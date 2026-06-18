@@ -7,7 +7,12 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-var apiUrl = builder.Configuration["ApiUrl"] ?? "http://localhost:8000";
+var configuredApiUrl = builder.Configuration["ApiUrl"];
+var apiUrl = string.IsNullOrWhiteSpace(configuredApiUrl)
+    || string.Equals(configuredApiUrl, "same-origin", StringComparison.OrdinalIgnoreCase)
+        ? builder.HostEnvironment.BaseAddress
+        : configuredApiUrl;
+
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) });
 builder.Services.AddScoped<MangaHubApiClient>();
 
