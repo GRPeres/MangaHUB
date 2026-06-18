@@ -1,31 +1,49 @@
 @page "/library"
-@inject MangaHub.Web.Services.MangaHubApiClient Api
+@inject MangaHubApiClient Api
+@inject NavigationManager Navigation
 
-<PageTitle>Library</PageTitle>
+<PageTitle>Shelf</PageTitle>
 
 <div class="page-heading">
     <div>
-        <p class="eyebrow">Local library</p>
-        <h1>Library</h1>
+        <p class="eyebrow">Personal tracker</p>
+        <h1>Shelf</h1>
     </div>
-    <button @onclick="Scan">Scan now</button>
+    <button @onclick="Load">Refresh</button>
 </div>
 
+<section class="panel search-row">
+    <select @bind="status">
+        <option value="">All</option>
+        <option value="reading">Reading</option>
+        <option value="done">Done</option>
+        <option value="planned">Planned</option>
+        <option value="dropped">Dropped</option>
+    </select>
+    <button @onclick="Load">Filter</button>
+</section>
+
 <section class="series-grid">
-    @foreach (var item in series)
+    @foreach (var item in entries)
     {
-        <a class="series-card" href="@($"/series/{item.Id}")">
-            <span>@item.Source</span>
+        <article class="series-card">
+            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
+            {
+                <img src="@item.CoverUrl" alt="@item.Title cover" />
+            }
+            <span>@item.ReadingStatus</span>
             <strong>@item.Title</strong>
-            <small>@item.Status</small>
-        </a>
+            <small>@item.Authors</small>
+            <button @onclick="() => Read(item.Id)">Read</button>
+        </article>
     }
 </section>
 
 <p class="status">@message</p>
 
 @code {
-    private List<SeriesResponse> series = [];
+    private List<MangaEntryResponse> entries = [];
+    private string status = "";
     private string message = "";
 
     protected override async Task OnInitializedAsync()
@@ -35,15 +53,31 @@
 
     private async Task Load()
     {
-        series = await Api.GetSeriesAsync();
+        entries = await Api.GetMangaEntriesAsync(status);
     }
 
-    private async Task Scan()
+    private async Task Read(Guid entryId)
     {
-        message = "Scanning...";
-        var result = await Api.ScanAsync();
-        message = result is null ? "Scan failed." : $"Scan completed: {result.SeriesCount} series, {result.ChapterCount} chapters.";
-        await Load();
+        var options = await Api.GetReadOptionsAsync(entryId);
+        if (options is null)
+        {
+            message = "Could not load read options.";
+            return;
+        }
+
+        if (options.HasLocal)
+        {
+            Navigation.NavigateTo(options.LocalReaderUrl);
+            return;
+        }
+
+        if (options.HasMangaDex)
+        {
+            Navigation.NavigateTo(options.MangaDexUrl, forceLoad: true);
+            return;
+        }
+
+        message = "No MangaDex URL or local series is registered for this manga yet.";
     }
 }
 

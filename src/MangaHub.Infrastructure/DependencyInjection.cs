@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddSingleton<IArchiveReader, CbzArchiveReader>();
         services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
         services.AddSingleton<ISessionTokenService, JwtSessionTokenService>();
+        services.AddHttpClient<IOpenLibraryClient, OpenLibraryClient>(client => client.BaseAddress = new Uri("https://openlibrary.org"));
         services.AddHttpClient<MangaDexSource>(client => client.BaseAddress = new Uri("https://api.mangadex.org"));
         services.AddScoped<IMangaSource, LocalMangaSource>();
         services.AddScoped<IMangaSource, MangaDexSource>();
@@ -33,4 +34,3 @@ public static class DependencyInjection
         return services;
     }
 }
-

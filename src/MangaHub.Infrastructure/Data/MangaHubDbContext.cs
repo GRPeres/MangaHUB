@@ -6,6 +6,7 @@ namespace MangaHub.Infrastructure.Data;
 public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> options) : DbContext(options)
 {
     public DbSet<MangaUser> Users => Set<MangaUser>();
+    public DbSet<MangaEntry> MangaEntries => Set<MangaEntry>();
     public DbSet<MangaSeries> Series => Set<MangaSeries>();
     public DbSet<MangaChapter> Chapters => Set<MangaChapter>();
     public DbSet<ReadingProgress> ReadingProgress => Set<ReadingProgress>();
@@ -18,6 +19,15 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.ToTable("users");
             entity.HasIndex(x => x.Username).IsUnique();
             entity.Property(x => x.Username).HasMaxLength(80);
+        });
+
+        modelBuilder.Entity<MangaEntry>(entity =>
+        {
+            entity.ToTable("manga_entries");
+            entity.HasIndex(x => new { x.UserId, x.OpenLibraryKey });
+            entity.Property(x => x.Title).HasMaxLength(255);
+            entity.Property(x => x.ReadingStatus).HasMaxLength(40);
+            entity.Property(x => x.MangaDexId).HasMaxLength(80);
         });
 
         modelBuilder.Entity<MangaSeries>(entity =>
@@ -48,4 +58,3 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
         });
     }
 }
-

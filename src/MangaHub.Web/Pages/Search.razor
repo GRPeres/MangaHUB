@@ -1,38 +1,99 @@
 @page "/search"
-@inject MangaHub.Web.Services.MangaHubApiClient Api
+@inject MangaHubApiClient Api
 
-<PageTitle>Search</PageTitle>
+<PageTitle>Register Manga</PageTitle>
 
 <div class="page-heading">
     <div>
-        <p class="eyebrow">Unified sources</p>
-        <h1>Search</h1>
+        <p class="eyebrow">OpenLibrary metadata</p>
+        <h1>Register Manga</h1>
     </div>
 </div>
 
 <section class="panel search-row">
-    <input @bind="query" @bind:event="oninput" placeholder="Search local library and MangaDex" />
+    <input @bind="query" @bind:event="oninput" placeholder="Search OpenLibrary" />
     <button @onclick="SearchNow">Search</button>
+</section>
+
+<section class="panel register-panel">
+    <label>Status</label>
+    <select @bind="readingStatus">
+        <option value="reading">Reading</option>
+        <option value="done">Done</option>
+        <option value="planned">Planned</option>
+        <option value="dropped">Dropped</option>
+    </select>
+
+    <label>MangaDex URL</label>
+    <input @bind="mangaDexUrl" placeholder="https://mangadex.org/title/..." />
+
+    <label>Local scanned series</label>
+    <select @bind="localSeriesIdText">
+        <option value="">None</option>
+        @foreach (var series in localSeries)
+        {
+            <option value="@series.Id">@series.Title</option>
+        }
+    </select>
+
+    <label>Notes</label>
+    <input @bind="notes" placeholder="Optional note" />
 </section>
 
 <section class="series-grid">
     @foreach (var item in results)
     {
         <article class="series-card">
-            <span>@item.Source</span>
+            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
+            {
+                <img src="@item.CoverUrl" alt="@item.Title cover" />
+            }
+            <span>@item.FirstPublishYear</span>
             <strong>@item.Title</strong>
-            <small>@item.Status</small>
+            <small>@item.Authors</small>
+            <button @onclick="() => Register(item)">Register</button>
         </article>
     }
 </section>
 
+<p class="status">@message</p>
+
 @code {
     private string query = "";
-    private List<SearchResult> results = [];
+    private string readingStatus = "planned";
+    private string mangaDexUrl = "";
+    private string localSeriesIdText = "";
+    private string notes = "";
+    private string message = "";
+    private List<OpenLibraryResult> results = [];
+    private List<SeriesResponse> localSeries = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        localSeries = await Api.GetSeriesAsync();
+    }
 
     private async Task SearchNow()
     {
-        results = string.IsNullOrWhiteSpace(query) ? [] : await Api.SearchAsync(query);
+        results = string.IsNullOrWhiteSpace(query) ? [] : await Api.SearchOpenLibraryAsync(query);
+    }
+
+    private async Task Register(OpenLibraryResult item)
+    {
+        var localSeriesId = Guid.TryParse(localSeriesIdText, out var parsed) ? parsed : (Guid?)null;
+        var request = new MangaEntryRequest(
+            item.Title,
+            item.Authors,
+            "",
+            item.CoverUrl,
+            item.Key,
+            item.FirstPublishYear,
+            readingStatus,
+            mangaDexUrl,
+            localSeriesId,
+            notes);
+
+        var created = await Api.CreateMangaEntryAsync(request);
+        message = created is null ? "Registration failed." : $"Registered {created.Title}.";
     }
 }
-

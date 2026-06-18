@@ -16,6 +16,21 @@ public sealed class MangaHubApiClient(HttpClient http)
     public async Task<List<SeriesResponse>> GetSeriesAsync() =>
         await GetAsync<List<SeriesResponse>>("/api/series") ?? [];
 
+    public async Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null)
+    {
+        var query = string.IsNullOrWhiteSpace(status) ? "" : $"?status={Uri.EscapeDataString(status)}";
+        return await GetAsync<List<MangaEntryResponse>>($"/api/manga{query}") ?? [];
+    }
+
+    public async Task<List<OpenLibraryResult>> SearchOpenLibraryAsync(string query) =>
+        await GetAsync<List<OpenLibraryResult>>($"/api/openlibrary/search?q={Uri.EscapeDataString(query)}") ?? [];
+
+    public async Task<MangaEntryResponse?> CreateMangaEntryAsync(MangaEntryRequest request) =>
+        await SendAsync<MangaEntryRequest, MangaEntryResponse>(HttpMethod.Post, "/api/manga", request);
+
+    public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
+        await GetAsync<ReadOptions>($"/api/manga/{entryId}/read-options");
+
     public async Task<SeriesResponse?> GetSeriesAsync(Guid id) =>
         await GetAsync<SeriesResponse>($"/api/series/{id}");
 
@@ -50,8 +65,39 @@ public sealed class MangaHubApiClient(HttpClient http)
 
 public sealed record AuthRequest(string Username, string Password);
 public sealed record UserResponse(Guid Id, string Username);
+public sealed record OpenLibraryResult(string Key, string Title, string Authors, string CoverUrl, int? FirstPublishYear);
+public sealed record MangaEntryRequest(
+    string Title,
+    string Authors,
+    string Description,
+    string CoverUrl,
+    string OpenLibraryKey,
+    int? FirstPublishYear,
+    string ReadingStatus,
+    string MangaDexUrl,
+    Guid? LocalSeriesId,
+    string Notes);
+public sealed record MangaEntryResponse(
+    Guid Id,
+    string Title,
+    string Authors,
+    string Description,
+    string CoverUrl,
+    string OpenLibraryKey,
+    int? FirstPublishYear,
+    string ReadingStatus,
+    string MangaDexUrl,
+    string MangaDexId,
+    Guid? LocalSeriesId,
+    string Notes);
+public sealed record ReadOptions(
+    Guid Id,
+    string Title,
+    bool HasMangaDex,
+    string MangaDexUrl,
+    bool HasLocal,
+    string LocalReaderUrl);
 public sealed record SeriesResponse(Guid Id, string Title, string Description, string CoverUrl, string Status, string Source, string ExternalId);
 public sealed record ChapterResponse(Guid Id, Guid SeriesId, string ChapterNumber, string Title, int PageCount);
 public sealed record SearchResult(string Id, string Title, string Description, string CoverUrl, string Status, string Source);
 public sealed record LibraryScanResult(int SeriesCount, int ChapterCount);
-
