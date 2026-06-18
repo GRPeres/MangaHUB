@@ -15,7 +15,14 @@
                 <MudTextField T="string" @bind-Value="query" Label="Search OpenLibrary" Variant="Variant.Outlined" Immediate="true" />
             </MudItem>
             <MudItem xs="12" md="3" Class="d-flex align-center">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" FullWidth="true" OnClick="SearchNow">Search</MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Search"
+                           FullWidth="true"
+                           Disabled="@isSearching"
+                           OnClick="SearchNow">
+                    @(isSearching ? "Searching..." : "Search")
+                </MudButton>
             </MudItem>
         </MudGrid>
     </MudPaper>
@@ -47,6 +54,11 @@
             </MudItem>
         </MudGrid>
     </MudPaper>
+
+    @if (!string.IsNullOrWhiteSpace(searchMessage))
+    {
+        <MudAlert Severity="@searchSeverity" Variant="Variant.Outlined">@searchMessage</MudAlert>
+    }
 
     <MudGrid Spacing="3">
         @foreach (var item in results)
@@ -83,7 +95,10 @@
     private string localSeriesIdText = "";
     private string notes = "";
     private string message = "";
+    private string searchMessage = "";
     private Severity messageSeverity = Severity.Info;
+    private Severity searchSeverity = Severity.Info;
+    private bool isSearching;
     private List<OpenLibraryResult> results = [];
     private List<SeriesResponse> localSeries = [];
 
@@ -94,7 +109,35 @@
 
     private async Task SearchNow()
     {
-        results = string.IsNullOrWhiteSpace(query) ? [] : await Api.SearchOpenLibraryAsync(query);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            results = [];
+            searchSeverity = Severity.Info;
+            searchMessage = "Type a title before searching.";
+            return;
+        }
+
+        isSearching = true;
+        searchMessage = "";
+
+        try
+        {
+            results = await Api.SearchOpenLibraryAsync(query);
+            searchSeverity = results.Count == 0 ? Severity.Warning : Severity.Success;
+            searchMessage = results.Count == 0
+                ? "OpenLibrary returned no matches."
+                : $"Found {results.Count} OpenLibrary matches.";
+        }
+        catch
+        {
+            results = [];
+            searchSeverity = Severity.Error;
+            searchMessage = "OpenLibrary search failed. Try again in a moment.";
+        }
+        finally
+        {
+            isSearching = false;
+        }
     }
 
     private async Task Register(OpenLibraryResult item)
@@ -114,6 +157,6 @@
 
         var created = await Api.CreateMangaEntryAsync(request);
         messageSeverity = created is null ? Severity.Error : Severity.Success;
-        message = created is null ? "Registration failed." : $"Registered {created.Title}.";
+        message = created is null ? "Registration failed. Make sure you are signed in first." : $"Registered {created.Title}.";
     }
 }

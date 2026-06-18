@@ -111,17 +111,14 @@ app.MapGet("/auth/me", async Task<Results<Ok<UserResponse>, UnauthorizedHttpResu
     return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(new UserResponse(user.Id, user.Username));
 });
 
-app.MapGet("/api/openlibrary/search", async Task<Results<Ok<List<OpenLibraryResult>>, UnauthorizedHttpResult>> (
-    HttpRequest request,
-    MangaHubDbContext db,
-    ISessionTokenService tokens,
+app.MapGet("/api/openlibrary/search", async Task<Ok<List<OpenLibraryResult>>> (
     IOpenLibraryClient openLibrary,
     string q,
     CancellationToken cancellationToken) =>
 {
-    if (await GetCurrentUserAsync(request, db, tokens, cancellationToken) is null)
+    if (string.IsNullOrWhiteSpace(q))
     {
-        return TypedResults.Unauthorized();
+        return TypedResults.Ok(new List<OpenLibraryResult>());
     }
 
     var results = await openLibrary.SearchAsync(q, cancellationToken);
