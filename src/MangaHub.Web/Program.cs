@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MangaHub.Web;
 using MangaHub.Web.Services;
+using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -15,5 +16,6 @@ var apiUrl = string.IsNullOrWhiteSpace(configuredApiUrl)
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) });
 builder.Services.AddScoped<MangaHubApiClient>();
+builder.Services.AddMudServices();
 
 await builder.Build().RunAsync();

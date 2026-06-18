@@ -1,16 +1,45 @@
-﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+@inherits LayoutComponentBase
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+<MudThemeProvider Theme="@MangaHubPalette.Theme" IsDarkMode="@_darkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
-        <article class="content px-4">
+<MudLayout>
+    <MudAppBar Elevation="0" Dense="true" Class="mh-appbar">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
+        <MudText Typo="Typo.h6" Class="mh-brand">MangaHub</MudText>
+        <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Class="mh-chip">Shelf first</MudChip>
+        <MudSpacer />
+        <MudTooltip Text="@(_darkMode ? "Use light theme" : "Use dark theme")">
+            <MudIconButton Icon="@(_darkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                           Color="Color.Inherit"
+                           OnClick="ToggleTheme" />
+        </MudTooltip>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive" Elevation="0" ClipMode="DrawerClipMode.Always" Class="mh-drawer">
+        <MudStack Spacing="1" Class="pa-4">
+            <MudText Typo="Typo.overline" Color="Color.Secondary">Navigation</MudText>
+            <MudNavMenu Rounded="true" Margin="Margin.Dense" Color="Color.Primary">
+                <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Home</MudNavLink>
+                <MudNavLink Href="library" Icon="@Icons.Material.Filled.AutoStories">Shelf</MudNavLink>
+                <MudNavLink Href="search" Icon="@Icons.Material.Filled.AddCircleOutline">Register</MudNavLink>
+            </MudNavMenu>
+        </MudStack>
+    </MudDrawer>
+
+    <MudMainContent Class="mh-main">
+        <MudContainer MaxWidth="MaxWidth.Large" Class="mh-content">
             @Body
-        </article>
-    </main>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _darkMode;
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+    private void ToggleTheme() => _darkMode = !_darkMode;
+}

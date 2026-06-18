@@ -1,48 +1,86 @@
 @page "/"
-@inject MangaHub.Web.Services.MangaHubApiClient Api
+@inject MangaHubApiClient Api
 
 <PageTitle>MangaHub</PageTitle>
 
-<section class="hub-header">
-    <div>
-        <p class="eyebrow">Self-hosted reader</p>
-        <h1>MangaHub</h1>
-        <p>Track what you are reading, what you finished, and where each manga should be opened when you decide to read.</p>
-    </div>
-</section>
+<MudStack Spacing="4">
+    <MudPaper Class="mh-hero" Elevation="0">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.overline" Color="Color.Secondary">Personal manga shelf</MudText>
+            <MudText Typo="Typo.h1">MangaHub</MudText>
+            <MudText Typo="Typo.body1" Class="mh-hero-copy">
+                Track what you are reading, keep OpenLibrary metadata close, and choose a local or MangaDex source only when it is time to read.
+            </MudText>
+        </MudStack>
+    </MudPaper>
 
-<section class="panel">
-    <h2>Account</h2>
-    <div class="auth-grid">
-        <input @bind="username" placeholder="Username" />
-        <input @bind="password" placeholder="Password" type="password" />
-        <button @onclick="Register">Register</button>
-        <button @onclick="Login">Login</button>
-        <button @onclick="Logout">Logout</button>
-    </div>
-    <p class="status">@message</p>
-</section>
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="7">
+            <MudPaper Class="pa-5" Elevation="0" Outlined="true">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h2">Account</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Sign in to manage your shelf.</MudText>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" @bind-Value="username" Label="Username" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" @bind-Value="password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined" />
+                        </MudItem>
+                    </MudGrid>
+                    <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Register">Register</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="Login">Login</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="Logout">Logout</MudButton>
+                    </MudStack>
+                    @if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="5">
+            <MudPaper Class="pa-5 mh-side-panel" Elevation="0" Outlined="true">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h3">Shelf rhythm</MudText>
+                    <MudText Typo="Typo.body2">Register from OpenLibrary, mark the status, then attach MangaDex or local CBZ sources when you have them.</MudText>
+                    <MudDivider />
+                    <MudChipSet T="string">
+                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled">Reading</MudChip>
+                        <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">Done</MudChip>
+                        <MudChip T="string" Color="Color.Tertiary" Variant="Variant.Outlined">Planned</MudChip>
+                    </MudChipSet>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudStack>
 
 @code {
     private string username = "";
     private string password = "";
     private string message = "";
+    private Severity messageSeverity = Severity.Info;
 
     private async Task Register()
     {
         var user = await Api.RegisterAsync(username, password);
+        messageSeverity = user is null ? Severity.Error : Severity.Success;
         message = user is null ? "Registration failed." : $"Signed in as {user.Username}.";
     }
 
     private async Task Login()
     {
         var user = await Api.LoginAsync(username, password);
+        messageSeverity = user is null ? Severity.Error : Severity.Success;
         message = user is null ? "Login failed." : $"Signed in as {user.Username}.";
     }
 
     private async Task Logout()
     {
         await Api.LogoutAsync();
+        messageSeverity = Severity.Info;
         message = "Signed out.";
     }
 }

@@ -4,42 +4,62 @@
 
 <PageTitle>Shelf</PageTitle>
 
-<div class="page-heading">
-    <div>
-        <p class="eyebrow">Personal tracker</p>
-        <h1>Shelf</h1>
-    </div>
-    <button @onclick="Load">Refresh</button>
-</div>
+<MudStack Spacing="4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mh-page-title">
+        <MudStack Spacing="1">
+            <MudText Typo="Typo.overline" Color="Color.Secondary">Personal tracker</MudText>
+            <MudText Typo="Typo.h1">Shelf</MudText>
+        </MudStack>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="Load">Refresh</MudButton>
+    </MudStack>
 
-<section class="panel search-row">
-    <select @bind="status">
-        <option value="">All</option>
-        <option value="reading">Reading</option>
-        <option value="done">Done</option>
-        <option value="planned">Planned</option>
-        <option value="dropped">Dropped</option>
-    </select>
-    <button @onclick="Load">Filter</button>
-</section>
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
+            <MudSelect T="string" @bind-Value="status" Label="Status" Variant="Variant.Outlined" Dense="true" Class="mh-filter">
+                <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
+                <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
+                <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
+                <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
+                <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
+            </MudSelect>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Load">Apply</MudButton>
+        </MudStack>
+    </MudPaper>
 
-<section class="series-grid">
-    @foreach (var item in entries)
+    @if (entries.Count == 0)
     {
-        <article class="series-card">
-            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-            {
-                <img src="@item.CoverUrl" alt="@item.Title cover" />
-            }
-            <span>@item.ReadingStatus</span>
-            <strong>@item.Title</strong>
-            <small>@item.Authors</small>
-            <button @onclick="() => Read(item.Id)">Read</button>
-        </article>
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Your shelf is empty for this filter.</MudAlert>
     }
-</section>
+    else
+    {
+        <MudGrid Spacing="3">
+            @foreach (var item in entries)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudCard Elevation="0" Outlined="true" Class="mh-card">
+                        @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
+                        {
+                            <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
+                        }
+                        <MudCardContent>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@item.ReadingStatus</MudChip>
+                            <MudText Typo="Typo.h3" Class="mt-2">@item.Title</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="() => Read(item.Id)">Read</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
 
-<p class="status">@message</p>
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@message</MudAlert>
+    }
+</MudStack>
 
 @code {
     private List<MangaEntryResponse> entries = [];
@@ -80,4 +100,3 @@
         message = "No MangaDex URL or local series is registered for this manga yet.";
     }
 }
-

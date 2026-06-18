@@ -1,31 +1,34 @@
 @page "/series/{SeriesId:guid}"
-@inject MangaHub.Web.Services.MangaHubApiClient Api
+@inject MangaHubApiClient Api
 
 <PageTitle>Series</PageTitle>
 
 @if (series is null)
 {
-    <p>Loading...</p>
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
 }
 else
 {
-    <div class="page-heading">
-        <div>
-            <p class="eyebrow">@series.Source</p>
-            <h1>@series.Title</h1>
-        </div>
-    </div>
+    <MudStack Spacing="4">
+        <MudStack Spacing="1" Class="mh-page-title">
+            <MudText Typo="Typo.overline" Color="Color.Secondary">@series.Source</MudText>
+            <MudText Typo="Typo.h1">@series.Title</MudText>
+        </MudStack>
 
-    <section class="chapter-list">
-        @foreach (var chapter in chapters)
-        {
-            <a href="@($"/reader/{chapter.Id}/{chapter.PageCount}")">
-                <span>@chapter.ChapterNumber</span>
-                <strong>@chapter.Title</strong>
-                <small>@chapter.PageCount pages</small>
-            </a>
-        }
-    </section>
+        <MudPaper Elevation="0" Outlined="true">
+            <MudList T="ChapterResponse">
+                @foreach (var chapter in chapters)
+                {
+                    <MudListItem Href="@($"/reader/{chapter.Id}/{chapter.PageCount}")" Icon="@Icons.Material.Filled.MenuBook">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                            <MudText>@chapter.Title</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@chapter.PageCount pages</MudText>
+                        </MudStack>
+                    </MudListItem>
+                }
+            </MudList>
+        </MudPaper>
+    </MudStack>
 }
 
 @code {
@@ -39,4 +42,3 @@ else
         chapters = await Api.GetChaptersAsync(SeriesId);
     }
 }
-

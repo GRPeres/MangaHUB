@@ -3,60 +3,78 @@
 
 <PageTitle>Register Manga</PageTitle>
 
-<div class="page-heading">
-    <div>
-        <p class="eyebrow">OpenLibrary metadata</p>
-        <h1>Register Manga</h1>
-    </div>
-</div>
+<MudStack Spacing="4">
+    <MudStack Spacing="1" Class="mh-page-title">
+        <MudText Typo="Typo.overline" Color="Color.Secondary">OpenLibrary metadata</MudText>
+        <MudText Typo="Typo.h1">Register Manga</MudText>
+    </MudStack>
 
-<section class="panel search-row">
-    <input @bind="query" @bind:event="oninput" placeholder="Search OpenLibrary" />
-    <button @onclick="SearchNow">Search</button>
-</section>
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="9">
+                <MudTextField T="string" @bind-Value="query" Label="Search OpenLibrary" Variant="Variant.Outlined" Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" md="3" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" FullWidth="true" OnClick="SearchNow">Search</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 
-<section class="panel register-panel">
-    <label>Status</label>
-    <select @bind="readingStatus">
-        <option value="reading">Reading</option>
-        <option value="done">Done</option>
-        <option value="planned">Planned</option>
-        <option value="dropped">Dropped</option>
-    </select>
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="3">
+                <MudSelect T="string" @bind-Value="readingStatus" Label="Status" Variant="Variant.Outlined">
+                    <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <MudTextField T="string" @bind-Value="mangaDexUrl" Label="MangaDex URL" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="string" @bind-Value="localSeriesIdText" Label="Local scanned series" Variant="Variant.Outlined">
+                    <MudSelectItem T="string" Value="@("")">None</MudSelectItem>
+                    @foreach (var series in localSeries)
+                    {
+                        <MudSelectItem T="string" Value="@series.Id.ToString()">@series.Title</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" @bind-Value="notes" Label="Notes" Variant="Variant.Outlined" Lines="2" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 
-    <label>MangaDex URL</label>
-    <input @bind="mangaDexUrl" placeholder="https://mangadex.org/title/..." />
-
-    <label>Local scanned series</label>
-    <select @bind="localSeriesIdText">
-        <option value="">None</option>
-        @foreach (var series in localSeries)
+    <MudGrid Spacing="3">
+        @foreach (var item in results)
         {
-            <option value="@series.Id">@series.Title</option>
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard Elevation="0" Outlined="true" Class="mh-card">
+                    @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
+                    {
+                        <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
+                    }
+                    <MudCardContent>
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
+                        <MudText Typo="Typo.h3">@item.Title</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="() => Register(item)">Register</MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
         }
-    </select>
+    </MudGrid>
 
-    <label>Notes</label>
-    <input @bind="notes" placeholder="Optional note" />
-</section>
-
-<section class="series-grid">
-    @foreach (var item in results)
+    @if (!string.IsNullOrWhiteSpace(message))
     {
-        <article class="series-card">
-            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-            {
-                <img src="@item.CoverUrl" alt="@item.Title cover" />
-            }
-            <span>@item.FirstPublishYear</span>
-            <strong>@item.Title</strong>
-            <small>@item.Authors</small>
-            <button @onclick="() => Register(item)">Register</button>
-        </article>
+        <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
     }
-</section>
-
-<p class="status">@message</p>
+</MudStack>
 
 @code {
     private string query = "";
@@ -65,6 +83,7 @@
     private string localSeriesIdText = "";
     private string notes = "";
     private string message = "";
+    private Severity messageSeverity = Severity.Info;
     private List<OpenLibraryResult> results = [];
     private List<SeriesResponse> localSeries = [];
 
@@ -94,6 +113,7 @@
             notes);
 
         var created = await Api.CreateMangaEntryAsync(request);
+        messageSeverity = created is null ? Severity.Error : Severity.Success;
         message = created is null ? "Registration failed." : $"Registered {created.Title}.";
     }
 }

@@ -1,13 +1,13 @@
 @page "/reader/{ChapterId:guid}/{PageCount:int}"
-@inject MangaHub.Web.Services.MangaHubApiClient Api
+@inject MangaHubApiClient Api
 
 <PageTitle>Reader</PageTitle>
 
-<div class="reader-toolbar">
-    <button @onclick="Previous" disabled="@(page <= 0)">Previous</button>
-    <span>Page @(page + 1) / @PageCount</span>
-    <button @onclick="Next" disabled="@(page >= PageCount - 1)">Next</button>
-</div>
+<MudPaper Class="reader-toolbar" Elevation="0" Outlined="true">
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ChevronLeft" OnClick="Previous" Disabled="@(page <= 0)">Previous</MudButton>
+    <MudText Typo="Typo.body2">Page @(page + 1) / @PageCount</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight" OnClick="Next" Disabled="@(page >= PageCount - 1)">Next</MudButton>
+</MudPaper>
 
 <main class="reader">
     <img src="@Api.GetPageUrl(ChapterId, page)" alt="Manga page @(page + 1)" />
@@ -21,4 +21,3 @@
     private void Previous() => page = Math.Max(0, page - 1);
     private void Next() => page = Math.Min(PageCount - 1, page + 1);
 }
-
