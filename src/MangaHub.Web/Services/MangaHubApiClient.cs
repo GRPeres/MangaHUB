@@ -13,6 +13,9 @@ public sealed class MangaHubApiClient(HttpClient http)
 
     public async Task LogoutAsync() => await SendAsync<object, object>(HttpMethod.Post, "/auth/logout", new { });
 
+    public async Task<UserResponse?> MeAsync() =>
+        await GetAsync<UserResponse>("/auth/me");
+
     public async Task<List<SeriesResponse>> GetSeriesAsync() =>
         await GetAsync<List<SeriesResponse>>("/api/series") ?? [];
 
@@ -22,11 +25,20 @@ public sealed class MangaHubApiClient(HttpClient http)
         return await GetAsync<List<MangaEntryResponse>>($"/api/manga{query}") ?? [];
     }
 
+    public async Task<List<CatalogMangaResponse>> GetCatalogAsync(string? queryText = null)
+    {
+        var query = string.IsNullOrWhiteSpace(queryText) ? "" : $"?q={Uri.EscapeDataString(queryText)}";
+        return await GetAsync<List<CatalogMangaResponse>>($"/api/catalog{query}") ?? [];
+    }
+
     public async Task<List<OpenLibraryResult>> SearchOpenLibraryAsync(string query) =>
         await GetAsync<List<OpenLibraryResult>>($"/api/openlibrary/search?q={Uri.EscapeDataString(query)}") ?? [];
 
-    public async Task<MangaEntryResponse?> CreateMangaEntryAsync(MangaEntryRequest request) =>
-        await SendAsync<MangaEntryRequest, MangaEntryResponse>(HttpMethod.Post, "/api/manga", request);
+    public async Task<CatalogMangaResponse?> CreateCatalogMangaAsync(MangaEntryRequest request) =>
+        await SendAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Post, "/api/catalog", request);
+
+    public async Task<MangaEntryResponse?> AddToShelfAsync(AddToShelfRequest request) =>
+        await SendAsync<AddToShelfRequest, MangaEntryResponse>(HttpMethod.Post, "/api/shelf", request);
 
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
         await GetAsync<ReadOptions>($"/api/manga/{entryId}/read-options");
@@ -64,7 +76,7 @@ public sealed class MangaHubApiClient(HttpClient http)
 }
 
 public sealed record AuthRequest(string Username, string Password);
-public sealed record UserResponse(Guid Id, string Username);
+public sealed record UserResponse(Guid Id, string Username, string Role);
 public sealed record OpenLibraryResult(string Key, string Title, string Authors, string CoverUrl, int? FirstPublishYear);
 public sealed record MangaEntryRequest(
     string Title,
@@ -90,6 +102,19 @@ public sealed record MangaEntryResponse(
     string MangaDexId,
     Guid? LocalSeriesId,
     string Notes);
+public sealed record CatalogMangaResponse(
+    Guid Id,
+    string Title,
+    string Authors,
+    string Description,
+    string CoverUrl,
+    string OpenLibraryKey,
+    int? FirstPublishYear,
+    string MangaDexUrl,
+    string MangaDexId,
+    Guid? LocalSeriesId,
+    bool IsInMyShelf);
+public sealed record AddToShelfRequest(Guid MangaEntryId, string ReadingStatus, string Notes);
 public sealed record ReadOptions(
     Guid Id,
     string Title,

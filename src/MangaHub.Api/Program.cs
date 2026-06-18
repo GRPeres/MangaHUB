@@ -69,11 +69,17 @@ app.MapPost("/auth/register", async Task<Results<Created<UserResponse>, Conflict
         return TypedResults.Conflict("Username already exists.");
     }
 
-    var user = new MangaUser { Username = username, PasswordHash = passwordHasher.Hash(request.Password) };
+    var isFirstUser = !await db.Users.AnyAsync(cancellationToken);
+    var user = new MangaUser
+    {
+        Username = username,
+        PasswordHash = passwordHasher.Hash(request.Password),
+        Role = isFirstUser ? "admin" : "user"
+    };
     db.Users.Add(user);
     await db.SaveChangesAsync(cancellationToken);
     SetSessionCookie(response, tokens.CreateToken(user.Id, user.Username));
-    return TypedResults.Created("/auth/me", new UserResponse(user.Id, user.Username));
+    return TypedResults.Created("/auth/me", new UserResponse(user.Id, user.Username, user.Role));
 });
 
 app.MapPost("/auth/login", async Task<Results<Ok<UserResponse>, UnauthorizedHttpResult>> (
@@ -92,7 +98,7 @@ app.MapPost("/auth/login", async Task<Results<Ok<UserResponse>, UnauthorizedHttp
     }
 
     SetSessionCookie(response, tokens.CreateToken(user.Id, user.Username));
-    return TypedResults.Ok(new UserResponse(user.Id, user.Username));
+    return TypedResults.Ok(new UserResponse(user.Id, user.Username, user.Role));
 }).RequireRateLimiting("login");
 
 app.MapPost("/auth/logout", (HttpResponse response) =>
@@ -108,7 +114,7 @@ app.MapGet("/auth/me", async Task<Results<Ok<UserResponse>, UnauthorizedHttpResu
     CancellationToken cancellationToken) =>
 {
     var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
-    return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(new UserResponse(user.Id, user.Username));
+    return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(new UserResponse(user.Id, user.Username, user.Role));
 });
 
 app.MapGet("/api/openlibrary/search", async Task<Ok<List<OpenLibraryResult>>> (
@@ -140,7 +146,9 @@ app.MapGet("/api/manga", async Task<Results<Ok<List<MangaEntryResponse>>, Unauth
         return TypedResults.Unauthorized();
     }
 
-    var query = db.MangaEntries.AsNoTracking().Where(x => x.UserId == user.Id);
+    var query = db.UserMangaEntries.AsNoTracking()
+        .Include(x => x.MangaEntry)
+        .Where(x => x.UserId == user.Id);
     if (!string.IsNullOrWhiteSpace(status))
     {
         query = query.Where(x => x.ReadingStatus == status);
@@ -148,8 +156,51 @@ app.MapGet("/api/manga", async Task<Results<Ok<List<MangaEntryResponse>>, Unauth
 
     var entries = await query
         .OrderBy(x => x.ReadingStatus)
-        .ThenBy(x => x.Title)
+        .ThenBy(x => x.MangaEntry!.Title)
         .Select(x => new MangaEntryResponse(
+            x.MangaEntry!.Id,
+            x.MangaEntry.Title,
+            x.MangaEntry.Authors,
+            x.MangaEntry.Description,
+            x.MangaEntry.CoverUrl,
+            x.MangaEntry.OpenLibraryKey,
+            x.MangaEntry.FirstPublishYear,
+            x.ReadingStatus,
+            x.MangaEntry.MangaDexUrl,
+            x.MangaEntry.MangaDexId,
+            x.MangaEntry.LocalSeriesId,
+            x.Notes))
+        .ToListAsync(cancellationToken);
+
+    return TypedResults.Ok(entries);
+});
+
+app.MapGet("/api/catalog", async Task<Results<Ok<List<CatalogMangaResponse>>, UnauthorizedHttpResult>> (
+    HttpRequest request,
+    MangaHubDbContext db,
+    ISessionTokenService tokens,
+    string? q,
+    CancellationToken cancellationToken) =>
+{
+    var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
+    if (user is null)
+    {
+        return TypedResults.Unauthorized();
+    }
+
+    var shelfIds = db.UserMangaEntries
+        .Where(x => x.UserId == user.Id)
+        .Select(x => x.MangaEntryId);
+
+    var query = db.MangaEntries.AsNoTracking();
+    if (!string.IsNullOrWhiteSpace(q))
+    {
+        query = query.Where(x => EF.Functions.ILike(x.Title, $"%{q}%") || EF.Functions.ILike(x.Authors, $"%{q}%"));
+    }
+
+    var entries = await query
+        .OrderBy(x => x.Title)
+        .Select(x => new CatalogMangaResponse(
             x.Id,
             x.Title,
             x.Authors,
@@ -157,17 +208,16 @@ app.MapGet("/api/manga", async Task<Results<Ok<List<MangaEntryResponse>>, Unauth
             x.CoverUrl,
             x.OpenLibraryKey,
             x.FirstPublishYear,
-            x.ReadingStatus,
             x.MangaDexUrl,
             x.MangaDexId,
             x.LocalSeriesId,
-            x.Notes))
+            shelfIds.Contains(x.Id)))
         .ToListAsync(cancellationToken);
 
     return TypedResults.Ok(entries);
 });
 
-app.MapPost("/api/manga", async Task<Results<Created<MangaEntryResponse>, UnauthorizedHttpResult>> (
+app.MapPost("/api/catalog", async Task<Results<Created<CatalogMangaResponse>, UnauthorizedHttpResult, ForbidHttpResult>> (
     MangaEntryRequest entry,
     HttpRequest request,
     MangaHubDbContext db,
@@ -179,29 +229,31 @@ app.MapPost("/api/manga", async Task<Results<Created<MangaEntryResponse>, Unauth
     {
         return TypedResults.Unauthorized();
     }
+    if (!IsAdmin(user))
+    {
+        return TypedResults.Forbid();
+    }
 
     var manga = new MangaEntry
     {
-        UserId = user.Id,
+        CreatedByUserId = user.Id,
         Title = entry.Title.Trim(),
         Authors = entry.Authors.Trim(),
         Description = entry.Description.Trim(),
         CoverUrl = entry.CoverUrl.Trim(),
         OpenLibraryKey = entry.OpenLibraryKey.Trim(),
         FirstPublishYear = entry.FirstPublishYear,
-        ReadingStatus = NormalizeShelfStatus(entry.ReadingStatus),
         MangaDexUrl = entry.MangaDexUrl.Trim(),
         MangaDexId = ExtractMangaDexId(entry.MangaDexUrl),
-        LocalSeriesId = entry.LocalSeriesId,
-        Notes = entry.Notes.Trim()
+        LocalSeriesId = entry.LocalSeriesId
     };
 
     db.MangaEntries.Add(manga);
     await db.SaveChangesAsync(cancellationToken);
-    return TypedResults.Created($"/api/manga/{manga.Id}", ToMangaEntryResponse(manga));
+    return TypedResults.Created($"/api/catalog/{manga.Id}", ToCatalogMangaResponse(manga, false));
 });
 
-app.MapPut("/api/manga/{entryId:guid}", async Task<Results<Ok<MangaEntryResponse>, NotFound, UnauthorizedHttpResult>> (
+app.MapPut("/api/catalog/{entryId:guid}", async Task<Results<Ok<CatalogMangaResponse>, NotFound, UnauthorizedHttpResult, ForbidHttpResult>> (
     Guid entryId,
     MangaEntryRequest entry,
     HttpRequest request,
@@ -214,8 +266,12 @@ app.MapPut("/api/manga/{entryId:guid}", async Task<Results<Ok<MangaEntryResponse
     {
         return TypedResults.Unauthorized();
     }
+    if (!IsAdmin(user))
+    {
+        return TypedResults.Forbid();
+    }
 
-    var manga = await db.MangaEntries.FirstOrDefaultAsync(x => x.Id == entryId && x.UserId == user.Id, cancellationToken);
+    var manga = await db.MangaEntries.FirstOrDefaultAsync(x => x.Id == entryId, cancellationToken);
     if (manga is null)
     {
         return TypedResults.NotFound();
@@ -227,15 +283,55 @@ app.MapPut("/api/manga/{entryId:guid}", async Task<Results<Ok<MangaEntryResponse
     manga.CoverUrl = entry.CoverUrl.Trim();
     manga.OpenLibraryKey = entry.OpenLibraryKey.Trim();
     manga.FirstPublishYear = entry.FirstPublishYear;
-    manga.ReadingStatus = NormalizeShelfStatus(entry.ReadingStatus);
     manga.MangaDexUrl = entry.MangaDexUrl.Trim();
     manga.MangaDexId = ExtractMangaDexId(entry.MangaDexUrl);
     manga.LocalSeriesId = entry.LocalSeriesId;
-    manga.Notes = entry.Notes.Trim();
     manga.UpdatedAt = DateTimeOffset.UtcNow;
 
     await db.SaveChangesAsync(cancellationToken);
-    return TypedResults.Ok(ToMangaEntryResponse(manga));
+    var isInShelf = await db.UserMangaEntries.AnyAsync(x => x.UserId == user.Id && x.MangaEntryId == manga.Id, cancellationToken);
+    return TypedResults.Ok(ToCatalogMangaResponse(manga, isInShelf));
+});
+
+app.MapPost("/api/shelf", async Task<Results<Created<MangaEntryResponse>, Ok<MangaEntryResponse>, NotFound, UnauthorizedHttpResult>> (
+    AddToShelfRequest shelfRequest,
+    HttpRequest request,
+    MangaHubDbContext db,
+    ISessionTokenService tokens,
+    CancellationToken cancellationToken) =>
+{
+    var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
+    if (user is null)
+    {
+        return TypedResults.Unauthorized();
+    }
+
+    var manga = await db.MangaEntries.AsNoTracking().FirstOrDefaultAsync(x => x.Id == shelfRequest.MangaEntryId, cancellationToken);
+    if (manga is null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    var shelf = await db.UserMangaEntries.FirstOrDefaultAsync(x => x.UserId == user.Id && x.MangaEntryId == manga.Id, cancellationToken);
+    if (shelf is null)
+    {
+        shelf = new UserMangaEntry
+        {
+            UserId = user.Id,
+            MangaEntryId = manga.Id,
+            ReadingStatus = NormalizeShelfStatus(shelfRequest.ReadingStatus),
+            Notes = shelfRequest.Notes.Trim()
+        };
+        db.UserMangaEntries.Add(shelf);
+        await db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Created($"/api/manga/{manga.Id}", ToMangaEntryResponse(manga, shelf));
+    }
+
+    shelf.ReadingStatus = NormalizeShelfStatus(shelfRequest.ReadingStatus);
+    shelf.Notes = shelfRequest.Notes.Trim();
+    shelf.UpdatedAt = DateTimeOffset.UtcNow;
+    await db.SaveChangesAsync(cancellationToken);
+    return TypedResults.Ok(ToMangaEntryResponse(manga, shelf));
 });
 
 app.MapGet("/api/manga/{entryId:guid}/read-options", async Task<Results<Ok<object>, NotFound, UnauthorizedHttpResult>> (
@@ -251,11 +347,14 @@ app.MapGet("/api/manga/{entryId:guid}/read-options", async Task<Results<Ok<objec
         return TypedResults.Unauthorized();
     }
 
-    var entry = await db.MangaEntries.AsNoTracking().FirstOrDefaultAsync(x => x.Id == entryId && x.UserId == user.Id, cancellationToken);
-    if (entry is null)
+    var shelf = await db.UserMangaEntries.AsNoTracking()
+        .Include(x => x.MangaEntry)
+        .FirstOrDefaultAsync(x => x.MangaEntryId == entryId && x.UserId == user.Id, cancellationToken);
+    if (shelf?.MangaEntry is null)
     {
         return TypedResults.NotFound();
     }
+    var entry = shelf.MangaEntry;
 
     var localFirstChapter = entry.LocalSeriesId is null
         ? null
@@ -509,7 +608,9 @@ static async Task<MangaUser?> GetCurrentUserAsync(
     return userId is null ? null : await db.Users.FindAsync([userId.Value], cancellationToken);
 }
 
-static MangaEntryResponse ToMangaEntryResponse(MangaEntry entry) =>
+static bool IsAdmin(MangaUser user) => string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase);
+
+static MangaEntryResponse ToMangaEntryResponse(MangaEntry entry, UserMangaEntry shelf) =>
     new(
         entry.Id,
         entry.Title,
@@ -518,11 +619,25 @@ static MangaEntryResponse ToMangaEntryResponse(MangaEntry entry) =>
         entry.CoverUrl,
         entry.OpenLibraryKey,
         entry.FirstPublishYear,
-        entry.ReadingStatus,
+        shelf.ReadingStatus,
         entry.MangaDexUrl,
         entry.MangaDexId,
         entry.LocalSeriesId,
-        entry.Notes);
+        shelf.Notes);
+
+static CatalogMangaResponse ToCatalogMangaResponse(MangaEntry entry, bool isInMyShelf) =>
+    new(
+        entry.Id,
+        entry.Title,
+        entry.Authors,
+        entry.Description,
+        entry.CoverUrl,
+        entry.OpenLibraryKey,
+        entry.FirstPublishYear,
+        entry.MangaDexUrl,
+        entry.MangaDexId,
+        entry.LocalSeriesId,
+        isInMyShelf);
 
 static string NormalizeShelfStatus(string status)
 {
@@ -553,23 +668,70 @@ static string ExtractMangaDexId(string urlOrId)
 static async Task EnsureMangaEntryTableAsync(MangaHubDbContext db)
 {
     await db.Database.ExecuteSqlRawAsync("""
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS "Role" character varying(40) NOT NULL DEFAULT 'user';
+
+        UPDATE users
+        SET "Role" = 'admin'
+        WHERE "Id" = (
+            SELECT "Id"
+            FROM users
+            ORDER BY "CreatedAt" ASC
+            LIMIT 1
+        )
+        AND NOT EXISTS (SELECT 1 FROM users WHERE "Role" = 'admin');
+
         CREATE TABLE IF NOT EXISTS manga_entries (
             "Id" uuid PRIMARY KEY,
-            "UserId" uuid NOT NULL,
             "Title" character varying(255) NOT NULL,
             "Authors" text NOT NULL,
             "Description" text NOT NULL,
             "CoverUrl" text NOT NULL,
             "OpenLibraryKey" text NOT NULL,
             "FirstPublishYear" integer NULL,
-            "ReadingStatus" character varying(40) NOT NULL,
             "MangaDexUrl" text NOT NULL,
             "MangaDexId" character varying(80) NOT NULL,
             "LocalSeriesId" uuid NULL,
+            "CreatedAt" timestamp with time zone NOT NULL,
+            "UpdatedAt" timestamp with time zone NOT NULL
+        );
+
+        ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CreatedByUserId" uuid NULL;
+        ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "UserId" uuid NULL;
+        ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReadingStatus" character varying(40) NULL;
+        ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "Notes" text NULL;
+
+        CREATE TABLE IF NOT EXISTS user_manga_entries (
+            "Id" uuid PRIMARY KEY,
+            "UserId" uuid NOT NULL,
+            "MangaEntryId" uuid NOT NULL,
+            "ReadingStatus" character varying(40) NOT NULL,
             "Notes" text NOT NULL,
             "CreatedAt" timestamp with time zone NOT NULL,
             "UpdatedAt" timestamp with time zone NOT NULL
         );
-        CREATE INDEX IF NOT EXISTS "IX_manga_entries_UserId_OpenLibraryKey" ON manga_entries ("UserId", "OpenLibraryKey");
+
+        INSERT INTO user_manga_entries ("Id", "UserId", "MangaEntryId", "ReadingStatus", "Notes", "CreatedAt", "UpdatedAt")
+        SELECT gen_random_uuid(),
+               "UserId",
+               "Id",
+               COALESCE("ReadingStatus", 'planned'),
+               COALESCE("Notes", ''),
+               "CreatedAt",
+               "UpdatedAt"
+        FROM manga_entries
+        WHERE "UserId" IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1
+              FROM user_manga_entries
+              WHERE user_manga_entries."UserId" = manga_entries."UserId"
+                AND user_manga_entries."MangaEntryId" = manga_entries."Id"
+          );
+
+        UPDATE manga_entries
+        SET "CreatedByUserId" = "UserId"
+        WHERE "CreatedByUserId" IS NULL AND "UserId" IS NOT NULL;
+
+        CREATE INDEX IF NOT EXISTS "IX_manga_entries_OpenLibraryKey" ON manga_entries ("OpenLibraryKey");
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_MangaEntryId" ON user_manga_entries ("UserId", "MangaEntryId");
         """);
 }

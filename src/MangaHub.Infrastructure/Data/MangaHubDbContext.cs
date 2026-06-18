@@ -7,6 +7,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
 {
     public DbSet<MangaUser> Users => Set<MangaUser>();
     public DbSet<MangaEntry> MangaEntries => Set<MangaEntry>();
+    public DbSet<UserMangaEntry> UserMangaEntries => Set<UserMangaEntry>();
     public DbSet<MangaSeries> Series => Set<MangaSeries>();
     public DbSet<MangaChapter> Chapters => Set<MangaChapter>();
     public DbSet<ReadingProgress> ReadingProgress => Set<ReadingProgress>();
@@ -19,15 +20,23 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.ToTable("users");
             entity.HasIndex(x => x.Username).IsUnique();
             entity.Property(x => x.Username).HasMaxLength(80);
+            entity.Property(x => x.Role).HasMaxLength(40);
         });
 
         modelBuilder.Entity<MangaEntry>(entity =>
         {
             entity.ToTable("manga_entries");
-            entity.HasIndex(x => new { x.UserId, x.OpenLibraryKey });
+            entity.HasIndex(x => x.OpenLibraryKey);
             entity.Property(x => x.Title).HasMaxLength(255);
-            entity.Property(x => x.ReadingStatus).HasMaxLength(40);
             entity.Property(x => x.MangaDexId).HasMaxLength(80);
+        });
+
+        modelBuilder.Entity<UserMangaEntry>(entity =>
+        {
+            entity.ToTable("user_manga_entries");
+            entity.HasIndex(x => new { x.UserId, x.MangaEntryId }).IsUnique();
+            entity.Property(x => x.ReadingStatus).HasMaxLength(40);
+            entity.HasOne(x => x.MangaEntry).WithMany().HasForeignKey(x => x.MangaEntryId);
         });
 
         modelBuilder.Entity<MangaSeries>(entity =>
