@@ -40,9 +40,9 @@ Open:
 
 ## Cloudflared Deployment
 
-`deploy.cloudflare.yml` builds from a GitHub URL placeholder and exposes the Blazor web container through Cloudflared.
+`deploy.cloudflare.yml` builds from `https://github.com/GRPeres/MangaHUB.git#main` and exposes the Blazor web container through Cloudflared.
 
-Before deploying, replace `https://github.com/PLACEHOLDER_OWNER/MangaHUB.git#main` with the real repository URL and copy `deploy.env.example` to `.env`.
+Copy `deploy.env.example` to `.env` before deploying.
 
 ```bash
 docker compose -f deploy.cloudflare.yml --env-file .env up --build -d

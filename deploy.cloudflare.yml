@@ -11,7 +11,7 @@ services:
 
   mangahub-api:
     build:
-      context: https://github.com/PLACEHOLDER_OWNER/MangaHUB.git#main
+      context: https://github.com/GRPeres/MangaHUB.git#main
       dockerfile: src/MangaHub.Api/Dockerfile
     depends_on:
       - postgres
@@ -30,7 +30,7 @@ services:
 
   mangahub-workers:
     build:
-      context: https://github.com/PLACEHOLDER_OWNER/MangaHUB.git#main
+      context: https://github.com/GRPeres/MangaHUB.git#main
       dockerfile: src/MangaHub.Workers/Dockerfile
     depends_on:
       - postgres
@@ -46,7 +46,7 @@ services:
 
   mangahub-web:
     build:
-      context: https://github.com/PLACEHOLDER_OWNER/MangaHUB.git#main
+      context: https://github.com/GRPeres/MangaHUB.git#main
       dockerfile: src/MangaHub.Web/Dockerfile
     depends_on:
       - mangahub-api
@@ -67,4 +67,3 @@ services:
 
 volumes:
   postgres-data:
-
