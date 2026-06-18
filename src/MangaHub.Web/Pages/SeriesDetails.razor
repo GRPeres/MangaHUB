@@ -1,0 +1,42 @@
+@page "/series/{SeriesId:guid}"
+@inject MangaHub.Web.Services.MangaHubApiClient Api
+
+<PageTitle>Series</PageTitle>
+
+@if (series is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">@series.Source</p>
+            <h1>@series.Title</h1>
+        </div>
+    </div>
+
+    <section class="chapter-list">
+        @foreach (var chapter in chapters)
+        {
+            <a href="@($"/reader/{chapter.Id}/{chapter.PageCount}")">
+                <span>@chapter.ChapterNumber</span>
+                <strong>@chapter.Title</strong>
+                <small>@chapter.PageCount pages</small>
+            </a>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public Guid SeriesId { get; set; }
+    private SeriesResponse? series;
+    private List<ChapterResponse> chapters = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        series = await Api.GetSeriesAsync(SeriesId);
+        chapters = await Api.GetChaptersAsync(SeriesId);
+    }
+}
+

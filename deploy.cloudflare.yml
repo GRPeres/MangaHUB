@@ -1,0 +1,70 @@
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: mangahub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mangahub-change-me}
+      POSTGRES_USER: mangahub
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  mangahub-api:
+    build:
+      context: https://github.com/PLACEHOLDER_OWNER/MangaHUB.git#main
+      dockerfile: src/MangaHub.Api/Dockerfile
+    depends_on:
+      - postgres
+    environment:
+      ConnectionStrings__MangaHub: Host=postgres;Database=mangahub;Username=mangahub;Password=${POSTGRES_PASSWORD:-mangahub-change-me}
+      FrontendOrigin: ${FRONTEND_ORIGIN:-https://mangahub.example.com}
+      MangaHub__JwtSecret: ${JWT_SECRET:-replace-with-a-long-random-secret}
+      MangaHub__LibraryPath: /library
+      MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
+    expose:
+      - '8080'
+    image: mangahub-api:latest
+    restart: unless-stopped
+    volumes:
+      - ${HOST_LIBRARY_PATH:-/mnt/storage/manga}:/library:ro
+
+  mangahub-workers:
+    build:
+      context: https://github.com/PLACEHOLDER_OWNER/MangaHUB.git#main
+      dockerfile: src/MangaHub.Workers/Dockerfile
+    depends_on:
+      - postgres
+    environment:
+      ConnectionStrings__MangaHub: Host=postgres;Database=mangahub;Username=mangahub;Password=${POSTGRES_PASSWORD:-mangahub-change-me}
+      MangaHub__JwtSecret: ${JWT_SECRET:-replace-with-a-long-random-secret}
+      MangaHub__LibraryPath: /library
+      MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
+    image: mangahub-workers:latest
+    restart: unless-stopped
+    volumes:
+      - ${HOST_LIBRARY_PATH:-/mnt/storage/manga}:/library:ro
+
+  mangahub-web:
+    build:
+      context: https://github.com/PLACEHOLDER_OWNER/MangaHUB.git#main
+      dockerfile: src/MangaHub.Web/Dockerfile
+    depends_on:
+      - mangahub-api
+    expose:
+      - '80'
+    image: mangahub-web:latest
+    restart: unless-stopped
+
+  cloudflared:
+    command:
+      - tunnel
+      - '--url'
+      - http://mangahub-web:80
+    depends_on:
+      - mangahub-web
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+

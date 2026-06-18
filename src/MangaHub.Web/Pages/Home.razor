@@ -1,0 +1,49 @@
+@page "/"
+@inject MangaHub.Web.Services.MangaHubApiClient Api
+
+<PageTitle>MangaHub</PageTitle>
+
+<section class="hub-header">
+    <div>
+        <p class="eyebrow">Self-hosted reader</p>
+        <h1>MangaHub</h1>
+        <p>Browse local CBZ archives, search remote sources, and keep your reading progress tied to your account.</p>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Account</h2>
+    <div class="auth-grid">
+        <input @bind="username" placeholder="Username" />
+        <input @bind="password" placeholder="Password" type="password" />
+        <button @onclick="Register">Register</button>
+        <button @onclick="Login">Login</button>
+        <button @onclick="Logout">Logout</button>
+    </div>
+    <p class="status">@message</p>
+</section>
+
+@code {
+    private string username = "";
+    private string password = "";
+    private string message = "";
+
+    private async Task Register()
+    {
+        var user = await Api.RegisterAsync(username, password);
+        message = user is null ? "Registration failed." : $"Signed in as {user.Username}.";
+    }
+
+    private async Task Login()
+    {
+        var user = await Api.LoginAsync(username, password);
+        message = user is null ? "Login failed." : $"Signed in as {user.Username}.";
+    }
+
+    private async Task Logout()
+    {
+        await Api.LogoutAsync();
+        message = "Signed out.";
+    }
+}
+

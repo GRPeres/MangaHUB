@@ -1,0 +1,38 @@
+@page "/search"
+@inject MangaHub.Web.Services.MangaHubApiClient Api
+
+<PageTitle>Search</PageTitle>
+
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Unified sources</p>
+        <h1>Search</h1>
+    </div>
+</div>
+
+<section class="panel search-row">
+    <input @bind="query" @bind:event="oninput" placeholder="Search local library and MangaDex" />
+    <button @onclick="SearchNow">Search</button>
+</section>
+
+<section class="series-grid">
+    @foreach (var item in results)
+    {
+        <article class="series-card">
+            <span>@item.Source</span>
+            <strong>@item.Title</strong>
+            <small>@item.Status</small>
+        </article>
+    }
+</section>
+
+@code {
+    private string query = "";
+    private List<SearchResult> results = [];
+
+    private async Task SearchNow()
+    {
+        results = string.IsNullOrWhiteSpace(query) ? [] : await Api.SearchAsync(query);
+    }
+}
+
