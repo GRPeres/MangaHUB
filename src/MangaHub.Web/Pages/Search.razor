@@ -3,15 +3,13 @@
 @inject MangaHubApiClient Api
 @inject AuthState Auth
 
-<PageTitle>Register Manga</PageTitle>
+<PageTitle>Add Manga</PageTitle>
 
 <MudStack Spacing="4">
     <MudStack Spacing="1" Class="mh-page-title">
-        <MudText Typo="Typo.overline" Color="Color.Secondary">Catalog controlled</MudText>
-        <MudText Typo="Typo.h1">Register Manga</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">
-            Admins add manga to the shared catalog. Users add existing catalog manga to their own shelf.
-        </MudText>
+        <MudText Typo="Typo.overline" Color="Color.Secondary">Shelf control</MudText>
+        <MudText Typo="Typo.h1">Add Manga</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@PageHint</MudText>
     </MudStack>
 
     @if (currentUser is null)
@@ -20,44 +18,108 @@
     }
     else
     {
+        <MudTabs Rounded="true" Border="true" Elevation="0">
+            <MudTabPanel Text="Add to shelf" Icon="@Icons.Material.Filled.AutoStories">
+                @ShelfTab()
+            </MudTabPanel>
+
+            @if (IsAdmin)
+            {
+                <MudTabPanel Text="Catalog" Icon="@Icons.Material.Filled.LibraryAdd">
+                    @CatalogTab()
+                </MudTabPanel>
+            }
+        </MudTabs>
+    }
+</MudStack>
+
+@code {
+    private UserResponse? currentUser;
+    private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private string PageHint => IsAdmin
+        ? "Add existing catalog manga to your shelf, or switch to Catalog to register shared entries."
+        : "Search the shared catalog and add manga to your personal shelf.";
+
+    private string catalogQuery = "";
+    private string catalogMessage = "";
+    private Severity catalogSeverity = Severity.Info;
+    private List<CatalogMangaResponse> catalogResults = [];
+
+    private string readingStatus = "planned";
+    private string currentChapter = "";
+    private int? score;
+    private string category = "";
+    private string summary = "";
+    private string notes = "";
+    private bool createMissingCatalogEntries;
+    private string importMessage = "";
+    private Severity importSeverity = Severity.Info;
+
+    private string openLibraryQuery = "";
+    private string openLibraryMessage = "";
+    private Severity openLibrarySeverity = Severity.Info;
+    private bool isSearchingOpenLibrary;
+    private List<OpenLibraryResult> openLibraryResults = [];
+
+    private string mangaDexUrl = "";
+    private string localSeriesIdText = "";
+    private List<SeriesResponse> localSeries = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await Auth.GetCurrentUserAsync();
+        if (currentUser is null)
+        {
+            return;
+        }
+
+        catalogResults = await Api.GetCatalogAsync();
+        localSeries = IsAdmin ? await Api.GetSeriesAsync() : [];
+        createMissingCatalogEntries = IsAdmin;
+    }
+
+    private RenderFragment ShelfTab() => @<MudStack Spacing="4">
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudGrid Spacing="2">
                 <MudItem xs="12" md="9">
                     <MudTextField T="string" @bind-Value="catalogQuery" Label="Search catalog" Variant="Variant.Outlined" Immediate="true" />
                 </MudItem>
                 <MudItem xs="12" md="3" Class="d-flex align-center">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" FullWidth="true" OnClick="SearchCatalog">Search Catalog</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" FullWidth="true" OnClick="SearchCatalog">Search</MudButton>
                 </MudItem>
             </MudGrid>
         </MudPaper>
 
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudGrid Spacing="3">
-                <MudItem xs="12" md="4">
-                    <MudSelect T="string" @bind-Value="readingStatus" Label="Shelf status" Variant="Variant.Outlined">
-                        <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("paused")">Paused</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" md="2">
-                    <MudTextField T="string" @bind-Value="currentChapter" Label="Chapter" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" md="2">
-                    <MudNumericField T="int?" @bind-Value="score" Label="Score" Variant="Variant.Outlined" Min="1" Max="5" />
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudTextField T="string" @bind-Value="category" Label="Type / genre" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" md="8">
-                    <MudTextField T="string" @bind-Value="notes" Label="Shelf notes" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField T="string" @bind-Value="summary" Label="Summary" Variant="Variant.Outlined" Lines="3" />
-                </MudItem>
-            </MudGrid>
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h3">Shelf details</MudText>
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="4">
+                        <MudSelect T="string" @bind-Value="readingStatus" Label="Status" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("paused")">Paused</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudTextField T="string" @bind-Value="currentChapter" Label="Chapter" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudNumericField T="int?" @bind-Value="score" Label="Score" Variant="Variant.Outlined" Min="1" Max="5" />
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudTextField T="string" @bind-Value="category" Label="Type / genre" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="8">
+                        <MudTextField T="string" @bind-Value="notes" Label="Notes" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="summary" Label="Summary" Variant="Variant.Outlined" Lines="3" />
+                    </MudItem>
+                </MudGrid>
+            </MudStack>
         </MudPaper>
 
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
@@ -67,7 +129,10 @@
                         <MudText Typo="Typo.h3">Import shelf CSV</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Uses Status, Name + Link, Chapter, Tipo, Rating, and Summary columns.</MudText>
                     </MudStack>
-                    <MudSwitch T="bool" @bind-Value="createMissingCatalogEntries" Color="Color.Primary" Label="Create missing catalog entries" Disabled="@(!IsAdmin)" />
+                    @if (IsAdmin)
+                    {
+                        <MudSwitch T="bool" @bind-Value="createMissingCatalogEntries" Color="Color.Primary" Label="Create missing catalog entries" />
+                    }
                 </MudStack>
                 <InputFile OnChange="ImportShelfCsv" accept=".csv,text/csv" />
                 @if (!string.IsNullOrWhiteSpace(importMessage))
@@ -95,6 +160,10 @@
                             <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
                             <MudText Typo="Typo.h3">@item.Title</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                            @if (!string.IsNullOrWhiteSpace(item.Category))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mt-2">@item.Category</MudChip>
+                            }
                         </MudCardContent>
                         <MudCardActions>
                             <MudButton Variant="Variant.Filled"
@@ -109,118 +178,78 @@
                 </MudItem>
             }
         </MudGrid>
+    </MudStack>;
 
-        @if (IsAdmin)
-        {
-            <MudDivider />
-            <MudStack Spacing="1" Class="mh-page-title">
-                <MudText Typo="Typo.overline" Color="Color.Secondary">Admin</MudText>
-                <MudText Typo="Typo.h2">Add catalog manga from OpenLibrary</MudText>
-            </MudStack>
-
-            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+    private RenderFragment CatalogTab() => @<MudStack Spacing="4">
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h3">Create catalog entry</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Search OpenLibrary, attach MangaDex or local source details, then add it to the shared catalog.</MudText>
                 <MudGrid Spacing="2">
                     <MudItem xs="12" md="9">
                         <MudTextField T="string" @bind-Value="openLibraryQuery" Label="Search OpenLibrary" Variant="Variant.Outlined" Immediate="true" />
                     </MudItem>
                     <MudItem xs="12" md="3" Class="d-flex align-center">
                         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingOpenLibrary" OnClick="SearchOpenLibrary">
-                            @(isSearchingOpenLibrary ? "Searching..." : "Search OpenLibrary")
+                            @(isSearchingOpenLibrary ? "Searching..." : "Search")
                         </MudButton>
                     </MudItem>
                 </MudGrid>
-            </MudPaper>
+            </MudStack>
+        </MudPaper>
 
-            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-                <MudGrid Spacing="3">
-                    <MudItem xs="12" md="5">
-                        <MudTextField T="string" @bind-Value="mangaDexUrl" Label="MangaDex URL" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <MudSelect T="string" @bind-Value="localSeriesIdText" Label="Local scanned series" Variant="Variant.Outlined">
-                            <MudSelectItem T="string" Value="@("")">None</MudSelectItem>
-                            @foreach (var series in localSeries)
-                            {
-                                <MudSelectItem T="string" Value="@series.Id.ToString()">@series.Title</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                </MudGrid>
-            </MudPaper>
-
-            @if (!string.IsNullOrWhiteSpace(openLibraryMessage))
-            {
-                <MudAlert Severity="@openLibrarySeverity" Variant="Variant.Outlined">@openLibraryMessage</MudAlert>
-            }
-
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudGrid Spacing="3">
-                @foreach (var item in openLibraryResults)
-                {
-                    <MudItem xs="12" sm="6" md="4" lg="3">
-                        <MudCard Elevation="0" Outlined="true" Class="mh-card">
-                            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-                            {
-                                <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
-                            }
-                            <MudCardContent>
-                                <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
-                                <MudText Typo="Typo.h3">@item.Title</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
-                                @if (!string.IsNullOrWhiteSpace(item.Category))
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mt-2">@item.Category</MudChip>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(item.Description))
-                                {
-                                    <MudText Typo="Typo.body2" Class="mt-2">@item.Description</MudText>
-                                }
-                            </MudCardContent>
-                            <MudCardActions>
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" OnClick="() => CreateCatalogEntry(item)">Add to catalog</MudButton>
-                            </MudCardActions>
-                        </MudCard>
-                    </MudItem>
-                }
+                <MudItem xs="12" md="5">
+                    <MudTextField T="string" @bind-Value="mangaDexUrl" Label="MangaDex URL" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect T="string" @bind-Value="localSeriesIdText" Label="Local scanned series" Variant="Variant.Outlined">
+                        <MudSelectItem T="string" Value="@("")">None</MudSelectItem>
+                        @foreach (var series in localSeries)
+                        {
+                            <MudSelectItem T="string" Value="@series.Id.ToString()">@series.Title</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
             </MudGrid>
+        </MudPaper>
+
+        @if (!string.IsNullOrWhiteSpace(openLibraryMessage))
+        {
+            <MudAlert Severity="@openLibrarySeverity" Variant="Variant.Outlined">@openLibraryMessage</MudAlert>
         }
-    }
-</MudStack>
 
-@code {
-    private UserResponse? currentUser;
-    private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
-
-    private string catalogQuery = "";
-    private string catalogMessage = "";
-    private Severity catalogSeverity = Severity.Info;
-    private List<CatalogMangaResponse> catalogResults = [];
-
-    private string readingStatus = "planned";
-    private string currentChapter = "";
-    private int? score;
-    private string category = "";
-    private string summary = "";
-    private string notes = "";
-    private bool createMissingCatalogEntries = true;
-    private string importMessage = "";
-    private Severity importSeverity = Severity.Info;
-
-    private string openLibraryQuery = "";
-    private string openLibraryMessage = "";
-    private Severity openLibrarySeverity = Severity.Info;
-    private bool isSearchingOpenLibrary;
-    private List<OpenLibraryResult> openLibraryResults = [];
-
-    private string mangaDexUrl = "";
-    private string localSeriesIdText = "";
-    private List<SeriesResponse> localSeries = [];
-
-    protected override async Task OnInitializedAsync()
-    {
-        currentUser = await Auth.GetCurrentUserAsync();
-        catalogResults = await Api.GetCatalogAsync();
-        localSeries = IsAdmin ? await Api.GetSeriesAsync() : [];
-    }
+        <MudGrid Spacing="3">
+            @foreach (var item in openLibraryResults)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudCard Elevation="0" Outlined="true" Class="mh-card">
+                        @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
+                        {
+                            <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
+                        }
+                        <MudCardContent>
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
+                            <MudText Typo="Typo.h3">@item.Title</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                            @if (!string.IsNullOrWhiteSpace(item.Category))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mt-2">@item.Category</MudChip>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(item.Description))
+                            {
+                                <MudText Typo="Typo.body2" Class="mt-2">@item.Description</MudText>
+                            }
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" OnClick="() => CreateCatalogEntry(item)">Add to catalog</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudStack>;
 
     private async Task SearchCatalog()
     {
