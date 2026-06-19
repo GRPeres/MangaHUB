@@ -1,10 +1,13 @@
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
 
 namespace MangaHub.Web.Services;
 
 public sealed class MangaHubApiClient(HttpClient http)
 {
+    private string sessionToken = "";
+
     public async Task<UserResponse?> RegisterAsync(string username, string password) =>
         await SendAsync<AuthRequest, UserResponse>(HttpMethod.Post, "/auth/register", new(username, password));
 
@@ -67,9 +70,15 @@ public sealed class MangaHubApiClient(HttpClient http)
     public string GetPageUrl(Guid chapterId, int pageIndex) =>
         new Uri(http.BaseAddress!, $"/api/read/{chapterId}/pages/{pageIndex}").ToString();
 
+    public void SetSessionToken(string token)
+    {
+        sessionToken = token;
+    }
+
     private async Task<TResponse?> GetAsync<TResponse>(string url)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        AddAuthorization(request);
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
         using var response = await http.SendAsync(request);
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
@@ -78,14 +87,23 @@ public sealed class MangaHubApiClient(HttpClient http)
     private async Task<TResponse?> SendAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest payload)
     {
         using var request = new HttpRequestMessage(method, url) { Content = JsonContent.Create(payload) };
+        AddAuthorization(request);
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
         using var response = await http.SendAsync(request);
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
     }
+
+    private void AddAuthorization(HttpRequestMessage request)
+    {
+        if (!string.IsNullOrWhiteSpace(sessionToken))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+        }
+    }
 }
 
 public sealed record AuthRequest(string Username, string Password);
-public sealed record UserResponse(Guid Id, string Username, string Role);
+public sealed record UserResponse(Guid Id, string Username, string Role, string SessionToken);
 public sealed record UserAdminResponse(Guid Id, string Username, string Role, DateTimeOffset CreatedAt);
 public sealed record UpdateUserRoleRequest(string Role);
 public sealed record OpenLibraryResult(string Key, string Title, string Authors, string CoverUrl, int? FirstPublishYear, string Category, string Description);

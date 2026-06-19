@@ -1,7 +1,7 @@
 namespace MangaHub.Core.Dto;
 
 public sealed record AuthRequest(string Username, string Password);
-public sealed record UserResponse(Guid Id, string Username, string Role);
+public sealed record UserResponse(Guid Id, string Username, string Role, string SessionToken);
 public sealed record UserAdminResponse(Guid Id, string Username, string Role, DateTimeOffset CreatedAt);
 public sealed record UpdateUserRoleRequest(string Role);
 public sealed record SeriesResponse(Guid Id, string Title, string Description, string CoverUrl, string Status, string Source, string ExternalId);

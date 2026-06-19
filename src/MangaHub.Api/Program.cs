@@ -81,8 +81,9 @@ app.MapPost("/auth/register", async Task<Results<Created<UserResponse>, Conflict
     };
     db.Users.Add(user);
     await db.SaveChangesAsync(cancellationToken);
-    SetSessionCookie(response, tokens.CreateToken(user.Id, user.Username), options.Value);
-    return TypedResults.Created("/auth/me", new UserResponse(user.Id, user.Username, user.Role));
+    var token = tokens.CreateToken(user.Id, user.Username);
+    SetSessionCookie(response, token, options.Value);
+    return TypedResults.Created("/auth/me", new UserResponse(user.Id, user.Username, user.Role, token));
 });
 
 app.MapPost("/auth/login", async Task<Results<Ok<UserResponse>, UnauthorizedHttpResult>> (
@@ -101,8 +102,9 @@ app.MapPost("/auth/login", async Task<Results<Ok<UserResponse>, UnauthorizedHttp
         return TypedResults.Unauthorized();
     }
 
-    SetSessionCookie(response, tokens.CreateToken(user.Id, user.Username), options.Value);
-    return TypedResults.Ok(new UserResponse(user.Id, user.Username, user.Role));
+    var token = tokens.CreateToken(user.Id, user.Username);
+    SetSessionCookie(response, token, options.Value);
+    return TypedResults.Ok(new UserResponse(user.Id, user.Username, user.Role, token));
 }).RequireRateLimiting("login");
 
 app.MapPost("/auth/logout", (HttpResponse response, IOptions<MangaHubOptions> options) =>
@@ -119,7 +121,7 @@ app.MapGet("/auth/me", async Task<Results<Ok<UserResponse>, UnauthorizedHttpResu
     CancellationToken cancellationToken) =>
 {
     var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
-    return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(new UserResponse(user.Id, user.Username, user.Role));
+    return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(new UserResponse(user.Id, user.Username, user.Role, ""));
 });
 
 app.MapGet("/api/admin/users", async Task<Results<Ok<List<UserAdminResponse>>, UnauthorizedHttpResult, ForbidHttpResult>> (
@@ -825,6 +827,16 @@ static async Task<MangaUser?> GetCurrentUserAsync(
     ISessionTokenService tokens,
     CancellationToken cancellationToken)
 {
+    var bearerToken = ReadBearerToken(request);
+    if (!string.IsNullOrWhiteSpace(bearerToken))
+    {
+        var bearerUserId = tokens.ReadUserId(bearerToken);
+        if (bearerUserId is not null)
+        {
+            return await db.Users.FindAsync([bearerUserId.Value], cancellationToken);
+        }
+    }
+
     if (!request.Cookies.TryGetValue("mangahub_session", out var token))
     {
         return null;
@@ -832,6 +844,13 @@ static async Task<MangaUser?> GetCurrentUserAsync(
 
     var userId = tokens.ReadUserId(token);
     return userId is null ? null : await db.Users.FindAsync([userId.Value], cancellationToken);
+}
+
+static string ReadBearerToken(HttpRequest request)
+{
+    var header = request.Headers.Authorization.ToString();
+    const string prefix = "Bearer ";
+    return header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? header[prefix.Length..].Trim() : "";
 }
 
 static bool IsAdmin(MangaUser user) => string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase);
