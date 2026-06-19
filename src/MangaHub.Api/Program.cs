@@ -806,6 +806,7 @@ static CookieOptions BuildSessionCookieOptions(MangaHubOptions options) =>
     new()
     {
         HttpOnly = true,
+        Path = "/",
         SameSite = ParseSameSiteMode(options.SessionCookieSameSite),
         Secure = options.SessionCookieSecure
     };
