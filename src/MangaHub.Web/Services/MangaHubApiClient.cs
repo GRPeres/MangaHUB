@@ -80,10 +80,11 @@ public sealed class MangaHubApiClient(HttpClient http)
 
 public sealed record AuthRequest(string Username, string Password);
 public sealed record UserResponse(Guid Id, string Username, string Role);
-public sealed record OpenLibraryResult(string Key, string Title, string Authors, string CoverUrl, int? FirstPublishYear);
+public sealed record OpenLibraryResult(string Key, string Title, string Authors, string CoverUrl, int? FirstPublishYear, string Category, string Description);
 public sealed record MangaEntryRequest(
     string Title,
     string Authors,
+    string Category,
     string Description,
     string CoverUrl,
     string OpenLibraryKey,
@@ -96,6 +97,7 @@ public sealed record MangaEntryResponse(
     Guid Id,
     string Title,
     string Authors,
+    string CatalogCategory,
     string Description,
     string CoverUrl,
     string OpenLibraryKey,
@@ -113,6 +115,7 @@ public sealed record CatalogMangaResponse(
     Guid Id,
     string Title,
     string Authors,
+    string Category,
     string Description,
     string CoverUrl,
     string OpenLibraryKey,

@@ -131,7 +131,7 @@ app.MapGet("/api/openlibrary/search", async Task<Ok<List<OpenLibraryResult>>> (
 
     var results = await openLibrary.SearchAsync(q, cancellationToken);
     return TypedResults.Ok(results
-        .Select(x => new OpenLibraryResult(x.Key, x.Title, x.Authors, x.CoverUrl, x.FirstPublishYear))
+        .Select(x => new OpenLibraryResult(x.Key, x.Title, x.Authors, x.CoverUrl, x.FirstPublishYear, x.Category, x.Description))
         .ToList());
 });
 
@@ -163,6 +163,7 @@ app.MapGet("/api/manga", async Task<Results<Ok<List<MangaEntryResponse>>, Unauth
             x.MangaEntry!.Id,
             x.MangaEntry.Title,
             x.MangaEntry.Authors,
+            x.MangaEntry.Category,
             x.MangaEntry.Description,
             x.MangaEntry.CoverUrl,
             x.MangaEntry.OpenLibraryKey,
@@ -210,6 +211,7 @@ app.MapGet("/api/catalog", async Task<Results<Ok<List<CatalogMangaResponse>>, Un
             x.Id,
             x.Title,
             x.Authors,
+            x.Category,
             x.Description,
             x.CoverUrl,
             x.OpenLibraryKey,
@@ -227,6 +229,7 @@ app.MapPost("/api/catalog", async Task<Results<Created<CatalogMangaResponse>, Un
     MangaEntryRequest entry,
     HttpRequest request,
     MangaHubDbContext db,
+    IOpenLibraryClient openLibrary,
     ISessionTokenService tokens,
     CancellationToken cancellationToken) =>
 {
@@ -240,12 +243,17 @@ app.MapPost("/api/catalog", async Task<Results<Created<CatalogMangaResponse>, Un
         return TypedResults.Forbid();
     }
 
+    var details = string.IsNullOrWhiteSpace(entry.OpenLibraryKey)
+        ? null
+        : await openLibrary.GetWorkAsync(entry.OpenLibraryKey.Trim(), cancellationToken);
+
     var manga = new MangaEntry
     {
         CreatedByUserId = user.Id,
         Title = entry.Title.Trim(),
         Authors = entry.Authors.Trim(),
-        Description = entry.Description.Trim(),
+        Category = FirstNonEmpty(entry.Category, details?.Category),
+        Description = FirstNonEmpty(entry.Description, details?.Description),
         CoverUrl = entry.CoverUrl.Trim(),
         OpenLibraryKey = entry.OpenLibraryKey.Trim(),
         FirstPublishYear = entry.FirstPublishYear,
@@ -285,6 +293,7 @@ app.MapPut("/api/catalog/{entryId:guid}", async Task<Results<Ok<CatalogMangaResp
 
     manga.Title = entry.Title.Trim();
     manga.Authors = entry.Authors.Trim();
+    manga.Category = entry.Category.Trim();
     manga.Description = entry.Description.Trim();
     manga.CoverUrl = entry.CoverUrl.Trim();
     manga.OpenLibraryKey = entry.OpenLibraryKey.Trim();
@@ -326,13 +335,13 @@ app.MapPost("/api/shelf", async Task<Results<Created<MangaEntryResponse>, Ok<Man
             UserId = user.Id,
             MangaEntryId = manga.Id
         };
-        ApplyShelfRequest(shelf, shelfRequest);
+        ApplyShelfRequest(shelf, shelfRequest, manga);
         db.UserMangaEntries.Add(shelf);
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Created($"/api/manga/{manga.Id}", ToMangaEntryResponse(manga, shelf));
     }
 
-    ApplyShelfRequest(shelf, shelfRequest);
+    ApplyShelfRequest(shelf, shelfRequest, manga);
     shelf.UpdatedAt = DateTimeOffset.UtcNow;
     await db.SaveChangesAsync(cancellationToken);
     return TypedResults.Ok(ToMangaEntryResponse(manga, shelf));
@@ -418,6 +427,8 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
             {
                 CreatedByUserId = user.Id,
                 Title = string.IsNullOrWhiteSpace(title) ? link : title,
+                Category = FirstValue(values, "tipo", "type", "category", "genre").Trim(),
+                Description = FirstValue(values, "summary", "description").Trim(),
                 MangaDexUrl = link.Trim(),
                 MangaDexId = mangaDexId
             };
@@ -746,6 +757,7 @@ static MangaEntryResponse ToMangaEntryResponse(MangaEntry entry, UserMangaEntry 
         entry.Id,
         entry.Title,
         entry.Authors,
+        entry.Category,
         entry.Description,
         entry.CoverUrl,
         entry.OpenLibraryKey,
@@ -765,6 +777,7 @@ static CatalogMangaResponse ToCatalogMangaResponse(MangaEntry entry, bool isInMy
         entry.Id,
         entry.Title,
         entry.Authors,
+        entry.Category,
         entry.Description,
         entry.CoverUrl,
         entry.OpenLibraryKey,
@@ -789,13 +802,13 @@ static string NormalizeShelfStatus(string status)
     };
 }
 
-static void ApplyShelfRequest(UserMangaEntry shelf, AddToShelfRequest request)
+static void ApplyShelfRequest(UserMangaEntry shelf, AddToShelfRequest request, MangaEntry? catalogEntry = null)
 {
     shelf.ReadingStatus = NormalizeShelfStatus(request.ReadingStatus);
     shelf.CurrentChapter = request.CurrentChapter.Trim();
     shelf.Score = NormalizeScore(request.Score);
-    shelf.Category = request.Category.Trim();
-    shelf.Summary = request.Summary.Trim();
+    shelf.Category = FirstNonEmpty(request.Category, catalogEntry?.Category);
+    shelf.Summary = FirstNonEmpty(request.Summary, catalogEntry?.Description);
     shelf.Notes = request.Notes.Trim();
 }
 
@@ -816,6 +829,9 @@ static int? ParseScore(string score)
 
     return Math.Clamp((int)Math.Round(parsed, MidpointRounding.AwayFromZero), 1, 5);
 }
+
+static string FirstNonEmpty(params string?[] values) =>
+    values.Select(x => x?.Trim() ?? "").FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? "";
 
 static string ExtractMangaDexId(string urlOrId)
 {
@@ -969,6 +985,7 @@ static async Task EnsureMangaEntryTableAsync(MangaHubDbContext db)
             "Id" uuid PRIMARY KEY,
             "Title" character varying(255) NOT NULL,
             "Authors" text NOT NULL,
+            "Category" character varying(120) NOT NULL DEFAULT '',
             "Description" text NOT NULL,
             "CoverUrl" text NOT NULL,
             "OpenLibraryKey" text NOT NULL,
@@ -981,6 +998,7 @@ static async Task EnsureMangaEntryTableAsync(MangaHubDbContext db)
         );
 
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CreatedByUserId" uuid NULL;
+        ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "Category" character varying(120) NOT NULL DEFAULT '';
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "UserId" uuid NULL;
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReadingStatus" character varying(40) NULL;
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "Notes" text NULL;

@@ -28,6 +28,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.ToTable("manga_entries");
             entity.HasIndex(x => x.OpenLibraryKey);
             entity.Property(x => x.Title).HasMaxLength(255);
+            entity.Property(x => x.Category).HasMaxLength(120);
             entity.Property(x => x.MangaDexId).HasMaxLength(80);
         });
 

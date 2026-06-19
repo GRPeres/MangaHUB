@@ -6,10 +6,11 @@ public sealed record SeriesResponse(Guid Id, string Title, string Description, s
 public sealed record ChapterResponse(Guid Id, Guid SeriesId, string ChapterNumber, string Title, int PageCount);
 public sealed record ProgressRequest(Guid SeriesId, Guid ChapterId, int Page);
 public sealed record ProgressResponse(Guid SeriesId, Guid ChapterId, int Page);
-public sealed record OpenLibraryResult(string Key, string Title, string Authors, string CoverUrl, int? FirstPublishYear);
+public sealed record OpenLibraryResult(string Key, string Title, string Authors, string CoverUrl, int? FirstPublishYear, string Category, string Description);
 public sealed record MangaEntryRequest(
     string Title,
     string Authors,
+    string Category,
     string Description,
     string CoverUrl,
     string OpenLibraryKey,
@@ -22,6 +23,7 @@ public sealed record MangaEntryResponse(
     Guid Id,
     string Title,
     string Authors,
+    string CatalogCategory,
     string Description,
     string CoverUrl,
     string OpenLibraryKey,
@@ -39,6 +41,7 @@ public sealed record CatalogMangaResponse(
     Guid Id,
     string Title,
     string Authors,
+    string Category,
     string Description,
     string CoverUrl,
     string OpenLibraryKey,

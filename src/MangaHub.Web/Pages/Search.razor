@@ -165,6 +165,14 @@
                                 <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
                                 <MudText Typo="Typo.h3">@item.Title</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                                @if (!string.IsNullOrWhiteSpace(item.Category))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mt-2">@item.Category</MudChip>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(item.Description))
+                                {
+                                    <MudText Typo="Typo.body2" Class="mt-2">@item.Description</MudText>
+                                }
                             </MudCardContent>
                             <MudCardActions>
                                 <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" OnClick="() => CreateCatalogEntry(item)">Add to catalog</MudButton>
@@ -297,7 +305,8 @@
         var request = new MangaEntryRequest(
             item.Title,
             item.Authors,
-            "",
+            item.Category,
+            item.Description,
             item.CoverUrl,
             item.Key,
             item.FirstPublishYear,

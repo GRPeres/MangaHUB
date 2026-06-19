@@ -6,6 +6,7 @@ public sealed class MangaEntry
     public Guid? CreatedByUserId { get; set; }
     public required string Title { get; set; }
     public string Authors { get; set; } = "";
+    public string Category { get; set; } = "";
     public string Description { get; set; } = "";
     public string CoverUrl { get; set; } = "";
     public string OpenLibraryKey { get; set; } = "";
