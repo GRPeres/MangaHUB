@@ -29,6 +29,10 @@ services:
       - ${HOST_LIBRARY_PATH:-./library}:/library:ro
     ports:
       - "8000:8080"
+    networks:
+      default:
+        aliases:
+          - mangahub-api
     depends_on:
       postgres:
         condition: service_healthy

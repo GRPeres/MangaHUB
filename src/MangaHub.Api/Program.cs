@@ -53,7 +53,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 app.UseRateLimiter();
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
