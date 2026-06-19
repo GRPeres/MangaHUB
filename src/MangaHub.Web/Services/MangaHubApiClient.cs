@@ -40,6 +40,9 @@ public sealed class MangaHubApiClient(HttpClient http)
     public async Task<MangaEntryResponse?> AddToShelfAsync(AddToShelfRequest request) =>
         await SendAsync<AddToShelfRequest, MangaEntryResponse>(HttpMethod.Post, "/api/shelf", request);
 
+    public async Task<ShelfImportResponse?> ImportShelfAsync(ShelfImportRequest request) =>
+        await SendAsync<ShelfImportRequest, ShelfImportResponse>(HttpMethod.Post, "/api/shelf/import", request);
+
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
         await GetAsync<ReadOptions>($"/api/manga/{entryId}/read-options");
 
@@ -101,6 +104,10 @@ public sealed record MangaEntryResponse(
     string MangaDexUrl,
     string MangaDexId,
     Guid? LocalSeriesId,
+    string CurrentChapter,
+    int? Score,
+    string Category,
+    string Summary,
     string Notes);
 public sealed record CatalogMangaResponse(
     Guid Id,
@@ -114,7 +121,16 @@ public sealed record CatalogMangaResponse(
     string MangaDexId,
     Guid? LocalSeriesId,
     bool IsInMyShelf);
-public sealed record AddToShelfRequest(Guid MangaEntryId, string ReadingStatus, string Notes);
+public sealed record AddToShelfRequest(
+    Guid MangaEntryId,
+    string ReadingStatus,
+    string CurrentChapter,
+    int? Score,
+    string Category,
+    string Summary,
+    string Notes);
+public sealed record ShelfImportRequest(string CsvText, bool CreateMissingCatalogEntries);
+public sealed record ShelfImportResponse(int Imported, int CreatedCatalogEntries, int UpdatedShelfEntries, int Skipped, List<string> Messages);
 public sealed record ReadOptions(
     Guid Id,
     string Title,

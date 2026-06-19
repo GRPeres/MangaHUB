@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Globalization;
+using System.Text;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -169,6 +171,10 @@ app.MapGet("/api/manga", async Task<Results<Ok<List<MangaEntryResponse>>, Unauth
             x.MangaEntry.MangaDexUrl,
             x.MangaEntry.MangaDexId,
             x.MangaEntry.LocalSeriesId,
+            x.CurrentChapter,
+            x.Score,
+            x.Category,
+            x.Summary,
             x.Notes))
         .ToListAsync(cancellationToken);
 
@@ -318,20 +324,145 @@ app.MapPost("/api/shelf", async Task<Results<Created<MangaEntryResponse>, Ok<Man
         shelf = new UserMangaEntry
         {
             UserId = user.Id,
-            MangaEntryId = manga.Id,
-            ReadingStatus = NormalizeShelfStatus(shelfRequest.ReadingStatus),
-            Notes = shelfRequest.Notes.Trim()
+            MangaEntryId = manga.Id
         };
+        ApplyShelfRequest(shelf, shelfRequest);
         db.UserMangaEntries.Add(shelf);
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Created($"/api/manga/{manga.Id}", ToMangaEntryResponse(manga, shelf));
     }
 
-    shelf.ReadingStatus = NormalizeShelfStatus(shelfRequest.ReadingStatus);
-    shelf.Notes = shelfRequest.Notes.Trim();
+    ApplyShelfRequest(shelf, shelfRequest);
     shelf.UpdatedAt = DateTimeOffset.UtcNow;
     await db.SaveChangesAsync(cancellationToken);
     return TypedResults.Ok(ToMangaEntryResponse(manga, shelf));
+});
+
+app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, UnauthorizedHttpResult, BadRequest<string>>> (
+    ShelfImportRequest import,
+    HttpRequest request,
+    MangaHubDbContext db,
+    ISessionTokenService tokens,
+    CancellationToken cancellationToken) =>
+{
+    var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
+    if (user is null)
+    {
+        return TypedResults.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(import.CsvText))
+    {
+        return TypedResults.BadRequest("CSV text is required.");
+    }
+
+    var rows = ParseCsv(import.CsvText);
+    if (rows.Count == 0)
+    {
+        return TypedResults.BadRequest("CSV has no data rows.");
+    }
+
+    var headers = rows[0].Select(NormalizeHeader).ToList();
+    var messages = new List<string>();
+    var imported = 0;
+    var createdCatalog = 0;
+    var updatedShelf = 0;
+    var skipped = 0;
+    var canCreateCatalog = IsAdmin(user) && import.CreateMissingCatalogEntries;
+
+    foreach (var row in rows.Skip(1))
+    {
+        var values = RowToDictionary(headers, row);
+        var title = FirstValue(values, "name+link", "name", "title", "manga", "series");
+        var link = FirstValue(values, "link", "url", "mangadexurl", "mangadex", "sourceurl");
+        if (Uri.TryCreate(title, UriKind.Absolute, out _))
+        {
+            link = title;
+            title = FirstValue(values, "title", "name", "manga", "series");
+        }
+
+        title = CleanTitle(title);
+        if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(link))
+        {
+            skipped++;
+            continue;
+        }
+
+        var mangaDexId = ExtractMangaDexId(link);
+        MangaEntry? manga = null;
+        if (!string.IsNullOrWhiteSpace(mangaDexId))
+        {
+            manga = await db.MangaEntries.FirstOrDefaultAsync(x => x.MangaDexId == mangaDexId, cancellationToken);
+        }
+
+        if (manga is null && !string.IsNullOrWhiteSpace(link))
+        {
+            manga = await db.MangaEntries.FirstOrDefaultAsync(x => x.MangaDexUrl == link, cancellationToken);
+        }
+
+        if (manga is null && !string.IsNullOrWhiteSpace(title))
+        {
+            manga = await db.MangaEntries.FirstOrDefaultAsync(x => EF.Functions.ILike(x.Title, title), cancellationToken);
+        }
+
+        if (manga is null)
+        {
+            if (!canCreateCatalog)
+            {
+                skipped++;
+                messages.Add($"Skipped '{title}': not found in catalog.");
+                continue;
+            }
+
+            manga = new MangaEntry
+            {
+                CreatedByUserId = user.Id,
+                Title = string.IsNullOrWhiteSpace(title) ? link : title,
+                MangaDexUrl = link.Trim(),
+                MangaDexId = mangaDexId
+            };
+            db.MangaEntries.Add(manga);
+            createdCatalog++;
+        }
+        else if (!string.IsNullOrWhiteSpace(link) && string.IsNullOrWhiteSpace(manga.MangaDexUrl))
+        {
+            manga.MangaDexUrl = link.Trim();
+            manga.MangaDexId = mangaDexId;
+            manga.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        var shelf = await db.UserMangaEntries.FirstOrDefaultAsync(x => x.UserId == user.Id && x.MangaEntryId == manga.Id, cancellationToken);
+        if (shelf is null)
+        {
+            shelf = new UserMangaEntry
+            {
+                UserId = user.Id,
+                MangaEntryId = manga.Id
+            };
+            db.UserMangaEntries.Add(shelf);
+        }
+        else
+        {
+            updatedShelf++;
+        }
+
+        shelf.ReadingStatus = NormalizeShelfStatus(FirstValue(values, "status", "readingstatus"));
+        shelf.CurrentChapter = FirstValue(values, "chapter", "currentchapter", "chapters").Trim();
+        shelf.Score = ParseScore(FirstValue(values, "rating", "score"));
+        shelf.Category = FirstValue(values, "tipo", "type", "category", "genre").Trim();
+        shelf.Summary = FirstValue(values, "summary", "description").Trim();
+        shelf.Notes = FirstValue(values, "notes", "note").Trim();
+        shelf.UpdatedAt = DateTimeOffset.UtcNow;
+        imported++;
+    }
+
+    await db.SaveChangesAsync(cancellationToken);
+    if (!canCreateCatalog && import.CreateMissingCatalogEntries)
+    {
+        messages.Add("Missing catalog entries were not created because only admins can create catalog manga.");
+    }
+
+    return TypedResults.Ok(new ShelfImportResponse(imported, createdCatalog, updatedShelf, skipped, messages.Take(20).ToList()));
 });
 
 app.MapGet("/api/manga/{entryId:guid}/read-options", async Task<Results<Ok<object>, NotFound, UnauthorizedHttpResult>> (
@@ -623,6 +754,10 @@ static MangaEntryResponse ToMangaEntryResponse(MangaEntry entry, UserMangaEntry 
         entry.MangaDexUrl,
         entry.MangaDexId,
         entry.LocalSeriesId,
+        shelf.CurrentChapter,
+        shelf.Score,
+        shelf.Category,
+        shelf.Summary,
         shelf.Notes);
 
 static CatalogMangaResponse ToCatalogMangaResponse(MangaEntry entry, bool isInMyShelf) =>
@@ -642,7 +777,44 @@ static CatalogMangaResponse ToCatalogMangaResponse(MangaEntry entry, bool isInMy
 static string NormalizeShelfStatus(string status)
 {
     var normalized = status.Trim().ToLowerInvariant();
-    return normalized is "reading" or "done" or "planned" or "dropped" ? normalized : "planned";
+    return normalized switch
+    {
+        "finished" or "complete" or "completed" => "done",
+        "ongoing" or "current" or "reading" => "reading",
+        "hiatus" or "paused" => "paused",
+        "to read" or "plan to read" or "planned" => "planned",
+        "dropped" => "dropped",
+        "done" => "done",
+        _ => "planned"
+    };
+}
+
+static void ApplyShelfRequest(UserMangaEntry shelf, AddToShelfRequest request)
+{
+    shelf.ReadingStatus = NormalizeShelfStatus(request.ReadingStatus);
+    shelf.CurrentChapter = request.CurrentChapter.Trim();
+    shelf.Score = NormalizeScore(request.Score);
+    shelf.Category = request.Category.Trim();
+    shelf.Summary = request.Summary.Trim();
+    shelf.Notes = request.Notes.Trim();
+}
+
+static int? NormalizeScore(int? score) => score is null or <= 0 ? null : Math.Clamp(score.Value, 1, 5);
+
+static int? ParseScore(string score)
+{
+    if (string.IsNullOrWhiteSpace(score))
+    {
+        return null;
+    }
+
+    var normalized = score.Trim().Replace(',', '.');
+    if (!decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) || parsed <= 0)
+    {
+        return null;
+    }
+
+    return Math.Clamp((int)Math.Round(parsed, MidpointRounding.AwayFromZero), 1, 5);
 }
 
 static string ExtractMangaDexId(string urlOrId)
@@ -663,6 +835,119 @@ static string ExtractMangaDexId(string urlOrId)
     var afterTitle = value[(index + marker.Length)..];
     var segment = afterTitle.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
     return Guid.TryParse(segment, out var parsed) ? parsed.ToString() : "";
+}
+
+static string NormalizeHeader(string header)
+{
+    var builder = new StringBuilder();
+    foreach (var ch in header.Trim().ToLowerInvariant())
+    {
+        if (char.IsLetterOrDigit(ch) || ch == '+')
+        {
+            builder.Append(ch);
+        }
+    }
+
+    return builder.ToString();
+}
+
+static Dictionary<string, string> RowToDictionary(List<string> headers, List<string> row)
+{
+    var values = new Dictionary<string, string>();
+    for (var i = 0; i < headers.Count; i++)
+    {
+        values[headers[i]] = i < row.Count ? row[i] : "";
+    }
+
+    return values;
+}
+
+static string FirstValue(Dictionary<string, string> values, params string[] keys)
+{
+    foreach (var key in keys)
+    {
+        if (values.TryGetValue(NormalizeHeader(key), out var value) && !string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+    }
+
+    return "";
+}
+
+static string CleanTitle(string title)
+{
+    var cleaned = title.Trim();
+    if (cleaned.Length > 3 && cleaned.Length % 2 == 0)
+    {
+        var half = cleaned.Length / 2;
+        if (string.Equals(cleaned[..half], cleaned[half..], StringComparison.OrdinalIgnoreCase))
+        {
+            cleaned = cleaned[..half].Trim();
+        }
+    }
+
+    return cleaned;
+}
+
+static List<List<string>> ParseCsv(string csv)
+{
+    var rows = new List<List<string>>();
+    var row = new List<string>();
+    var field = new StringBuilder();
+    var inQuotes = false;
+
+    for (var i = 0; i < csv.Length; i++)
+    {
+        var ch = csv[i];
+        if (ch == '"')
+        {
+            if (inQuotes && i + 1 < csv.Length && csv[i + 1] == '"')
+            {
+                field.Append('"');
+                i++;
+            }
+            else
+            {
+                inQuotes = !inQuotes;
+            }
+            continue;
+        }
+
+        if (ch == ',' && !inQuotes)
+        {
+            row.Add(field.ToString());
+            field.Clear();
+            continue;
+        }
+
+        if ((ch == '\n' || ch == '\r') && !inQuotes)
+        {
+            if (ch == '\r' && i + 1 < csv.Length && csv[i + 1] == '\n')
+            {
+                i++;
+            }
+
+            row.Add(field.ToString());
+            field.Clear();
+            if (row.Any(x => !string.IsNullOrWhiteSpace(x)))
+            {
+                rows.Add(row);
+            }
+            row = [];
+            continue;
+        }
+
+        field.Append(ch);
+    }
+
+    row.Add(field.ToString());
+    if (row.Any(x => !string.IsNullOrWhiteSpace(x)))
+    {
+        rows.Add(row);
+    }
+
+    return rows;
 }
 
 static async Task EnsureMangaEntryTableAsync(MangaHubDbContext db)
@@ -705,10 +990,19 @@ static async Task EnsureMangaEntryTableAsync(MangaHubDbContext db)
             "UserId" uuid NOT NULL,
             "MangaEntryId" uuid NOT NULL,
             "ReadingStatus" character varying(40) NOT NULL,
+            "CurrentChapter" character varying(40) NOT NULL DEFAULT '',
+            "Score" integer NULL,
+            "Category" character varying(120) NOT NULL DEFAULT '',
+            "Summary" text NOT NULL DEFAULT '',
             "Notes" text NOT NULL,
             "CreatedAt" timestamp with time zone NOT NULL,
             "UpdatedAt" timestamp with time zone NOT NULL
         );
+
+        ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "CurrentChapter" character varying(40) NOT NULL DEFAULT '';
+        ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Score" integer NULL;
+        ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Category" character varying(120) NOT NULL DEFAULT '';
+        ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Summary" text NOT NULL DEFAULT '';
 
         INSERT INTO user_manga_entries ("Id", "UserId", "MangaEntryId", "ReadingStatus", "Notes", "CreatedAt", "UpdatedAt")
         SELECT gen_random_uuid(),

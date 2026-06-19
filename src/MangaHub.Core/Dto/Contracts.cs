@@ -30,6 +30,10 @@ public sealed record MangaEntryResponse(
     string MangaDexUrl,
     string MangaDexId,
     Guid? LocalSeriesId,
+    string CurrentChapter,
+    int? Score,
+    string Category,
+    string Summary,
     string Notes);
 public sealed record CatalogMangaResponse(
     Guid Id,
@@ -43,4 +47,13 @@ public sealed record CatalogMangaResponse(
     string MangaDexId,
     Guid? LocalSeriesId,
     bool IsInMyShelf);
-public sealed record AddToShelfRequest(Guid MangaEntryId, string ReadingStatus, string Notes);
+public sealed record AddToShelfRequest(
+    Guid MangaEntryId,
+    string ReadingStatus,
+    string CurrentChapter,
+    int? Score,
+    string Category,
+    string Summary,
+    string Notes);
+public sealed record ShelfImportRequest(string CsvText, bool CreateMissingCatalogEntries);
+public sealed record ShelfImportResponse(int Imported, int CreatedCatalogEntries, int UpdatedShelfEntries, int Skipped, List<string> Messages);
