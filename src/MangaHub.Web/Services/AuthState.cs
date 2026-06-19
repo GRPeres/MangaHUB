@@ -1,10 +1,7 @@
 namespace MangaHub.Web.Services;
 
-using Microsoft.JSInterop;
-
-public sealed class AuthState(MangaHubApiClient api, IJSRuntime js)
+public sealed class AuthState(MangaHubApiClient api, SessionTokenStore tokens)
 {
-    private const string StorageKey = "mangahub_session";
     private UserResponse? currentUser;
     private bool loaded;
 
@@ -17,8 +14,6 @@ public sealed class AuthState(MangaHubApiClient api, IJSRuntime js)
     {
         if (!loaded || forceRefresh)
         {
-            var token = await ReadStoredTokenAsync();
-            api.SetSessionToken(token);
             currentUser = await api.MeAsync();
             loaded = true;
             Changed?.Invoke();
@@ -30,7 +25,7 @@ public sealed class AuthState(MangaHubApiClient api, IJSRuntime js)
     public async Task<UserResponse?> LoginAsync(string username, string password)
     {
         currentUser = await api.LoginAsync(username, password);
-        await StoreTokenAsync(currentUser?.SessionToken ?? "");
+        await tokens.SetAsync(currentUser?.SessionToken ?? "");
         loaded = true;
         Changed?.Invoke();
         return currentUser;
@@ -39,7 +34,7 @@ public sealed class AuthState(MangaHubApiClient api, IJSRuntime js)
     public async Task<UserResponse?> RegisterAsync(string username, string password)
     {
         currentUser = await api.RegisterAsync(username, password);
-        await StoreTokenAsync(currentUser?.SessionToken ?? "");
+        await tokens.SetAsync(currentUser?.SessionToken ?? "");
         loaded = true;
         Changed?.Invoke();
         return currentUser;
@@ -48,42 +43,9 @@ public sealed class AuthState(MangaHubApiClient api, IJSRuntime js)
     public async Task LogoutAsync()
     {
         await api.LogoutAsync();
-        await StoreTokenAsync("");
+        await tokens.SetAsync("");
         currentUser = null;
         loaded = true;
         Changed?.Invoke();
-    }
-
-    private async Task<string> ReadStoredTokenAsync()
-    {
-        try
-        {
-            return await js.InvokeAsync<string>("localStorage.getItem", StorageKey) ?? "";
-        }
-        catch
-        {
-            return "";
-        }
-    }
-
-    private async Task StoreTokenAsync(string token)
-    {
-        api.SetSessionToken(token);
-        try
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                await js.InvokeVoidAsync("localStorage.removeItem", StorageKey);
-                await js.InvokeVoidAsync("sessionStorage.removeItem", StorageKey);
-            }
-            else
-            {
-                await js.InvokeVoidAsync("localStorage.setItem", StorageKey, token);
-                await js.InvokeVoidAsync("sessionStorage.setItem", StorageKey, token);
-            }
-        }
-        catch
-        {
-        }
     }
 }

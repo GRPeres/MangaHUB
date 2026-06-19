@@ -12,6 +12,7 @@ a {
 .mh-appbar {
     border-bottom: 1px solid var(--mud-palette-divider);
     backdrop-filter: blur(16px);
+    padding-left: 72px;
 }
 
 .mh-brand {
@@ -22,6 +23,7 @@ a {
 .mh-drawer {
     border-right: 1px solid var(--mud-palette-divider);
     transition: width .18s ease;
+    z-index: 1301;
 }
 
 .mh-drawer-compact {
@@ -33,7 +35,9 @@ a {
 }
 
 .mh-rail {
+    align-items: stretch;
     height: 100%;
+    justify-content: flex-start;
     padding: .75rem;
 }
 

@@ -15,6 +15,7 @@ var apiUrl = string.IsNullOrWhiteSpace(configuredApiUrl)
         : configuredApiUrl;
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) });
+builder.Services.AddScoped<SessionTokenStore>();
 builder.Services.AddScoped<MangaHubApiClient>();
 builder.Services.AddScoped<AuthState>();
 builder.Services.AddMudServices();

@@ -1,15 +1,11 @@
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
-using Microsoft.JSInterop;
 
 namespace MangaHub.Web.Services;
 
-public sealed class MangaHubApiClient(HttpClient http, IJSRuntime js)
+public sealed class MangaHubApiClient(HttpClient http, SessionTokenStore tokens)
 {
-    private const string StorageKey = "mangahub_session";
-    private string sessionToken = "";
-
     public async Task<UserResponse?> RegisterAsync(string username, string password) =>
         await SendAsync<AuthRequest, UserResponse>(HttpMethod.Post, "/auth/register", new(username, password));
 
@@ -72,11 +68,6 @@ public sealed class MangaHubApiClient(HttpClient http, IJSRuntime js)
     public string GetPageUrl(Guid chapterId, int pageIndex) =>
         new Uri(http.BaseAddress!, $"/api/read/{chapterId}/pages/{pageIndex}").ToString();
 
-    public void SetSessionToken(string token)
-    {
-        sessionToken = token;
-    }
-
     private async Task<TResponse?> GetAsync<TResponse>(string url)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -97,32 +88,10 @@ public sealed class MangaHubApiClient(HttpClient http, IJSRuntime js)
 
     private async Task AddAuthorizationAsync(HttpRequestMessage request)
     {
-        if (string.IsNullOrWhiteSpace(sessionToken))
-        {
-            sessionToken = await ReadStoredTokenAsync();
-        }
-
+        var sessionToken = await tokens.GetAsync();
         if (!string.IsNullOrWhiteSpace(sessionToken))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
-        }
-    }
-
-    private async Task<string> ReadStoredTokenAsync()
-    {
-        try
-        {
-            var token = await js.InvokeAsync<string>("localStorage.getItem", StorageKey);
-            if (!string.IsNullOrWhiteSpace(token))
-            {
-                return token;
-            }
-
-            return await js.InvokeAsync<string>("sessionStorage.getItem", StorageKey) ?? "";
-        }
-        catch
-        {
-            return "";
         }
     }
 }
