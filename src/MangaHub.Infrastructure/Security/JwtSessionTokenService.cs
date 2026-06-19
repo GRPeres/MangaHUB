@@ -32,6 +32,9 @@ public sealed class JwtSessionTokenService(IOptions<MangaHubOptions> options) : 
 
         try
         {
+            Console.WriteLine($"Token received length: {token.Length}");
+            Console.WriteLine($"JWT secret length: {options.Value.JwtSecret.Length}");
+
             var principal = handler.ValidateToken(token, new TokenValidationParameters
             {
                 ValidateIssuer = false,
@@ -40,13 +43,31 @@ public sealed class JwtSessionTokenService(IOptions<MangaHubOptions> options) : 
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
                 ClockSkew = TimeSpan.FromMinutes(1)
-            }, out _);
+            }, out var validatedToken);
 
-            var sub = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-            return Guid.TryParse(sub, out var userId) ? userId : null;
+            Console.WriteLine($"Validated token type: {validatedToken.GetType().Name}");
+
+            foreach (var claim in principal.Claims)
+            {
+                Console.WriteLine($"Claim: {claim.Type} = {claim.Value}");
+            }
+
+            var sub =
+                principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? principal.FindFirst("sub")?.Value;
+
+            Console.WriteLine($"Resolved sub: {sub}");
+
+            var parsed = Guid.TryParse(sub, out var userId);
+            Console.WriteLine($"Guid parsed: {parsed}, userId: {userId}");
+
+            return parsed ? userId : null;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"ReadUserId failed: {ex.GetType().Name}");
+            Console.WriteLine(ex.Message);
             return null;
         }
     }

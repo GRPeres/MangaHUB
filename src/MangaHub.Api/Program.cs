@@ -123,8 +123,19 @@ app.MapGet("/auth/me", async Task<Results<Ok<UserResponse>, UnauthorizedHttpResu
     ISessionTokenService tokens,
     CancellationToken cancellationToken) =>
 {
-    var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
-    return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(new UserResponse(user.Id, user.Username, user.Role, ""));
+    var user = await GetCurrentUserAsync(
+        request,
+        db,
+        tokens,
+        cancellationToken);
+
+    return user is null
+        ? TypedResults.Unauthorized()
+        : TypedResults.Ok(new UserResponse(
+            user.Id,
+            user.Username,
+            user.Role,
+            ""));
 });
 
 app.MapGet("/api/admin/users", async Task<Results<Ok<List<UserAdminResponse>>, UnauthorizedHttpResult, ForbidHttpResult>> (

@@ -75,16 +75,19 @@
     }
 </MudStack>
 
-@code {
+    @code {
+
     private UserResponse? currentUser;
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private List<UserAdminResponse> users = [];
     private string message = "";
     private Severity messageSeverity = Severity.Info;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
         await RefreshAccount();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task RefreshAccount()

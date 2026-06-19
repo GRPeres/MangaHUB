@@ -9,10 +9,32 @@ a {
     text-decoration: none;
 }
 
+.mud-drawer-open-persistent-left:not(.mud-drawer-open-persistent-right) .mud-main-content {
+    margin-left: 72px !important;
+}
+
+.mud-drawer-open-persistent-left.mud-drawer-left-clipped-never .mud-appbar {
+    margin-left: 72px !important;
+    width: 100% !important;
+}
+
+.mh-drawer {
+    z-index: 1301;
+}
+
+.mh-appbar {
+    z-index: 1300;
+}
+
+/*
+.mh-appbar .mud-toolbar-appbar {
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}*/
+
 .mh-appbar {
     border-bottom: 1px solid var(--mud-palette-divider);
     backdrop-filter: blur(16px);
-    padding-left: 72px;
 }
 
 .mh-brand {
@@ -59,6 +81,24 @@ a {
     padding-left: .75rem;
     padding-right: .75rem;
     text-align: left;
+}
+
+.mh-layout-compact .mh-appbar {
+    left: 72px !important;
+    width: calc(100% - 72px) !important;
+}
+
+.mh-layout-expanded .mh-appbar {
+    left: 240px !important;
+    width: calc(100% - 240px) !important;
+}
+
+.mh-layout-compact .mh-main {
+    margin-left: 72px !important;
+}
+
+.mh-layout-expanded .mh-main {
+    margin-left: 240px !important;
 }
 
 .mh-drawer-compact .mh-nav-button {
