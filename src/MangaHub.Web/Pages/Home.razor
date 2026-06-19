@@ -1,25 +1,40 @@
 @page "/"
 @inject AuthState Auth
+@inject NavigationManager Navigation
 
 <PageTitle>MangaHub</PageTitle>
 
 <MudStack Spacing="4">
-    <MudPaper Class="mh-hero" Elevation="0">
-        <MudStack Spacing="2">
-            <MudText Typo="Typo.overline" Color="Color.Secondary">Personal manga shelf</MudText>
-            <MudText Typo="Typo.h1">MangaHub</MudText>
-            <MudText Typo="Typo.body1" Class="mh-hero-copy">
-                Track what you are reading, keep OpenLibrary metadata close, and choose a local or MangaDex source only when it is time to read.
-            </MudText>
+    <section class="mh-home-hero">
+        <MudStack Spacing="3">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">Manga tracker</MudText>
+                <MudText Typo="Typo.h1">Keep your reading life in one quiet place.</MudText>
+                <MudText Typo="Typo.body1" Class="mh-hero-copy">
+                    Your shelf, current chapters, scores, notes, OpenLibrary metadata, MangaDex links, and local files all meet here.
+                </MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="GoLibrary">Open shelf</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddCircleOutline" OnClick="GoSearch">Add manga</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageAccounts" OnClick="GoAccount">Account</MudButton>
+            </MudStack>
         </MudStack>
-    </MudPaper>
+        <div class="mh-home-pulse">
+            <MudText Typo="Typo.overline" Color="Color.Secondary">Current build</MudText>
+            <MudText Typo="Typo.h3">Home refresh</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">If you can see this panel, TrueNAS pulled the new web build.</MudText>
+        </div>
+    </section>
 
     <MudGrid Spacing="3">
-        <MudItem xs="12" md="7">
+        <MudItem xs="12" md="5">
             <MudPaper Class="pa-5" Elevation="0" Outlined="true">
                 <MudStack Spacing="3">
-                    <MudText Typo="Typo.h2">Account</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Sign in to manage your shelf.</MudText>
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h2">Account</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@AccountPrompt</MudText>
+                    </MudStack>
                     <MudGrid Spacing="2">
                         <MudItem xs="12" sm="6">
                             <MudTextField T="string" @bind-Value="username" Label="Username" Variant="Variant.Outlined" />
@@ -43,19 +58,37 @@
                 </MudStack>
             </MudPaper>
         </MudItem>
-        <MudItem xs="12" md="5">
-            <MudPaper Class="pa-5 mh-side-panel" Elevation="0" Outlined="true">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.h3">Shelf rhythm</MudText>
-                    <MudText Typo="Typo.body2">Register from OpenLibrary, mark the status, then attach MangaDex or local CBZ sources when you have them.</MudText>
-                    <MudDivider />
-                    <MudChipSet T="string">
-                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled">Reading</MudChip>
-                        <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">Done</MudChip>
-                        <MudChip T="string" Color="Color.Tertiary" Variant="Variant.Outlined">Planned</MudChip>
-                    </MudChipSet>
-                </MudStack>
-            </MudPaper>
+        <MudItem xs="12" md="7">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoLibrary">
+                        <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h3">Read where you left off</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Use chapter, status, score, and notes as your personal memory.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoSearch">
+                        <MudIcon Icon="@Icons.Material.Filled.TravelExplore" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h3">Register clean metadata</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Pull covers, descriptions, and category hints from OpenLibrary.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoSearch">
+                        <MudIcon Icon="@Icons.Material.Filled.UploadFile" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.h3">Bring the old sheet</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Import status, chapter, score, type, and summaries from CSV.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoAccount">
+                        <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.h3">Keep control</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Admins curate the catalog while users manage their own shelf.</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
         </MudItem>
     </MudGrid>
 </MudStack>
@@ -66,6 +99,9 @@
     private string message = "";
     private Severity messageSeverity = Severity.Info;
     private UserResponse? currentUser;
+    private string AccountPrompt => currentUser is null
+        ? "Sign in to manage your shelf and sync your reading state across the app."
+        : $"Signed in as {currentUser.Username}.";
 
     protected override async Task OnInitializedAsync()
     {
@@ -100,4 +136,12 @@
         messageSeverity = Severity.Info;
         message = "Signed out.";
     }
+
+    private void GoTo(string route) => Navigation.NavigateTo(route);
+
+    private void GoLibrary() => GoTo("library");
+
+    private void GoSearch() => GoTo("search");
+
+    private void GoAccount() => GoTo("account");
 }
