@@ -18,24 +18,20 @@
                            Color="Color.Inherit"
                            OnClick="ToggleTheme" />
         </MudTooltip>
-        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-            <ActivatorContent>
-                <MudTooltip Text="Account">
-                    <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" />
-                </MudTooltip>
-            </ActivatorContent>
-            <ChildContent>
-                @if (_currentUser is null)
-                {
-                    <MudMenuItem Icon="@Icons.Material.Filled.Login" OnClick="GoHome">Sign in</MudMenuItem>
-                }
-                else
-                {
-                    <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" OnClick="GoAccount">Manage account</MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudMenuItem>
-                }
-            </ChildContent>
+        <MudMenu Icon="@Icons.Material.Filled.AccountCircle"
+                 Color="Color.Inherit"
+                 AnchorOrigin="Origin.BottomRight"
+                 TransformOrigin="Origin.TopRight">
+            @if (_currentUser is null)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.Login" OnClick="GoHome">Sign in</MudMenuItem>
+            }
+            else
+            {
+                <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" OnClick="GoAccount">Manage account</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudMenuItem>
+            }
         </MudMenu>
     </MudAppBar>
 
