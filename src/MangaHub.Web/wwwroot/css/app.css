@@ -213,6 +213,14 @@ a {
     width: 100%;
 }
 
+.mh-match-cover {
+    aspect-ratio: 2 / 3;
+    border-radius: 6px;
+    flex: 0 0 72px;
+    object-fit: cover;
+    width: 72px;
+}
+
 .reader-toolbar {
     align-items: center;
     display: flex;

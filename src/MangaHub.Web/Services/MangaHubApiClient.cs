@@ -54,6 +54,9 @@ public sealed class MangaHubApiClient(HttpClient http, SessionTokenStore tokens)
     public async Task<CatalogMangaResponse?> CreateCatalogMangaAsync(MangaEntryRequest request) =>
         await SendAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Post, "/api/catalog", request);
 
+    public async Task<CatalogMangaResponse?> UpdateCatalogMangaAsync(Guid entryId, MangaEntryRequest request) =>
+        await SendAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Put, $"/api/catalog/{entryId}", request);
+
     public async Task<MangaEntryResponse?> AddToShelfAsync(AddToShelfRequest request) =>
         await SendAsync<AddToShelfRequest, MangaEntryResponse>(HttpMethod.Post, "/api/shelf", request);
 
