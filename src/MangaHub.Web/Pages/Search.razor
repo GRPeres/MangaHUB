@@ -62,6 +62,7 @@
     private List<OpenLibraryResult> openLibraryResults = [];
 
     private string mangaDexUrl = "";
+    private string coverUrlOverride = "";
     private string localSeriesIdText = "";
     private List<SeriesResponse> localSeries = [];
 
@@ -203,6 +204,9 @@
                 <MudItem xs="12" md="5">
                     <MudTextField T="string" @bind-Value="mangaDexUrl" Label="MangaDex URL" Variant="Variant.Outlined" />
                 </MudItem>
+                <MudItem xs="12" md="5">
+                    <MudTextField T="string" @bind-Value="coverUrlOverride" Label="Cover image URL override" Variant="Variant.Outlined" />
+                </MudItem>
                 <MudItem xs="12" md="4">
                     <MudSelect T="string" @bind-Value="localSeriesIdText" Label="Local scanned series" Variant="Variant.Outlined">
                         <MudSelectItem T="string" Value="@("")">None</MudSelectItem>
@@ -337,7 +341,7 @@
             item.Authors,
             item.Category,
             item.Description,
-            item.CoverUrl,
+            FirstNonEmpty(coverUrlOverride, item.CoverUrl),
             item.Key,
             item.FirstPublishYear,
             "",
@@ -350,4 +354,7 @@
         openLibraryMessage = created is null ? "Catalog registration failed. Admin permissions are required." : $"Added {created.Title} to the catalog.";
         catalogResults = await Api.GetCatalogAsync(catalogQuery);
     }
+
+    private static string FirstNonEmpty(params string[] values) =>
+        values.Select(x => x.Trim()).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? "";
 }

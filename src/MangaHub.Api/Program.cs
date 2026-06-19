@@ -471,6 +471,7 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
         var values = RowToDictionary(headers, row);
         var title = FirstValue(values, "name+link", "name", "title", "manga", "series");
         var link = FirstValue(values, "link", "url", "mangadexurl", "mangadex", "sourceurl");
+        var coverUrl = FirstValue(values, "cover", "coverurl", "image", "imageurl", "thumbnail", "poster");
         if (Uri.TryCreate(title, UriKind.Absolute, out _))
         {
             link = title;
@@ -516,6 +517,7 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
                 Title = string.IsNullOrWhiteSpace(title) ? link : title,
                 Category = FirstValue(values, "tipo", "type", "category", "genre").Trim(),
                 Description = FirstValue(values, "summary", "description").Trim(),
+                CoverUrl = coverUrl.Trim(),
                 MangaDexUrl = link.Trim(),
                 MangaDexId = mangaDexId
             };
@@ -526,6 +528,11 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
         {
             manga.MangaDexUrl = link.Trim();
             manga.MangaDexId = mangaDexId;
+            manga.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+        if (!string.IsNullOrWhiteSpace(coverUrl) && string.IsNullOrWhiteSpace(manga.CoverUrl))
+        {
+            manga.CoverUrl = coverUrl.Trim();
             manga.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
@@ -1122,6 +1129,7 @@ static async Task EnsureMangaEntryTableAsync(MangaHubDbContext db)
 
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CreatedByUserId" uuid NULL;
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "Category" character varying(120) NOT NULL DEFAULT '';
+        ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CoverUrl" text NOT NULL DEFAULT '';
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "UserId" uuid NULL;
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReadingStatus" character varying(40) NULL;
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "Notes" text NULL;
