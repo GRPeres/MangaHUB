@@ -1,5 +1,6 @@
 @page "/library"
 @inject MangaHubApiClient Api
+@inject AuthState Auth
 @inject NavigationManager Navigation
 
 <PageTitle>Shelf</PageTitle>
@@ -23,9 +24,63 @@
                 <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
                 <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
             </MudSelect>
+            @if (IsAdmin)
+            {
+                <MudSelect T="Guid?" @bind-Value="selectedUserId" Label="Shelf owner" Variant="Variant.Outlined" Dense="true" Class="mh-filter">
+                    @foreach (var user in users)
+                    {
+                        <MudSelectItem T="Guid?" Value="@user.Id">@user.Username (@user.Role)</MudSelectItem>
+                    }
+                </MudSelect>
+            }
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Load">Apply</MudButton>
         </MudStack>
     </MudPaper>
+
+    @if (editingEntry is not null)
+    {
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h3">Edit shelf entry</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@editingEntry.Title</MudText>
+                    </MudStack>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="CancelEdit">Cancel</MudButton>
+                </MudStack>
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="string" @bind-Value="editStatus" Label="Status" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("paused")">Paused</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudTextField T="string" @bind-Value="editChapter" Label="Chapter" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudNumericField T="int?" @bind-Value="editScore" Label="Score" Variant="Variant.Outlined" Min="1" Max="5" />
+                    </MudItem>
+                    <MudItem xs="12" md="5">
+                        <MudTextField T="string" @bind-Value="editCategory" Label="Type / genre" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="editNotes" Label="Notes" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="editSummary" Label="Summary" Variant="Variant.Outlined" Lines="3" />
+                    </MudItem>
+                </MudGrid>
+                <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveEdit">Save</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="RemoveEditingEntry">Remove from shelf</MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    }
 
     @if (entries.Count == 0)
     {
@@ -72,7 +127,8 @@
                             }
                         </MudCardContent>
                         <MudCardActions>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="() => Read(item.Id)">Read</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => Read(item.Id)">Read</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="() => Edit(item)">Edit</MudButton>
                         </MudCardActions>
                     </MudCard>
                 </MudItem>
@@ -82,23 +138,42 @@
 
     @if (!string.IsNullOrWhiteSpace(message))
     {
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@message</MudAlert>
+        <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
     }
 </MudStack>
 
 @code {
     private List<MangaEntryResponse> entries = [];
+    private List<UserAdminResponse> users = [];
+    private UserResponse? currentUser;
+    private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private Guid? selectedUserId;
     private string status = "";
     private string message = "";
+    private Severity messageSeverity = Severity.Warning;
+    private MangaEntryResponse? editingEntry;
+    private string editStatus = "planned";
+    private string editChapter = "";
+    private int? editScore;
+    private string editCategory = "";
+    private string editSummary = "";
+    private string editNotes = "";
 
     protected override async Task OnInitializedAsync()
     {
+        currentUser = await Auth.GetCurrentUserAsync();
+        if (IsAdmin)
+        {
+            users = await Api.GetUsersAsync();
+            selectedUserId = currentUser?.Id;
+        }
         await Load();
     }
 
     private async Task Load()
     {
-        entries = await Api.GetMangaEntriesAsync(status);
+        entries = await Api.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null);
+        CancelEdit();
     }
 
     private async Task Read(Guid entryId)
@@ -106,7 +181,7 @@
         var options = await Api.GetReadOptionsAsync(entryId);
         if (options is null)
         {
-            message = "Could not load read options.";
+            ShowWarning("Could not load read options.");
             return;
         }
 
@@ -122,6 +197,67 @@
             return;
         }
 
-        message = "No MangaDex URL or local series is registered for this manga yet.";
+        ShowWarning("No MangaDex URL or local series is registered for this manga yet.");
+    }
+
+    private void Edit(MangaEntryResponse entry)
+    {
+        editingEntry = entry;
+        editStatus = entry.ReadingStatus;
+        editChapter = entry.CurrentChapter;
+        editScore = entry.Score;
+        editCategory = entry.Category;
+        editSummary = entry.Summary;
+        editNotes = entry.Notes;
+    }
+
+    private void CancelEdit()
+    {
+        editingEntry = null;
+    }
+
+    private async Task SaveEdit()
+    {
+        if (editingEntry is null)
+        {
+            return;
+        }
+
+        var request = new AddToShelfRequest(editingEntry.Id, editStatus, editChapter, editScore, editCategory, editSummary, editNotes);
+        var updated = await Api.UpdateShelfAsync(editingEntry.Id, request, IsAdmin ? selectedUserId : null);
+        if (updated is null)
+        {
+            ShowWarning("Could not save shelf changes.");
+            return;
+        }
+
+        messageSeverity = Severity.Success;
+        message = $"Updated {updated.Title}.";
+        await Load();
+    }
+
+    private async Task RemoveEditingEntry()
+    {
+        if (editingEntry is null)
+        {
+            return;
+        }
+
+        var removed = await Api.RemoveShelfAsync(editingEntry.Id, IsAdmin ? selectedUserId : null);
+        if (!removed)
+        {
+            ShowWarning("Could not remove shelf entry.");
+            return;
+        }
+
+        messageSeverity = Severity.Success;
+        message = $"Removed {editingEntry.Title} from shelf.";
+        await Load();
+    }
+
+    private void ShowWarning(string text)
+    {
+        messageSeverity = Severity.Warning;
+        message = text;
     }
 }

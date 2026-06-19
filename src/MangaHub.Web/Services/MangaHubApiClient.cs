@@ -26,9 +26,19 @@ public sealed class MangaHubApiClient(HttpClient http, SessionTokenStore tokens)
     public async Task<List<SeriesResponse>> GetSeriesAsync() =>
         await GetAsync<List<SeriesResponse>>("/api/series") ?? [];
 
-    public async Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null)
+    public async Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null, Guid? userId = null)
     {
-        var query = string.IsNullOrWhiteSpace(status) ? "" : $"?status={Uri.EscapeDataString(status)}";
+        var queryParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            queryParts.Add($"status={Uri.EscapeDataString(status)}");
+        }
+        if (userId is not null)
+        {
+            queryParts.Add($"userId={Uri.EscapeDataString(userId.Value.ToString())}");
+        }
+
+        var query = queryParts.Count == 0 ? "" : $"?{string.Join("&", queryParts)}";
         return await GetAsync<List<MangaEntryResponse>>($"/api/manga{query}") ?? [];
     }
 
@@ -46,6 +56,18 @@ public sealed class MangaHubApiClient(HttpClient http, SessionTokenStore tokens)
 
     public async Task<MangaEntryResponse?> AddToShelfAsync(AddToShelfRequest request) =>
         await SendAsync<AddToShelfRequest, MangaEntryResponse>(HttpMethod.Post, "/api/shelf", request);
+
+    public async Task<MangaEntryResponse?> UpdateShelfAsync(Guid entryId, AddToShelfRequest request, Guid? userId = null)
+    {
+        var query = userId is null ? "" : $"?userId={Uri.EscapeDataString(userId.Value.ToString())}";
+        return await SendAsync<AddToShelfRequest, MangaEntryResponse>(HttpMethod.Put, $"/api/shelf/{entryId}{query}", request);
+    }
+
+    public async Task<bool> RemoveShelfAsync(Guid entryId, Guid? userId = null)
+    {
+        var query = userId is null ? "" : $"?userId={Uri.EscapeDataString(userId.Value.ToString())}";
+        return await DeleteAsync($"/api/shelf/{entryId}{query}");
+    }
 
     public async Task<ShelfImportResponse?> ImportShelfAsync(ShelfImportRequest request) =>
         await SendAsync<ShelfImportRequest, ShelfImportResponse>(HttpMethod.Post, "/api/shelf/import", request);
@@ -84,6 +106,15 @@ public sealed class MangaHubApiClient(HttpClient http, SessionTokenStore tokens)
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
         using var response = await http.SendAsync(request);
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
+    }
+
+    private async Task<bool> DeleteAsync(string url)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        await AddAuthorizationAsync(request);
+        request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+        using var response = await http.SendAsync(request);
+        return response.IsSuccessStatusCode;
     }
 
     private async Task AddAuthorizationAsync(HttpRequestMessage request)

@@ -222,11 +222,12 @@ app.MapGet("/api/openlibrary/search", async Task<Ok<List<OpenLibraryResult>>> (
         .ToList());
 });
 
-app.MapGet("/api/manga", async Task<Results<Ok<List<MangaEntryResponse>>, UnauthorizedHttpResult>> (
+app.MapGet("/api/manga", async Task<Results<Ok<List<MangaEntryResponse>>, UnauthorizedHttpResult, ForbidHttpResult, NotFound>> (
     HttpRequest request,
     MangaHubDbContext db,
     ISessionTokenService tokens,
     string? status,
+    Guid? userId,
     CancellationToken cancellationToken) =>
 {
     var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
@@ -235,9 +236,15 @@ app.MapGet("/api/manga", async Task<Results<Ok<List<MangaEntryResponse>>, Unauth
         return TypedResults.Unauthorized();
     }
 
+    var targetUserId = await ResolveShelfUserIdAsync(user, userId, db, cancellationToken);
+    if (targetUserId is null)
+    {
+        return userId is null ? TypedResults.NotFound() : TypedResults.Forbid();
+    }
+
     var query = db.UserMangaEntries.AsNoTracking()
         .Include(x => x.MangaEntry)
-        .Where(x => x.UserId == user.Id);
+        .Where(x => x.UserId == targetUserId.Value);
     if (!string.IsNullOrWhiteSpace(status))
     {
         query = query.Where(x => x.ReadingStatus == status);
@@ -432,6 +439,73 @@ app.MapPost("/api/shelf", async Task<Results<Created<MangaEntryResponse>, Ok<Man
     shelf.UpdatedAt = DateTimeOffset.UtcNow;
     await db.SaveChangesAsync(cancellationToken);
     return TypedResults.Ok(ToMangaEntryResponse(manga, shelf));
+});
+
+app.MapPut("/api/shelf/{entryId:guid}", async Task<Results<Ok<MangaEntryResponse>, NotFound, UnauthorizedHttpResult, ForbidHttpResult>> (
+    Guid entryId,
+    AddToShelfRequest shelfRequest,
+    HttpRequest request,
+    MangaHubDbContext db,
+    ISessionTokenService tokens,
+    Guid? userId,
+    CancellationToken cancellationToken) =>
+{
+    var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
+    if (user is null)
+    {
+        return TypedResults.Unauthorized();
+    }
+
+    var targetUserId = await ResolveShelfUserIdAsync(user, userId, db, cancellationToken);
+    if (targetUserId is null)
+    {
+        return userId is null ? TypedResults.NotFound() : TypedResults.Forbid();
+    }
+
+    var shelf = await db.UserMangaEntries
+        .Include(x => x.MangaEntry)
+        .FirstOrDefaultAsync(x => x.UserId == targetUserId.Value && x.MangaEntryId == entryId, cancellationToken);
+    if (shelf?.MangaEntry is null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    ApplyShelfRequest(shelf, shelfRequest, shelf.MangaEntry);
+    shelf.UpdatedAt = DateTimeOffset.UtcNow;
+    await db.SaveChangesAsync(cancellationToken);
+    return TypedResults.Ok(ToMangaEntryResponse(shelf.MangaEntry, shelf));
+});
+
+app.MapDelete("/api/shelf/{entryId:guid}", async Task<Results<NoContent, NotFound, UnauthorizedHttpResult, ForbidHttpResult>> (
+    Guid entryId,
+    HttpRequest request,
+    MangaHubDbContext db,
+    ISessionTokenService tokens,
+    Guid? userId,
+    CancellationToken cancellationToken) =>
+{
+    var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
+    if (user is null)
+    {
+        return TypedResults.Unauthorized();
+    }
+
+    var targetUserId = await ResolveShelfUserIdAsync(user, userId, db, cancellationToken);
+    if (targetUserId is null)
+    {
+        return userId is null ? TypedResults.NotFound() : TypedResults.Forbid();
+    }
+
+    var shelf = await db.UserMangaEntries
+        .FirstOrDefaultAsync(x => x.UserId == targetUserId.Value && x.MangaEntryId == entryId, cancellationToken);
+    if (shelf is null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    db.UserMangaEntries.Remove(shelf);
+    await db.SaveChangesAsync(cancellationToken);
+    return TypedResults.NoContent();
 });
 
 app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, UnauthorizedHttpResult, BadRequest<string>>> (
@@ -875,6 +949,23 @@ static string ReadBearerToken(HttpRequest request)
 }
 
 static bool IsAdmin(MangaUser user) => string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase);
+
+static async Task<Guid?> ResolveShelfUserIdAsync(MangaUser currentUser, Guid? requestedUserId, MangaHubDbContext db, CancellationToken cancellationToken)
+{
+    if (requestedUserId is null || requestedUserId == currentUser.Id)
+    {
+        return currentUser.Id;
+    }
+
+    if (!IsAdmin(currentUser))
+    {
+        return null;
+    }
+
+    return await db.Users.AnyAsync(x => x.Id == requestedUserId.Value, cancellationToken)
+        ? requestedUserId.Value
+        : null;
+}
 
 static string? NormalizeUserRole(string role)
 {
