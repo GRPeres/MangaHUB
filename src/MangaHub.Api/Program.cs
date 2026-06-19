@@ -62,6 +62,7 @@ app.MapPost("/auth/register", async Task<Results<Created<UserResponse>, Conflict
     MangaHubDbContext db,
     IPasswordHasher passwordHasher,
     ISessionTokenService tokens,
+    IOptions<MangaHubOptions> options,
     HttpResponse response,
     CancellationToken cancellationToken) =>
 {
@@ -80,7 +81,7 @@ app.MapPost("/auth/register", async Task<Results<Created<UserResponse>, Conflict
     };
     db.Users.Add(user);
     await db.SaveChangesAsync(cancellationToken);
-    SetSessionCookie(response, tokens.CreateToken(user.Id, user.Username));
+    SetSessionCookie(response, tokens.CreateToken(user.Id, user.Username), options.Value);
     return TypedResults.Created("/auth/me", new UserResponse(user.Id, user.Username, user.Role));
 });
 
@@ -89,6 +90,7 @@ app.MapPost("/auth/login", async Task<Results<Ok<UserResponse>, UnauthorizedHttp
     MangaHubDbContext db,
     IPasswordHasher passwordHasher,
     ISessionTokenService tokens,
+    IOptions<MangaHubOptions> options,
     HttpResponse response,
     CancellationToken cancellationToken) =>
 {
@@ -99,13 +101,14 @@ app.MapPost("/auth/login", async Task<Results<Ok<UserResponse>, UnauthorizedHttp
         return TypedResults.Unauthorized();
     }
 
-    SetSessionCookie(response, tokens.CreateToken(user.Id, user.Username));
+    SetSessionCookie(response, tokens.CreateToken(user.Id, user.Username), options.Value);
     return TypedResults.Ok(new UserResponse(user.Id, user.Username, user.Role));
 }).RequireRateLimiting("login");
 
-app.MapPost("/auth/logout", (HttpResponse response) =>
+app.MapPost("/auth/logout", (HttpResponse response, IOptions<MangaHubOptions> options) =>
 {
-    response.Cookies.Delete("mangahub_session");
+    var cookieOptions = BuildSessionCookieOptions(options.Value);
+    response.Cookies.Delete("mangahub_session", cookieOptions);
     return Results.Ok(new { status = "ok" });
 });
 
@@ -117,6 +120,74 @@ app.MapGet("/auth/me", async Task<Results<Ok<UserResponse>, UnauthorizedHttpResu
 {
     var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
     return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(new UserResponse(user.Id, user.Username, user.Role));
+});
+
+app.MapGet("/api/admin/users", async Task<Results<Ok<List<UserAdminResponse>>, UnauthorizedHttpResult, ForbidHttpResult>> (
+    HttpRequest request,
+    MangaHubDbContext db,
+    ISessionTokenService tokens,
+    CancellationToken cancellationToken) =>
+{
+    var user = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
+    if (user is null)
+    {
+        return TypedResults.Unauthorized();
+    }
+    if (!IsAdmin(user))
+    {
+        return TypedResults.Forbid();
+    }
+
+    var users = await db.Users.AsNoTracking()
+        .OrderBy(x => x.Username)
+        .Select(x => new UserAdminResponse(x.Id, x.Username, x.Role, x.CreatedAt))
+        .ToListAsync(cancellationToken);
+
+    return TypedResults.Ok(users);
+});
+
+app.MapPut("/api/admin/users/{userId:guid}/role", async Task<Results<Ok<UserAdminResponse>, NotFound, UnauthorizedHttpResult, ForbidHttpResult, BadRequest<string>>> (
+    Guid userId,
+    UpdateUserRoleRequest roleRequest,
+    HttpRequest request,
+    MangaHubDbContext db,
+    ISessionTokenService tokens,
+    CancellationToken cancellationToken) =>
+{
+    var currentUser = await GetCurrentUserAsync(request, db, tokens, cancellationToken);
+    if (currentUser is null)
+    {
+        return TypedResults.Unauthorized();
+    }
+    if (!IsAdmin(currentUser))
+    {
+        return TypedResults.Forbid();
+    }
+
+    var role = NormalizeUserRole(roleRequest.Role);
+    if (role is null)
+    {
+        return TypedResults.BadRequest("Role must be admin or user.");
+    }
+
+    var targetUser = await db.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+    if (targetUser is null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    if (string.Equals(targetUser.Role, "admin", StringComparison.OrdinalIgnoreCase) && role == "user")
+    {
+        var adminCount = await db.Users.CountAsync(x => x.Role == "admin", cancellationToken);
+        if (adminCount <= 1)
+        {
+            return TypedResults.BadRequest("At least one admin must remain.");
+        }
+    }
+
+    targetUser.Role = role;
+    await db.SaveChangesAsync(cancellationToken);
+    return TypedResults.Ok(new UserAdminResponse(targetUser.Id, targetUser.Username, targetUser.Role, targetUser.CreatedAt));
 });
 
 app.MapGet("/api/openlibrary/search", async Task<Ok<List<OpenLibraryResult>>> (
@@ -724,16 +795,28 @@ app.MapGet("/api/progress", async Task<Results<Ok<List<ProgressResponse>>, Unaut
 
 app.Run();
 
-static void SetSessionCookie(HttpResponse response, string token)
+static void SetSessionCookie(HttpResponse response, string token, MangaHubOptions options)
 {
-    response.Cookies.Append("mangahub_session", token, new CookieOptions
+    var cookieOptions = BuildSessionCookieOptions(options);
+    cookieOptions.MaxAge = TimeSpan.FromDays(7);
+    response.Cookies.Append("mangahub_session", token, cookieOptions);
+}
+
+static CookieOptions BuildSessionCookieOptions(MangaHubOptions options) =>
+    new()
     {
         HttpOnly = true,
-        SameSite = SameSiteMode.Lax,
-        Secure = false,
-        MaxAge = TimeSpan.FromDays(7)
-    });
-}
+        SameSite = ParseSameSiteMode(options.SessionCookieSameSite),
+        Secure = options.SessionCookieSecure
+    };
+
+static SameSiteMode ParseSameSiteMode(string value) =>
+    value.Trim().ToLowerInvariant() switch
+    {
+        "none" => SameSiteMode.None,
+        "strict" => SameSiteMode.Strict,
+        _ => SameSiteMode.Lax
+    };
 
 static async Task<MangaUser?> GetCurrentUserAsync(
     HttpRequest request,
@@ -751,6 +834,12 @@ static async Task<MangaUser?> GetCurrentUserAsync(
 }
 
 static bool IsAdmin(MangaUser user) => string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase);
+
+static string? NormalizeUserRole(string role)
+{
+    var normalized = role.Trim().ToLowerInvariant();
+    return normalized is "admin" or "user" ? normalized : null;
+}
 
 static MangaEntryResponse ToMangaEntryResponse(MangaEntry entry, UserMangaEntry shelf) =>
     new(

@@ -1,5 +1,5 @@
 @page "/"
-@inject MangaHubApiClient Api
+@inject AuthState Auth
 
 <PageTitle>MangaHub</PageTitle>
 
@@ -31,7 +31,10 @@
                     <MudStack Row="true" Spacing="2" Class="flex-wrap">
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Register">Register</MudButton>
                         <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="Login">Login</MudButton>
-                        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="Logout">Logout</MudButton>
+                        @if (currentUser is not null)
+                        {
+                            <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="Logout">Logout</MudButton>
+                        }
                     </MudStack>
                     @if (!string.IsNullOrWhiteSpace(message))
                     {
@@ -62,24 +65,38 @@
     private string password = "";
     private string message = "";
     private Severity messageSeverity = Severity.Info;
+    private UserResponse? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await Auth.GetCurrentUserAsync();
+        if (currentUser is not null)
+        {
+            messageSeverity = Severity.Success;
+            message = $"Signed in as {currentUser.Username}.";
+        }
+    }
 
     private async Task Register()
     {
-        var user = await Api.RegisterAsync(username, password);
+        var user = await Auth.RegisterAsync(username, password);
+        currentUser = user;
         messageSeverity = user is null ? Severity.Error : Severity.Success;
         message = user is null ? "Registration failed." : $"Signed in as {user.Username}.";
     }
 
     private async Task Login()
     {
-        var user = await Api.LoginAsync(username, password);
+        var user = await Auth.LoginAsync(username, password);
+        currentUser = user;
         messageSeverity = user is null ? Severity.Error : Severity.Success;
         message = user is null ? "Login failed." : $"Signed in as {user.Username}.";
     }
 
     private async Task Logout()
     {
-        await Api.LogoutAsync();
+        await Auth.LogoutAsync();
+        currentUser = null;
         messageSeverity = Severity.Info;
         message = "Signed out.";
     }

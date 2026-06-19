@@ -1,4 +1,7 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject AuthState Auth
+@inject NavigationManager Navigation
 
 <MudThemeProvider Theme="@MangaHubPalette.Theme" IsDarkMode="@_darkMode" />
 <MudPopoverProvider />
@@ -16,6 +19,25 @@
                            Color="Color.Inherit"
                            OnClick="ToggleTheme" />
         </MudTooltip>
+        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+            <ActivatorContent>
+                <MudTooltip Text="Account">
+                    <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" />
+                </MudTooltip>
+            </ActivatorContent>
+            <ChildContent>
+                @if (_currentUser is null)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.Login" OnClick="GoHome">Sign in</MudMenuItem>
+                }
+                else
+                {
+                    <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" Href="account">Manage account</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudMenuItem>
+                }
+            </ChildContent>
+        </MudMenu>
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive" Elevation="0" ClipMode="DrawerClipMode.Always" Class="mh-drawer">
@@ -25,6 +47,7 @@
                 <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Home</MudNavLink>
                 <MudNavLink Href="library" Icon="@Icons.Material.Filled.AutoStories">Shelf</MudNavLink>
                 <MudNavLink Href="search" Icon="@Icons.Material.Filled.AddCircleOutline">Register</MudNavLink>
+                <MudNavLink Href="account" Icon="@Icons.Material.Filled.ManageAccounts">Account</MudNavLink>
             </MudNavMenu>
         </MudStack>
     </MudDrawer>
@@ -39,7 +62,33 @@
 @code {
     private bool _drawerOpen = true;
     private bool _darkMode;
+    private UserResponse? _currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.Changed += OnAuthChanged;
+        _currentUser = await Auth.GetCurrentUserAsync();
+    }
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
     private void ToggleTheme() => _darkMode = !_darkMode;
+
+    private void GoHome() => Navigation.NavigateTo("");
+
+    private async Task Logout()
+    {
+        await Auth.LogoutAsync();
+        Navigation.NavigateTo("");
+    }
+
+    private void OnAuthChanged()
+    {
+        _currentUser = Auth.CurrentUser;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Auth.Changed -= OnAuthChanged;
+    }
 }

@@ -16,6 +16,12 @@ public sealed class MangaHubApiClient(HttpClient http)
     public async Task<UserResponse?> MeAsync() =>
         await GetAsync<UserResponse>("/auth/me");
 
+    public async Task<List<UserAdminResponse>> GetUsersAsync() =>
+        await GetAsync<List<UserAdminResponse>>("/api/admin/users") ?? [];
+
+    public async Task<UserAdminResponse?> UpdateUserRoleAsync(Guid userId, string role) =>
+        await SendAsync<UpdateUserRoleRequest, UserAdminResponse>(HttpMethod.Put, $"/api/admin/users/{userId}/role", new(role));
+
     public async Task<List<SeriesResponse>> GetSeriesAsync() =>
         await GetAsync<List<SeriesResponse>>("/api/series") ?? [];
 
@@ -80,6 +86,8 @@ public sealed class MangaHubApiClient(HttpClient http)
 
 public sealed record AuthRequest(string Username, string Password);
 public sealed record UserResponse(Guid Id, string Username, string Role);
+public sealed record UserAdminResponse(Guid Id, string Username, string Role, DateTimeOffset CreatedAt);
+public sealed record UpdateUserRoleRequest(string Role);
 public sealed record OpenLibraryResult(string Key, string Title, string Authors, string CoverUrl, int? FirstPublishYear, string Category, string Description);
 public sealed record MangaEntryRequest(
     string Title,
