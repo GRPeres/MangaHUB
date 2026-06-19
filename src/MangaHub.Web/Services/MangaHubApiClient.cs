@@ -1,11 +1,13 @@
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
+using Microsoft.JSInterop;
 
 namespace MangaHub.Web.Services;
 
-public sealed class MangaHubApiClient(HttpClient http)
+public sealed class MangaHubApiClient(HttpClient http, IJSRuntime js)
 {
+    private const string StorageKey = "mangahub_session";
     private string sessionToken = "";
 
     public async Task<UserResponse?> RegisterAsync(string username, string password) =>
@@ -78,7 +80,7 @@ public sealed class MangaHubApiClient(HttpClient http)
     private async Task<TResponse?> GetAsync<TResponse>(string url)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        AddAuthorization(request);
+        await AddAuthorizationAsync(request);
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
         using var response = await http.SendAsync(request);
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
@@ -87,17 +89,40 @@ public sealed class MangaHubApiClient(HttpClient http)
     private async Task<TResponse?> SendAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest payload)
     {
         using var request = new HttpRequestMessage(method, url) { Content = JsonContent.Create(payload) };
-        AddAuthorization(request);
+        await AddAuthorizationAsync(request);
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
         using var response = await http.SendAsync(request);
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
     }
 
-    private void AddAuthorization(HttpRequestMessage request)
+    private async Task AddAuthorizationAsync(HttpRequestMessage request)
     {
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            sessionToken = await ReadStoredTokenAsync();
+        }
+
         if (!string.IsNullOrWhiteSpace(sessionToken))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+        }
+    }
+
+    private async Task<string> ReadStoredTokenAsync()
+    {
+        try
+        {
+            var token = await js.InvokeAsync<string>("localStorage.getItem", StorageKey);
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                return token;
+            }
+
+            return await js.InvokeAsync<string>("sessionStorage.getItem", StorageKey) ?? "";
+        }
+        catch
+        {
+            return "";
         }
     }
 }

@@ -74,10 +74,12 @@ public sealed class AuthState(MangaHubApiClient api, IJSRuntime js)
             if (string.IsNullOrWhiteSpace(token))
             {
                 await js.InvokeVoidAsync("localStorage.removeItem", StorageKey);
+                await js.InvokeVoidAsync("sessionStorage.removeItem", StorageKey);
             }
             else
             {
                 await js.InvokeVoidAsync("localStorage.setItem", StorageKey, token);
+                await js.InvokeVoidAsync("sessionStorage.setItem", StorageKey, token);
             }
         }
         catch
