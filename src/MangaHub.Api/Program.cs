@@ -540,8 +540,12 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
     var skipped = 0;
     var canCreateCatalog = IsAdmin(user) && import.CreateMissingCatalogEntries;
 
+    var rowNumber = 1;
     foreach (var row in rows.Skip(1))
     {
+        rowNumber++;
+        try
+        {
         var values = RowToDictionary(headers, row);
         var title = FirstValue(values, "name+link", "name", "title", "manga", "series");
         var link = FirstValue(values, "link", "url", "mangadexurl", "mangadex", "sourceurl");
@@ -563,17 +567,23 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
         MangaEntry? manga = null;
         if (!string.IsNullOrWhiteSpace(mangaDexId))
         {
-            manga = await db.MangaEntries.FirstOrDefaultAsync(x => x.MangaDexId == mangaDexId, cancellationToken);
+            manga = await db.MangaEntries
+                .OrderBy(x => x.CreatedAt)
+                .FirstOrDefaultAsync(x => x.MangaDexId == mangaDexId, cancellationToken);
         }
 
         if (manga is null && !string.IsNullOrWhiteSpace(link))
         {
-            manga = await db.MangaEntries.FirstOrDefaultAsync(x => x.MangaDexUrl == link, cancellationToken);
+            manga = await db.MangaEntries
+                .OrderBy(x => x.CreatedAt)
+                .FirstOrDefaultAsync(x => x.MangaDexUrl == link, cancellationToken);
         }
 
         if (manga is null && !string.IsNullOrWhiteSpace(title))
         {
-            manga = await db.MangaEntries.FirstOrDefaultAsync(x => EF.Functions.ILike(x.Title, title), cancellationToken);
+            manga = await db.MangaEntries
+                .OrderBy(x => x.CreatedAt)
+                .FirstOrDefaultAsync(x => EF.Functions.ILike(x.Title, title), cancellationToken);
         }
 
         if (manga is null)
@@ -632,10 +642,17 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
         shelf.Summary = FirstValue(values, "summary", "description").Trim();
         shelf.Notes = FirstValue(values, "notes", "note").Trim();
         shelf.UpdatedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
         imported++;
+        }
+        catch (Exception ex)
+        {
+            skipped++;
+            db.ChangeTracker.Clear();
+            messages.Add($"Skipped row {rowNumber}: {ex.GetType().Name}.");
+        }
     }
 
-    await db.SaveChangesAsync(cancellationToken);
     if (!canCreateCatalog && import.CreateMissingCatalogEntries)
     {
         messages.Add("Missing catalog entries were not created because only admins can create catalog manga.");
