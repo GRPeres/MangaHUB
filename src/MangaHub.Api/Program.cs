@@ -546,6 +546,7 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
         rowNumber++;
         try
         {
+        var createdThisRow = false;
         var values = RowToDictionary(headers, row);
         var title = FirstValue(values, "name+link", "name", "title", "manga", "series");
         var link = FirstValue(values, "link", "url", "mangadexurl", "mangadex", "sourceurl");
@@ -606,7 +607,7 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
                 MangaDexId = mangaDexId
             };
             db.MangaEntries.Add(manga);
-            createdCatalog++;
+            createdThisRow = true;
         }
         else if (!string.IsNullOrWhiteSpace(link) && string.IsNullOrWhiteSpace(manga.MangaDexUrl))
         {
@@ -643,13 +644,17 @@ app.MapPost("/api/shelf/import", async Task<Results<Ok<ShelfImportResponse>, Una
         shelf.Notes = FirstValue(values, "notes", "note").Trim();
         shelf.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        if (createdThisRow)
+        {
+            createdCatalog++;
+        }
         imported++;
         }
         catch (Exception ex)
         {
             skipped++;
             db.ChangeTracker.Clear();
-            messages.Add($"Skipped row {rowNumber}: {ex.GetType().Name}.");
+            messages.Add($"Skipped row {rowNumber}: {DescribeImportException(ex)}.");
         }
     }
 
@@ -1066,6 +1071,19 @@ static int? ParseScore(string score)
     }
 
     return Math.Clamp((int)Math.Round(parsed, MidpointRounding.AwayFromZero), 1, 5);
+}
+
+static string DescribeImportException(Exception exception)
+{
+    var root = exception;
+    while (root.InnerException is not null)
+    {
+        root = root.InnerException;
+    }
+
+    var message = string.IsNullOrWhiteSpace(root.Message) ? exception.GetType().Name : root.Message;
+    message = message.ReplaceLineEndings(" ").Trim();
+    return message.Length <= 180 ? message : $"{message[..180]}...";
 }
 
 static string FirstNonEmpty(params string?[] values) =>

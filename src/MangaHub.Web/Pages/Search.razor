@@ -51,9 +51,10 @@
     private string category = "";
     private string summary = "";
     private string notes = "";
-    private bool createMissingCatalogEntries;
     private string importMessage = "";
     private Severity importSeverity = Severity.Info;
+    private string catalogImportMessage = "";
+    private Severity catalogImportSeverity = Severity.Info;
 
     private string openLibraryQuery = "";
     private string openLibraryMessage = "";
@@ -76,7 +77,6 @@
 
         catalogResults = await Api.GetCatalogAsync();
         localSeries = IsAdmin ? await Api.GetSeriesAsync() : [];
-        createMissingCatalogEntries = IsAdmin;
     }
 
     private RenderFragment ShelfTab() => @<MudStack Spacing="4">
@@ -125,15 +125,9 @@
 
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap">
-                    <MudStack Spacing="1">
-                        <MudText Typo="Typo.h3">Import shelf CSV</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Uses Status, Name + Link, Chapter, Tipo, Rating, and Summary columns.</MudText>
-                    </MudStack>
-                    @if (IsAdmin)
-                    {
-                        <MudSwitch T="bool" @bind-Value="createMissingCatalogEntries" Color="Color.Primary" Label="Create missing catalog entries" />
-                    }
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.h3">Import shelf CSV</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Adds rows to your shelf only when the manga already exists in the catalog.</MudText>
                 </MudStack>
                 <InputFile OnChange="ImportShelfCsv" accept=".csv,text/csv" />
                 @if (!string.IsNullOrWhiteSpace(importMessage))
@@ -219,6 +213,20 @@
             </MudGrid>
         </MudPaper>
 
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.h3">Import CSV into catalog</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Creates missing catalog entries from the CSV, then adds those manga to your shelf.</MudText>
+                </MudStack>
+                <InputFile OnChange="ImportCatalogCsv" accept=".csv,text/csv" />
+                @if (!string.IsNullOrWhiteSpace(catalogImportMessage))
+                {
+                    <MudAlert Severity="@catalogImportSeverity" Variant="Variant.Outlined">@catalogImportMessage</MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+
         @if (!string.IsNullOrWhiteSpace(openLibraryMessage))
         {
             <MudAlert Severity="@openLibrarySeverity" Variant="Variant.Outlined">@openLibraryMessage</MudAlert>
@@ -283,7 +291,7 @@
             using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
             using var reader = new StreamReader(stream);
             var csv = await reader.ReadToEndAsync();
-            var result = await Api.ImportShelfAsync(new ShelfImportRequest(csv, createMissingCatalogEntries));
+            var result = await Api.ImportShelfAsync(new ShelfImportRequest(csv, false));
             importSeverity = result is null ? Severity.Error : Severity.Success;
             importMessage = result is null
                 ? "Import failed."
@@ -298,6 +306,37 @@
         {
             importSeverity = Severity.Error;
             importMessage = "Could not read the CSV file.";
+        }
+    }
+
+    private async Task ImportCatalogCsv(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (file is null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+            var csv = await reader.ReadToEndAsync();
+            var result = await Api.ImportShelfAsync(new ShelfImportRequest(csv, true));
+            catalogImportSeverity = result is null ? Severity.Error : Severity.Success;
+            catalogImportMessage = result is null
+                ? "Catalog import failed."
+                : $"Imported {result.Imported} rows, created {result.CreatedCatalogEntries} catalog entries, updated {result.UpdatedShelfEntries}, skipped {result.Skipped}.";
+            if (result?.Messages.Count > 0)
+            {
+                catalogImportMessage += " " + string.Join(" ", result.Messages);
+            }
+            catalogResults = await Api.GetCatalogAsync(catalogQuery);
+        }
+        catch
+        {
+            catalogImportSeverity = Severity.Error;
+            catalogImportMessage = "Could not read the CSV file.";
         }
     }
 
