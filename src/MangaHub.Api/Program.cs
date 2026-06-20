@@ -1257,6 +1257,7 @@ static async Task EnsureMangaEntryTableAsync(MangaHubDbContext db)
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "Category" character varying(120) NOT NULL DEFAULT '';
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CoverUrl" text NOT NULL DEFAULT '';
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "UserId" uuid NULL;
+        ALTER TABLE manga_entries ALTER COLUMN "UserId" DROP NOT NULL;
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReadingStatus" character varying(40) NULL;
         ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "Notes" text NULL;
 
