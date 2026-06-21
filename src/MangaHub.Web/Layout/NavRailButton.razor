@@ -1,0 +1,15 @@
+<span class="mh-nav-button-host">
+    <MudTooltip Text="@Label" Placement="Placement.Right" Class="mh-nav-tooltip" Disabled="@Expanded">
+        <MudButton Variant="Variant.Text"
+                   Color="@(IsActive ? Color.Primary : Color.Inherit)"
+                   StartIcon="@Icon"
+                   Class="@ButtonClass"
+                   FullWidth="true"
+                   OnClick="HandleClick">
+            @if (Expanded)
+            {
+                <span>@Label</span>
+            }
+        </MudButton>
+    </MudTooltip>
+</span>

@@ -1,208 +1,72 @@
 @inherits LayoutComponentBase
-@implements IDisposable
-@inject AuthState Auth
-@inject NavigationManager Navigation
 
 <MudThemeProvider Theme="@MangaHubPalette.Theme" IsDarkMode="@_darkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="0" Dense="true" Class="mh-appbar">
-        <MudText Typo="Typo.h6" Class="mh-brand">MangaHub</MudText>
-        <MudSpacer />
-        <MudTooltip Text="@(_darkMode ? "Use light theme" : "Use dark theme")">
-            <MudIconButton Icon="@(_darkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                           Color="Color.Inherit"
-                           OnClick="ToggleTheme" />
-        </MudTooltip>
-        <MudMenu Icon="@Icons.Material.Filled.AccountCircle"
-                 Color="Color.Inherit"
-                 AnchorOrigin="Origin.BottomRight"
-                 TransformOrigin="Origin.TopRight">
-            @if (_currentUser is null)
-            {
-                <MudMenuItem Icon="@Icons.Material.Filled.Login" OnClick="OpenLogin">Sign in</MudMenuItem>
-            }
-            else
-            {
-                <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" OnClick="GoAccount">Manage account</MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudMenuItem>
-            }
-        </MudMenu>
-    </MudAppBar>
-
-    <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="0" ClipMode="DrawerClipMode.Never" Class="@DrawerClass">
-        <MudStack Spacing="1" Class="mh-rail">
-            <div class="mh-rail-brand">
-                <MudIconButton Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" OnClick="GoHome"/>
-                @if (_drawerExpanded)
-                {
-                    <MudText Typo="Typo.subtitle2">Library</MudText>
-                }
-            </div>
-
-            @NavButton("", "Home", Icons.Material.Filled.Dashboard)
-            @NavButton("library", "Shelf", Icons.Material.Filled.AutoStories)
-            @NavButton("search", "Register", Icons.Material.Filled.AddCircleOutline)
-            @NavButton("account", "Account", Icons.Material.Filled.ManageAccounts)
-
+<div class="mh-layout-root">
+    <MudLayout>
+        <MudAppBar Elevation="0" Dense="true" Class="mh-appbar">
+            <MudText Typo="Typo.h6" Class="mh-brand">MangaHub</MudText>
             <MudSpacer />
-
-            <MudTooltip Text="@(_drawerExpanded ? "Collapse sidebar" : "Expand sidebar")" Placement="Placement.Right" Class="mh-nav-tooltip">
-                <MudIconButton Icon="@(_drawerExpanded ? Icons.Material.Filled.KeyboardDoubleArrowLeft : Icons.Material.Filled.KeyboardDoubleArrowRight)"
-                               Color="Color.Primary"
-                               Class="mh-rail-action"
-                               OnClick="ToggleDrawer" />
+            <MudTooltip Text="@(_darkMode ? "Use light theme" : "Use dark theme")">
+                <MudIconButton Icon="@(_darkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                               Color="Color.Inherit"
+                               OnClick="ToggleTheme" />
             </MudTooltip>
-        </MudStack>
-    </MudDrawer>
+            <MudMenu Icon="@Icons.Material.Filled.AccountCircle"
+                     Color="Color.Inherit"
+                     Class="mh-account-menu"
+                     AnchorOrigin="Origin.BottomRight"
+                     TransformOrigin="Origin.TopRight">
+                @if (_currentUser is null)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.Login" OnClick="OpenLogin">Sign in</MudMenuItem>
+                }
+                else
+                {
+                    <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" OnClick="GoAccount">Manage account</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudMenuItem>
+                }
+            </MudMenu>
+        </MudAppBar>
 
-    <MudMainContent Class="mh-main">
-        <MudContainer MaxWidth="MaxWidth.Large" Class="mh-content">
-            @Body
-        </MudContainer>
-    </MudMainContent>
-</MudLayout>
+        <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="0" ClipMode="DrawerClipMode.Never" Class="@DrawerClass">
+            <MudStack Spacing="1" Class="mh-rail">
+                <div class="mh-rail-brand">
+                    <MudIconButton Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" OnClick="GoHome"/>
+                    @if (_drawerExpanded)
+                    {
+                        <MudText Typo="Typo.subtitle2">Library</MudText>
+                    }
+                </div>
 
-<LoginModal @bind-Open="_loginOpen"
-            Message="@_loginMessage"
-            OnAuthenticated="OnLoginAuthenticated" />
+                <NavRailButton Route="" Label="Home" Icon="@Icons.Material.Filled.Dashboard" Expanded="@_drawerExpanded" IsActive="@IsActive("")" OnNavigate="Navigate" />
+                <NavRailButton Route="library" Label="Shelf" Icon="@Icons.Material.Filled.AutoStories" Expanded="@_drawerExpanded" IsActive="@IsActive("library")" OnNavigate="Navigate" />
+                <NavRailButton Route="search" Label="Register" Icon="@Icons.Material.Filled.AddCircleOutline" Expanded="@_drawerExpanded" IsActive="@IsActive("search")" OnNavigate="Navigate" />
+                <NavRailButton Route="account" Label="Account" Icon="@Icons.Material.Filled.ManageAccounts" Expanded="@_drawerExpanded" IsActive="@IsActive("account")" OnNavigate="Navigate" />
 
-@code {
-    private bool _drawerExpanded;
-    private bool _darkMode;
-    private UserResponse? _currentUser;
-    private bool _loginOpen;
-    private string _loginMessage = "Please log in to continue.";
-    private string? _pendingRoute;
-    private string DrawerClass => _drawerExpanded ? "mh-drawer mh-drawer-expanded" : "mh-drawer mh-drawer-compact";
+                <MudSpacer />
 
-    protected override async Task OnInitializedAsync()
-    {
-        Auth.Changed += OnAuthChanged;
-        Auth.LoginRequested += OnLoginRequested;
-        Navigation.LocationChanged += OnLocationChanged;
-        _currentUser = await Auth.GetCurrentUserAsync();
-        GuardCurrentRoute();
-    }
+                <MudTooltip Text="@(_drawerExpanded ? "Collapse sidebar" : "Expand sidebar")" Placement="Placement.Right" Class="mh-nav-tooltip">
+                    <MudIconButton Icon="@(_drawerExpanded ? Icons.Material.Filled.KeyboardDoubleArrowLeft : Icons.Material.Filled.KeyboardDoubleArrowRight)"
+                                   Color="Color.Primary"
+                                   Class="mh-rail-action"
+                                   OnClick="ToggleDrawer" />
+                </MudTooltip>
+            </MudStack>
+        </MudDrawer>
 
-    private void ToggleDrawer() => _drawerExpanded = !_drawerExpanded;
-    private void ToggleTheme() => _darkMode = !_darkMode;
+        <MudMainContent Class="mh-main">
+            <MudContainer MaxWidth="MaxWidth.Large" Class="mh-content">
+                @Body
+            </MudContainer>
+        </MudMainContent>
+    </MudLayout>
 
-    private void GoHome() => Navigation.NavigateTo("");
-    private void GoLibrary() => Navigate("library");
-    private void GoSearch() => Navigate("search");
-    private void GoAccount() => Navigate("account");
-
-    private RenderFragment NavButton(string route, string label, string icon) => @<MudTooltip Text="@label" Placement="Placement.Right" Class="mh-nav-tooltip" Disabled="@_drawerExpanded">
-        <MudButton Variant="Variant.Text"
-                   Color="@(IsActive(route) ? Color.Primary : Color.Inherit)"
-                   StartIcon="@icon"
-                   Class="@NavButtonClass(route)"
-                   FullWidth="true"
-                   OnClick="() => Navigate(route)">
-            @if (_drawerExpanded)
-            {
-                <span>@label</span>
-            }
-        </MudButton>
-    </MudTooltip>;
-
-    private void Navigate(string route)
-    {
-        if (RequiresLogin(route) && _currentUser is null)
-        {
-            RequestLoginForRoute(route);
-            return;
-        }
-
-        Navigation.NavigateTo(route);
-    }
-
-    private void OpenLogin()
-    {
-        _pendingRoute = null;
-        _loginMessage = "Log in to manage your shelf and account.";
-        _loginOpen = true;
-    }
-
-    private void RequestLoginForRoute(string route)
-    {
-        _pendingRoute = route;
-        _loginMessage = "Please log in to continue.";
-        _loginOpen = true;
-    }
-
-    private void OnLoginRequested(LoginPrompt prompt)
-    {
-        _pendingRoute = prompt.ReturnUrl;
-        _loginMessage = string.IsNullOrWhiteSpace(prompt.Message) ? "Please log in to continue." : prompt.Message;
-        _loginOpen = true;
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    private void OnLoginAuthenticated(UserResponse user)
-    {
-        _currentUser = user;
-        var route = _pendingRoute;
-        _pendingRoute = null;
-        if (!string.IsNullOrWhiteSpace(route))
-        {
-            var currentRoute = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
-            Navigation.NavigateTo(route, forceLoad: string.Equals(currentRoute, route, StringComparison.OrdinalIgnoreCase));
-        }
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
-    {
-        GuardCurrentRoute();
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    private void GuardCurrentRoute()
-    {
-        var route = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
-        if (RequiresLogin(route) && _currentUser is null)
-        {
-            RequestLoginForRoute(route);
-        }
-    }
-
-    private static bool RequiresLogin(string route)
-    {
-        var cleanRoute = route.Trim('/').Split('?', '#')[0];
-        return cleanRoute is "library" or "search" or "account";
-    }
-
-    private bool IsActive(string route)
-    {
-        var relative = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
-        return string.IsNullOrWhiteSpace(route)
-            ? string.IsNullOrWhiteSpace(relative)
-            : string.Equals(relative, route, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private string NavButtonClass(string route) => IsActive(route) ? "mh-nav-button mh-nav-button-active" : "mh-nav-button";
-
-    private async Task Logout()
-    {
-        await Auth.LogoutAsync();
-        Navigation.NavigateTo("");
-    }
-
-    private void OnAuthChanged()
-    {
-        _currentUser = Auth.CurrentUser;
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose()
-    {
-        Auth.Changed -= OnAuthChanged;
-        Auth.LoginRequested -= OnLoginRequested;
-        Navigation.LocationChanged -= OnLocationChanged;
-    }
-}
+    <LoginModal @bind-Open="_loginOpen"
+                Message="@_loginMessage"
+                OnAuthenticated="OnLoginAuthenticated" />
+</div>

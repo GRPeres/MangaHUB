@@ -1,0 +1,18 @@
+.mh-nav-button-host {
+    display: block;
+}
+
+.mh-nav-button-host ::deep .mh-nav-button {
+    border-radius: 8px;
+    justify-content: flex-start;
+    min-height: 44px;
+    min-width: 0;
+    overflow: hidden;
+    padding-left: 10px;
+    padding-right: .75rem;
+    text-align: left;
+}
+
+.mh-nav-button-host ::deep .mh-nav-button-active {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+}
