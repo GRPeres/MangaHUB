@@ -1,5 +1,4 @@
 using MangaHub.Web.API.DTOs;
-using MangaHub.Web.API.Services;
 using MangaHub.Web.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
@@ -8,7 +7,7 @@ namespace MangaHub.Web.Pages.Layout;
 
 public partial class MainLayout : IDisposable
 {
-    [Inject] private AuthApiService Auth { get; set; } = default!;
+    [Inject] private AuthSessionService Auth { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private bool _drawerExpanded;

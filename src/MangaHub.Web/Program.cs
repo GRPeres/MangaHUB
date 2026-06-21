@@ -20,6 +20,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) 
 builder.Services.AddScoped<SessionTokenStore>();
 builder.Services.AddScoped<ApiHttpClient>();
 builder.Services.AddScoped<AuthApiService>();
+builder.Services.AddScoped<AuthSessionService>();
 builder.Services.AddScoped<AdminApiService>();
 builder.Services.AddScoped<CatalogApiService>();
 builder.Services.AddScoped<OpenLibraryApiService>();
