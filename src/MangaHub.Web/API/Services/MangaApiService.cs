@@ -1,4 +1,4 @@
-namespace MangaHub.Web.Services;
+namespace MangaHub.Web.API.Services;
 
 public sealed class MangaApiService(ApiHttpClient api)
 {
@@ -21,3 +21,4 @@ public sealed class MangaApiService(ApiHttpClient api)
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
         await api.GetAsync<ReadOptions>($"/api/manga/{entryId}/read-options");
 }
+

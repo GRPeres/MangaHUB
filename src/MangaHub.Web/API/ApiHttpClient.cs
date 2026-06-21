@@ -1,8 +1,9 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
+using MangaHub.Web.Services;
 
-namespace MangaHub.Web.Services;
+namespace MangaHub.Web.API;
 
 public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
 {
@@ -44,3 +45,4 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         }
     }
 }
+

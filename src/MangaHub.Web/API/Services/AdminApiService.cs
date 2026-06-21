@@ -1,4 +1,4 @@
-namespace MangaHub.Web.Services;
+namespace MangaHub.Web.API.Services;
 
 public sealed class AdminApiService(ApiHttpClient api)
 {

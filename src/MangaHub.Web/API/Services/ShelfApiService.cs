@@ -1,4 +1,4 @@
-namespace MangaHub.Web.Services;
+namespace MangaHub.Web.API.Services;
 
 public sealed class ShelfApiService(ApiHttpClient api)
 {
@@ -20,3 +20,4 @@ public sealed class ShelfApiService(ApiHttpClient api)
     public async Task<ShelfImportResponse?> ImportShelfAsync(ShelfImportRequest request) =>
         await api.SendAsync<ShelfImportRequest, ShelfImportResponse>(HttpMethod.Post, "/api/shelf/import", request);
 }
+

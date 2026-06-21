@@ -1,4 +1,4 @@
-namespace MangaHub.Web.Services;
+namespace MangaHub.Web.API.Services;
 
 public sealed class SeriesApiService(ApiHttpClient api)
 {
@@ -14,3 +14,4 @@ public sealed class SeriesApiService(ApiHttpClient api)
     public async Task<List<SearchResult>> SearchAsync(string query) =>
         await api.GetAsync<List<SearchResult>>($"/api/series/search?q={Uri.EscapeDataString(query)}") ?? [];
 }
+

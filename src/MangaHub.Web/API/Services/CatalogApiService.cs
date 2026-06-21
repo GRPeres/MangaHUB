@@ -1,4 +1,4 @@
-namespace MangaHub.Web.Services;
+namespace MangaHub.Web.API.Services;
 
 public sealed class CatalogApiService(ApiHttpClient api)
 {
@@ -14,3 +14,4 @@ public sealed class CatalogApiService(ApiHttpClient api)
     public async Task<CatalogMangaResponse?> UpdateCatalogMangaAsync(Guid entryId, MangaEntryRequest request) =>
         await api.SendAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Put, $"/api/catalog/{entryId}", request);
 }
+

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace MangaHub.Web.Layout;
+namespace MangaHub.Web.Components.Layout;
 
 public partial class NavRailButton : ComponentBase
 {

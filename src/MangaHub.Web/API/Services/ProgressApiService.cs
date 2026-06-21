@@ -1,4 +1,4 @@
-namespace MangaHub.Web.Services;
+namespace MangaHub.Web.API.Services;
 
 public sealed class ProgressApiService(ApiHttpClient api)
 {
@@ -8,3 +8,4 @@ public sealed class ProgressApiService(ApiHttpClient api)
     public async Task<List<ProgressResponse>> ListAsync() =>
         await api.GetAsync<List<ProgressResponse>>("/api/progress") ?? [];
 }
+

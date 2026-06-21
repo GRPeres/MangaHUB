@@ -1,4 +1,4 @@
-namespace MangaHub.Web.Services;
+namespace MangaHub.Web.API.Services;
 
 public sealed class AuthApiService(ApiHttpClient api)
 {
@@ -14,3 +14,4 @@ public sealed class AuthApiService(ApiHttpClient api)
     public async Task<UserResponse?> MeAsync() =>
         await api.GetAsync<UserResponse>("/auth/me");
 }
+

@@ -1,7 +1,8 @@
-namespace MangaHub.Web.Services;
+namespace MangaHub.Web.API.Services;
 
 public sealed class LibraryApiService(ApiHttpClient api)
 {
     public async Task<LibraryScanResult?> ScanAsync() =>
         await api.SendAsync<object, LibraryScanResult>(HttpMethod.Post, "/api/library/scan", new { });
 }
+

@@ -1,3 +1,5 @@
+using MangaHub.Web.API.DTOs;
+using MangaHub.Web.API.Services;
 using MangaHub.Web.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;

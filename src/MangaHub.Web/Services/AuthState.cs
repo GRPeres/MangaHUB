@@ -1,5 +1,8 @@
 namespace MangaHub.Web.Services;
 
+using MangaHub.Web.API.DTOs;
+using MangaHub.Web.API.Services;
+
 public sealed class AuthState(AuthApiService api, SessionTokenStore tokens)
 {
     private UserResponse? currentUser;
@@ -55,5 +58,3 @@ public sealed class AuthState(AuthApiService api, SessionTokenStore tokens)
         LoginRequested?.Invoke(new LoginPrompt(message, returnUrl));
     }
 }
-
-public sealed record LoginPrompt(string Message, string? ReturnUrl);

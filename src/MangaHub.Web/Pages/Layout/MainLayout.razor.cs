@@ -1,8 +1,10 @@
+using MangaHub.Web.API.DTOs;
+using MangaHub.Web.API.Services;
 using MangaHub.Web.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 
-namespace MangaHub.Web.Layout;
+namespace MangaHub.Web.Pages.Layout;
 
 public partial class MainLayout : IDisposable
 {
