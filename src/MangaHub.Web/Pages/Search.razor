@@ -1,7 +1,10 @@
 @page "/search"
 @using Microsoft.AspNetCore.Components.Forms
-@inject MangaHubApiClient Api
 @inject AuthState Auth
+@inject CatalogApiService CatalogApi
+@inject ShelfApiService ShelfApi
+@inject OpenLibraryApiService OpenLibraryApi
+@inject SeriesApiService SeriesApi
 
 <PageTitle>Add Manga</PageTitle>
 
@@ -80,8 +83,8 @@
             return;
         }
 
-        catalogResults = await Api.GetCatalogAsync();
-        localSeries = IsAdmin ? await Api.GetSeriesAsync() : [];
+        catalogResults = await CatalogApi.GetCatalogAsync();
+        localSeries = IsAdmin ? await SeriesApi.GetSeriesAsync() : [];
     }
 
     private RenderFragment ShelfTab() => @<MudStack Spacing="4">
@@ -374,7 +377,7 @@
 
     private async Task SearchCatalog()
     {
-        catalogResults = await Api.GetCatalogAsync(catalogQuery);
+        catalogResults = await CatalogApi.GetCatalogAsync(catalogQuery);
         catalogSeverity = catalogResults.Count == 0 ? Severity.Warning : Severity.Success;
         catalogMessage = catalogResults.Count == 0 ? "No catalog manga matched your search." : $"Found {catalogResults.Count} catalog entries.";
     }
@@ -418,10 +421,10 @@
             IsDoneStatus ? summary : "",
             notes);
 
-        var created = await Api.AddToShelfAsync(request);
+        var created = await ShelfApi.AddToShelfAsync(request);
         catalogSeverity = created is null ? Severity.Error : Severity.Success;
         catalogMessage = created is null ? "Could not add manga to your shelf." : $"Added {created.Title} to your shelf.";
-        catalogResults = await Api.GetCatalogAsync(catalogQuery);
+        catalogResults = await CatalogApi.GetCatalogAsync(catalogQuery);
         if (created is not null)
         {
             BackToCatalog();
@@ -455,7 +458,7 @@
             using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
             using var reader = new StreamReader(stream);
             var csv = await reader.ReadToEndAsync();
-            var result = await Api.ImportShelfAsync(new ShelfImportRequest(csv, false));
+            var result = await ShelfApi.ImportShelfAsync(new ShelfImportRequest(csv, false));
             importSeverity = result is null ? Severity.Error : Severity.Success;
             importMessage = result is null
                 ? "Import failed."
@@ -464,7 +467,7 @@
             {
                 importMessage += " " + string.Join(" ", result.Messages);
             }
-            catalogResults = await Api.GetCatalogAsync(catalogQuery);
+            catalogResults = await CatalogApi.GetCatalogAsync(catalogQuery);
         }
         catch
         {
@@ -486,7 +489,7 @@
             using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
             using var reader = new StreamReader(stream);
             var csv = await reader.ReadToEndAsync();
-            var result = await Api.ImportShelfAsync(new ShelfImportRequest(csv, true));
+            var result = await ShelfApi.ImportShelfAsync(new ShelfImportRequest(csv, true));
             catalogImportSeverity = result is null ? Severity.Error : Severity.Success;
             catalogImportMessage = result is null
                 ? "Catalog import failed."
@@ -495,7 +498,7 @@
             {
                 catalogImportMessage += " " + string.Join(" ", result.Messages);
             }
-            catalogResults = await Api.GetCatalogAsync(catalogQuery);
+            catalogResults = await CatalogApi.GetCatalogAsync(catalogQuery);
         }
         catch
         {
@@ -518,7 +521,7 @@
         openLibraryMessage = "";
         try
         {
-            openLibraryResults = await Api.SearchOpenLibraryAsync(openLibraryQuery);
+            openLibraryResults = await OpenLibraryApi.SearchOpenLibraryAsync(openLibraryQuery);
             selectedOpenLibraryManga = null;
             catalogWizardStep = 1;
             openLibrarySeverity = openLibraryResults.Count == 0 ? Severity.Warning : Severity.Success;
@@ -567,10 +570,10 @@
             localSeriesId,
             "");
 
-        var created = await Api.CreateCatalogMangaAsync(request);
+        var created = await CatalogApi.CreateCatalogMangaAsync(request);
         openLibrarySeverity = created is null ? Severity.Error : Severity.Success;
         openLibraryMessage = created is null ? "Catalog registration failed. Admin permissions are required." : $"Added {created.Title} to the catalog.";
-        catalogResults = await Api.GetCatalogAsync(catalogQuery);
+        catalogResults = await CatalogApi.GetCatalogAsync(catalogQuery);
         if (created is not null)
         {
             selectedOpenLibraryManga = null;

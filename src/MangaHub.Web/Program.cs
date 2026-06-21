@@ -16,6 +16,17 @@ var apiUrl = string.IsNullOrWhiteSpace(configuredApiUrl)
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) });
 builder.Services.AddScoped<SessionTokenStore>();
+builder.Services.AddScoped<ApiHttpClient>();
+builder.Services.AddScoped<AuthApiService>();
+builder.Services.AddScoped<AdminApiService>();
+builder.Services.AddScoped<CatalogApiService>();
+builder.Services.AddScoped<OpenLibraryApiService>();
+builder.Services.AddScoped<MangaApiService>();
+builder.Services.AddScoped<ShelfApiService>();
+builder.Services.AddScoped<LibraryApiService>();
+builder.Services.AddScoped<SeriesApiService>();
+builder.Services.AddScoped<ReadApiService>();
+builder.Services.AddScoped<ProgressApiService>();
 builder.Services.AddScoped<MangaHubApiClient>();
 builder.Services.AddScoped<AuthState>();
 builder.Services.AddMudServices();

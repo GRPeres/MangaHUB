@@ -1,133 +1,77 @@
-using System.Net.Http.Json;
-using System.Net.Http.Headers;
-using Microsoft.AspNetCore.Components.WebAssembly.Http;
-
 namespace MangaHub.Web.Services;
 
-public sealed class MangaHubApiClient(HttpClient http, SessionTokenStore tokens)
+public sealed class MangaHubApiClient(
+    AuthApiService auth,
+    AdminApiService admin,
+    CatalogApiService catalog,
+    OpenLibraryApiService openLibrary,
+    MangaApiService manga,
+    ShelfApiService shelf,
+    LibraryApiService library,
+    SeriesApiService series,
+    ReadApiService read)
 {
-    public async Task<UserResponse?> RegisterAsync(string username, string password) =>
-        await SendAsync<AuthRequest, UserResponse>(HttpMethod.Post, "/auth/register", new(username, password));
+    public Task<UserResponse?> RegisterAsync(string username, string password) =>
+        auth.RegisterAsync(username, password);
 
-    public async Task<UserResponse?> LoginAsync(string username, string password) =>
-        await SendAsync<AuthRequest, UserResponse>(HttpMethod.Post, "/auth/login", new(username, password));
+    public Task<UserResponse?> LoginAsync(string username, string password) =>
+        auth.LoginAsync(username, password);
 
-    public async Task LogoutAsync() => await SendAsync<object, object>(HttpMethod.Post, "/auth/logout", new { });
+    public Task LogoutAsync() => auth.LogoutAsync();
 
-    public async Task<UserResponse?> MeAsync() =>
-        await GetAsync<UserResponse>("/auth/me");
+    public Task<UserResponse?> MeAsync() => auth.MeAsync();
 
-    public async Task<List<UserAdminResponse>> GetUsersAsync() =>
-        await GetAsync<List<UserAdminResponse>>("/api/admin/users") ?? [];
+    public Task<List<UserAdminResponse>> GetUsersAsync() => admin.GetUsersAsync();
 
-    public async Task<UserAdminResponse?> UpdateUserRoleAsync(Guid userId, string role) =>
-        await SendAsync<UpdateUserRoleRequest, UserAdminResponse>(HttpMethod.Put, $"/api/admin/users/{userId}/role", new(role));
+    public Task<UserAdminResponse?> UpdateUserRoleAsync(Guid userId, string role) =>
+        admin.UpdateUserRoleAsync(userId, role);
 
-    public async Task<List<SeriesResponse>> GetSeriesAsync() =>
-        await GetAsync<List<SeriesResponse>>("/api/series") ?? [];
+    public Task<List<SeriesResponse>> GetSeriesAsync() => series.GetSeriesAsync();
 
-    public async Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null, Guid? userId = null)
-    {
-        var queryParts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            queryParts.Add($"status={Uri.EscapeDataString(status)}");
-        }
-        if (userId is not null)
-        {
-            queryParts.Add($"userId={Uri.EscapeDataString(userId.Value.ToString())}");
-        }
+    public Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null, Guid? userId = null) =>
+        manga.GetMangaEntriesAsync(status, userId);
 
-        var query = queryParts.Count == 0 ? "" : $"?{string.Join("&", queryParts)}";
-        return await GetAsync<List<MangaEntryResponse>>($"/api/manga{query}") ?? [];
-    }
+    public Task<List<CatalogMangaResponse>> GetCatalogAsync(string? queryText = null) =>
+        catalog.GetCatalogAsync(queryText);
 
-    public async Task<List<CatalogMangaResponse>> GetCatalogAsync(string? queryText = null)
-    {
-        var query = string.IsNullOrWhiteSpace(queryText) ? "" : $"?q={Uri.EscapeDataString(queryText)}";
-        return await GetAsync<List<CatalogMangaResponse>>($"/api/catalog{query}") ?? [];
-    }
+    public Task<List<OpenLibraryResult>> SearchOpenLibraryAsync(string query) =>
+        openLibrary.SearchOpenLibraryAsync(query);
 
-    public async Task<List<OpenLibraryResult>> SearchOpenLibraryAsync(string query) =>
-        await GetAsync<List<OpenLibraryResult>>($"/api/openlibrary/search?q={Uri.EscapeDataString(query)}") ?? [];
+    public Task<CatalogMangaResponse?> CreateCatalogMangaAsync(MangaEntryRequest request) =>
+        catalog.CreateCatalogMangaAsync(request);
 
-    public async Task<CatalogMangaResponse?> CreateCatalogMangaAsync(MangaEntryRequest request) =>
-        await SendAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Post, "/api/catalog", request);
+    public Task<CatalogMangaResponse?> UpdateCatalogMangaAsync(Guid entryId, MangaEntryRequest request) =>
+        catalog.UpdateCatalogMangaAsync(entryId, request);
 
-    public async Task<CatalogMangaResponse?> UpdateCatalogMangaAsync(Guid entryId, MangaEntryRequest request) =>
-        await SendAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Put, $"/api/catalog/{entryId}", request);
+    public Task<MangaEntryResponse?> AddToShelfAsync(AddToShelfRequest request) =>
+        shelf.AddToShelfAsync(request);
 
-    public async Task<MangaEntryResponse?> AddToShelfAsync(AddToShelfRequest request) =>
-        await SendAsync<AddToShelfRequest, MangaEntryResponse>(HttpMethod.Post, "/api/shelf", request);
+    public Task<MangaEntryResponse?> UpdateShelfAsync(Guid entryId, AddToShelfRequest request, Guid? userId = null) =>
+        shelf.UpdateShelfAsync(entryId, request, userId);
 
-    public async Task<MangaEntryResponse?> UpdateShelfAsync(Guid entryId, AddToShelfRequest request, Guid? userId = null)
-    {
-        var query = userId is null ? "" : $"?userId={Uri.EscapeDataString(userId.Value.ToString())}";
-        return await SendAsync<AddToShelfRequest, MangaEntryResponse>(HttpMethod.Put, $"/api/shelf/{entryId}{query}", request);
-    }
+    public Task<bool> RemoveShelfAsync(Guid entryId, Guid? userId = null) =>
+        shelf.RemoveShelfAsync(entryId, userId);
 
-    public async Task<bool> RemoveShelfAsync(Guid entryId, Guid? userId = null)
-    {
-        var query = userId is null ? "" : $"?userId={Uri.EscapeDataString(userId.Value.ToString())}";
-        return await DeleteAsync($"/api/shelf/{entryId}{query}");
-    }
+    public Task<ShelfImportResponse?> ImportShelfAsync(ShelfImportRequest request) =>
+        shelf.ImportShelfAsync(request);
 
-    public async Task<ShelfImportResponse?> ImportShelfAsync(ShelfImportRequest request) =>
-        await SendAsync<ShelfImportRequest, ShelfImportResponse>(HttpMethod.Post, "/api/shelf/import", request);
+    public Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
+        manga.GetReadOptionsAsync(entryId);
 
-    public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
-        await GetAsync<ReadOptions>($"/api/manga/{entryId}/read-options");
+    public Task<SeriesResponse?> GetSeriesAsync(Guid id) =>
+        series.GetSeriesAsync(id);
 
-    public async Task<SeriesResponse?> GetSeriesAsync(Guid id) =>
-        await GetAsync<SeriesResponse>($"/api/series/{id}");
+    public Task<List<ChapterResponse>> GetChaptersAsync(Guid seriesId) =>
+        series.GetChaptersAsync(seriesId);
 
-    public async Task<List<ChapterResponse>> GetChaptersAsync(Guid seriesId) =>
-        await GetAsync<List<ChapterResponse>>($"/api/series/{seriesId}/chapters") ?? [];
+    public Task<List<SearchResult>> SearchAsync(string query) =>
+        series.SearchAsync(query);
 
-    public async Task<List<SearchResult>> SearchAsync(string query) =>
-        await GetAsync<List<SearchResult>>($"/api/series/search?q={Uri.EscapeDataString(query)}") ?? [];
-
-    public async Task<LibraryScanResult?> ScanAsync() =>
-        await SendAsync<object, LibraryScanResult>(HttpMethod.Post, "/api/library/scan", new { });
+    public Task<LibraryScanResult?> ScanAsync() =>
+        library.ScanAsync();
 
     public string GetPageUrl(Guid chapterId, int pageIndex) =>
-        new Uri(http.BaseAddress!, $"/api/read/{chapterId}/pages/{pageIndex}").ToString();
-
-    private async Task<TResponse?> GetAsync<TResponse>(string url)
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        await AddAuthorizationAsync(request);
-        request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
-        using var response = await http.SendAsync(request);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
-    }
-
-    private async Task<TResponse?> SendAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest payload)
-    {
-        using var request = new HttpRequestMessage(method, url) { Content = JsonContent.Create(payload) };
-        await AddAuthorizationAsync(request);
-        request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
-        using var response = await http.SendAsync(request);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
-    }
-
-    private async Task<bool> DeleteAsync(string url)
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        await AddAuthorizationAsync(request);
-        request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
-        using var response = await http.SendAsync(request);
-        return response.IsSuccessStatusCode;
-    }
-
-    private async Task AddAuthorizationAsync(HttpRequestMessage request)
-    {
-        var sessionToken = await tokens.GetAsync();
-        if (!string.IsNullOrWhiteSpace(sessionToken))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
-        }
-    }
+        read.GetPageUrl(chapterId, pageIndex);
 }
 
 public sealed record AuthRequest(string Username, string Password);
@@ -199,3 +143,5 @@ public sealed record SeriesResponse(Guid Id, string Title, string Description, s
 public sealed record ChapterResponse(Guid Id, Guid SeriesId, string ChapterNumber, string Title, int PageCount);
 public sealed record SearchResult(string Id, string Title, string Description, string CoverUrl, string Status, string Source);
 public sealed record LibraryScanResult(int SeriesCount, int ChapterCount);
+public sealed record ProgressRequest(Guid SeriesId, Guid ChapterId, int Page);
+public sealed record ProgressResponse(Guid SeriesId, Guid ChapterId, int Page);

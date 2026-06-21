@@ -1,7 +1,11 @@
 @page "/library"
-@inject MangaHubApiClient Api
 @inject AuthState Auth
 @inject NavigationManager Navigation
+@inject AdminApiService AdminApi
+@inject MangaApiService MangaApi
+@inject ShelfApiService ShelfApi
+@inject OpenLibraryApiService OpenLibraryApi
+@inject CatalogApiService CatalogApi
 
 <PageTitle>Shelf</PageTitle>
 
@@ -245,7 +249,7 @@
         currentUser = await Auth.GetCurrentUserAsync();
         if (IsAdmin)
         {
-            users = await Api.GetUsersAsync();
+            users = await AdminApi.GetUsersAsync();
             selectedUserId = currentUser?.Id;
         }
         await Load();
@@ -253,13 +257,13 @@
 
     private async Task Load()
     {
-        entries = await Api.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null);
+        entries = await MangaApi.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null);
         CancelEdit();
     }
 
     private async Task Read(Guid entryId)
     {
-        var options = await Api.GetReadOptionsAsync(entryId);
+        var options = await MangaApi.GetReadOptionsAsync(entryId);
         if (options is null)
         {
             ShowWarning("Could not load read options.");
@@ -312,7 +316,7 @@
         }
 
         var request = new AddToShelfRequest(editingEntry.Id, editStatus, editChapter, editScore, editCategory, editSummary, editNotes);
-        var updated = await Api.UpdateShelfAsync(editingEntry.Id, request, IsAdmin ? selectedUserId : null);
+        var updated = await ShelfApi.UpdateShelfAsync(editingEntry.Id, request, IsAdmin ? selectedUserId : null);
         if (updated is null)
         {
             ShowWarning("Could not save shelf changes.");
@@ -331,7 +335,7 @@
             return;
         }
 
-        var removed = await Api.RemoveShelfAsync(editingEntry.Id, IsAdmin ? selectedUserId : null);
+        var removed = await ShelfApi.RemoveShelfAsync(editingEntry.Id, IsAdmin ? selectedUserId : null);
         if (!removed)
         {
             ShowWarning("Could not remove shelf entry.");
@@ -362,7 +366,7 @@
         isSearchingOpenLibrary = true;
         try
         {
-            openLibraryResults = await Api.SearchOpenLibraryAsync(openLibraryQuery);
+            openLibraryResults = await OpenLibraryApi.SearchOpenLibraryAsync(openLibraryQuery);
             openLibrarySeverity = openLibraryResults.Count == 0 ? Severity.Warning : Severity.Success;
             openLibraryMessage = openLibraryResults.Count == 0
                 ? "OpenLibrary returned no matches."
@@ -400,7 +404,7 @@
             editingEntry.LocalSeriesId,
             "");
 
-        var updated = await Api.UpdateCatalogMangaAsync(editingEntry.Id, request);
+        var updated = await CatalogApi.UpdateCatalogMangaAsync(editingEntry.Id, request);
         if (updated is null)
         {
             openLibrarySeverity = Severity.Error;

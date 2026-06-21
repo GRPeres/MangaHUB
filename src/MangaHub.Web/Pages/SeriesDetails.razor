@@ -1,5 +1,5 @@
 @page "/series/{SeriesId:guid}"
-@inject MangaHubApiClient Api
+@inject SeriesApiService SeriesApi
 
 <PageTitle>Series</PageTitle>
 
@@ -38,7 +38,7 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        series = await Api.GetSeriesAsync(SeriesId);
-        chapters = await Api.GetChaptersAsync(SeriesId);
+        series = await SeriesApi.GetSeriesAsync(SeriesId);
+        chapters = await SeriesApi.GetChaptersAsync(SeriesId);
     }
 }

@@ -1,6 +1,6 @@
 @page "/account"
 @inject AuthState Auth
-@inject MangaHubApiClient Api
+@inject AdminApiService AdminApi
 
 <PageTitle>Account</PageTitle>
 
@@ -101,12 +101,12 @@
 
     private async Task LoadUsers()
     {
-        users = await Api.GetUsersAsync();
+        users = await AdminApi.GetUsersAsync();
     }
 
     private async Task SetRole(UserAdminResponse user, string role)
     {
-        var updated = await Api.UpdateUserRoleAsync(user.Id, role);
+        var updated = await AdminApi.UpdateUserRoleAsync(user.Id, role);
         messageSeverity = updated is null ? Severity.Error : Severity.Success;
         message = updated is null ? "Could not update user role." : $"{updated.Username} is now {updated.Role}.";
         await RefreshAccount();

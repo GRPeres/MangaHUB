@@ -1,5 +1,5 @@
 @page "/reader/{ChapterId:guid}/{PageCount:int}"
-@inject MangaHubApiClient Api
+@inject ReadApiService ReadApi
 
 <PageTitle>Reader</PageTitle>
 
@@ -10,7 +10,7 @@
 </MudPaper>
 
 <main class="reader">
-    <img src="@Api.GetPageUrl(ChapterId, page)" alt="Manga page @(page + 1)" />
+    <img src="@ReadApi.GetPageUrl(ChapterId, page)" alt="Manga page @(page + 1)" />
 </main>
 
 @code {

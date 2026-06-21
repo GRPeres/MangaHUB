@@ -1,6 +1,6 @@
 namespace MangaHub.Web.Services;
 
-public sealed class AuthState(MangaHubApiClient api, SessionTokenStore tokens)
+public sealed class AuthState(AuthApiService api, SessionTokenStore tokens)
 {
     private UserResponse? currentUser;
     private bool loaded;
