@@ -221,6 +221,14 @@ a {
     width: 72px;
 }
 
+.mh-wizard-cover {
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    flex: 0 0 120px;
+    object-fit: cover;
+    width: 120px;
+}
+
 .reader-toolbar {
     align-items: center;
     display: flex;

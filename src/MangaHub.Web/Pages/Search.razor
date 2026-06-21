@@ -44,6 +44,9 @@
     private string catalogMessage = "";
     private Severity catalogSeverity = Severity.Info;
     private List<CatalogMangaResponse> catalogResults = [];
+    private CatalogMangaResponse? selectedCatalogManga;
+    private int shelfWizardStep = 1;
+    private bool IsDoneStatus => string.Equals(readingStatus, "done", StringComparison.OrdinalIgnoreCase);
 
     private string readingStatus = "planned";
     private string currentChapter = "";
@@ -81,6 +84,14 @@
 
     private RenderFragment ShelfTab() => @<MudStack Spacing="4">
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
+                <MudChip T="string" Color="@(shelfWizardStep == 1 ? Color.Primary : Color.Default)" Variant="@(shelfWizardStep == 1 ? Variant.Filled : Variant.Outlined)">1. Choose manga</MudChip>
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Secondary" />
+                <MudChip T="string" Color="@(shelfWizardStep == 2 ? Color.Primary : Color.Default)" Variant="@(shelfWizardStep == 2 ? Variant.Filled : Variant.Outlined)">2. Reading info</MudChip>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudGrid Spacing="2">
                 <MudItem xs="12" md="9">
                     <MudTextField T="string" @bind-Value="catalogQuery" Label="Search catalog" Variant="Variant.Outlined" Immediate="true" />
@@ -91,37 +102,108 @@
             </MudGrid>
         </MudPaper>
 
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.h3">Shelf details</MudText>
-                <MudGrid Spacing="3">
-                    <MudItem xs="12" md="4">
-                        <MudSelect T="string" @bind-Value="readingStatus" Label="Status" Variant="Variant.Outlined">
-                            <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("paused")">Paused</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
-                        </MudSelect>
+        @if (shelfWizardStep == 1)
+        {
+            @if (!string.IsNullOrWhiteSpace(catalogMessage))
+            {
+                <MudAlert Severity="@catalogSeverity" Variant="Variant.Outlined">@catalogMessage</MudAlert>
+            }
+
+            <MudGrid Spacing="3">
+                @foreach (var item in catalogResults)
+                {
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        <MudCard Elevation="0" Outlined="true" Class="mh-card">
+                            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
+                            {
+                                <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
+                            }
+                            <MudCardContent>
+                                <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
+                                <MudText Typo="Typo.h3">@item.Title</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                                @if (!string.IsNullOrWhiteSpace(item.Category))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mt-2">@item.Category</MudChip>
+                                }
+                            </MudCardContent>
+                            <MudCardActions>
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           Disabled="@item.IsInMyShelf"
+                                           FullWidth="true"
+                                           OnClick="() => SelectCatalogManga(item)">
+                                    @(item.IsInMyShelf ? "Already in shelf" : "Choose")
+                                </MudButton>
+                            </MudCardActions>
+                        </MudCard>
                     </MudItem>
-                    <MudItem xs="12" md="2">
-                        <MudTextField T="string" @bind-Value="currentChapter" Label="Chapter" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="2">
-                        <MudNumericField T="int?" @bind-Value="score" Label="Score" Variant="Variant.Outlined" Min="1" Max="5" />
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <MudTextField T="string" @bind-Value="category" Label="Type / genre" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="8">
-                        <MudTextField T="string" @bind-Value="notes" Label="Notes" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12">
-                        <MudTextField T="string" @bind-Value="summary" Label="Summary" Variant="Variant.Outlined" Lines="3" />
-                    </MudItem>
-                </MudGrid>
-            </MudStack>
-        </MudPaper>
+                }
+            </MudGrid>
+        }
+
+        @if (shelfWizardStep == 2 && selectedCatalogManga is not null)
+        {
+            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                <MudStack Spacing="3">
+                    <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start" Class="flex-wrap">
+                        @if (!string.IsNullOrWhiteSpace(selectedCatalogManga.CoverUrl))
+                        {
+                            <MudImage Src="@selectedCatalogManga.CoverUrl" Alt="@($"{selectedCatalogManga.Title} cover")" Class="mh-wizard-cover" />
+                        }
+                        <MudStack Spacing="1" Class="flex-grow-1">
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">Selected manga</MudText>
+                            <MudText Typo="Typo.h2">@selectedCatalogManga.Title</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedCatalogManga.Authors</MudText>
+                            <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="BackToCatalog">Choose another</MudButton>
+                        </MudStack>
+                    </MudStack>
+
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" md="4">
+                            <MudSelect T="string" @bind-Value="readingStatus" Label="Status" Variant="Variant.Outlined">
+                                <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("paused")">Paused</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        @if (readingStatus != "planned")
+                        {
+                            <MudItem xs="12" md="3">
+                                <MudTextField T="string" @bind-Value="currentChapter" Label="Current chapter" Variant="Variant.Outlined" />
+                            </MudItem>
+                        }
+                        @if (IsDoneStatus)
+                        {
+                            <MudItem xs="12" md="2">
+                                <MudNumericField T="int?" @bind-Value="score" Label="Rating" Variant="Variant.Outlined" Min="1" Max="5" />
+                            </MudItem>
+                            <MudItem xs="12" md="3">
+                                <MudTextField T="string" @bind-Value="category" Label="Type / genre" Variant="Variant.Outlined" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField T="string" @bind-Value="summary" Label="Final thoughts / summary" Variant="Variant.Outlined" Lines="3" />
+                            </MudItem>
+                        }
+                        <MudItem xs="12">
+                            <MudTextField T="string" @bind-Value="notes" Label="Notes" Variant="Variant.Outlined" Lines="2" />
+                        </MudItem>
+                    </MudGrid>
+
+                    @if (!string.IsNullOrWhiteSpace(catalogMessage))
+                    {
+                        <MudAlert Severity="@catalogSeverity" Variant="Variant.Outlined">@catalogMessage</MudAlert>
+                    }
+
+                    <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PlaylistAdd" OnClick="AddSelectedToShelf">Add to shelf</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="BackToCatalog">Back</MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        }
 
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
@@ -131,48 +213,11 @@
                 </MudStack>
                 <InputFile OnChange="ImportShelfCsv" accept=".csv,text/csv" />
                 @if (!string.IsNullOrWhiteSpace(importMessage))
-                {
+                            {
                     <MudAlert Severity="@importSeverity" Variant="Variant.Outlined">@importMessage</MudAlert>
-                }
+                            }
             </MudStack>
         </MudPaper>
-
-        @if (!string.IsNullOrWhiteSpace(catalogMessage))
-        {
-            <MudAlert Severity="@catalogSeverity" Variant="Variant.Outlined">@catalogMessage</MudAlert>
-        }
-
-        <MudGrid Spacing="3">
-            @foreach (var item in catalogResults)
-            {
-                <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudCard Elevation="0" Outlined="true" Class="mh-card">
-                        @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-                        {
-                            <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
-                        }
-                        <MudCardContent>
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
-                            <MudText Typo="Typo.h3">@item.Title</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
-                            @if (!string.IsNullOrWhiteSpace(item.Category))
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mt-2">@item.Category</MudChip>
-                            }
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       Disabled="@item.IsInMyShelf"
-                                       FullWidth="true"
-                                       OnClick="() => AddCatalogToShelf(item)">
-                                @(item.IsInMyShelf ? "Already in shelf" : "Add to shelf")
-                            </MudButton>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
     </MudStack>;
 
     private RenderFragment CatalogTab() => @<MudStack Spacing="4">
@@ -270,12 +315,53 @@
         catalogMessage = catalogResults.Count == 0 ? "No catalog manga matched your search." : $"Found {catalogResults.Count} catalog entries.";
     }
 
-    private async Task AddCatalogToShelf(CatalogMangaResponse item)
+    private void SelectCatalogManga(CatalogMangaResponse item)
     {
-        var created = await Api.AddToShelfAsync(new AddToShelfRequest(item.Id, readingStatus, currentChapter, score, category, summary, notes));
+        selectedCatalogManga = item;
+        shelfWizardStep = 2;
+        catalogMessage = "";
+        readingStatus = "planned";
+        currentChapter = "";
+        score = null;
+        category = "";
+        summary = "";
+        notes = "";
+    }
+
+    private void BackToCatalog()
+    {
+        shelfWizardStep = 1;
+        selectedCatalogManga = null;
+        catalogMessage = "";
+    }
+
+    private async Task AddSelectedToShelf()
+    {
+        if (selectedCatalogManga is null)
+        {
+            catalogSeverity = Severity.Warning;
+            catalogMessage = "Choose a manga first.";
+            shelfWizardStep = 1;
+            return;
+        }
+
+        var request = new AddToShelfRequest(
+            selectedCatalogManga.Id,
+            readingStatus,
+            readingStatus == "planned" ? "" : currentChapter,
+            IsDoneStatus ? score : null,
+            IsDoneStatus ? category : "",
+            IsDoneStatus ? summary : "",
+            notes);
+
+        var created = await Api.AddToShelfAsync(request);
         catalogSeverity = created is null ? Severity.Error : Severity.Success;
         catalogMessage = created is null ? "Could not add manga to your shelf." : $"Added {created.Title} to your shelf.";
         catalogResults = await Api.GetCatalogAsync(catalogQuery);
+        if (created is not null)
+        {
+            BackToCatalog();
+        }
     }
 
     private async Task ImportShelfCsv(InputFileChangeEventArgs args)
