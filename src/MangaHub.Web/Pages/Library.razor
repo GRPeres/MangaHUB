@@ -37,102 +37,6 @@
         </MudStack>
     </MudPaper>
 
-    @if (editingEntry is not null)
-    {
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudStack Spacing="3">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap">
-                    <MudStack Spacing="1">
-                        <MudText Typo="Typo.h3">Edit shelf entry</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@editingEntry.Title</MudText>
-                    </MudStack>
-                    <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="CancelEdit">Cancel</MudButton>
-                </MudStack>
-                <MudGrid Spacing="3">
-                    <MudItem xs="12" md="3">
-                        <MudSelect T="string" @bind-Value="editStatus" Label="Status" Variant="Variant.Outlined">
-                            <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("paused")">Paused</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="2">
-                        <MudTextField T="string" @bind-Value="editChapter" Label="Chapter" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="2">
-                        <MudNumericField T="int?" @bind-Value="editScore" Label="Score" Variant="Variant.Outlined" Min="1" Max="5" />
-                    </MudItem>
-                    <MudItem xs="12" md="5">
-                        <MudTextField T="string" @bind-Value="editCategory" Label="Type / genre" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudTextField T="string" @bind-Value="editNotes" Label="Notes" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12">
-                        <MudTextField T="string" @bind-Value="editSummary" Label="Summary" Variant="Variant.Outlined" Lines="3" />
-                    </MudItem>
-                </MudGrid>
-                <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveEdit">Save</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="RemoveEditingEntry">Remove from shelf</MudButton>
-                </MudStack>
-
-                @if (IsAdmin)
-                {
-                    <MudDivider />
-                    <MudStack Spacing="2">
-                        <MudStack Spacing="1">
-                            <MudText Typo="Typo.h3">Match catalog metadata</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Use this when an imported CSV title needs the correct OpenLibrary book, cover, category, or summary.</MudText>
-                        </MudStack>
-                        <MudGrid Spacing="2">
-                            <MudItem xs="12" md="9">
-                                <MudTextField T="string" @bind-Value="openLibraryQuery" Label="Search OpenLibrary" Variant="Variant.Outlined" />
-                            </MudItem>
-                            <MudItem xs="12" md="3" Class="d-flex align-center">
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingOpenLibrary" OnClick="SearchOpenLibrary">
-                                    @(isSearchingOpenLibrary ? "Searching..." : "Search")
-                                </MudButton>
-                            </MudItem>
-                        </MudGrid>
-
-                        @if (!string.IsNullOrWhiteSpace(openLibraryMessage))
-                        {
-                            <MudAlert Severity="@openLibrarySeverity" Variant="Variant.Outlined">@openLibraryMessage</MudAlert>
-                        }
-
-                        <MudGrid Spacing="2">
-                            @foreach (var item in openLibraryResults)
-                            {
-                                <MudItem xs="12" md="6">
-                                    <MudPaper Class="pa-3" Elevation="0" Outlined="true">
-                                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start">
-                                            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-                                            {
-                                                <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-match-cover" />
-                                            }
-                                            <MudStack Spacing="1" Class="flex-grow-1">
-                                                <MudText Typo="Typo.h3">@item.Title</MudText>
-                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
-                                                @if (!string.IsNullOrWhiteSpace(item.Category))
-                                                {
-                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@item.Category</MudChip>
-                                                }
-                                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="() => ApplyOpenLibraryMetadata(item)">Use metadata</MudButton>
-                                            </MudStack>
-                                        </MudStack>
-                                    </MudPaper>
-                                </MudItem>
-                            }
-                        </MudGrid>
-                    </MudStack>
-                }
-            </MudStack>
-        </MudPaper>
-    }
-
     @if (entries.Count == 0)
     {
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Your shelf is empty for this filter.</MudAlert>
@@ -193,6 +97,126 @@
     }
 </MudStack>
 
+@if (isEditDialogOpen && editingEntry is not null)
+{
+    <div class="mh-modal-backdrop" @onclick="CancelEdit">
+        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="shelf-edit-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start" Class="mh-selected-manga">
+                        @if (!string.IsNullOrWhiteSpace(editingEntry.CoverUrl))
+                        {
+                            <MudImage Src="@editingEntry.CoverUrl" Alt="@($"{editingEntry.Title} cover")" Class="mh-modal-cover" />
+                        }
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">Editing shelf entry</MudText>
+                            <MudText id="shelf-edit-title" Typo="Typo.h2">@editingEntry.Title</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@editingEntry.Authors</MudText>
+                            <MudStack Row="true" Spacing="1" Class="flex-wrap">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">@editingEntry.ReadingStatus</MudChip>
+                                @if (!string.IsNullOrWhiteSpace(editingEntry.CurrentChapter))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Ch. @editingEntry.CurrentChapter</MudChip>
+                                }
+                                @if (editingEntry.Score is not null)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@($"{editingEntry.Score}/5")</MudChip>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CancelEdit" aria-label="Close editor" />
+                </MudStack>
+
+                <MudDivider />
+
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="string" @bind-Value="editStatus" Label="Status" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("paused")">Paused</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudTextField T="string" @bind-Value="editChapter" Label="Chapter" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudNumericField T="int?" @bind-Value="editScore" Label="Score" Variant="Variant.Outlined" Min="1" Max="5" />
+                    </MudItem>
+                    <MudItem xs="12" md="5">
+                        <MudTextField T="string" @bind-Value="editCategory" Label="Type / genre" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="editNotes" Label="Notes" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="editSummary" Label="Summary" Variant="Variant.Outlined" Lines="3" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveEdit">Save changes</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="RemoveEditingEntry">Remove from shelf</MudButton>
+                </MudStack>
+
+                @if (IsAdmin)
+                {
+                    <MudDivider />
+                    <MudStack Spacing="2">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.h3">Match catalog metadata</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Use this when an imported CSV title needs the correct OpenLibrary book, cover, category, or summary.</MudText>
+                        </MudStack>
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" md="9">
+                                <MudTextField T="string" @bind-Value="openLibraryQuery" Label="Search OpenLibrary" Variant="Variant.Outlined" />
+                            </MudItem>
+                            <MudItem xs="12" md="3" Class="d-flex align-center">
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingOpenLibrary" OnClick="SearchOpenLibrary">
+                                    @(isSearchingOpenLibrary ? "Searching..." : "Search")
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
+
+                        @if (!string.IsNullOrWhiteSpace(openLibraryMessage))
+                        {
+                            <MudAlert Severity="@openLibrarySeverity" Variant="Variant.Outlined">@openLibraryMessage</MudAlert>
+                        }
+
+                        <MudGrid Spacing="2">
+                            @foreach (var item in openLibraryResults)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudPaper Class="pa-3" Elevation="0" Outlined="true">
+                                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start">
+                                            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
+                                            {
+                                                <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-match-cover" />
+                                            }
+                                            <MudStack Spacing="1" Class="flex-grow-1">
+                                                <MudText Typo="Typo.h3">@item.Title</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                                                @if (!string.IsNullOrWhiteSpace(item.Category))
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@item.Category</MudChip>
+                                                }
+                                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="() => ApplyOpenLibraryMetadata(item)">Use metadata</MudButton>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudStack>
+                }
+            </MudStack>
+        </section>
+    </div>
+}
+
 @code {
     private List<MangaEntryResponse> entries = [];
     private List<UserAdminResponse> users = [];
@@ -203,6 +227,7 @@
     private string message = "";
     private Severity messageSeverity = Severity.Warning;
     private MangaEntryResponse? editingEntry;
+    private bool isEditDialogOpen;
     private string editStatus = "planned";
     private string editChapter = "";
     private int? editScore;
@@ -268,11 +293,15 @@
         openLibraryQuery = entry.Title;
         openLibraryResults = [];
         openLibraryMessage = "";
+        isEditDialogOpen = true;
     }
 
     private void CancelEdit()
     {
         editingEntry = null;
+        isEditDialogOpen = false;
+        openLibraryResults = [];
+        openLibraryMessage = "";
     }
 
     private async Task SaveEdit()
@@ -381,9 +410,30 @@
 
         editCategory = FirstNonEmpty(editCategory, updated.Category);
         editSummary = FirstNonEmpty(editSummary, updated.Description);
+        editingEntry = editingEntry with
+        {
+            Title = updated.Title,
+            Authors = updated.Authors,
+            CatalogCategory = updated.Category,
+            Description = updated.Description,
+            CoverUrl = updated.CoverUrl,
+            OpenLibraryKey = updated.OpenLibraryKey,
+            FirstPublishYear = updated.FirstPublishYear,
+            MangaDexUrl = updated.MangaDexUrl,
+            MangaDexId = updated.MangaDexId,
+            LocalSeriesId = updated.LocalSeriesId
+        };
+
+        var entryIndex = entries.FindIndex(x => x.Id == editingEntry.Id);
+        if (entryIndex >= 0)
+        {
+            entries[entryIndex] = editingEntry;
+        }
+
+        openLibrarySeverity = Severity.Success;
+        openLibraryMessage = $"Matched {updated.Title}. Review the shelf fields, then save if needed.";
         messageSeverity = Severity.Success;
         message = $"Updated catalog metadata for {updated.Title}.";
-        await Load();
     }
 
     private static string FirstNonEmpty(params string[] values) =>

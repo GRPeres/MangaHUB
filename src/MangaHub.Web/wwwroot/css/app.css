@@ -229,6 +229,46 @@ a {
     width: 120px;
 }
 
+.mh-modal-backdrop {
+    align-items: center;
+    background: rgba(10, 3, 18, .62);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: clamp(1rem, 4vw, 2rem);
+    position: fixed;
+    z-index: 1500;
+}
+
+.mh-modal {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    box-shadow: 0 24px 80px rgba(10, 3, 18, .38);
+    max-height: min(90vh, 920px);
+    max-width: 980px;
+    overflow: auto;
+    padding: clamp(1rem, 3vw, 1.5rem);
+    width: min(100%, 980px);
+}
+
+.mh-modal-header {
+    gap: 1rem;
+}
+
+.mh-selected-manga {
+    min-width: 0;
+}
+
+.mh-modal-cover {
+    aspect-ratio: 2 / 3;
+    background: var(--mud-palette-lines-default);
+    border-radius: 8px;
+    flex: 0 0 96px;
+    object-fit: cover;
+    width: 96px;
+}
+
 .reader-toolbar {
     align-items: center;
     display: flex;
@@ -310,5 +350,19 @@ a {
 
     .reader-toolbar {
         top: 64px;
+    }
+
+    .mh-modal-backdrop {
+        align-items: stretch;
+        padding: .75rem;
+    }
+
+    .mh-modal {
+        max-height: calc(100vh - 1.5rem);
+    }
+
+    .mh-modal-cover {
+        flex-basis: 72px;
+        width: 72px;
     }
 }
