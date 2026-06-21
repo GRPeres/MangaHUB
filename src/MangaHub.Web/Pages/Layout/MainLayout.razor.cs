@@ -8,7 +8,7 @@ namespace MangaHub.Web.Pages.Layout;
 
 public partial class MainLayout : IDisposable
 {
-    [Inject] private AuthState Auth { get; set; } = default!;
+    [Inject] private AuthApiService Auth { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private bool _drawerExpanded;

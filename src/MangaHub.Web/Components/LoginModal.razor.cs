@@ -8,7 +8,7 @@ namespace MangaHub.Web.Components;
 
 public partial class LoginModal : ComponentBase
 {
-    [Inject] private AuthState Auth { get; set; } = default!;
+    [Inject] private AuthApiService Auth { get; set; } = default!;
 
     [Parameter] public bool Open { get; set; }
     [Parameter] public EventCallback<bool> OpenChanged { get; set; }
