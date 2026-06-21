@@ -5,8 +5,6 @@
 @inject AdminApiService AdminApi
 @inject MangaApiService MangaApi
 @inject ShelfApiService ShelfApi
-@inject OpenLibraryApiService OpenLibraryApi
-@inject CatalogApiService CatalogApi
 
 <PageTitle>Shelf</PageTitle>
 
@@ -166,57 +164,6 @@
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveEdit">Save changes</MudButton>
                     <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="RemoveEditingEntry">Remove from shelf</MudButton>
                 </MudStack>
-
-                @if (IsAdmin)
-                {
-                    <MudDivider />
-                    <MudStack Spacing="2">
-                        <MudStack Spacing="1">
-                            <MudText Typo="Typo.h3">Match catalog metadata</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Use this when an imported CSV title needs the correct OpenLibrary book, cover, category, or summary.</MudText>
-                        </MudStack>
-                        <MudGrid Spacing="2">
-                            <MudItem xs="12" md="9">
-                                <MudTextField T="string" @bind-Value="openLibraryQuery" Label="Search OpenLibrary" Variant="Variant.Outlined" />
-                            </MudItem>
-                            <MudItem xs="12" md="3" Class="d-flex align-center">
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingOpenLibrary" OnClick="SearchOpenLibrary">
-                                    @(isSearchingOpenLibrary ? "Searching..." : "Search")
-                                </MudButton>
-                            </MudItem>
-                        </MudGrid>
-
-                        @if (!string.IsNullOrWhiteSpace(openLibraryMessage))
-                        {
-                            <MudAlert Severity="@openLibrarySeverity" Variant="Variant.Outlined">@openLibraryMessage</MudAlert>
-                        }
-
-                        <MudGrid Spacing="2">
-                            @foreach (var item in openLibraryResults)
-                            {
-                                <MudItem xs="12" md="6">
-                                    <MudPaper Class="pa-3" Elevation="0" Outlined="true">
-                                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start">
-                                            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-                                            {
-                                                <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-match-cover" />
-                                            }
-                                            <MudStack Spacing="1" Class="flex-grow-1">
-                                                <MudText Typo="Typo.h3">@item.Title</MudText>
-                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
-                                                @if (!string.IsNullOrWhiteSpace(item.Category))
-                                                {
-                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@item.Category</MudChip>
-                                                }
-                                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="() => ApplyOpenLibraryMetadata(item)">Use metadata</MudButton>
-                                            </MudStack>
-                                        </MudStack>
-                                    </MudPaper>
-                                </MudItem>
-                            }
-                        </MudGrid>
-                    </MudStack>
-                }
             </MudStack>
         </section>
     </div>
@@ -239,11 +186,6 @@
     private string editCategory = "";
     private string editSummary = "";
     private string editNotes = "";
-    private string openLibraryQuery = "";
-    private string openLibraryMessage = "";
-    private Severity openLibrarySeverity = Severity.Info;
-    private bool isSearchingOpenLibrary;
-    private List<OpenLibraryResult> openLibraryResults = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -295,9 +237,6 @@
         editCategory = entry.Category;
         editSummary = entry.Summary;
         editNotes = entry.Notes;
-        openLibraryQuery = entry.Title;
-        openLibraryResults = [];
-        openLibraryMessage = "";
         isEditDialogOpen = true;
     }
 
@@ -305,8 +244,6 @@
     {
         editingEntry = null;
         isEditDialogOpen = false;
-        openLibraryResults = [];
-        openLibraryMessage = "";
     }
 
     private async Task SaveEdit()
@@ -354,93 +291,4 @@
         message = text;
     }
 
-    private async Task SearchOpenLibrary()
-    {
-        if (string.IsNullOrWhiteSpace(openLibraryQuery))
-        {
-            openLibraryResults = [];
-            openLibrarySeverity = Severity.Info;
-            openLibraryMessage = "Type a title before searching OpenLibrary.";
-            return;
-        }
-
-        isSearchingOpenLibrary = true;
-        try
-        {
-            openLibraryResults = await OpenLibraryApi.SearchOpenLibraryAsync(openLibraryQuery);
-            openLibrarySeverity = openLibraryResults.Count == 0 ? Severity.Warning : Severity.Success;
-            openLibraryMessage = openLibraryResults.Count == 0
-                ? "OpenLibrary returned no matches."
-                : $"Found {openLibraryResults.Count} OpenLibrary matches.";
-        }
-        catch
-        {
-            openLibraryResults = [];
-            openLibrarySeverity = Severity.Error;
-            openLibraryMessage = "OpenLibrary search failed.";
-        }
-        finally
-        {
-            isSearchingOpenLibrary = false;
-        }
-    }
-
-    private async Task ApplyOpenLibraryMetadata(OpenLibraryResult item)
-    {
-        if (editingEntry is null)
-        {
-            return;
-        }
-
-        var request = new MangaEntryRequest(
-            item.Title,
-            item.Authors,
-            item.Category,
-            item.Description,
-            item.CoverUrl,
-            item.Key,
-            item.FirstPublishYear,
-            "",
-            editingEntry.MangaDexUrl,
-            editingEntry.LocalSeriesId,
-            "");
-
-        var updated = await CatalogApi.UpdateCatalogMangaAsync(editingEntry.Id, request);
-        if (updated is null)
-        {
-            openLibrarySeverity = Severity.Error;
-            openLibraryMessage = "Could not update catalog metadata.";
-            return;
-        }
-
-        editCategory = FirstNonEmpty(editCategory, updated.Category);
-        editSummary = FirstNonEmpty(editSummary, updated.Description);
-        editingEntry = editingEntry with
-        {
-            Title = updated.Title,
-            Authors = updated.Authors,
-            CatalogCategory = updated.Category,
-            Description = updated.Description,
-            CoverUrl = updated.CoverUrl,
-            OpenLibraryKey = updated.OpenLibraryKey,
-            FirstPublishYear = updated.FirstPublishYear,
-            MangaDexUrl = updated.MangaDexUrl,
-            MangaDexId = updated.MangaDexId,
-            LocalSeriesId = updated.LocalSeriesId
-        };
-
-        var entryIndex = entries.FindIndex(x => x.Id == editingEntry.Id);
-        if (entryIndex >= 0)
-        {
-            entries[entryIndex] = editingEntry;
-        }
-
-        openLibrarySeverity = Severity.Success;
-        openLibraryMessage = $"Matched {updated.Title}. Review the shelf fields, then save if needed.";
-        messageSeverity = Severity.Success;
-        message = $"Updated catalog metadata for {updated.Title}.";
-    }
-
-    private static string FirstNonEmpty(params string[] values) =>
-        values.Select(x => x.Trim()).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? "";
 }

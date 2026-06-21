@@ -16,6 +16,7 @@ public partial class MainLayout : IDisposable
     private bool _loginOpen;
     private string _loginMessage = "Please log in to continue.";
     private string? _pendingRoute;
+    private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private string DrawerClass => _drawerExpanded ? "mh-drawer mh-drawer-expanded" : "mh-drawer mh-drawer-compact";
 
     protected override async Task OnInitializedAsync()
@@ -98,7 +99,7 @@ public partial class MainLayout : IDisposable
     private static bool RequiresLogin(string route)
     {
         var cleanRoute = route.Trim('/').Split('?', '#')[0];
-        return cleanRoute is "library" or "search" or "account";
+        return cleanRoute is "library" or "search" or "catalog" or "account";
     }
 
     private bool IsActive(string route)
