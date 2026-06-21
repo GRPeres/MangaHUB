@@ -1,4 +1,5 @@
 @page "/"
+@implements IDisposable
 @inject AuthState Auth
 @inject NavigationManager Navigation
 
@@ -35,26 +36,18 @@
                         <MudText Typo="Typo.h2">Account</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">@AccountPrompt</MudText>
                     </MudStack>
-                    <MudGrid Spacing="2">
-                        <MudItem xs="12" sm="6">
-                            <MudTextField T="string" @bind-Value="username" Label="Username" Variant="Variant.Outlined" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudTextField T="string" @bind-Value="password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined" />
-                        </MudItem>
-                    </MudGrid>
                     <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Register">Register</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="Login">Login</MudButton>
-                        @if (currentUser is not null)
+                        @if (currentUser is null)
                         {
-                            <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="Logout">Logout</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login" OnClick="OpenLogin">Log in</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenLogin">Create account</MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="GoLibrary">Open shelf</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="Logout">Log out</MudButton>
                         }
                     </MudStack>
-                    @if (!string.IsNullOrWhiteSpace(message))
-                    {
-                        <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
-                    }
                 </MudStack>
             </MudPaper>
         </MudItem>
@@ -94,10 +87,6 @@
 </MudStack>
 
 @code {
-    private string username = "";
-    private string password = "";
-    private string message = "";
-    private Severity messageSeverity = Severity.Info;
     private UserResponse? currentUser;
     private string AccountPrompt => currentUser is null
         ? "Sign in to manage your shelf and sync your reading state across the app."
@@ -105,43 +94,43 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Auth.Changed += OnAuthChanged;
         currentUser = await Auth.GetCurrentUserAsync();
-        if (currentUser is not null)
-        {
-            messageSeverity = Severity.Success;
-            message = $"Signed in as {currentUser.Username}.";
-        }
-    }
-
-    private async Task Register()
-    {
-        var user = await Auth.RegisterAsync(username, password);
-        currentUser = user;
-        messageSeverity = user is null ? Severity.Error : Severity.Success;
-        message = user is null ? "Registration failed." : $"Signed in as {user.Username}.";
-    }
-
-    private async Task Login()
-    {
-        var user = await Auth.LoginAsync(username, password);
-        currentUser = user;
-        messageSeverity = user is null ? Severity.Error : Severity.Success;
-        message = user is null ? "Login failed." : $"Signed in as {user.Username}.";
     }
 
     private async Task Logout()
     {
         await Auth.LogoutAsync();
         currentUser = null;
-        messageSeverity = Severity.Info;
-        message = "Signed out.";
     }
 
-    private void GoTo(string route) => Navigation.NavigateTo(route);
+    private void OpenLogin() => Auth.RequestLogin("Log in to manage your shelf and account.");
+
+    private void GoTo(string route)
+    {
+        if (currentUser is null)
+        {
+            Auth.RequestLogin("Please log in to continue.", route);
+            return;
+        }
+
+        Navigation.NavigateTo(route);
+    }
 
     private void GoLibrary() => GoTo("library");
 
     private void GoSearch() => GoTo("search");
 
     private void GoAccount() => GoTo("account");
+
+    private void OnAuthChanged()
+    {
+        currentUser = Auth.CurrentUser;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Auth.Changed -= OnAuthChanged;
+    }
 }

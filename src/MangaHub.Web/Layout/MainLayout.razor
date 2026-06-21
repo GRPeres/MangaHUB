@@ -23,7 +23,7 @@
                  TransformOrigin="Origin.TopRight">
             @if (_currentUser is null)
             {
-                <MudMenuItem Icon="@Icons.Material.Filled.Login" OnClick="GoHome">Sign in</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Login" OnClick="OpenLogin">Sign in</MudMenuItem>
             }
             else
             {
@@ -37,14 +37,12 @@
     <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="0" ClipMode="DrawerClipMode.Never" Class="@DrawerClass">
         <MudStack Spacing="1" Class="mh-rail">
             <div class="mh-rail-brand">
-                <MudIcon Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" />
+                <MudIconButton Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" OnClick="GoHome"/>
                 @if (_drawerExpanded)
                 {
                     <MudText Typo="Typo.subtitle2">Library</MudText>
                 }
             </div>
-
-            <MudDivider />
 
             @NavButton("", "Home", Icons.Material.Filled.Dashboard)
             @NavButton("library", "Shelf", Icons.Material.Filled.AutoStories)
@@ -69,25 +67,35 @@
     </MudMainContent>
 </MudLayout>
 
+<LoginModal @bind-Open="_loginOpen"
+            Message="@_loginMessage"
+            OnAuthenticated="OnLoginAuthenticated" />
+
 @code {
     private bool _drawerExpanded;
     private bool _darkMode;
     private UserResponse? _currentUser;
+    private bool _loginOpen;
+    private string _loginMessage = "Please log in to continue.";
+    private string? _pendingRoute;
     private string DrawerClass => _drawerExpanded ? "mh-drawer mh-drawer-expanded" : "mh-drawer mh-drawer-compact";
 
     protected override async Task OnInitializedAsync()
     {
         Auth.Changed += OnAuthChanged;
+        Auth.LoginRequested += OnLoginRequested;
+        Navigation.LocationChanged += OnLocationChanged;
         _currentUser = await Auth.GetCurrentUserAsync();
+        GuardCurrentRoute();
     }
 
     private void ToggleDrawer() => _drawerExpanded = !_drawerExpanded;
     private void ToggleTheme() => _darkMode = !_darkMode;
 
     private void GoHome() => Navigation.NavigateTo("");
-    private void GoLibrary() => Navigation.NavigateTo("library");
-    private void GoSearch() => Navigation.NavigateTo("search");
-    private void GoAccount() => Navigation.NavigateTo("account");
+    private void GoLibrary() => Navigate("library");
+    private void GoSearch() => Navigate("search");
+    private void GoAccount() => Navigate("account");
 
     private RenderFragment NavButton(string route, string label, string icon) => @<MudTooltip Text="@label" Placement="Placement.Right" Class="mh-nav-tooltip" Disabled="@_drawerExpanded">
         <MudButton Variant="Variant.Text"
@@ -103,7 +111,71 @@
         </MudButton>
     </MudTooltip>;
 
-    private void Navigate(string route) => Navigation.NavigateTo(route);
+    private void Navigate(string route)
+    {
+        if (RequiresLogin(route) && _currentUser is null)
+        {
+            RequestLoginForRoute(route);
+            return;
+        }
+
+        Navigation.NavigateTo(route);
+    }
+
+    private void OpenLogin()
+    {
+        _pendingRoute = null;
+        _loginMessage = "Log in to manage your shelf and account.";
+        _loginOpen = true;
+    }
+
+    private void RequestLoginForRoute(string route)
+    {
+        _pendingRoute = route;
+        _loginMessage = "Please log in to continue.";
+        _loginOpen = true;
+    }
+
+    private void OnLoginRequested(LoginPrompt prompt)
+    {
+        _pendingRoute = prompt.ReturnUrl;
+        _loginMessage = string.IsNullOrWhiteSpace(prompt.Message) ? "Please log in to continue." : prompt.Message;
+        _loginOpen = true;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnLoginAuthenticated(UserResponse user)
+    {
+        _currentUser = user;
+        var route = _pendingRoute;
+        _pendingRoute = null;
+        if (!string.IsNullOrWhiteSpace(route))
+        {
+            var currentRoute = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
+            Navigation.NavigateTo(route, forceLoad: string.Equals(currentRoute, route, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        GuardCurrentRoute();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void GuardCurrentRoute()
+    {
+        var route = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
+        if (RequiresLogin(route) && _currentUser is null)
+        {
+            RequestLoginForRoute(route);
+        }
+    }
+
+    private static bool RequiresLogin(string route)
+    {
+        var cleanRoute = route.Trim('/').Split('?', '#')[0];
+        return cleanRoute is "library" or "search" or "account";
+    }
 
     private bool IsActive(string route)
     {
@@ -130,5 +202,7 @@
     public void Dispose()
     {
         Auth.Changed -= OnAuthChanged;
+        Auth.LoginRequested -= OnLoginRequested;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

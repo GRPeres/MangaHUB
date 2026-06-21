@@ -1,0 +1,103 @@
+@inject AuthState Auth
+
+@if (Open)
+{
+    <div class="mh-modal-backdrop" @onclick="Close">
+        <section class="mh-modal mh-login-modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">Account required</MudText>
+                        <MudText id="login-modal-title" Typo="Typo.h2">Log in to continue</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@Message</MudText>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close login" />
+                </MudStack>
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="username" Label="Username" Variant="Variant.Outlined" AutoFocus="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login" Disabled="@isBusy" OnClick="Login">
+                        @(isBusy ? "Signing in..." : "Log in")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" Disabled="@isBusy" OnClick="Register">
+                        Create account
+                    </MudButton>
+                </MudStack>
+
+                @if (!string.IsNullOrWhiteSpace(feedback))
+                {
+                    <MudAlert Severity="@feedbackSeverity" Variant="Variant.Outlined">@feedback</MudAlert>
+                }
+            </MudStack>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public string Message { get; set; } = "Please log in to continue.";
+    [Parameter] public EventCallback<UserResponse> OnAuthenticated { get; set; }
+
+    private string username = "";
+    private string password = "";
+    private string feedback = "";
+    private Severity feedbackSeverity = Severity.Info;
+    private bool isBusy;
+
+    private async Task Login()
+    {
+        await Authenticate(() => Auth.LoginAsync(username, password), "Login failed.");
+    }
+
+    private async Task Register()
+    {
+        await Authenticate(() => Auth.RegisterAsync(username, password), "Registration failed.");
+    }
+
+    private async Task Authenticate(Func<Task<UserResponse?>> action, string failureMessage)
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        {
+            feedbackSeverity = Severity.Warning;
+            feedback = "Enter your username and password first.";
+            return;
+        }
+
+        isBusy = true;
+        feedback = "";
+        try
+        {
+            var user = await action();
+            if (user is null)
+            {
+                feedbackSeverity = Severity.Error;
+                feedback = failureMessage;
+                return;
+            }
+
+            feedbackSeverity = Severity.Success;
+            feedback = $"Signed in as {user.Username}.";
+            await OnAuthenticated.InvokeAsync(user);
+            await Close();
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task Close()
+    {
+        feedback = "";
+        await OpenChanged.InvokeAsync(false);
+    }
+}

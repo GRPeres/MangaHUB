@@ -276,6 +276,10 @@ a {
     width: 96px;
 }
 
+.mh-login-modal {
+    max-width: 460px;
+}
+
 .reader-toolbar {
     align-items: center;
     display: flex;

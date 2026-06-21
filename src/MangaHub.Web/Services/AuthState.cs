@@ -6,6 +6,7 @@ public sealed class AuthState(MangaHubApiClient api, SessionTokenStore tokens)
     private bool loaded;
 
     public event Action? Changed;
+    public event Action<LoginPrompt>? LoginRequested;
 
     public UserResponse? CurrentUser => currentUser;
     public bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
@@ -48,4 +49,11 @@ public sealed class AuthState(MangaHubApiClient api, SessionTokenStore tokens)
         loaded = true;
         Changed?.Invoke();
     }
+
+    public void RequestLogin(string message = "Please log in to continue.", string? returnUrl = null)
+    {
+        LoginRequested?.Invoke(new LoginPrompt(message, returnUrl));
+    }
 }
+
+public sealed record LoginPrompt(string Message, string? ReturnUrl);
