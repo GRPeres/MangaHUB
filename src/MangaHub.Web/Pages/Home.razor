@@ -17,7 +17,7 @@
             </MudStack>
             <MudStack Row="true" Spacing="2" Class="flex-wrap">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="GoLibrary">Open shelf</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddCircleOutline" OnClick="GoSearch">Add manga</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddCircleOutline" OnClick="GoLibrary">Add manga</MudButton>
                 <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageAccounts" OnClick="GoAccount">Account</MudButton>
             </MudStack>
         </MudStack>
@@ -61,17 +61,17 @@
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoSearch">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoCatalog">
                         <MudIcon Icon="@Icons.Material.Filled.TravelExplore" Color="Color.Primary" Size="Size.Large" />
-                        <MudText Typo="Typo.h3">Register clean metadata</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Pull covers, descriptions, and category hints from OpenLibrary.</MudText>
+                        <MudText Typo="Typo.h3">Curate the catalog</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Admins pull covers, descriptions, and category hints from OpenLibrary.</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoSearch">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoLibrary">
                         <MudIcon Icon="@Icons.Material.Filled.UploadFile" Color="Color.Secondary" Size="Size.Large" />
                         <MudText Typo="Typo.h3">Bring the old sheet</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Import status, chapter, score, type, and summaries from CSV.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Import status, chapter, score, type, and summaries into your shelf.</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12" sm="6">
@@ -119,7 +119,7 @@
 
     private void GoLibrary() => GoTo("library");
 
-    private void GoSearch() => GoTo("search");
+    private void GoCatalog() => GoTo("catalog");
 
     private void GoAccount() => GoTo("account");
 

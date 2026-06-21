@@ -33,7 +33,6 @@ public partial class MainLayout : IDisposable
 
     private void GoHome() => Navigation.NavigateTo("");
     private void GoLibrary() => Navigate("library");
-    private void GoSearch() => Navigate("search");
     private void GoAccount() => Navigate("account");
 
     private void Navigate(string route)
