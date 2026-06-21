@@ -206,6 +206,13 @@ a {
     flex: 1;
 }
 
+.mh-card-summary {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
 .mh-cover {
     aspect-ratio: 2 / 3;
     background: var(--mud-palette-lines-default);
