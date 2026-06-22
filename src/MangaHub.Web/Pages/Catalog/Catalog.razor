@@ -1,11 +1,9 @@
 @page "/catalog"
 @using MangaHub.Web.API.Services
-@using Microsoft.AspNetCore.Components.Forms
 @inject AuthSessionService Auth
 @inject CatalogApiService CatalogApi
 @inject OpenLibraryApiService OpenLibraryApi
 @inject SeriesApiService SeriesApi
-@inject ShelfApiService ShelfApi
 
 <PageTitle>Catalog</PageTitle>
 
@@ -17,7 +15,10 @@
             <MudText Typo="Typo.body2" Color="Color.Secondary">Manage shared manga metadata, covers, OpenLibrary matches, MangaDex links, and local series bindings.</MudText>
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="flex-wrap">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.LibraryAdd" OnClick="ToggleCreateCatalog">Add catalog manga</MudButton>
+            <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
+                <MudMenuItem Icon="@Icons.Material.Filled.LibraryAdd" OnClick="OpenAddCatalog">Add manga</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportCatalog">Import CSV</MudMenuItem>
+            </MudMenu>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadCatalog">Refresh</MudButton>
         </MudStack>
     </MudStack>
@@ -32,145 +33,6 @@
     }
     else
     {
-        @if (isCreatingCatalog)
-        {
-            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-                <MudStack Spacing="4">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap">
-                        <MudStack Spacing="1">
-                            <MudText Typo="Typo.h2">Add catalog manga</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Search OpenLibrary first, then confirm the shared metadata and reading sources.</MudText>
-                        </MudStack>
-                        <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CloseCreateCatalog" aria-label="Close catalog creation form" />
-                    </MudStack>
-
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
-                        <MudChip T="string" Color="@(catalogWizardStep == 1 ? Color.Primary : Color.Default)" Variant="@(catalogWizardStep == 1 ? Variant.Filled : Variant.Outlined)">1. Find metadata</MudChip>
-                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Secondary" />
-                        <MudChip T="string" Color="@(catalogWizardStep == 2 ? Color.Primary : Color.Default)" Variant="@(catalogWizardStep == 2 ? Variant.Filled : Variant.Outlined)">2. Confirm entry</MudChip>
-                    </MudStack>
-
-                    @if (catalogWizardStep == 1)
-                    {
-                        <MudGrid Spacing="2">
-                            <MudItem xs="12" md="9">
-                                <MudTextField T="string" @bind-Value="createOpenLibraryQuery" Label="Search OpenLibrary" Variant="Variant.Outlined" Immediate="true" />
-                            </MudItem>
-                            <MudItem xs="12" md="3" Class="d-flex align-center">
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingCreateOpenLibrary" OnClick="SearchCreateOpenLibrary">
-                                    @(isSearchingCreateOpenLibrary ? "Searching..." : "Search")
-                                </MudButton>
-                            </MudItem>
-                        </MudGrid>
-
-                        @if (!string.IsNullOrWhiteSpace(createOpenLibraryMessage))
-                        {
-                            <MudAlert Severity="@createOpenLibrarySeverity" Variant="Variant.Outlined">@createOpenLibraryMessage</MudAlert>
-                        }
-
-                        @if (createOpenLibraryResults.Count == 0 && string.IsNullOrWhiteSpace(createOpenLibraryMessage))
-                        {
-                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Search OpenLibrary to pick metadata for the catalog entry.</MudAlert>
-                        }
-
-                        <MudGrid Spacing="3">
-                            @foreach (var item in createOpenLibraryResults)
-                            {
-                                <MudItem xs="12" sm="6" md="4" lg="3">
-                                    <MudCard Elevation="0" Outlined="true" Class="mh-card">
-                                        @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-                                        {
-                                            <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
-                                        }
-                                        <MudCardContent>
-                                            <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
-                                            <MudText Typo="Typo.h3">@item.Title</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
-                                            @if (!string.IsNullOrWhiteSpace(item.Category))
-                                            {
-                                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mt-2">@item.Category</MudChip>
-                                            }
-                                            @if (!string.IsNullOrWhiteSpace(item.Description))
-                                            {
-                                                <MudText Typo="Typo.body2" Class="mt-2 mh-card-summary">@item.Description</MudText>
-                                            }
-                                        </MudCardContent>
-                                        <MudCardActions>
-                                            <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" OnClick="() => SelectCreateOpenLibraryManga(item)">Review entry</MudButton>
-                                        </MudCardActions>
-                                    </MudCard>
-                                </MudItem>
-                            }
-                        </MudGrid>
-                    }
-
-                    @if (catalogWizardStep == 2 && selectedCreateOpenLibraryManga is not null)
-                    {
-                        <MudStack Spacing="3">
-                            <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start" Class="flex-wrap">
-                                @if (!string.IsNullOrWhiteSpace(FirstNonEmpty(createCoverUrlOverride, selectedCreateOpenLibraryManga.CoverUrl)))
-                                {
-                                    <MudImage Src="@FirstNonEmpty(createCoverUrlOverride, selectedCreateOpenLibraryManga.CoverUrl)" Alt="@($"{selectedCreateOpenLibraryManga.Title} cover")" Class="mh-wizard-cover" />
-                                }
-                                <MudStack Spacing="1" Class="flex-grow-1">
-                                    <MudText Typo="Typo.overline" Color="Color.Secondary">Catalog candidate</MudText>
-                                    <MudText Typo="Typo.h2">@selectedCreateOpenLibraryManga.Title</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedCreateOpenLibraryManga.Authors</MudText>
-                                    @if (!string.IsNullOrWhiteSpace(selectedCreateOpenLibraryManga.Description))
-                                    {
-                                        <MudText Typo="Typo.body2" Class="mt-2">@selectedCreateOpenLibraryManga.Description</MudText>
-                                    }
-                                    <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="BackToCreateOpenLibrarySearch">Choose another</MudButton>
-                                </MudStack>
-                            </MudStack>
-
-                            <MudGrid Spacing="3">
-                                <MudItem xs="12" md="5">
-                                    <MudTextField T="string" @bind-Value="createMangaDexUrl" Label="MangaDex URL" Variant="Variant.Outlined" />
-                                </MudItem>
-                                <MudItem xs="12" md="5">
-                                    <MudTextField T="string" @bind-Value="createCoverUrlOverride" Label="Cover image URL override" Variant="Variant.Outlined" />
-                                </MudItem>
-                                <MudItem xs="12" md="4">
-                                    <MudSelect T="string" @bind-Value="createLocalSeriesIdText" Label="Local scanned series" Variant="Variant.Outlined">
-                                        <MudSelectItem T="string" Value="@("")">None</MudSelectItem>
-                                        @foreach (var series in localSeries)
-                                        {
-                                            <MudSelectItem T="string" Value="@series.Id.ToString()">@series.Title</MudSelectItem>
-                                        }
-                                    </MudSelect>
-                                </MudItem>
-                            </MudGrid>
-
-                            @if (!string.IsNullOrWhiteSpace(createOpenLibraryMessage))
-                            {
-                                <MudAlert Severity="@createOpenLibrarySeverity" Variant="Variant.Outlined">@createOpenLibraryMessage</MudAlert>
-                            }
-
-                            <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.LibraryAdd" OnClick="CreateSelectedCatalogEntry">Add to catalog</MudButton>
-                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="BackToCreateOpenLibrarySearch">Back</MudButton>
-                            </MudStack>
-                        </MudStack>
-                    }
-                </MudStack>
-            </MudPaper>
-        }
-
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudStack Spacing="2">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.h3">Import CSV into catalog</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Creates missing catalog entries from the CSV, then adds those manga to your shelf.</MudText>
-                </MudStack>
-                <InputFile OnChange="ImportCatalogCsv" accept=".csv,text/csv" />
-                @if (!string.IsNullOrWhiteSpace(catalogImportMessage))
-                {
-                    <MudAlert Severity="@catalogImportSeverity" Variant="Variant.Outlined">@catalogImportMessage</MudAlert>
-                }
-            </MudStack>
-        </MudPaper>
-
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudGrid Spacing="2">
                 <MudItem xs="12" md="9">
@@ -235,6 +97,9 @@
         }
     }
 </MudStack>
+
+<CatalogAddModal Open="@isAddCatalogOpen" OpenChanged="OnAddCatalogOpenChanged" LocalSeries="@localSeries" OnSaved="LoadCatalog" />
+<CatalogImportModal Open="@isImportCatalogOpen" OpenChanged="OnImportCatalogOpenChanged" OnImported="LoadCatalog" />
 
 @if (isEditDialogOpen && editingEntry is not null)
 {
@@ -370,19 +235,8 @@
     private string query = "";
     private string message = "";
     private Severity messageSeverity = Severity.Info;
-    private bool isCreatingCatalog;
-    private int catalogWizardStep = 1;
-    private string createOpenLibraryQuery = "";
-    private string createOpenLibraryMessage = "";
-    private Severity createOpenLibrarySeverity = Severity.Info;
-    private bool isSearchingCreateOpenLibrary;
-    private List<OpenLibraryResult> createOpenLibraryResults = [];
-    private OpenLibraryResult? selectedCreateOpenLibraryManga;
-    private string createMangaDexUrl = "";
-    private string createCoverUrlOverride = "";
-    private string createLocalSeriesIdText = "";
-    private string catalogImportMessage = "";
-    private Severity catalogImportSeverity = Severity.Info;
+    private bool isAddCatalogOpen;
+    private bool isImportCatalogOpen;
     private CatalogMangaResponse? editingEntry;
     private bool isEditDialogOpen;
     private string editTitle = "";
@@ -431,132 +285,10 @@
         message = catalog.Count == 0 ? "No catalog entries matched your search." : $"Found {catalog.Count} catalog entries.";
     }
 
-    private void ToggleCreateCatalog() => isCreatingCatalog = !isCreatingCatalog;
-
-    private void CloseCreateCatalog()
-    {
-        isCreatingCatalog = false;
-        BackToCreateOpenLibrarySearch();
-    }
-
-    private void SelectCreateOpenLibraryManga(OpenLibraryResult item)
-    {
-        selectedCreateOpenLibraryManga = item;
-        catalogWizardStep = 2;
-        createOpenLibraryMessage = "";
-    }
-
-    private void BackToCreateOpenLibrarySearch()
-    {
-        selectedCreateOpenLibraryManga = null;
-        catalogWizardStep = 1;
-        createOpenLibraryMessage = "";
-    }
-
-    private async Task SearchCreateOpenLibrary()
-    {
-        if (string.IsNullOrWhiteSpace(createOpenLibraryQuery))
-        {
-            createOpenLibraryResults = [];
-            createOpenLibrarySeverity = Severity.Info;
-            createOpenLibraryMessage = "Type a title before searching OpenLibrary.";
-            return;
-        }
-
-        isSearchingCreateOpenLibrary = true;
-        createOpenLibraryMessage = "";
-        try
-        {
-            createOpenLibraryResults = await OpenLibraryApi.SearchOpenLibraryAsync(createOpenLibraryQuery);
-            selectedCreateOpenLibraryManga = null;
-            catalogWizardStep = 1;
-            createOpenLibrarySeverity = createOpenLibraryResults.Count == 0 ? Severity.Warning : Severity.Success;
-            createOpenLibraryMessage = createOpenLibraryResults.Count == 0
-                ? "OpenLibrary returned no matches."
-                : $"Found {createOpenLibraryResults.Count} OpenLibrary matches.";
-        }
-        catch
-        {
-            createOpenLibraryResults = [];
-            createOpenLibrarySeverity = Severity.Error;
-            createOpenLibraryMessage = "OpenLibrary search failed. Try again in a moment.";
-        }
-        finally
-        {
-            isSearchingCreateOpenLibrary = false;
-        }
-    }
-
-    private async Task CreateSelectedCatalogEntry()
-    {
-        if (selectedCreateOpenLibraryManga is null)
-        {
-            createOpenLibrarySeverity = Severity.Warning;
-            createOpenLibraryMessage = "Choose an OpenLibrary result first.";
-            catalogWizardStep = 1;
-            return;
-        }
-
-        var localSeriesId = Guid.TryParse(createLocalSeriesIdText, out var parsed) ? parsed : (Guid?)null;
-        var request = new MangaEntryRequest(
-            selectedCreateOpenLibraryManga.Title,
-            selectedCreateOpenLibraryManga.Authors,
-            selectedCreateOpenLibraryManga.Category,
-            selectedCreateOpenLibraryManga.Description,
-            FirstNonEmpty(createCoverUrlOverride, selectedCreateOpenLibraryManga.CoverUrl),
-            selectedCreateOpenLibraryManga.Key,
-            selectedCreateOpenLibraryManga.FirstPublishYear,
-            "",
-            createMangaDexUrl,
-            localSeriesId,
-            "");
-
-        var created = await CatalogApi.CreateCatalogMangaAsync(request);
-        createOpenLibrarySeverity = created is null ? Severity.Error : Severity.Success;
-        createOpenLibraryMessage = created is null ? "Catalog registration failed. Admin permissions are required." : $"Added {created.Title} to the catalog.";
-        catalog = await CatalogApi.GetCatalogAsync(query);
-        if (created is not null)
-        {
-            selectedCreateOpenLibraryManga = null;
-            catalogWizardStep = 1;
-            createOpenLibraryResults = [];
-            createOpenLibraryQuery = "";
-            createMangaDexUrl = "";
-            createCoverUrlOverride = "";
-            createLocalSeriesIdText = "";
-        }
-    }
-
-    private async Task ImportCatalogCsv(InputFileChangeEventArgs args)
-    {
-        var file = args.File;
-        if (file is null)
-        {
-            return;
-        }
-
-        try
-        {
-            using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
-            using var reader = new StreamReader(stream);
-            var csv = await reader.ReadToEndAsync();
-            var result = await ShelfApi.ImportShelfAsync(new ShelfImportRequest(csv, true));
-            catalogImportSeverity = result is null ? Severity.Error : Severity.Success;
-            catalogImportMessage = result is null
-                ? "Catalog import failed."
-                : $"Imported {result.Imported} rows, created {result.CreatedCatalogEntries} catalog entries, updated {result.UpdatedShelfEntries}, skipped {result.Skipped}.";
-            if (result?.Messages.Count > 0)
-            {
-                catalogImportMessage += " " + string.Join(" ", result.Messages);
-            }
-            catalog = await CatalogApi.GetCatalogAsync(query);
-        }
-        catch
-        {
-            catalogImportSeverity = Severity.Error;
-            catalogImportMessage = "Could not read the CSV file.";
-        }
-    }
+    private void OpenAddCatalog() => isAddCatalogOpen = true;
+    private void OpenImportCatalog() => isImportCatalogOpen = true;
+    private void OnAddCatalogOpenChanged(bool open) => isAddCatalogOpen = open;
+    private void OnImportCatalogOpenChanged(bool open) => isImportCatalogOpen = open;
 
     private void EditCatalog(CatalogMangaResponse entry)
     {
