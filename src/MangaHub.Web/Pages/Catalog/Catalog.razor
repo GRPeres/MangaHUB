@@ -76,6 +76,22 @@
                                     {
                                         <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">OpenLibrary</MudChip>
                                     }
+                                    @if (!string.IsNullOrWhiteSpace(item.MyAnimeListId))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">MAL</MudChip>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.MediaType))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@item.MediaType</MudChip>
+                                    }
+                                    @if (item.ChapterCount is not null)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.ChapterCount} ch.")</MudChip>
+                                    }
+                                    @if (item.VolumeCount is not null)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.VolumeCount} vol.")</MudChip>
+                                    }
                                     @if (!string.IsNullOrWhiteSpace(item.MangaDexUrl))
                                     {
                                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>

@@ -22,6 +22,7 @@ services:
       MangaHub__LibraryPath: /library
       MangaHub__JwtSecret: ${JWT_SECRET:-change-me-before-deploying-to-a-long-random-secret}
       MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
+      MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:-}
       MangaHub__SessionCookieSameSite: Lax
       MangaHub__SessionCookieSecure: false
       FrontendOrigin: http://localhost:3000
@@ -46,6 +47,7 @@ services:
       MangaHub__LibraryPath: /library
       MangaHub__JwtSecret: ${JWT_SECRET:-change-me-before-deploying-to-a-long-random-secret}
       MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
+      MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:-}
     volumes:
       - ${HOST_LIBRARY_PATH:-./library}:/library:ro
     depends_on:

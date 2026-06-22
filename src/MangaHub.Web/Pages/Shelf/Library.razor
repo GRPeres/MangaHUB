@@ -79,6 +79,18 @@
                                 {
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@item.Category</MudChip>
                                 }
+                                @if (!string.IsNullOrWhiteSpace(item.MyAnimeListId))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">MAL</MudChip>
+                                }
+                                @if (item.ChapterCount is not null)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.ChapterCount} ch.")</MudChip>
+                                }
+                                @if (item.VolumeCount is not null)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.VolumeCount} vol.")</MudChip>
+                                }
                             </MudStack>
                             @if (!string.IsNullOrWhiteSpace(item.Summary))
                             {

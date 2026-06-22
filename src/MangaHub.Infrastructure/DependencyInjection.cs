@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
         services.AddSingleton<ISessionTokenService, JwtSessionTokenService>();
         services.AddHttpClient<IOpenLibraryClient, OpenLibraryClient>(client => client.BaseAddress = new Uri("https://openlibrary.org"));
+        services.AddHttpClient<IMyAnimeListClient, MyAnimeListClient>(client => client.BaseAddress = new Uri("https://api.myanimelist.net/v2/"));
         services.AddHttpClient<MangaDexSource>(client => client.BaseAddress = new Uri("https://api.mangadex.org"));
         services.AddScoped<IMangaSource, LocalMangaSource>();
         services.AddScoped<IMangaSource, MangaDexSource>();

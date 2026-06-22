@@ -33,8 +33,14 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "Category" character varying(120) NOT NULL DEFAULT '',
                 "Description" text NOT NULL,
                 "CoverUrl" text NOT NULL,
+                "MetadataSource" character varying(40) NOT NULL DEFAULT '',
+                "MyAnimeListId" character varying(80) NOT NULL DEFAULT '',
                 "OpenLibraryKey" text NOT NULL,
                 "FirstPublishYear" integer NULL,
+                "MediaType" character varying(80) NOT NULL DEFAULT '',
+                "PublishingStatus" character varying(80) NOT NULL DEFAULT '',
+                "ChapterCount" integer NULL,
+                "VolumeCount" integer NULL,
                 "MangaDexUrl" text NOT NULL,
                 "MangaDexId" character varying(80) NOT NULL,
                 "LocalSeriesId" uuid NULL,
@@ -45,6 +51,12 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CreatedByUserId" uuid NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "Category" character varying(120) NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CoverUrl" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MetadataSource" character varying(40) NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MyAnimeListId" character varying(80) NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MediaType" character varying(80) NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "PublishingStatus" character varying(80) NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ChapterCount" integer NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "VolumeCount" integer NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "UserId" uuid NULL;
             ALTER TABLE manga_entries ALTER COLUMN "UserId" DROP NOT NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReadingStatus" character varying(40) NULL;
@@ -93,6 +105,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             WHERE "CreatedByUserId" IS NULL AND "UserId" IS NOT NULL;
 
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_OpenLibraryKey" ON manga_entries ("OpenLibraryKey");
+            CREATE INDEX IF NOT EXISTS "IX_manga_entries_MyAnimeListId" ON manga_entries ("MyAnimeListId");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_MangaEntryId" ON user_manga_entries ("UserId", "MangaEntryId");
             """);
     }

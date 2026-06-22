@@ -36,6 +36,21 @@
                     <MudItem xs="12" md="4">
                         <MudTextField T="string" @bind-Value="editOpenLibraryKey" Label="OpenLibrary key" Variant="Variant.Outlined" />
                     </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudTextField T="string" @bind-Value="editMyAnimeListId" Label="MyAnimeList ID" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudTextField T="string" @bind-Value="editMediaType" Label="Media type" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudTextField T="string" @bind-Value="editPublishingStatus" Label="Publishing status" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudNumericField T="int?" @bind-Value="editChapterCount" Label="Chapters" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudNumericField T="int?" @bind-Value="editVolumeCount" Label="Volumes" Variant="Variant.Outlined" />
+                    </MudItem>
                     <MudItem xs="12" md="6">
                         <MudTextField T="string" @bind-Value="editCoverUrl" Label="Cover image URL" Variant="Variant.Outlined" />
                     </MudItem>
@@ -58,35 +73,36 @@
 
                 <MudStack Row="true" Spacing="2" Class="flex-wrap">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveCatalog">Save catalog metadata</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" OnClick="ToggleOpenLibrary">Find OpenLibrary match</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" OnClick="ToggleMetadata">Find metadata match</MudButton>
                 </MudStack>
 
-                @if (showOpenLibrary)
+                @if (showMetadata)
                 {
                     <MudDivider />
                     <MudStack Spacing="2">
                         <MudStack Spacing="1">
-                            <MudText Typo="Typo.h3">OpenLibrary match</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Use this when an imported catalog title needs the correct book, cover, category, or summary.</MudText>
+                            <MudText Typo="Typo.h3">Metadata match</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Search MyAnimeList first. Load OpenLibrary when you need extra fallback matches.</MudText>
                         </MudStack>
                         <MudGrid Spacing="2">
                             <MudItem xs="12" md="9">
-                                <MudTextField T="string" @bind-Value="openLibraryQuery" Label="Search OpenLibrary" Variant="Variant.Outlined" />
+                                <MudTextField T="string" @bind-Value="metadataQuery" Label="Search MyAnimeList" Variant="Variant.Outlined" />
                             </MudItem>
                             <MudItem xs="12" md="3" Class="d-flex align-center">
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingOpenLibrary" OnClick="SearchOpenLibrary">
-                                    @(isSearchingOpenLibrary ? "Searching..." : "Search")
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingMetadata" OnClick="() => SearchMetadata(false)">
+                                    @(isSearchingMetadata ? "Searching..." : "Search")
                                 </MudButton>
                             </MudItem>
                         </MudGrid>
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.MoreHoriz" Disabled="@isSearchingMetadata" OnClick="() => SearchMetadata(true)">Load OpenLibrary results</MudButton>
 
-                        @if (!string.IsNullOrWhiteSpace(openLibraryMessage))
+                        @if (!string.IsNullOrWhiteSpace(metadataMessage))
                         {
-                            <MudAlert Severity="@openLibrarySeverity" Variant="Variant.Outlined">@openLibraryMessage</MudAlert>
+                            <MudAlert Severity="@metadataSeverity" Variant="Variant.Outlined">@metadataMessage</MudAlert>
                         }
 
                         <MudGrid Spacing="2">
-                            @foreach (var item in openLibraryResults)
+                            @foreach (var item in metadataResults)
                             {
                                 <MudItem xs="12" md="6">
                                     <MudPaper Class="pa-3" Elevation="0" Outlined="true">
@@ -98,11 +114,22 @@
                                             <MudStack Spacing="1" Class="flex-grow-1">
                                                 <MudText Typo="Typo.h3">@item.Title</MudText>
                                                 <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                                                <MudStack Row="true" Spacing="1" Class="flex-wrap">
+                                                    <MudChip T="string" Size="Size.Small" Color="@(item.Source == "myanimelist" ? Color.Secondary : Color.Primary)" Variant="Variant.Outlined">@item.Source</MudChip>
+                                                    @if (item.ChapterCount is not null)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.ChapterCount} ch.")</MudChip>
+                                                    }
+                                                    @if (item.VolumeCount is not null)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.VolumeCount} vol.")</MudChip>
+                                                    }
+                                                </MudStack>
                                                 @if (!string.IsNullOrWhiteSpace(item.Category))
                                                 {
                                                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@item.Category</MudChip>
                                                 }
-                                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="() => ApplyOpenLibraryMetadata(item)">Use metadata</MudButton>
+                                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="() => ApplyMetadata(item)">Use metadata</MudButton>
                                             </MudStack>
                                         </MudStack>
                                     </MudPaper>

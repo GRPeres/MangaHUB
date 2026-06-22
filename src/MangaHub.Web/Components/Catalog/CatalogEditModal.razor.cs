@@ -8,7 +8,7 @@ namespace MangaHub.Web.Components.Catalog;
 public partial class CatalogEditModal
 {
     [Inject] private CatalogApiService CatalogApi { get; set; } = default!;
-    [Inject] private OpenLibraryApiService OpenLibraryApi { get; set; } = default!;
+    [Inject] private MetadataApiService MetadataApi { get; set; } = default!;
 
     [Parameter] public CatalogMangaResponse? Entry { get; set; }
     [Parameter] public List<SeriesResponse> LocalSeries { get; set; } = [];
@@ -21,18 +21,25 @@ public partial class CatalogEditModal
     private string editCategory = "";
     private string editDescription = "";
     private string editCoverUrl = "";
+    private string editMetadataSource = "";
+    private string editMyAnimeListId = "";
     private string editOpenLibraryKey = "";
     private int? editFirstPublishYear;
+    private string editMediaType = "";
+    private string editPublishingStatus = "";
+    private int? editChapterCount;
+    private int? editVolumeCount;
     private string editMangaDexUrl = "";
     private string editLocalSeriesIdText = "";
     private string message = "";
     private Severity messageSeverity = Severity.Info;
-    private bool showOpenLibrary;
-    private string openLibraryQuery = "";
-    private string openLibraryMessage = "";
-    private Severity openLibrarySeverity = Severity.Info;
-    private bool isSearchingOpenLibrary;
-    private List<OpenLibraryResult> openLibraryResults = [];
+    private bool showMetadata;
+    private string metadataQuery = "";
+    private string metadataMessage = "";
+    private Severity metadataSeverity = Severity.Info;
+    private bool isSearchingMetadata;
+    private bool includeOpenLibrary;
+    private List<MetadataResult> metadataResults = [];
 
     protected override void OnParametersSet()
     {
@@ -47,61 +54,75 @@ public partial class CatalogEditModal
         editCategory = Entry.Category;
         editDescription = Entry.Description;
         editCoverUrl = Entry.CoverUrl;
+        editMetadataSource = Entry.MetadataSource;
+        editMyAnimeListId = Entry.MyAnimeListId;
         editOpenLibraryKey = Entry.OpenLibraryKey;
         editFirstPublishYear = Entry.FirstPublishYear;
+        editMediaType = Entry.MediaType;
+        editPublishingStatus = Entry.PublishingStatus;
+        editChapterCount = Entry.ChapterCount;
+        editVolumeCount = Entry.VolumeCount;
         editMangaDexUrl = Entry.MangaDexUrl;
         editLocalSeriesIdText = Entry.LocalSeriesId?.ToString() ?? "";
-        openLibraryQuery = Entry.Title;
-        openLibraryResults = [];
-        openLibraryMessage = "";
+        metadataQuery = Entry.Title;
+        metadataResults = [];
+        metadataMessage = "";
+        includeOpenLibrary = false;
         message = "";
-        showOpenLibrary = false;
+        showMetadata = false;
     }
 
-    private void ToggleOpenLibrary() => showOpenLibrary = !showOpenLibrary;
+    private void ToggleMetadata() => showMetadata = !showMetadata;
 
-    private async Task SearchOpenLibrary()
+    private async Task SearchMetadata(bool loadOpenLibrary = false)
     {
-        if (string.IsNullOrWhiteSpace(openLibraryQuery))
+        if (string.IsNullOrWhiteSpace(metadataQuery))
         {
-            openLibraryResults = [];
-            openLibrarySeverity = Severity.Info;
-            openLibraryMessage = "Type a title before searching OpenLibrary.";
+            metadataResults = [];
+            metadataSeverity = Severity.Info;
+            metadataMessage = "Type a title before searching metadata.";
             return;
         }
 
-        isSearchingOpenLibrary = true;
+        includeOpenLibrary = includeOpenLibrary || loadOpenLibrary;
+        isSearchingMetadata = true;
         try
         {
-            openLibraryResults = await OpenLibraryApi.SearchOpenLibraryAsync(openLibraryQuery);
-            openLibrarySeverity = openLibraryResults.Count == 0 ? Severity.Warning : Severity.Success;
-            openLibraryMessage = openLibraryResults.Count == 0
-                ? "OpenLibrary returned no matches."
-                : $"Found {openLibraryResults.Count} OpenLibrary matches.";
+            metadataResults = await MetadataApi.SearchAsync(metadataQuery, includeOpenLibrary);
+            metadataSeverity = metadataResults.Count == 0 ? Severity.Warning : Severity.Success;
+            metadataMessage = metadataResults.Count == 0
+                ? "No metadata matches found."
+                : $"Found {metadataResults.Count} metadata matches.";
         }
         catch
         {
-            openLibraryResults = [];
-            openLibrarySeverity = Severity.Error;
-            openLibraryMessage = "OpenLibrary search failed.";
+            metadataResults = [];
+            metadataSeverity = Severity.Error;
+            metadataMessage = "Metadata search failed.";
         }
         finally
         {
-            isSearchingOpenLibrary = false;
+            isSearchingMetadata = false;
         }
     }
 
-    private void ApplyOpenLibraryMetadata(OpenLibraryResult item)
+    private void ApplyMetadata(MetadataResult item)
     {
         editTitle = item.Title;
         editAuthors = item.Authors;
         editCategory = item.Category;
         editDescription = item.Description;
         editCoverUrl = item.CoverUrl;
-        editOpenLibraryKey = item.Key;
+        editMetadataSource = item.Source;
+        editMyAnimeListId = item.MyAnimeListId;
+        editOpenLibraryKey = item.OpenLibraryKey;
         editFirstPublishYear = item.FirstPublishYear;
-        openLibrarySeverity = Severity.Success;
-        openLibraryMessage = $"Filled the form from {item.Title}.";
+        editMediaType = item.MediaType;
+        editPublishingStatus = item.PublishingStatus;
+        editChapterCount = item.ChapterCount;
+        editVolumeCount = item.VolumeCount;
+        metadataSeverity = Severity.Success;
+        metadataMessage = $"Filled the form from {item.Title}.";
     }
 
     private async Task SaveCatalog()
@@ -125,7 +146,24 @@ public partial class CatalogEditModal
     private MangaEntryRequest BuildRequest()
     {
         var localSeriesId = Guid.TryParse(editLocalSeriesIdText, out var parsed) ? parsed : (Guid?)null;
-        return new MangaEntryRequest(editTitle, editAuthors, editCategory, editDescription, editCoverUrl, editOpenLibraryKey, editFirstPublishYear, "", editMangaDexUrl, localSeriesId, "");
+        return new MangaEntryRequest(
+            editTitle,
+            editAuthors,
+            editCategory,
+            editDescription,
+            editCoverUrl,
+            editOpenLibraryKey,
+            editFirstPublishYear,
+            "",
+            editMangaDexUrl,
+            localSeriesId,
+            "",
+            editMetadataSource,
+            editMyAnimeListId,
+            editMediaType,
+            editPublishingStatus,
+            editChapterCount,
+            editVolumeCount);
     }
 
     private async Task Close()

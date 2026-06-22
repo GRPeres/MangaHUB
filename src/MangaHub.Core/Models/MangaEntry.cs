@@ -9,8 +9,14 @@ public sealed class MangaEntry
     public string Category { get; set; } = "";
     public string Description { get; set; } = "";
     public string CoverUrl { get; set; } = "";
+    public string MetadataSource { get; set; } = "";
+    public string MyAnimeListId { get; set; } = "";
     public string OpenLibraryKey { get; set; } = "";
     public int? FirstPublishYear { get; set; }
+    public string MediaType { get; set; } = "";
+    public string PublishingStatus { get; set; } = "";
+    public int? ChapterCount { get; set; }
+    public int? VolumeCount { get; set; }
     public string MangaDexUrl { get; set; } = "";
     public string MangaDexId { get; set; } = "";
     public Guid? LocalSeriesId { get; set; }

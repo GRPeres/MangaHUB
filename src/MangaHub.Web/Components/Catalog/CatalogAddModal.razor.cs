@@ -8,7 +8,7 @@ namespace MangaHub.Web.Components.Catalog;
 public partial class CatalogAddModal
 {
     [Inject] private CatalogApiService CatalogApi { get; set; } = default!;
-    [Inject] private OpenLibraryApiService OpenLibraryApi { get; set; } = default!;
+    [Inject] private MetadataApiService MetadataApi { get; set; } = default!;
 
     [Parameter] public bool Open { get; set; }
     [Parameter] public EventCallback<bool> OpenChanged { get; set; }
@@ -20,70 +20,84 @@ public partial class CatalogAddModal
     private string category = "";
     private string description = "";
     private string coverUrl = "";
+    private string metadataSource = "";
+    private string myAnimeListId = "";
     private string openLibraryKey = "";
     private int? firstPublishYear;
+    private string mediaType = "";
+    private string publishingStatus = "";
+    private int? chapterCount;
+    private int? volumeCount;
     private string mangaDexUrl = "";
     private string localSeriesIdText = "";
     private string message = "";
     private Severity messageSeverity = Severity.Info;
-    private bool showOpenLibrary;
-    private string openLibraryQuery = "";
-    private string openLibraryMessage = "";
-    private Severity openLibrarySeverity = Severity.Info;
-    private bool isSearchingOpenLibrary;
-    private List<OpenLibraryResult> openLibraryResults = [];
+    private bool showMetadata;
+    private string metadataQuery = "";
+    private string metadataMessage = "";
+    private Severity metadataSeverity = Severity.Info;
+    private bool isSearchingMetadata;
+    private bool includeOpenLibrary;
+    private List<MetadataResult> metadataResults = [];
 
-    private void ToggleOpenLibrary()
+    private void ToggleMetadata()
     {
-        showOpenLibrary = !showOpenLibrary;
-        if (showOpenLibrary && string.IsNullOrWhiteSpace(openLibraryQuery))
+        showMetadata = !showMetadata;
+        if (showMetadata && string.IsNullOrWhiteSpace(metadataQuery))
         {
-            openLibraryQuery = title;
+            metadataQuery = title;
         }
     }
 
-    private async Task SearchOpenLibrary()
+    private async Task SearchMetadata(bool loadOpenLibrary = false)
     {
-        if (string.IsNullOrWhiteSpace(openLibraryQuery))
+        if (string.IsNullOrWhiteSpace(metadataQuery))
         {
-            openLibraryResults = [];
-            openLibrarySeverity = Severity.Info;
-            openLibraryMessage = "Type a title before searching OpenLibrary.";
+            metadataResults = [];
+            metadataSeverity = Severity.Info;
+            metadataMessage = "Type a title before searching metadata.";
             return;
         }
 
-        isSearchingOpenLibrary = true;
+        includeOpenLibrary = includeOpenLibrary || loadOpenLibrary;
+        isSearchingMetadata = true;
         try
         {
-            openLibraryResults = await OpenLibraryApi.SearchOpenLibraryAsync(openLibraryQuery);
-            openLibrarySeverity = openLibraryResults.Count == 0 ? Severity.Warning : Severity.Success;
-            openLibraryMessage = openLibraryResults.Count == 0
-                ? "OpenLibrary returned no matches."
-                : $"Found {openLibraryResults.Count} OpenLibrary matches.";
+            metadataResults = await MetadataApi.SearchAsync(metadataQuery, includeOpenLibrary);
+            metadataSeverity = metadataResults.Count == 0 ? Severity.Warning : Severity.Success;
+            metadataMessage = metadataResults.Count == 0
+                ? "No metadata matches found."
+                : $"Found {metadataResults.Count} metadata matches.";
         }
         catch
         {
-            openLibraryResults = [];
-            openLibrarySeverity = Severity.Error;
-            openLibraryMessage = "OpenLibrary search failed.";
+            metadataResults = [];
+            metadataSeverity = Severity.Error;
+            metadataMessage = "Metadata search failed.";
         }
         finally
         {
-            isSearchingOpenLibrary = false;
+            isSearchingMetadata = false;
         }
     }
 
-    private void ApplyOpenLibrary(OpenLibraryResult item)
+    private void ApplyMetadata(MetadataResult item)
     {
         title = item.Title;
         authors = item.Authors;
         category = item.Category;
         description = item.Description;
         coverUrl = item.CoverUrl;
-        openLibraryKey = item.Key;
+        metadataSource = item.Source;
+        myAnimeListId = item.MyAnimeListId;
+        openLibraryKey = item.OpenLibraryKey;
         firstPublishYear = item.FirstPublishYear;
-        openLibrarySeverity = Severity.Success;
-        openLibraryMessage = $"Filled the form from {item.Title}.";
+        mediaType = item.MediaType;
+        publishingStatus = item.PublishingStatus;
+        chapterCount = item.ChapterCount;
+        volumeCount = item.VolumeCount;
+        metadataSeverity = Severity.Success;
+        metadataMessage = $"Filled the form from {item.Title}.";
     }
 
     private async Task Save()
@@ -111,7 +125,24 @@ public partial class CatalogAddModal
     private MangaEntryRequest BuildRequest()
     {
         var localSeriesId = Guid.TryParse(localSeriesIdText, out var parsed) ? parsed : (Guid?)null;
-        return new MangaEntryRequest(title, authors, category, description, coverUrl, openLibraryKey, firstPublishYear, "", mangaDexUrl, localSeriesId, "");
+        return new MangaEntryRequest(
+            title,
+            authors,
+            category,
+            description,
+            coverUrl,
+            openLibraryKey,
+            firstPublishYear,
+            "",
+            mangaDexUrl,
+            localSeriesId,
+            "",
+            metadataSource,
+            myAnimeListId,
+            mediaType,
+            publishingStatus,
+            chapterCount,
+            volumeCount);
     }
 
     private async Task Close()
@@ -127,14 +158,21 @@ public partial class CatalogAddModal
         category = "";
         description = "";
         coverUrl = "";
+        metadataSource = "";
+        myAnimeListId = "";
         openLibraryKey = "";
         firstPublishYear = null;
+        mediaType = "";
+        publishingStatus = "";
+        chapterCount = null;
+        volumeCount = null;
         mangaDexUrl = "";
         localSeriesIdText = "";
         message = "";
-        showOpenLibrary = false;
-        openLibraryQuery = "";
-        openLibraryMessage = "";
-        openLibraryResults = [];
+        showMetadata = false;
+        metadataQuery = "";
+        metadataMessage = "";
+        includeOpenLibrary = false;
+        metadataResults = [];
     }
 }

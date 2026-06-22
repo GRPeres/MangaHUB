@@ -9,6 +9,21 @@ public sealed record ChapterResponse(Guid Id, Guid SeriesId, string ChapterNumbe
 public sealed record ProgressRequest(Guid SeriesId, Guid ChapterId, int Page);
 public sealed record ProgressResponse(Guid SeriesId, Guid ChapterId, int Page);
 public sealed record OpenLibraryResult(string Key, string Title, string Authors, string CoverUrl, int? FirstPublishYear, string Category, string Description);
+public sealed record MetadataResult(
+    string Source,
+    string SourceId,
+    string Title,
+    string Authors,
+    string CoverUrl,
+    int? FirstPublishYear,
+    string Category,
+    string Description,
+    string MediaType,
+    string PublishingStatus,
+    int? ChapterCount,
+    int? VolumeCount,
+    string OpenLibraryKey,
+    string MyAnimeListId);
 public sealed record MangaEntryRequest(
     string Title,
     string Authors,
@@ -20,7 +35,13 @@ public sealed record MangaEntryRequest(
     string ReadingStatus,
     string MangaDexUrl,
     Guid? LocalSeriesId,
-    string Notes);
+    string Notes,
+    string MetadataSource = "",
+    string MyAnimeListId = "",
+    string MediaType = "",
+    string PublishingStatus = "",
+    int? ChapterCount = null,
+    int? VolumeCount = null);
 public sealed record MangaEntryResponse(
     Guid Id,
     string Title,
@@ -30,6 +51,12 @@ public sealed record MangaEntryResponse(
     string CoverUrl,
     string OpenLibraryKey,
     int? FirstPublishYear,
+    string MetadataSource,
+    string MyAnimeListId,
+    string MediaType,
+    string PublishingStatus,
+    int? ChapterCount,
+    int? VolumeCount,
     string ReadingStatus,
     string MangaDexUrl,
     string MangaDexId,
@@ -48,6 +75,12 @@ public sealed record CatalogMangaResponse(
     string CoverUrl,
     string OpenLibraryKey,
     int? FirstPublishYear,
+    string MetadataSource,
+    string MyAnimeListId,
+    string MediaType,
+    string PublishingStatus,
+    int? ChapterCount,
+    int? VolumeCount,
     string MangaDexUrl,
     string MangaDexId,
     Guid? LocalSeriesId,

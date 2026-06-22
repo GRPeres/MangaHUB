@@ -21,6 +21,7 @@ services:
       MangaHub__JwtSecret: ${JWT_SECRET:-replace-with-a-long-random-secret}
       MangaHub__LibraryPath: /library
       MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
+      MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:-}
       MangaHub__SessionCookieSameSite: ${SESSION_COOKIE_SAMESITE:-Lax}
       MangaHub__SessionCookieSecure: ${SESSION_COOKIE_SECURE:-false}
     expose:
@@ -41,6 +42,7 @@ services:
       MangaHub__JwtSecret: ${JWT_SECRET:-replace-with-a-long-random-secret}
       MangaHub__LibraryPath: /library
       MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
+      MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:-}
     image: mangahub-workers:latest
     restart: unless-stopped
     volumes:

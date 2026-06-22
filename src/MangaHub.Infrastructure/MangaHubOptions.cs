@@ -8,4 +8,5 @@ public sealed class MangaHubOptions
     public int JwtExpiresMinutes { get; set; } = 60 * 24 * 7;
     public bool SessionCookieSecure { get; set; }
     public string SessionCookieSameSite { get; set; } = "Lax";
+    public string MyAnimeListClientId { get; set; } = "";
 }

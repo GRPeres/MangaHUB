@@ -11,4 +11,10 @@ public sealed record MangaEntryRequest(
     string ReadingStatus,
     string MangaDexUrl,
     Guid? LocalSeriesId,
-    string Notes);
+    string Notes,
+    string MetadataSource = "",
+    string MyAnimeListId = "",
+    string MediaType = "",
+    string PublishingStatus = "",
+    int? ChapterCount = null,
+    int? VolumeCount = null);
