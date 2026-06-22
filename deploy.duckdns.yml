@@ -17,7 +17,7 @@ services:
       - postgres
     environment:
       ConnectionStrings__MangaHub: Host=postgres;Database=mangahub;Username=mangahub;Password=${POSTGRES_PASSWORD:-mangahub-change-me}
-      FrontendOrigin: ${FRONTEND_ORIGIN:-https://mangahub.example.com}
+      FrontendOrigin: ${FRONTEND_ORIGIN:-http://mangahub.duckdns.org:8080}
       MangaHub__JwtSecret: ${JWT_SECRET:-replace-with-a-long-random-secret}
       MangaHub__LibraryPath: /library
       MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
@@ -54,19 +54,18 @@ services:
       dockerfile: src/MangaHub.Web/Dockerfile
     depends_on:
       - mangahub-api
-    expose:
-      - '80'
     image: mangahub-web:latest
+    ports:
+      - '${WEB_HOST_PORT:-8080}:80'
     restart: unless-stopped
 
-  cloudflared:
-    command:
-      - tunnel
-      - '--url'
-      - http://mangahub-web:80
-    depends_on:
-      - mangahub-web
-    image: cloudflare/cloudflared:latest
+  duckdns:
+    environment:
+      LOG_FILE: 'false'
+      SUBDOMAINS: ${DUCKDNS_SUBDOMAINS:-mangahub}
+      TOKEN: ${DUCKDNS_TOKEN:-replace-with-your-duckdns-token}
+      TZ: ${TZ:-America/Sao_Paulo}
+    image: lscr.io/linuxserver/duckdns:latest
     restart: unless-stopped
 
 volumes:

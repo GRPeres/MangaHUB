@@ -38,14 +38,14 @@ Open:
 - Web: `http://localhost:3000`
 - API: `http://localhost:8000`
 
-## Cloudflared Deployment
+## DuckDNS Deployment
 
-`deploy.cloudflare.yml` builds from `https://github.com/GRPeres/MangaHUB.git#main` and exposes the Blazor web container through Cloudflared.
+`deploy.duckdns.yml` builds from `https://github.com/GRPeres/MangaHUB.git#main`, publishes the web app on a fixed host port, and keeps a DuckDNS hostname updated.
 
-Copy `deploy.env.example` to `.env` before deploying.
+Copy `deploy.env.example` to `.env` before deploying, then set `DUCKDNS_SUBDOMAINS`, `DUCKDNS_TOKEN`, `WEB_HOST_PORT`, and `FRONTEND_ORIGIN` for your hostname.
 
 ```bash
-docker compose -f deploy.cloudflare.yml --env-file .env up --build -d
+docker compose -f deploy.duckdns.yml --env-file .env up --build -d
 ```
 
 ## Current MVP Slice
