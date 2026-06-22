@@ -2,7 +2,6 @@
 @using MangaHub.Web.API.Services
 @inject AuthSessionService Auth
 @inject CatalogApiService CatalogApi
-@inject OpenLibraryApiService OpenLibraryApi
 @inject SeriesApiService SeriesApi
 
 <PageTitle>Catalog</PageTitle>
@@ -100,132 +99,7 @@
 
 <CatalogAddModal Open="@isAddCatalogOpen" OpenChanged="OnAddCatalogOpenChanged" LocalSeries="@localSeries" OnSaved="LoadCatalog" />
 <CatalogImportModal Open="@isImportCatalogOpen" OpenChanged="OnImportCatalogOpenChanged" OnImported="LoadCatalog" />
-
-@if (isEditDialogOpen && editingEntry is not null)
-{
-    <div class="mh-modal-backdrop" @onclick="CancelEdit">
-        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-edit-title" @onclick:stopPropagation="true">
-            <MudStack Spacing="3">
-                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
-                    <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start" Class="mh-selected-manga">
-                        @if (!string.IsNullOrWhiteSpace(editCoverUrl))
-                        {
-                            <MudImage Src="@editCoverUrl" Alt="@($"{editTitle} cover")" Class="mh-modal-cover" />
-                        }
-                        <MudStack Spacing="1">
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">Editing catalog metadata</MudText>
-                            <MudText id="catalog-edit-title" Typo="Typo.h2">@editingEntry.Title</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@editingEntry.Authors</MudText>
-                        </MudStack>
-                    </MudStack>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CancelEdit" aria-label="Close catalog editor" />
-                </MudStack>
-
-                <MudDivider />
-
-                <MudGrid Spacing="3">
-                    <MudItem xs="12" md="6">
-                        <MudTextField T="string" @bind-Value="editTitle" Label="Title" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudTextField T="string" @bind-Value="editAuthors" Label="Authors" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <MudTextField T="string" @bind-Value="editCategory" Label="Type / category" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <MudNumericField T="int?" @bind-Value="editFirstPublishYear" Label="First publish year" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <MudTextField T="string" @bind-Value="editOpenLibraryKey" Label="OpenLibrary key" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudTextField T="string" @bind-Value="editCoverUrl" Label="Cover image URL" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudTextField T="string" @bind-Value="editMangaDexUrl" Label="MangaDex URL" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudSelect T="string" @bind-Value="editLocalSeriesIdText" Label="Local scanned series" Variant="Variant.Outlined">
-                            <MudSelectItem T="string" Value="@("")">None</MudSelectItem>
-                            @foreach (var series in localSeries)
-                            {
-                                <MudSelectItem T="string" Value="@series.Id.ToString()">@series.Title</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12">
-                        <MudTextField T="string" @bind-Value="editDescription" Label="Summary / description" Variant="Variant.Outlined" Lines="4" />
-                    </MudItem>
-                </MudGrid>
-
-                <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveCatalog">Save catalog metadata</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" OnClick="SearchOpenLibrary">Find OpenLibrary match</MudButton>
-                </MudStack>
-
-                <MudDivider />
-
-                <MudStack Spacing="2">
-                    <MudStack Spacing="1">
-                        <MudText Typo="Typo.h3">OpenLibrary match</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Use this when an imported catalog title needs the correct book, cover, category, or summary.</MudText>
-                    </MudStack>
-                    <MudGrid Spacing="2">
-                        <MudItem xs="12" md="9">
-                            <MudTextField T="string" @bind-Value="openLibraryQuery" Label="Search OpenLibrary" Variant="Variant.Outlined" />
-                        </MudItem>
-                        <MudItem xs="12" md="3" Class="d-flex align-center">
-                            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingOpenLibrary" OnClick="SearchOpenLibrary">
-                                @(isSearchingOpenLibrary ? "Searching..." : "Search")
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-
-                    @if (!string.IsNullOrWhiteSpace(openLibraryMessage))
-                    {
-                        <MudAlert Severity="@openLibrarySeverity" Variant="Variant.Outlined">@openLibraryMessage</MudAlert>
-                    }
-
-                    <MudGrid Spacing="2">
-                        @foreach (var item in openLibraryResults)
-                        {
-                            <MudItem xs="12" md="6">
-                                <MudPaper Class="pa-3" Elevation="0" Outlined="true">
-                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start">
-                                        @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-                                        {
-                                            <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-match-cover" />
-                                        }
-                                        <MudStack Spacing="1" Class="flex-grow-1">
-                                            <MudText Typo="Typo.h3">@item.Title</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
-                                            <MudStack Row="true" Spacing="1" Class="flex-wrap">
-                                                @if (item.FirstPublishYear is not null)
-                                                {
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@item.FirstPublishYear</MudChip>
-                                                }
-                                                @if (!string.IsNullOrWhiteSpace(item.Category))
-                                                {
-                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@item.Category</MudChip>
-                                                }
-                                            </MudStack>
-                                            @if (!string.IsNullOrWhiteSpace(item.Description))
-                                            {
-                                                <MudText Typo="Typo.body2" Class="mh-card-summary">@item.Description</MudText>
-                                            }
-                                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="() => ApplyOpenLibraryMetadata(item)">Use metadata</MudButton>
-                                        </MudStack>
-                                    </MudStack>
-                                </MudPaper>
-                            </MudItem>
-                        }
-                    </MudGrid>
-                </MudStack>
-            </MudStack>
-        </section>
-    </div>
-}
+<CatalogEditModal Entry="@editingEntry" LocalSeries="@localSeries" OnSaved="OnCatalogSaved" OnClosed="CloseEdit" />
 
 @code {
     private UserResponse? currentUser;
@@ -238,21 +112,6 @@
     private bool isAddCatalogOpen;
     private bool isImportCatalogOpen;
     private CatalogMangaResponse? editingEntry;
-    private bool isEditDialogOpen;
-    private string editTitle = "";
-    private string editAuthors = "";
-    private string editCategory = "";
-    private string editDescription = "";
-    private string editCoverUrl = "";
-    private string editOpenLibraryKey = "";
-    private int? editFirstPublishYear;
-    private string editMangaDexUrl = "";
-    private string editLocalSeriesIdText = "";
-    private string openLibraryQuery = "";
-    private string openLibraryMessage = "";
-    private Severity openLibrarySeverity = Severity.Info;
-    private bool isSearchingOpenLibrary;
-    private List<OpenLibraryResult> openLibraryResults = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -275,7 +134,7 @@
 
         catalog = await CatalogApi.GetCatalogAsync(query);
         message = "";
-        CancelEdit();
+        CloseEdit();
     }
 
     private async Task SearchCatalog()
@@ -293,125 +152,18 @@
     private void EditCatalog(CatalogMangaResponse entry)
     {
         editingEntry = entry;
-        editTitle = entry.Title;
-        editAuthors = entry.Authors;
-        editCategory = entry.Category;
-        editDescription = entry.Description;
-        editCoverUrl = entry.CoverUrl;
-        editOpenLibraryKey = entry.OpenLibraryKey;
-        editFirstPublishYear = entry.FirstPublishYear;
-        editMangaDexUrl = entry.MangaDexUrl;
-        editLocalSeriesIdText = entry.LocalSeriesId?.ToString() ?? "";
-        openLibraryQuery = entry.Title;
-        openLibraryResults = [];
-        openLibraryMessage = "";
-        isEditDialogOpen = true;
     }
 
-    private void CancelEdit()
+    private void CloseEdit()
     {
         editingEntry = null;
-        isEditDialogOpen = false;
-        openLibraryResults = [];
-        openLibraryMessage = "";
     }
 
-    private async Task SaveCatalog()
+    private async Task OnCatalogSaved(CatalogMangaResponse updated)
     {
-        if (editingEntry is null)
-        {
-            return;
-        }
-
-        var updated = await CatalogApi.UpdateCatalogMangaAsync(editingEntry.Id, BuildRequest());
-        if (updated is null)
-        {
-            messageSeverity = Severity.Error;
-            message = "Could not save catalog metadata.";
-            return;
-        }
-
         messageSeverity = Severity.Success;
         message = $"Updated catalog metadata for {updated.Title}.";
         await RefreshCatalogEntry(updated);
-    }
-
-    private async Task SearchOpenLibrary()
-    {
-        if (string.IsNullOrWhiteSpace(openLibraryQuery))
-        {
-            openLibraryResults = [];
-            openLibrarySeverity = Severity.Info;
-            openLibraryMessage = "Type a title before searching OpenLibrary.";
-            return;
-        }
-
-        isSearchingOpenLibrary = true;
-        try
-        {
-            openLibraryResults = await OpenLibraryApi.SearchOpenLibraryAsync(openLibraryQuery);
-            openLibrarySeverity = openLibraryResults.Count == 0 ? Severity.Warning : Severity.Success;
-            openLibraryMessage = openLibraryResults.Count == 0
-                ? "OpenLibrary returned no matches."
-                : $"Found {openLibraryResults.Count} OpenLibrary matches.";
-        }
-        catch
-        {
-            openLibraryResults = [];
-            openLibrarySeverity = Severity.Error;
-            openLibraryMessage = "OpenLibrary search failed.";
-        }
-        finally
-        {
-            isSearchingOpenLibrary = false;
-        }
-    }
-
-    private async Task ApplyOpenLibraryMetadata(OpenLibraryResult item)
-    {
-        if (editingEntry is null)
-        {
-            return;
-        }
-
-        editTitle = item.Title;
-        editAuthors = item.Authors;
-        editCategory = item.Category;
-        editDescription = item.Description;
-        editCoverUrl = item.CoverUrl;
-        editOpenLibraryKey = item.Key;
-        editFirstPublishYear = item.FirstPublishYear;
-
-        var updated = await CatalogApi.UpdateCatalogMangaAsync(editingEntry.Id, BuildRequest());
-        if (updated is null)
-        {
-            openLibrarySeverity = Severity.Error;
-            openLibraryMessage = "Could not update catalog metadata.";
-            return;
-        }
-
-        openLibrarySeverity = Severity.Success;
-        openLibraryMessage = $"Matched {updated.Title}.";
-        messageSeverity = Severity.Success;
-        message = $"Updated catalog metadata for {updated.Title}.";
-        await RefreshCatalogEntry(updated);
-    }
-
-    private MangaEntryRequest BuildRequest()
-    {
-        var localSeriesId = Guid.TryParse(editLocalSeriesIdText, out var parsed) ? parsed : (Guid?)null;
-        return new MangaEntryRequest(
-            editTitle,
-            editAuthors,
-            editCategory,
-            editDescription,
-            editCoverUrl,
-            editOpenLibraryKey,
-            editFirstPublishYear,
-            "",
-            editMangaDexUrl,
-            localSeriesId,
-            "");
     }
 
     private async Task RefreshCatalogEntry(CatalogMangaResponse updated)
@@ -428,6 +180,4 @@
         }
     }
 
-    private static string FirstNonEmpty(params string[] values) =>
-        values.Select(x => x.Trim()).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? "";
 }

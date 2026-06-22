@@ -3,7 +3,7 @@ using MangaHub.Web.API.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace MangaHub.Web.Pages.Shelf;
+namespace MangaHub.Web.Components.Shelf;
 
 public partial class ShelfAddModal
 {

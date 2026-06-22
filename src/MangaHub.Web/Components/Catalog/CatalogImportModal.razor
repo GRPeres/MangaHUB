@@ -1,0 +1,24 @@
+@if (Open)
+{
+    <div class="mh-modal-backdrop" @onclick="Close">
+        <section class="mh-modal mh-small-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-import-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">Catalog import</MudText>
+                        <MudText id="catalog-import-title" Typo="Typo.h2">Import catalog CSV</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Creates missing catalog entries from the CSV and adds those manga to your shelf.</MudText>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close catalog import" />
+                </MudStack>
+
+                <InputFile OnChange="ImportCatalogCsv" accept=".csv,text/csv" />
+
+                @if (!string.IsNullOrWhiteSpace(importMessage))
+                {
+                    <MudAlert Severity="@importSeverity" Variant="Variant.Outlined">@importMessage</MudAlert>
+                }
+            </MudStack>
+        </section>
+    </div>
+}

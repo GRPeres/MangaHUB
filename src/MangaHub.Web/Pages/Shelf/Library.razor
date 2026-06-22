@@ -4,7 +4,6 @@
 @inject NavigationManager Navigation
 @inject AdminApiService AdminApi
 @inject MangaApiService MangaApi
-@inject ShelfApiService ShelfApi
 
 <PageTitle>Shelf</PageTitle>
 
@@ -108,75 +107,7 @@
 
 <ShelfAddModal Open="@isAddShelfOpen" OpenChanged="OnAddShelfOpenChanged" OnSaved="Load" />
 <ShelfImportModal Open="@isImportShelfOpen" OpenChanged="OnImportShelfOpenChanged" OnImported="Load" />
-
-@if (isEditDialogOpen && editingEntry is not null)
-{
-    <div class="mh-modal-backdrop" @onclick="CancelEdit">
-        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="shelf-edit-title" @onclick:stopPropagation="true">
-            <MudStack Spacing="3">
-                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
-                    <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start" Class="mh-selected-manga">
-                        @if (!string.IsNullOrWhiteSpace(editingEntry.CoverUrl))
-                        {
-                            <MudImage Src="@editingEntry.CoverUrl" Alt="@($"{editingEntry.Title} cover")" Class="mh-modal-cover" />
-                        }
-                        <MudStack Spacing="1">
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">Editing shelf entry</MudText>
-                            <MudText id="shelf-edit-title" Typo="Typo.h2">@editingEntry.Title</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@editingEntry.Authors</MudText>
-                            <MudStack Row="true" Spacing="1" Class="flex-wrap">
-                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">@editingEntry.ReadingStatus</MudChip>
-                                @if (!string.IsNullOrWhiteSpace(editingEntry.CurrentChapter))
-                                {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Ch. @editingEntry.CurrentChapter</MudChip>
-                                }
-                                @if (editingEntry.Score is not null)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@($"{editingEntry.Score}/5")</MudChip>
-                                }
-                            </MudStack>
-                        </MudStack>
-                    </MudStack>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CancelEdit" aria-label="Close editor" />
-                </MudStack>
-
-                <MudDivider />
-
-                <MudGrid Spacing="3">
-                    <MudItem xs="12" md="3">
-                        <MudSelect T="string" @bind-Value="editStatus" Label="Status" Variant="Variant.Outlined">
-                            <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("paused")">Paused</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="2">
-                        <MudTextField T="string" @bind-Value="editChapter" Label="Chapter" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="2">
-                        <MudNumericField T="int?" @bind-Value="editScore" Label="Score" Variant="Variant.Outlined" Min="1" Max="5" />
-                    </MudItem>
-                    <MudItem xs="12" md="5">
-                        <MudTextField T="string" @bind-Value="editCategory" Label="Type / genre" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudTextField T="string" @bind-Value="editNotes" Label="Notes" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12">
-                        <MudTextField T="string" @bind-Value="editSummary" Label="Summary" Variant="Variant.Outlined" Lines="3" />
-                    </MudItem>
-                </MudGrid>
-
-                <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveEdit">Save changes</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="RemoveEditingEntry">Remove from shelf</MudButton>
-                </MudStack>
-            </MudStack>
-        </section>
-    </div>
-}
+<ShelfEditModal Entry="@editingEntry" OwnerUserId="@(IsAdmin ? selectedUserId : null)" OnSaved="OnShelfEditSaved" OnClosed="CloseEdit" />
 
 @code {
     private List<MangaEntryResponse> entries = [];
@@ -190,13 +121,6 @@
     private bool isAddShelfOpen;
     private bool isImportShelfOpen;
     private MangaEntryResponse? editingEntry;
-    private bool isEditDialogOpen;
-    private string editStatus = "planned";
-    private string editChapter = "";
-    private int? editScore;
-    private string editCategory = "";
-    private string editSummary = "";
-    private string editNotes = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -217,7 +141,7 @@
     private async Task Load()
     {
         entries = await MangaApi.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null);
-        CancelEdit();
+        CloseEdit();
     }
 
     private async Task Read(Guid entryId)
@@ -247,57 +171,17 @@
     private void Edit(MangaEntryResponse entry)
     {
         editingEntry = entry;
-        editStatus = entry.ReadingStatus;
-        editChapter = entry.CurrentChapter;
-        editScore = entry.Score;
-        editCategory = entry.Category;
-        editSummary = entry.Summary;
-        editNotes = entry.Notes;
-        isEditDialogOpen = true;
     }
 
-    private void CancelEdit()
+    private void CloseEdit()
     {
         editingEntry = null;
-        isEditDialogOpen = false;
     }
 
-    private async Task SaveEdit()
+    private async Task OnShelfEditSaved(string text)
     {
-        if (editingEntry is null)
-        {
-            return;
-        }
-
-        var request = new AddToShelfRequest(editingEntry.Id, editStatus, editChapter, editScore, editCategory, editSummary, editNotes);
-        var updated = await ShelfApi.UpdateShelfAsync(editingEntry.Id, request, IsAdmin ? selectedUserId : null);
-        if (updated is null)
-        {
-            ShowWarning("Could not save shelf changes.");
-            return;
-        }
-
         messageSeverity = Severity.Success;
-        message = $"Updated {updated.Title}.";
-        await Load();
-    }
-
-    private async Task RemoveEditingEntry()
-    {
-        if (editingEntry is null)
-        {
-            return;
-        }
-
-        var removed = await ShelfApi.RemoveShelfAsync(editingEntry.Id, IsAdmin ? selectedUserId : null);
-        if (!removed)
-        {
-            ShowWarning("Could not remove shelf entry.");
-            return;
-        }
-
-        messageSeverity = Severity.Success;
-        message = $"Removed {editingEntry.Title} from shelf.";
+        message = text;
         await Load();
     }
 

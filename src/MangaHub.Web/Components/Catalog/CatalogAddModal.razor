@@ -1,0 +1,111 @@
+@if (Open)
+{
+    <div class="mh-modal-backdrop" @onclick="Close">
+        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-add-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">Catalog</MudText>
+                        <MudText id="catalog-add-title" Typo="Typo.h2">Add catalog manga</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Create a shared catalog entry manually, or use OpenLibrary to fill the form.</MudText>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close catalog add form" />
+                </MudStack>
+
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="title" Label="Title" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="authors" Label="Authors" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudTextField T="string" @bind-Value="category" Label="Type / category" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudNumericField T="int?" @bind-Value="firstPublishYear" Label="First publish year" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudTextField T="string" @bind-Value="openLibraryKey" Label="OpenLibrary key" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="coverUrl" Label="Cover image URL" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="mangaDexUrl" Label="MangaDex URL" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="string" @bind-Value="localSeriesIdText" Label="Local scanned series" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("")">None</MudSelectItem>
+                            @foreach (var series in LocalSeries)
+                            {
+                                <MudSelectItem T="string" Value="@series.Id.ToString()">@series.Title</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="description" Label="Summary / description" Variant="Variant.Outlined" Lines="4" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.LibraryAdd" OnClick="Save">Add to catalog</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" OnClick="ToggleOpenLibrary">Use OpenLibrary</MudButton>
+                </MudStack>
+
+                @if (showOpenLibrary)
+                {
+                    <MudDivider />
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h3">OpenLibrary helper</MudText>
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" md="9">
+                                <MudTextField T="string" @bind-Value="openLibraryQuery" Label="Search OpenLibrary" Variant="Variant.Outlined" />
+                            </MudItem>
+                            <MudItem xs="12" md="3" Class="d-flex align-center">
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingOpenLibrary" OnClick="SearchOpenLibrary">
+                                    @(isSearchingOpenLibrary ? "Searching..." : "Search")
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
+
+                        @if (!string.IsNullOrWhiteSpace(openLibraryMessage))
+                        {
+                            <MudAlert Severity="@openLibrarySeverity" Variant="Variant.Outlined">@openLibraryMessage</MudAlert>
+                        }
+
+                        <MudGrid Spacing="2">
+                            @foreach (var item in openLibraryResults)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudPaper Class="pa-3" Elevation="0" Outlined="true">
+                                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start">
+                                            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
+                                            {
+                                                <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-match-cover" />
+                                            }
+                                            <MudStack Spacing="1" Class="flex-grow-1">
+                                                <MudText Typo="Typo.h3">@item.Title</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                                                @if (!string.IsNullOrWhiteSpace(item.Category))
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@item.Category</MudChip>
+                                                }
+                                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="() => ApplyOpenLibrary(item)">Fill form</MudButton>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudStack>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(message))
+                {
+                    <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
+                }
+            </MudStack>
+        </section>
+    </div>
+}

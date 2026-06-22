@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using MudBlazor;
 
-namespace MangaHub.Web.Components.Shelf;
+namespace MangaHub.Web.Components.Catalog;
 
-public partial class ShelfImportModal
+public partial class CatalogImportModal
 {
     [Inject] private ShelfApiService ShelfApi { get; set; } = default!;
 
@@ -17,7 +17,7 @@ public partial class ShelfImportModal
     private string importMessage = "";
     private Severity importSeverity = Severity.Info;
 
-    private async Task ImportShelfCsv(InputFileChangeEventArgs args)
+    private async Task ImportCatalogCsv(InputFileChangeEventArgs args)
     {
         var file = args.File;
         if (file is null)
@@ -30,10 +30,10 @@ public partial class ShelfImportModal
             using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
             using var reader = new StreamReader(stream);
             var csv = await reader.ReadToEndAsync();
-            var result = await ShelfApi.ImportShelfAsync(new ShelfImportRequest(csv, false));
+            var result = await ShelfApi.ImportShelfAsync(new ShelfImportRequest(csv, true));
             importSeverity = result is null ? Severity.Error : Severity.Success;
             importMessage = result is null
-                ? "Import failed."
+                ? "Catalog import failed."
                 : $"Imported {result.Imported} rows, created {result.CreatedCatalogEntries} catalog entries, updated {result.UpdatedShelfEntries}, skipped {result.Skipped}.";
             if (result?.Messages.Count > 0)
             {
