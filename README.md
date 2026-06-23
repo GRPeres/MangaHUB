@@ -1,34 +1,81 @@
 # MangaHub
 
-MangaHub is a self-hosted manga reader for local CBZ archives and expandable remote sources. This first development pass follows the `.NET` OpenSpec with a Blazor WebAssembly frontend, ASP.NET Core API, EF Core/PostgreSQL persistence, and background workers.
+**MangaHub** is a self-hosted manga catalog, reading tracker, and local library companion built for a personal TrueNAS setup.
 
-For current architecture and development guidance, start with [OPENSPEC.md](OPENSPEC.md) and [docs/README.md](docs/README.md).
+Live instance:
 
-## Projects
+[https://mangahub.app](https://mangahub.app)
 
-- `src/MangaHub.Api`: HTTP API for auth, library, search, reader pages, and progress.
-- `src/MangaHub.Web`: Blazor WebAssembly frontend.
-- `src/MangaHub.Core`: domain models, DTOs, source contracts, and service abstractions.
-- `src/MangaHub.Infrastructure`: EF Core, local scanner, CBZ reader, JWT, Argon2id hashing, MangaDex client.
-- `src/MangaHub.Workers`: scheduled local scans and remote sync placeholder.
+## English
 
-## Local Run
+MangaHub replaces a spreadsheet-based manga reading list with a full web app. It keeps a shared admin-managed catalog of manga and lets each user maintain their own shelf with reading status, current chapter, score, notes, and read sources.
 
-```bash
-dotnet restore
-dotnet run --project src/MangaHub.Api
-dotnet run --project src/MangaHub.Web
-```
+The app prefers MyAnimeList metadata for manga, keeps OpenLibrary as a fallback, and can connect catalog entries to MangaDex links and/or a local manga library mounted from NAS storage.
 
-Put development CBZ files under:
+## Português
+
+O **MangaHub** substitui uma planilha de acompanhamento de mangás por uma aplicação web auto-hospedada. Ele mantém um catálogo compartilhado administrado por admins e permite que cada usuário gerencie sua própria lista com status de leitura, capítulo atual, nota, observações e fontes de leitura.
+
+A aplicação usa MyAnimeList como fonte principal de metadados, mantém OpenLibrary como alternativa, e permite ligar entradas do catálogo a links do MangaDex e/ou a uma biblioteca local de mangás montada no NAS.
+
+## What It Does
+
+- Tracks manga by user shelf: reading, done, paused, planned, dropped.
+- Stores current chapter, score, notes, personal category, and summaries.
+- Lets admins curate the shared catalog.
+- Imports CSV data from the old spreadsheet workflow.
+- Pulls metadata from MyAnimeList first, with OpenLibrary fallback.
+- Supports cover images and external metadata ids.
+- Connects manga to MangaDex and local library entries.
+- Scans local CBZ-style manga libraries.
+- Runs behind Cloudflare Tunnel for CGNAT-friendly hosting.
+- Backs up PostgreSQL dumps to a NAS share.
+
+## Tech Stack
+
+- .NET 9
+- ASP.NET Core API
+- Blazor WebAssembly
+- MudBlazor
+- Entity Framework Core
+- PostgreSQL
+- Docker Compose
+- nginx static web/proxy container
+- Cloudflare Tunnel
+- TrueNAS target deployment
+
+## Repository Layout
 
 ```text
-library/
-  Series Name/
-    Chapter 0001.cbz
+src/
+  MangaHub.Api/             ASP.NET Core API, controllers, services, repositories
+  MangaHub.Core/            Domain contracts and shared core models
+  MangaHub.Infrastructure/  EF Core, local scanner, archive reader, remote clients
+  MangaHub.Web/             Blazor WebAssembly frontend
+  MangaHub.Workers/         Background scan/sync workers
+tests/
+  MangaHub.Api.Tests/
+  MangaHub.Core.Tests/
+docs/
+  Architecture, API, frontend, deployment, operations, and AI handoff docs
 ```
 
-## Docker
+## Documentation
+
+Start here for future development:
+
+- [OPENSPEC.md](OPENSPEC.md)
+- [docs/README.md](docs/README.md)
+- [docs/architecture.md](docs/architecture.md)
+- [docs/api.md](docs/api.md)
+- [docs/frontend.md](docs/frontend.md)
+- [docs/deployment.md](docs/deployment.md)
+- [docs/operations.md](docs/operations.md)
+- [docs/development-notes.md](docs/development-notes.md)
+
+## Local Development
+
+Run the stack with Docker:
 
 ```bash
 copy .env.example .env
@@ -40,22 +87,76 @@ Open:
 - Web: `http://localhost:3000`
 - API: `http://localhost:8000`
 
-## DuckDNS Deployment
-
-`deploy.duckdns.yml` builds from `https://github.com/GRPeres/MangaHUB.git#main`, publishes the web app on a fixed host port, and keeps a DuckDNS hostname updated.
-
-Copy `deploy.env.example` to `.env` before deploying, then set `DUCKDNS_SUBDOMAINS`, `DUCKDNS_TOKEN`, `WEB_HOST_PORT`, and `FRONTEND_ORIGIN` for your hostname.
+Or run projects directly:
 
 ```bash
-docker compose -f deploy.duckdns.yml --env-file .env up --build -d
+dotnet restore
+dotnet run --project src/MangaHub.Api
+dotnet run --project src/MangaHub.Web
 ```
 
-## Current MVP Slice
+Development library layout:
 
-- Local account register/login/logout
-- HttpOnly JWT cookie sessions
-- Local CBZ scan endpoint and hourly worker scan
-- Library, chapter, and page APIs
-- Reading progress API
-- MangaDex search connector scaffold
-- Blazor screens for auth, library, search, series, and reader
+```text
+library/
+  Series Name/
+    Chapter 0001.cbz
+    Chapter 0002.cbz
+```
+
+## Production Deployment
+
+Current production direction is TrueNAS plus a named Cloudflare Tunnel:
+
+```text
+https://mangahub.app
+  -> Cloudflare Tunnel
+  -> mangahub-web:80
+  -> nginx /api and /auth proxy
+  -> mangahub-api:8080
+```
+
+The secret-filled TrueNAS compose file is intentionally local-only:
+
+```text
+deploy.truenas.local.yml
+```
+
+It is ignored by Git and should not be committed.
+
+The public example deploy file `deploy.duckdns.yml` is kept as historical/reference compose for direct DNS/port-forward setups, but Cloudflare Tunnel is the current production approach because the deployment network is behind CGNAT.
+
+## Backups
+
+The TrueNAS deployment includes a `postgres-backup` sidecar that writes `pg_dump -Fc` backups to:
+
+```text
+/mnt/Shared/NAS/MangaHUBBackups
+```
+
+Backups are database-only. Manga files live separately in the NAS library mount.
+
+## Verification
+
+Web build:
+
+```bash
+dotnet build src/MangaHub.Web/MangaHub.Web.csproj
+```
+
+Full build/tests:
+
+```bash
+dotnet build
+dotnet test
+```
+
+Compose validation:
+
+```bash
+docker compose -f deploy.duckdns.yml --env-file deploy.env.example config
+```
+
+## Status
+
+MangaHub is actively evolving. The current focus is keeping the app maintainable while expanding the catalog/shelf workflow, metadata matching, local reading, admin tools, and deployment reliability.

@@ -2,7 +2,7 @@
 
 This is the current development guide for MangaHub. Treat it as the first file to read before changing the app.
 
-`OPENSPEC.txt` is the original draft. This Markdown OpenSpec reflects the project as it exists now.
+This Markdown OpenSpec reflects the project as it exists now.
 
 ## Purpose
 
@@ -136,4 +136,3 @@ For compose changes:
 docker compose -f deploy.truenas.local.yml config
 docker compose -f deploy.duckdns.yml --env-file deploy.env.example config
 ```
-
