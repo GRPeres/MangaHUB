@@ -18,6 +18,7 @@
                 <MudMenuItem Icon="@Icons.Material.Filled.LibraryAdd" OnClick="OpenAddCatalog">Add manga</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportCatalog">Import CSV</MudMenuItem>
             </MudMenu>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterList" OnClick="OpenFilters">@FilterButtonLabel</MudButton>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadCatalog">Refresh</MudButton>
         </MudStack>
     </MudStack>
@@ -32,17 +33,6 @@
     }
     else
     {
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudGrid Spacing="2">
-                <MudItem xs="12" md="9">
-                    <MudTextField T="string" @bind-Value="query" Label="Search catalog" Variant="Variant.Outlined" Immediate="true" />
-                </MudItem>
-                <MudItem xs="12" md="3" Class="d-flex align-center">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" FullWidth="true" OnClick="SearchCatalog">Search</MudButton>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
-
         @if (!string.IsNullOrWhiteSpace(message))
         {
             <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
@@ -75,6 +65,84 @@
 <CatalogImportModal Open="@isImportCatalogOpen" OpenChanged="OnImportCatalogOpenChanged" OnImported="LoadCatalog" />
 <CatalogEditModal Entry="@editingEntry" LocalSeries="@localSeries" OnSaved="OnCatalogSaved" OnClosed="CloseEdit" />
 
+@if (filtersOpen)
+{
+    <div class="mh-modal-backdrop" @onclick="CloseFilters">
+        <section class="mh-modal mh-filter-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-filter-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Spacing="1">
+                        <MudText id="catalog-filter-title" Typo="Typo.h2">Catalog filters</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Filter shared metadata by source, type, status, links, and shelf presence.</MudText>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CloseFilters" aria-label="Close catalog filters" />
+                </MudStack>
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="query" Label="Search catalog" Variant="Variant.Outlined" Immediate="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="string" @bind-Value="sourceFilter" Label="Metadata source" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("MAL")">MAL</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("OpenLibrary")">OpenLibrary</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Manual")">Manual</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="string" @bind-Value="categoryFilter" Label="Genre/category" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
+                            @foreach (var category in CategoryOptions)
+                            {
+                                <MudSelectItem T="string" Value="@category">@category</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="string" @bind-Value="mediaTypeFilter" Label="Type" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
+                            @foreach (var mediaType in MediaTypeOptions)
+                            {
+                                <MudSelectItem T="string" Value="@mediaType">@mediaType</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="string" @bind-Value="publishingStatusFilter" Label="Publishing status" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
+                            @foreach (var publishingStatus in PublishingStatusOptions)
+                            {
+                                <MudSelectItem T="string" Value="@publishingStatus">@publishingStatus</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="string" @bind-Value="linkFilter" Label="Read binding" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("mangadex")">MangaDex</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("local")">Local files</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("missing")">Missing read source</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="string" @bind-Value="shelfFilter" Label="Shelf presence" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("in")">In my shelf</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("not-in")">Not in my shelf</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="flex-wrap">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ClearFilters">Clear</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Check" OnClick="ApplyFilters">Apply filters</MudButton>
+                </MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
+
 @code {
     private UserResponse? currentUser;
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
@@ -83,9 +151,15 @@
     private string query = "";
     private string message = "";
     private string sourceFilter = "";
+    private string categoryFilter = "";
+    private string mediaTypeFilter = "";
+    private string publishingStatusFilter = "";
+    private string linkFilter = "";
+    private string shelfFilter = "";
     private Severity messageSeverity = Severity.Info;
     private bool isAddCatalogOpen;
     private bool isImportCatalogOpen;
+    private bool filtersOpen;
     private CatalogMangaResponse? editingEntry;
 
     protected override async Task OnInitializedAsync()
@@ -121,12 +195,33 @@
 
     private void OpenAddCatalog() => isAddCatalogOpen = true;
     private void OpenImportCatalog() => isImportCatalogOpen = true;
+    private void OpenFilters() => filtersOpen = true;
+    private void CloseFilters() => filtersOpen = false;
     private void OnAddCatalogOpenChanged(bool open) => isAddCatalogOpen = open;
     private void OnImportCatalogOpenChanged(bool open) => isImportCatalogOpen = open;
 
     private void ToggleSourceFilter(string clickedSource)
     {
         sourceFilter = string.Equals(sourceFilter, clickedSource, StringComparison.OrdinalIgnoreCase) ? "" : clickedSource;
+    }
+
+    private async Task ApplyFilters()
+    {
+        filtersOpen = false;
+        await SearchCatalog();
+    }
+
+    private async Task ClearFilters()
+    {
+        query = "";
+        sourceFilter = "";
+        categoryFilter = "";
+        mediaTypeFilter = "";
+        publishingStatusFilter = "";
+        linkFilter = "";
+        shelfFilter = "";
+        await LoadCatalog();
+        filtersOpen = false;
     }
 
     private void EditCatalog(CatalogMangaResponse entry)
@@ -161,8 +256,66 @@
     }
 
     private List<CatalogMangaResponse> FilteredCatalog => string.IsNullOrWhiteSpace(sourceFilter)
-        ? catalog
-        : catalog.Where(entry => string.Equals(GetSourceLabel(entry), sourceFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+        ? catalog.Where(MatchesCategory).Where(MatchesMediaType).Where(MatchesPublishingStatus).Where(MatchesLink).Where(MatchesShelf).ToList()
+        : catalog
+            .Where(entry => string.Equals(GetSourceLabel(entry), sourceFilter, StringComparison.OrdinalIgnoreCase))
+            .Where(MatchesCategory)
+            .Where(MatchesMediaType)
+            .Where(MatchesPublishingStatus)
+            .Where(MatchesLink)
+            .Where(MatchesShelf)
+            .ToList();
+
+    private List<string> CategoryOptions => catalog
+        .Select(entry => entry.Category)
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Order(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private List<string> MediaTypeOptions => catalog
+        .Select(entry => entry.MediaType)
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Order(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private List<string> PublishingStatusOptions => catalog
+        .Select(entry => entry.PublishingStatus)
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Order(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private string FilterButtonLabel => ActiveFilterCount == 0 ? "Filters" : $"Filters ({ActiveFilterCount})";
+
+    private int ActiveFilterCount => Count(query) + Count(sourceFilter) + Count(categoryFilter) + Count(mediaTypeFilter) + Count(publishingStatusFilter) + Count(linkFilter) + Count(shelfFilter);
+
+    private bool MatchesCategory(CatalogMangaResponse entry) =>
+        string.IsNullOrWhiteSpace(categoryFilter) || string.Equals(entry.Category, categoryFilter, StringComparison.OrdinalIgnoreCase);
+
+    private bool MatchesMediaType(CatalogMangaResponse entry) =>
+        string.IsNullOrWhiteSpace(mediaTypeFilter) || string.Equals(entry.MediaType, mediaTypeFilter, StringComparison.OrdinalIgnoreCase);
+
+    private bool MatchesPublishingStatus(CatalogMangaResponse entry) =>
+        string.IsNullOrWhiteSpace(publishingStatusFilter) || string.Equals(entry.PublishingStatus, publishingStatusFilter, StringComparison.OrdinalIgnoreCase);
+
+    private bool MatchesLink(CatalogMangaResponse entry) => linkFilter switch
+    {
+        "mangadex" => !string.IsNullOrWhiteSpace(entry.MangaDexUrl),
+        "local" => entry.LocalSeriesId is not null,
+        "missing" => entry.LocalSeriesId is null && string.IsNullOrWhiteSpace(entry.MangaDexUrl),
+        _ => true
+    };
+
+    private bool MatchesShelf(CatalogMangaResponse entry) => shelfFilter switch
+    {
+        "in" => entry.IsInMyShelf,
+        "not-in" => !entry.IsInMyShelf,
+        _ => true
+    };
+
+    private static int Count(string value) => string.IsNullOrWhiteSpace(value) ? 0 : 1;
 
     private static string GetSourceLabel(CatalogMangaResponse entry)
     {

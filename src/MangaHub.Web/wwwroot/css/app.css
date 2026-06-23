@@ -152,6 +152,10 @@ a {
     width: 96px;
 }
 
+.mh-filter-modal {
+    max-width: 760px;
+}
+
 .reader-toolbar {
     align-items: center;
     display: flex;
