@@ -51,64 +51,12 @@
     }
     else
     {
-        <MudGrid Spacing="3">
+        <MudStack Spacing="2">
             @foreach (var item in entries)
             {
-                <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudCard Elevation="0" Outlined="true" Class="mh-card">
-                        @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-                        {
-                            <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
-                        }
-                        <MudCardContent>
-                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
-                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@item.ReadingStatus</MudChip>
-                                @if (item.Score is not null)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">@($"{item.Score}/5")</MudChip>
-                                }
-                            </MudStack>
-                            <MudText Typo="Typo.h3" Class="mt-2">@item.Title</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
-                            <MudStack Row="true" Spacing="1" Class="mt-3 flex-wrap">
-                                @if (!string.IsNullOrWhiteSpace(item.CurrentChapter))
-                                {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Ch. @item.CurrentChapter</MudChip>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(item.Category))
-                                {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@item.Category</MudChip>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(item.MyAnimeListId))
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">MAL</MudChip>
-                                }
-                                @if (item.ChapterCount is not null)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.ChapterCount} ch.")</MudChip>
-                                }
-                                @if (item.VolumeCount is not null)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.VolumeCount} vol.")</MudChip>
-                                }
-                            </MudStack>
-                            @if (!string.IsNullOrWhiteSpace(item.Summary))
-                            {
-                                <MudText Typo="Typo.body2" Class="mt-3">@item.Summary</MudText>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(item.Notes))
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">@item.Notes</MudText>
-                            }
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => Read(item.Id)">Read</MudButton>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="() => Edit(item)">Edit</MudButton>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
+                <ShelfEntryCard Entry="@item" OnRead="Read" OnEdit="Edit" />
             }
-        </MudGrid>
+        </MudStack>
     }
 
     @if (!string.IsNullOrWhiteSpace(message))

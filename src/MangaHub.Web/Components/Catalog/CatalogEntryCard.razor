@@ -1,0 +1,90 @@
+<MudCard Elevation="0" Outlined="true" Class="mh-row-card">
+    <div class="mh-cover-frame">
+        @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
+        {
+            <MudImage Src="@Entry.CoverUrl" Alt="@($"{Entry.Title} cover")" Class="mh-row-cover" />
+        }
+        else
+        {
+            <div class="mh-cover-placeholder" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
+            </div>
+        }
+    </div>
+
+    <MudCardContent Class="mh-row-content">
+        <div class="mh-title-line">
+            <div class="mh-title-block">
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
+                    @if (!string.IsNullOrWhiteSpace(SourceLabel))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">@SourceLabel</MudChip>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Entry.Category))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@Entry.Category</MudChip>
+                    }
+                    @if (Entry.IsInMyShelf)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">In shelf</MudChip>
+                    }
+                </MudStack>
+
+                <MudText Typo="Typo.h3" Class="mh-row-title">@Entry.Title</MudText>
+                @if (!string.IsNullOrWhiteSpace(Entry.Authors))
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
+                }
+            </div>
+
+            <div class="mh-facts">
+                @if (Entry.ChapterCount is not null)
+                {
+                    <div>
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">Chapters</MudText>
+                        <strong>@Entry.ChapterCount</strong>
+                    </div>
+                }
+                @if (Entry.VolumeCount is not null)
+                {
+                    <div>
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">Volumes</MudText>
+                        <strong>@Entry.VolumeCount</strong>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <MudStack Row="true" Spacing="1" Class="mh-chip-row flex-wrap">
+            @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.MediaType</MudChip>
+            }
+            @if (!string.IsNullOrWhiteSpace(Entry.PublishingStatus))
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.PublishingStatus</MudChip>
+            }
+            @if (Entry.FirstPublishYear is not null)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.FirstPublishYear</MudChip>
+            }
+            @if (!string.IsNullOrWhiteSpace(Entry.MangaDexUrl))
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
+            }
+            @if (!string.IsNullOrWhiteSpace(Entry.LocalSeriesId?.ToString()))
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Local files</MudChip>
+            }
+        </MudStack>
+
+        @if (!string.IsNullOrWhiteSpace(Entry.Description))
+        {
+            <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Description</MudText>
+        }
+    </MudCardContent>
+
+    <MudCardActions Class="mh-row-actions">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
+    </MudCardActions>
+</MudCard>

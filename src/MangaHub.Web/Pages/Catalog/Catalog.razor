@@ -54,61 +54,12 @@
         }
         else
         {
-            <MudGrid Spacing="3">
+            <MudStack Spacing="2">
                 @foreach (var item in catalog)
                 {
-                    <MudItem xs="12" sm="6" md="4" lg="3">
-                        <MudCard Elevation="0" Outlined="true" Class="mh-card">
-                            @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-                            {
-                                <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
-                            }
-                            <MudCardContent>
-                                <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
-                                <MudText Typo="Typo.h3">@item.Title</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
-                                <MudStack Row="true" Spacing="1" Class="mt-3 flex-wrap">
-                                    @if (!string.IsNullOrWhiteSpace(item.Category))
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@item.Category</MudChip>
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(item.OpenLibraryKey))
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">OpenLibrary</MudChip>
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(item.MyAnimeListId))
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">MAL</MudChip>
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(item.MediaType))
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@item.MediaType</MudChip>
-                                    }
-                                    @if (item.ChapterCount is not null)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.ChapterCount} ch.")</MudChip>
-                                    }
-                                    @if (item.VolumeCount is not null)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{item.VolumeCount} vol.")</MudChip>
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(item.MangaDexUrl))
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
-                                    }
-                                </MudStack>
-                                @if (!string.IsNullOrWhiteSpace(item.Description))
-                                {
-                                    <MudText Typo="Typo.body2" Class="mt-3 mh-card-summary">@item.Description</MudText>
-                                }
-                            </MudCardContent>
-                            <MudCardActions>
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="() => EditCatalog(item)">Edit metadata</MudButton>
-                            </MudCardActions>
-                        </MudCard>
-                    </MudItem>
+                    <CatalogEntryCard Entry="@item" OnEdit="EditCatalog" />
                 }
-            </MudGrid>
+            </MudStack>
         }
     }
 </MudStack>
