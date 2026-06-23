@@ -1,21 +1,22 @@
 .mh-row-card {
-    align-items: stretch;
-    display: grid;
-    gap: 0;
-    grid-template-columns: 116px minmax(0, 1fr) auto;
-    min-height: 176px;
     overflow: hidden;
+}
+
+.mh-row-grid {
+    min-height: 100%;
 }
 
 .mh-cover-frame {
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
-    border-right: 1px solid var(--mud-palette-divider);
-    min-height: 100%;
+    height: 100%;
+    padding: .85rem;
 }
 
 ::deep .mh-row-cover {
-    height: 100%;
-    min-height: 176px;
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    display: block;
+    max-height: 260px;
     object-fit: cover;
     width: 100%;
 }
@@ -24,9 +25,12 @@
     align-items: center;
     color: var(--mud-palette-primary);
     display: flex;
-    height: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    height: auto;
     justify-content: center;
-    min-height: 176px;
+    max-height: 260px;
+    width: 100%;
 }
 
 ::deep .mh-cover-placeholder .mud-icon-root {
@@ -38,6 +42,7 @@
     display: flex;
     flex-direction: column;
     gap: .8rem;
+    height: 100%;
     min-width: 0;
     padding: 1rem 1.1rem;
 }
@@ -91,49 +96,42 @@
 }
 
 ::deep .mh-row-actions {
-    align-content: center;
     align-items: stretch;
-    border-left: 1px solid var(--mud-palette-divider);
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: .5rem;
-    justify-content: center;
-    padding: 1rem;
-    width: 150px;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding: .35rem 0 0;
 }
 
 @media (max-width: 900px) {
-    .mh-row-card {
-        grid-template-columns: 96px minmax(0, 1fr);
-    }
-
-    ::deep .mh-row-actions {
-        border-left: 0;
-        border-top: 1px solid var(--mud-palette-divider);
-        flex-direction: row;
-        grid-column: 1 / -1;
-        justify-content: flex-end;
-        width: auto;
-    }
-
     .mh-row-main {
         grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 640px) {
-    .mh-row-card {
-        grid-template-columns: 1fr;
-    }
-
     .mh-cover-frame {
-        border-right: 0;
         border-bottom: 1px solid var(--mud-palette-divider);
-        max-height: 280px;
+        padding: 0;
     }
 
-    ::deep .mh-row-cover,
+    ::deep .mh-row-cover {
+        border-radius: 0;
+        max-height: 360px;
+    }
+
     .mh-cover-placeholder {
-        max-height: 280px;
+        border-radius: 0;
+        max-height: 360px;
+    }
+
+    ::deep .mh-row-actions {
+        justify-content: stretch;
+    }
+
+    ::deep .mh-row-actions .mud-button-root {
+        flex: 1 1 0;
     }
 }
