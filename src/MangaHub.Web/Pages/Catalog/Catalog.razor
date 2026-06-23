@@ -48,16 +48,23 @@
             <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
         }
 
-        @if (catalog.Count == 0)
+        @if (!string.IsNullOrWhiteSpace(sourceFilter))
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                Showing @sourceFilter catalog entries. Click a @sourceFilter chip again to show all sources.
+            </MudAlert>
+        }
+
+        @if (FilteredCatalog.Count == 0)
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No catalog entries matched this search.</MudAlert>
         }
         else
         {
             <MudStack Spacing="2">
-                @foreach (var item in catalog)
+                @foreach (var item in FilteredCatalog)
                 {
-                    <CatalogEntryCard Entry="@item" OnEdit="EditCatalog" />
+                    <CatalogEntryCard Entry="@item" ActiveSourceFilter="@sourceFilter" OnEdit="EditCatalog" OnSourceFilter="ToggleSourceFilter" />
                 }
             </MudStack>
         }
@@ -75,6 +82,7 @@
     private List<SeriesResponse> localSeries = [];
     private string query = "";
     private string message = "";
+    private string sourceFilter = "";
     private Severity messageSeverity = Severity.Info;
     private bool isAddCatalogOpen;
     private bool isImportCatalogOpen;
@@ -107,14 +115,19 @@
     private async Task SearchCatalog()
     {
         catalog = await CatalogApi.GetCatalogAsync(query);
-        messageSeverity = catalog.Count == 0 ? Severity.Warning : Severity.Success;
-        message = catalog.Count == 0 ? "No catalog entries matched your search." : $"Found {catalog.Count} catalog entries.";
+        messageSeverity = FilteredCatalog.Count == 0 ? Severity.Warning : Severity.Success;
+        message = FilteredCatalog.Count == 0 ? "No catalog entries matched your search." : $"Found {FilteredCatalog.Count} catalog entries.";
     }
 
     private void OpenAddCatalog() => isAddCatalogOpen = true;
     private void OpenImportCatalog() => isImportCatalogOpen = true;
     private void OnAddCatalogOpenChanged(bool open) => isAddCatalogOpen = open;
     private void OnImportCatalogOpenChanged(bool open) => isImportCatalogOpen = open;
+
+    private void ToggleSourceFilter(string clickedSource)
+    {
+        sourceFilter = string.Equals(sourceFilter, clickedSource, StringComparison.OrdinalIgnoreCase) ? "" : clickedSource;
+    }
 
     private void EditCatalog(CatalogMangaResponse entry)
     {
@@ -145,6 +158,37 @@
         {
             catalog = await CatalogApi.GetCatalogAsync(query);
         }
+    }
+
+    private List<CatalogMangaResponse> FilteredCatalog => string.IsNullOrWhiteSpace(sourceFilter)
+        ? catalog
+        : catalog.Where(entry => string.Equals(GetSourceLabel(entry), sourceFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private static string GetSourceLabel(CatalogMangaResponse entry)
+    {
+        var source = entry.MetadataSource.ToLowerInvariant() switch
+        {
+            "myanimelist" => "MAL",
+            "openlibrary" => "OpenLibrary",
+            _ => entry.MetadataSource
+        };
+
+        if (!string.IsNullOrWhiteSpace(source))
+        {
+            return source;
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.MyAnimeListId))
+        {
+            return "MAL";
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.OpenLibraryKey))
+        {
+            return "OpenLibrary";
+        }
+
+        return "Manual";
     }
 
 }

@@ -54,7 +54,7 @@
         <MudStack Spacing="2">
             @foreach (var item in entries)
             {
-                <ShelfEntryCard Entry="@item" OnRead="Read" OnEdit="Edit" />
+                <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" OnRead="Read" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" />
             }
         </MudStack>
     }
@@ -97,6 +97,12 @@
     private void OpenImportShelf() => isImportShelfOpen = true;
     private void OnAddShelfOpenChanged(bool open) => isAddShelfOpen = open;
     private void OnImportShelfOpenChanged(bool open) => isImportShelfOpen = open;
+
+    private async Task ToggleStatusFilter(string clickedStatus)
+    {
+        status = string.Equals(status, clickedStatus, StringComparison.OrdinalIgnoreCase) ? "" : clickedStatus;
+        await Load();
+    }
 
     private async Task Load()
     {
