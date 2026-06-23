@@ -2,6 +2,8 @@
 
 MangaHub is a self-hosted manga reader for local CBZ archives and expandable remote sources. This first development pass follows the `.NET` OpenSpec with a Blazor WebAssembly frontend, ASP.NET Core API, EF Core/PostgreSQL persistence, and background workers.
 
+For current architecture and development guidance, start with [OPENSPEC.md](OPENSPEC.md) and [docs/README.md](docs/README.md).
+
 ## Projects
 
 - `src/MangaHub.Api`: HTTP API for auth, library, search, reader pages, and progress.
