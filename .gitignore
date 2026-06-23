@@ -13,6 +13,7 @@ obj/
 appsettings.Local.json
 appsettings.Production.json
 docker-compose.override.yml
+deploy.truenas.local.yml
 *.user
 *.suo
 TestResults/
