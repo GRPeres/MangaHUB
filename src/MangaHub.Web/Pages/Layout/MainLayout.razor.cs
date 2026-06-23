@@ -9,6 +9,7 @@ public partial class MainLayout : IDisposable
 {
     [Inject] private AuthSessionService Auth { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ThemePreferenceService ThemePreference { get; set; } = default!;
 
     private bool _drawerExpanded;
     private bool _darkMode;
@@ -24,12 +25,17 @@ public partial class MainLayout : IDisposable
         Auth.Changed += OnAuthChanged;
         Auth.LoginRequested += OnLoginRequested;
         Navigation.LocationChanged += OnLocationChanged;
+        _darkMode = await ThemePreference.GetDarkModeAsync() ?? false;
         _currentUser = await Auth.GetCurrentUserAsync();
         GuardCurrentRoute();
     }
 
     private void ToggleDrawer() => _drawerExpanded = !_drawerExpanded;
-    private void ToggleTheme() => _darkMode = !_darkMode;
+    private async Task ToggleTheme()
+    {
+        _darkMode = !_darkMode;
+        await ThemePreference.SetDarkModeAsync(_darkMode);
+    }
 
     private void GoHome() => Navigation.NavigateTo("");
     private void GoLibrary() => Navigate("library");

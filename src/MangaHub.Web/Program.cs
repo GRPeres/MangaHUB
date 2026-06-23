@@ -18,6 +18,7 @@ var apiUrl = string.IsNullOrWhiteSpace(configuredApiUrl)
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) });
 builder.Services.AddScoped<SessionTokenStore>();
+builder.Services.AddScoped<ThemePreferenceService>();
 builder.Services.AddScoped<ApiHttpClient>();
 builder.Services.AddScoped<AuthApiService>();
 builder.Services.AddScoped<AuthSessionService>();
