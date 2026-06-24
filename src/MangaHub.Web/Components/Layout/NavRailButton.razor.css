@@ -16,3 +16,10 @@
 .mh-nav-button-host ::deep .mh-nav-button-active {
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
 }
+
+.mh-nav-button ::deep .mud-button-icon-start {
+    margin-left: 0;
+    margin-right: 0;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+}

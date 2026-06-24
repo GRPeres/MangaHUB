@@ -55,7 +55,7 @@
 
 ::deep .mh-row-side {
     border-left: 1px solid var(--mud-palette-divider);
-    justify-content: space-between;
+    justify-content: flex-start;
 }
 
 .mh-title-block {
@@ -68,6 +68,7 @@
 
 .mh-facts {
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: .75rem;
 }
@@ -155,3 +156,11 @@
         flex: 1 1 0;
     }
 }
+
+::deep .mh-row-grid > .mud-grid-item {
+    display: flex;
+}
+
+    ::deep .mh-row-grid > .mud-grid-item > .mh-row-content {
+        width: 100%;
+    }
