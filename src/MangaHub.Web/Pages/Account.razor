@@ -102,10 +102,10 @@
                             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadUsers">Refresh users</MudButton>
                         </MudStack>
 
-                        <MangaBlockGrid Class="mh-user-block-grid">
+                        <BentoBlock Class="mh-user-block-grid">
                             @foreach (var userBlock in users.Select((User, Index) => new { User, Index }))
                             {
-                                <MangaBlockItem Size="@UserBlockSize(userBlock.Index)">
+                                <BentoItem Size="@UserBlockSize(userBlock.Index)">
                                     <MudPaper Elevation="0" Outlined="true" Class="@UserBlockClass(userBlock.User)">
                                         <div class="mh-user-block-main">
                                             <MudIcon Icon="@UserRoleIcon(userBlock.User)" />
@@ -130,9 +130,9 @@
                                             }
                                         </div>
                                     </MudPaper>
-                                </MangaBlockItem>
+                                </BentoItem>
                             }
-                        </MangaBlockGrid>
+                        </BentoBlock>
                     </MudPaper>
                 </MudItem>
             }

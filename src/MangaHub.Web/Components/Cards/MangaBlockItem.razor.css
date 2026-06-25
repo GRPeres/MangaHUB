@@ -1,5 +1,0 @@
-.mh-block-item {
-    grid-column: span var(--mh-block-col-span, 3);
-    grid-row: span var(--mh-block-row-span, 1);
-    min-width: 0;
-}

@@ -1,6 +1,6 @@
 using MangaHub.Web.API.DTOs;
 using MangaHub.Web.API.Services;
-using MangaHub.Web.Components.Cards;
+using MangaHub.Web.Components.Bento;
 using MangaHub.Web.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -91,11 +91,11 @@ public partial class Account
         return $"mh-user-block {roleClass} {selfClass}";
     }
 
-    private static MangaBlockSize UserBlockSize(int index) => (index % 5) switch
+    private static BentoBlockSize UserBlockSize(int index) => (index % 5) switch
     {
-        0 => MangaBlockSize.Wide,
-        2 => MangaBlockSize.Small,
-        4 => MangaBlockSize.Feature,
-        _ => MangaBlockSize.Wide
+        0 => BentoBlockSize.Wide,
+        2 => BentoBlockSize.Small,
+        4 => BentoBlockSize.Feature,
+        _ => BentoBlockSize.Wide
     };
 }

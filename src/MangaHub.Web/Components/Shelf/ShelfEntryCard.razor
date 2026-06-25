@@ -6,74 +6,74 @@
 
         <MudItem xs="12" md="10">
             <MudCardContent Class="mh-row-content mh-row-bento">
-                <MangaBlockGrid Variant="card">
-                    <MangaBlockItem Size="MangaBlockSize.Feature">
+                <BentoBlock Variant="card">
+                    <BentoItem Size="BentoBlockSize.Feature">
                         <MudPaper Elevation="0" Outlined="true" Class="mh-bento-summary">
                             <MangaSummaryBlock Title="@Entry.Title" Subtitle="@Entry.Authors" Summary="@SummaryText" Notes="@Entry.Notes" />
                         </MudPaper>
-                    </MangaBlockItem>
+                    </BentoItem>
 
-                    <MangaBlockItem Size="MangaBlockSize.Tall">
+                    <BentoItem Size="BentoBlockSize.Tall">
                         <MangaInfoBlock Label="Status"
                                         Value="@StatusLabel"
                                         Icon="@StatusIcon"
                                         Tone="@StatusTone"
                                         Active="@IsStatusFilterActive"
                                         OnClick="FilterByStatus" />
-                    </MangaBlockItem>
+                    </BentoItem>
                     @if (!string.IsNullOrWhiteSpace(GenreLabel))
                     {
-                        <MangaBlockItem Size="MangaBlockSize.Wide">
+                        <BentoItem Size="BentoBlockSize.Wide">
                             <MangaInfoBlock Label="Category" Value="@GenreLabel" Icon="@Icons.Material.Filled.Category" />
-                        </MangaBlockItem>
+                        </BentoItem>
                     }
                     @if (!string.IsNullOrWhiteSpace(SourceLabel))
                     {
-                        <MangaBlockItem>
+                        <BentoItem>
                             <MangaInfoBlock Label="Source" Value="@SourceLabel" Icon="@Icons.Material.Filled.TravelExplore" />
-                        </MangaBlockItem>
+                        </BentoItem>
                     }
                     @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
                     {
-                        <MangaBlockItem>
+                        <BentoItem>
                             <MangaInfoBlock Label="Format" Value="@Entry.MediaType" Icon="@Icons.Material.Filled.Style" />
-                        </MangaBlockItem>
+                        </BentoItem>
                     }
                     @if (!string.IsNullOrWhiteSpace(Entry.PublishingStatus))
                     {
-                        <MangaBlockItem Size="MangaBlockSize.Wide">
+                        <BentoItem Size="BentoBlockSize.Wide">
                             <MangaInfoBlock Label="Release" Value="@Entry.PublishingStatus" Icon="@Icons.Material.Filled.Update" Tone="progress" />
-                        </MangaBlockItem>
+                        </BentoItem>
                     }
                     @if (!string.IsNullOrWhiteSpace(AvailabilityLabel))
                     {
-                        <MangaBlockItem Size="MangaBlockSize.Wide">
+                        <BentoItem Size="BentoBlockSize.Wide">
                             <MangaInfoBlock Label="Read from" Value="@AvailabilityLabel" Icon="@Icons.Material.Filled.AutoStories" />
-                        </MangaBlockItem>
+                        </BentoItem>
                     }
 
-                    <MangaBlockItem Size="MangaBlockSize.Wide">
+                    <BentoItem Size="BentoBlockSize.Wide">
                         <MangaInfoBlock Label="Current" Value="@CurrentChapterLabel" Icon="@Icons.Material.Filled.Bookmark" Tone="progress" />
-                    </MangaBlockItem>
-                    <MangaBlockItem>
+                    </BentoItem>
+                    <BentoItem>
                         <MangaInfoBlock Label="Latest" Value="@LatestChapterLabel" Icon="@Icons.Material.Filled.NewReleases" Tone="progress" />
-                    </MangaBlockItem>
+                    </BentoItem>
                     @if (Entry.Score is not null)
                     {
-                        <MangaBlockItem>
+                        <BentoItem>
                             <MangaInfoBlock Label="Score" Value="@($"{Entry.Score}/5")" Icon="@Icons.Material.Filled.Star" Tone="success" />
-                        </MangaBlockItem>
+                        </BentoItem>
                     }
 
-                    <MangaBlockItem Size="MangaBlockSize.Wide">
+                    <BentoItem Size="BentoBlockSize.Wide">
                         <MudPaper Elevation="0" Outlined="true" Class="mh-bento-actions">
                             <MangaCardActions>
                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
                                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
                             </MangaCardActions>
                         </MudPaper>
-                    </MangaBlockItem>
-                </MangaBlockGrid>
+                    </BentoItem>
+                </BentoBlock>
             </MudCardContent>
         </MudItem>
     </MudGrid>

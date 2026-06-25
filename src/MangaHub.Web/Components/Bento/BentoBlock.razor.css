@@ -1,0 +1,98 @@
+.mh-bento-block {
+    --mh-bento-columns: 12;
+    --mh-bento-gap: .7rem;
+    --mh-bento-row-height: 5.75rem;
+    display: grid;
+    gap: var(--mh-bento-gap);
+    grid-auto-flow: dense;
+    grid-auto-rows: var(--mh-bento-row-height);
+    grid-template-columns: repeat(var(--mh-bento-columns), minmax(0, 1fr));
+    width: 100%;
+}
+
+.mh-bento-block-card {
+    --mh-bento-row-height: 5.75rem;
+}
+
+::deep > .mh-bento-item {
+    grid-column: span var(--mh-bento-item-width, 3);
+    grid-row: span var(--mh-bento-item-height, 1);
+    min-width: 0;
+}
+
+::deep > .mh-bento-item > * {
+    height: 100%;
+    width: 100%;
+}
+
+::deep > .mh-bento-item:nth-child(6n + 1) {
+    --mh-block-accent: var(--mud-palette-primary);
+    --mh-user-accent: var(--mud-palette-primary);
+}
+
+::deep > .mh-bento-item:nth-child(6n + 2) {
+    --mh-block-accent: var(--mud-palette-secondary);
+    --mh-user-accent: var(--mud-palette-secondary);
+}
+
+::deep > .mh-bento-item:nth-child(6n + 3) {
+    --mh-block-accent: var(--mud-palette-info);
+    --mh-user-accent: var(--mud-palette-info);
+}
+
+::deep > .mh-bento-item:nth-child(6n + 4) {
+    --mh-block-accent: var(--mud-palette-success);
+    --mh-user-accent: var(--mud-palette-success);
+}
+
+::deep > .mh-bento-item:nth-child(6n + 5) {
+    --mh-block-accent: var(--mud-palette-warning);
+    --mh-user-accent: var(--mud-palette-warning);
+}
+
+::deep > .mh-bento-item:nth-child(6n) {
+    --mh-block-accent: var(--mud-palette-tertiary);
+    --mh-user-accent: var(--mud-palette-tertiary);
+}
+
+@media (max-width: 960px) {
+    .mh-bento-block,
+    .mh-bento-block-card,
+    .mh-bento-block-side {
+        --mh-bento-columns: 6;
+    }
+
+    ::deep > .mh-bento-item {
+        --mh-bento-responsive-width: min(var(--mh-bento-item-width, 3), 6);
+        grid-column: span var(--mh-bento-responsive-width);
+    }
+}
+
+@media (max-width: 640px) {
+    .mh-bento-block,
+    .mh-bento-block-card,
+    .mh-bento-block-side {
+        --mh-bento-columns: 2;
+        --mh-bento-row-height: 5.25rem;
+    }
+
+    ::deep > .mh-bento-item {
+        --mh-bento-responsive-width: min(var(--mh-bento-item-width, 1), 2);
+        --mh-bento-responsive-height: min(var(--mh-bento-item-height, 1), 1);
+        grid-column: span var(--mh-bento-responsive-width);
+        grid-row: span var(--mh-bento-responsive-height);
+    }
+}
+
+@media (max-width: 420px) {
+    .mh-bento-block,
+    .mh-bento-block-card,
+    .mh-bento-block-side {
+        --mh-bento-columns: 1;
+    }
+
+    ::deep > .mh-bento-item {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+}
