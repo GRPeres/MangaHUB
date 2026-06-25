@@ -1,52 +1,52 @@
 .mh-block-grid {
+    --mh-block-columns: 12;
     display: grid;
     gap: var(--mh-block-gap, .7rem);
     grid-auto-flow: dense;
     grid-auto-rows: minmax(var(--mh-block-row-min, 74px), auto);
-    grid-template-columns: repeat(var(--mh-block-columns, 6), minmax(0, 1fr));
+    grid-template-columns: repeat(var(--mh-block-columns), minmax(0, 1fr));
     width: 100%;
 }
 
 .mh-block-grid-side {
-    --mh-block-columns: 2;
+    --mh-block-columns: 12;
 }
 
 .mh-block-grid-card {
-    --mh-block-columns: 10;
+    --mh-block-columns: 12;
     --mh-block-row-min: 82px;
 }
 
 ::deep .mh-lego-hero {
-    grid-column: span 3;
+    grid-column: span 6;
     grid-row: span 2;
 }
 
 ::deep .mh-lego-feature {
-    grid-column: span 4;
+    grid-column: span 6;
     grid-row: span 2;
 }
 
 ::deep .mh-lego-tall {
-    grid-column: span 2;
+    grid-column: span 3;
     grid-row: span 2;
 }
 
 ::deep .mh-lego-wide {
-    grid-column: span 3;
+    grid-column: span 6;
 }
 
 ::deep .mh-lego-small {
-    grid-column: span 2;
+    grid-column: span 3;
 }
 
 ::deep .mh-block-grid-side .mh-lego-hero,
 ::deep .mh-block-grid-side .mh-lego-wide {
-    grid-column: span 2;
-    grid-row: span 1;
+    grid-column: span 6;
 }
 
 ::deep .mh-block-grid-side .mh-lego-small {
-    grid-column: span 1;
+    grid-column: span 3;
 }
 
 ::deep .mh-info-block:nth-child(6n + 1),
@@ -106,12 +106,12 @@
     }
 
     ::deep .mh-block-grid-card .mh-lego-feature {
-        grid-column: span 4;
+        grid-column: span 6;
         grid-row: span 2;
     }
 
     ::deep .mh-block-grid-card .mh-lego-tall {
-        grid-column: span 2;
+        grid-column: span 3;
     }
 }
 
