@@ -2,7 +2,9 @@
     overflow: hidden;
 }
 
-.mh-row-grid {
+::deep .mh-row-grid {
+    --mh-bento-gap: 0;
+    --mh-bento-row-height: auto;
     min-height: 100%;
 }
 
@@ -15,7 +17,7 @@
     padding: 1rem 1.1rem;
 }
 
-.mh-row-bento {
+::deep .mh-row-bento {
     --mh-block-gap: .8rem;
 }
 
@@ -25,11 +27,3 @@
     flex-direction: column;
     justify-content: flex-end;
 }
-
-::deep .mh-row-grid > .mud-grid-item {
-    display: flex;
-}
-
-    ::deep .mh-row-grid > .mud-grid-item > .mh-row-content {
-        width: 100%;
-    }

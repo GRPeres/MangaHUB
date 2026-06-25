@@ -3,8 +3,8 @@
 <PageTitle>MangaHub</PageTitle>
 
 <MudStack Spacing="3" Class="mh-home">
-    <MudGrid Spacing="3" Class="mh-home-grid">
-        <MudItem xs="12" lg="7">
+    <BentoBlock Class="mh-home-grid mh-home-bento">
+        <BentoItem Width="7" Height="3">
             <MudPaper Elevation="0" Outlined="true" Class="mh-home-hero-block mh-home-block">
                 <MudStack Spacing="3">
                     <MudStack Spacing="1">
@@ -25,18 +25,18 @@
                     </MudStack>
                 </MudStack>
             </MudPaper>
-        </MudItem>
+        </BentoItem>
 
-        <MudItem xs="12" sm="6" lg="2">
+        <BentoItem Width="2" Height="2">
             <MangaInfoBlock Label="Session"
                             Value="@SessionLabel"
                             Icon="@SessionIcon"
                             Tone="@SessionTone"
                             Class="mh-home-block mh-home-tall"
                             OnClick="GoAccountOrLogin" />
-        </MudItem>
+        </BentoItem>
 
-        <MudItem xs="12" sm="6" lg="3">
+        <BentoItem Width="3" Height="2">
             <MudPaper Elevation="0" Outlined="true" Class="mh-home-block mh-home-action" @onclick="GoLibrary" role="button" tabindex="0">
                 <MudIcon Icon="@Icons.Material.Filled.Bookmark" Color="Color.Primary" />
                 <div>
@@ -45,34 +45,34 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">Your shelf shows current and latest chapters side by side.</MudText>
                 </div>
             </MudPaper>
-        </MudItem>
+        </BentoItem>
 
-        <MudItem xs="12" sm="6" lg="3">
+        <BentoItem Width="3" Height="1">
             <MangaInfoBlock Label="Metadata"
                             Value="MAL first"
                             Icon="@Icons.Material.Filled.TravelExplore"
                             Tone="source"
                             Class="mh-home-block mh-home-wide"
                             OnClick="GoCatalog" />
-        </MudItem>
+        </BentoItem>
 
-        <MudItem xs="12" sm="6" lg="3">
+        <BentoItem Width="3" Height="1">
             <MangaInfoBlock Label="Fallback"
                             Value="OpenLibrary when useful"
                             Icon="@Icons.Material.Filled.LibraryBooks"
                             Class="mh-home-block" />
-        </MudItem>
+        </BentoItem>
 
-        <MudItem xs="12" sm="6" lg="2">
+        <BentoItem Width="2" Height="2">
             <MangaInfoBlock Label="Import"
                             Value="CSV to shelf"
                             Icon="@Icons.Material.Filled.UploadFile"
                             Tone="progress"
                             Class="mh-home-block mh-home-tall"
                             OnClick="GoLibrary" />
-        </MudItem>
+        </BentoItem>
 
-        <MudItem xs="12" sm="6" lg="4">
+        <BentoItem Width="4" Height="2">
             <MudPaper Elevation="0" Outlined="true" Class="mh-home-block mh-home-action mh-home-admin" @onclick="GoCatalogOrAccount" role="button" tabindex="0">
                 <MudIcon Icon="@AdminIcon" Color="@AdminColor" />
                 <div>
@@ -81,9 +81,9 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@AdminCopy</MudText>
                 </div>
             </MudPaper>
-        </MudItem>
+        </BentoItem>
 
-        <MudItem xs="12" lg="5">
+        <BentoItem Width="5" Height="3">
             <MudPaper Elevation="0" Outlined="true" Class="mh-home-block mh-home-flow">
                 <MudText Typo="Typo.overline" Color="Color.Secondary">Flow</MudText>
                 <BentoBlock Class="mh-home-flow-grid">
@@ -98,9 +98,9 @@
                     </BentoItem>
                 </BentoBlock>
             </MudPaper>
-        </MudItem>
+        </BentoItem>
 
-        <MudItem xs="12" lg="7">
+        <BentoItem Width="7" Height="2">
             <MudPaper Elevation="0" Outlined="true" Class="mh-home-block mh-home-action mh-home-local" @onclick="GoLibrary" role="button" tabindex="0">
                 <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Secondary" />
                 <div>
@@ -111,6 +111,6 @@
                     </MudText>
                 </div>
             </MudPaper>
-        </MudItem>
-    </MudGrid>
+        </BentoItem>
+    </BentoBlock>
 </MudStack>

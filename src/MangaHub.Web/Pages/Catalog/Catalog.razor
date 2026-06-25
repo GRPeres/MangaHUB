@@ -78,19 +78,19 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CloseFilters" aria-label="Close catalog filters" />
                 </MudStack>
 
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" md="6">
+                <BentoBlock Class="mh-filter-bento">
+                    <BentoItem Width="6" Height="1">
                         <MudTextField T="string" @bind-Value="query" Label="Search catalog" Variant="Variant.Outlined" Immediate="true" />
-                    </MudItem>
-                    <MudItem xs="12" md="3">
+                    </BentoItem>
+                    <BentoItem Width="3" Height="1">
                         <MudSelect T="string" @bind-Value="sourceFilter" Label="Metadata source" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("MAL")">MAL</MudSelectItem>
                             <MudSelectItem T="string" Value="@("OpenLibrary")">OpenLibrary</MudSelectItem>
                             <MudSelectItem T="string" Value="@("Manual")">Manual</MudSelectItem>
                         </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="3">
+                    </BentoItem>
+                    <BentoItem Width="3" Height="1">
                         <MudSelect T="string" @bind-Value="categoryFilter" Label="Genre/category" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             @foreach (var category in CategoryOptions)
@@ -98,8 +98,8 @@
                                 <MudSelectItem T="string" Value="@category">@category</MudSelectItem>
                             }
                         </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="3">
+                    </BentoItem>
+                    <BentoItem Width="3" Height="1">
                         <MudSelect T="string" @bind-Value="mediaTypeFilter" Label="Type" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             @foreach (var mediaType in MediaTypeOptions)
@@ -107,8 +107,8 @@
                                 <MudSelectItem T="string" Value="@mediaType">@mediaType</MudSelectItem>
                             }
                         </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="3">
+                    </BentoItem>
+                    <BentoItem Width="3" Height="1">
                         <MudSelect T="string" @bind-Value="publishingStatusFilter" Label="Publishing status" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             @foreach (var publishingStatus in PublishingStatusOptions)
@@ -116,23 +116,23 @@
                                 <MudSelectItem T="string" Value="@publishingStatus">@publishingStatus</MudSelectItem>
                             }
                         </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="3">
+                    </BentoItem>
+                    <BentoItem Width="3" Height="1">
                         <MudSelect T="string" @bind-Value="linkFilter" Label="Read binding" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("mangadex")">MangaDex</MudSelectItem>
                             <MudSelectItem T="string" Value="@("local")">Local files</MudSelectItem>
                             <MudSelectItem T="string" Value="@("missing")">Missing read source</MudSelectItem>
                         </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="3">
+                    </BentoItem>
+                    <BentoItem Width="3" Height="1">
                         <MudSelect T="string" @bind-Value="shelfFilter" Label="Shelf presence" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("in")">In my shelf</MudSelectItem>
                             <MudSelectItem T="string" Value="@("not-in")">Not in my shelf</MudSelectItem>
                         </MudSelect>
-                    </MudItem>
-                </MudGrid>
+                    </BentoItem>
+                </BentoBlock>
 
                 <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="flex-wrap">
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ClearFilters">Clear</MudButton>

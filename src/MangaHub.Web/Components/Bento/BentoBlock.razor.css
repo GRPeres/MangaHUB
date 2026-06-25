@@ -14,6 +14,10 @@
     --mh-bento-row-height: 5.75rem;
 }
 
+.mh-filter-bento {
+    --mh-bento-row-height: 4.75rem;
+}
+
 ::deep > .mh-bento-item {
     grid-column: span var(--mh-bento-item-width, 3);
     grid-row: span var(--mh-bento-item-height, 1);

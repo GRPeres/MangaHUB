@@ -1,12 +1,12 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
-    <MudGrid Spacing="0" Class="mh-row-grid">
-        <MudItem xs="12" md="2">
+    <BentoBlock Class="mh-row-grid">
+        <BentoItem Width="2" Height="1">
             <MangaCoverBlock CoverUrl="@Entry.CoverUrl"
                              AltText="@($"{Entry.Title} cover")"
                              PlaceholderIcon="@Icons.Material.Filled.Inventory2" />
-        </MudItem>
+        </BentoItem>
 
-        <MudItem xs="12" md="10">
+        <BentoItem Width="10" Height="1">
             <MudCardContent Class="mh-row-content mh-row-bento">
                 <BentoBlock Variant="card">
                     <BentoItem Size="BentoBlockSize.Feature">
@@ -84,6 +84,6 @@
                     </BentoItem>
                 </BentoBlock>
             </MudCardContent>
-        </MudItem>
-    </MudGrid>
+        </BentoItem>
+    </BentoBlock>
 </MudCard>

@@ -10,8 +10,8 @@
 
     @if (currentUser is null)
     {
-        <MudGrid Spacing="3" Class="mh-account-grid">
-            <MudItem xs="12" md="7">
+        <BentoBlock Class="mh-account-grid mh-account-bento">
+            <BentoItem Width="7" Height="3">
                 <MudPaper Elevation="0" Outlined="true" Class="mh-account-block mh-account-hero">
                     <MudStack Spacing="2">
                         <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" />
@@ -25,20 +25,20 @@
                         </MudStack>
                     </MudStack>
                 </MudPaper>
-            </MudItem>
-            <MudItem xs="12" md="5">
+            </BentoItem>
+            <BentoItem Width="5" Height="3">
                 <MangaInfoBlock Label="Access"
                                 Value="Session required"
                                 Icon="@Icons.Material.Filled.VerifiedUser"
                                 Tone="warning"
                                 Class="mh-account-block mh-account-tall" />
-            </MudItem>
-        </MudGrid>
+            </BentoItem>
+        </BentoBlock>
     }
     else
     {
-        <MudGrid Spacing="3" Class="mh-account-grid">
-            <MudItem xs="12" lg="5">
+        <BentoBlock Class="mh-account-grid mh-account-bento">
+            <BentoItem Width="5" Height="3">
                 <MudPaper Elevation="0" Outlined="true" Class="mh-account-block mh-account-hero">
                     <MudStack Spacing="3">
                         <MudStack Spacing="1">
@@ -52,26 +52,26 @@
                         </MudStack>
                     </MudStack>
                 </MudPaper>
-            </MudItem>
+            </BentoItem>
 
-            <MudItem xs="12" sm="6" lg="2">
+            <BentoItem Width="2" Height="2">
                 <MangaInfoBlock Label="Role"
                                 Value="@currentUser.Role"
                                 Icon="@RoleIcon"
                                 Tone="@RoleTone"
                                 Class="mh-account-block mh-account-tall" />
-            </MudItem>
+            </BentoItem>
 
-            <MudItem xs="12" sm="6" lg="2">
+            <BentoItem Width="2" Height="2">
                 <MangaInfoBlock Label="Users"
                                 Value="@UserCountLabel"
                                 Icon="@Icons.Material.Filled.Groups"
                                 Tone="source"
                                 Class="mh-account-block mh-account-tall"
                                 OnClick="LoadUsers" />
-            </MudItem>
+            </BentoItem>
 
-            <MudItem xs="12" lg="3">
+            <BentoItem Width="3" Height="2">
                 <MudPaper Elevation="0" Outlined="true" Class="mh-account-block mh-account-action" @onclick="RefreshAccount" role="button" tabindex="0">
                     <MudIcon Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" />
                     <div>
@@ -80,18 +80,18 @@
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Reload your role and admin access from the API.</MudText>
                     </div>
                 </MudPaper>
-            </MudItem>
+            </BentoItem>
 
             @if (!string.IsNullOrWhiteSpace(message))
             {
-                <MudItem xs="12">
+                <BentoItem Width="12" Height="1">
                     <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
-                </MudItem>
+                </BentoItem>
             }
 
             @if (IsAdmin)
             {
-                <MudItem xs="12">
+                <BentoItem Width="12" Height="4">
                     <MudPaper Elevation="0" Outlined="true" Class="mh-account-block mh-account-users">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap mh-account-users-head">
                             <MudStack Spacing="1">
@@ -134,8 +134,8 @@
                             }
                         </BentoBlock>
                     </MudPaper>
-                </MudItem>
+                </BentoItem>
             }
-        </MudGrid>
+        </BentoBlock>
     }
 </MudStack>

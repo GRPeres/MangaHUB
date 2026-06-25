@@ -1,9 +1,5 @@
-.mh-home-grid {
-    align-items: stretch;
-}
-
-::deep .mh-home-grid > .mud-grid-item {
-    display: flex;
+::deep .mh-home-bento {
+    --mh-bento-row-height: 6.25rem;
 }
 
 .mh-home-block,

@@ -60,11 +60,11 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CloseFilters" aria-label="Close shelf filters" />
                 </MudStack>
 
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" md="6">
+                <BentoBlock Class="mh-filter-bento">
+                    <BentoItem Width="6" Height="1">
                         <MudTextField T="string" @bind-Value="searchText" Label="Search title, author, notes" Variant="Variant.Outlined" Immediate="true" />
-                    </MudItem>
-                    <MudItem xs="12" md="3">
+                    </BentoItem>
+                    <BentoItem Width="3" Height="1">
                         <MudSelect T="string" @bind-Value="status" Label="Status" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
@@ -73,28 +73,28 @@
                             <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
                             <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
                         </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="3">
+                    </BentoItem>
+                    <BentoItem Width="3" Height="1">
                         <MudSelect T="string" @bind-Value="sourceFilter" Label="Metadata source" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("MAL")">MAL</MudSelectItem>
                             <MudSelectItem T="string" Value="@("OpenLibrary")">OpenLibrary</MudSelectItem>
                             <MudSelectItem T="string" Value="@("Manual")">Manual</MudSelectItem>
                         </MudSelect>
-                    </MudItem>
+                    </BentoItem>
 
                     @if (IsAdmin)
                     {
-                        <MudItem xs="12" md="4">
+                        <BentoItem Width="4" Height="1">
                             <MudSelect T="Guid?" @bind-Value="selectedUserId" Label="Shelf owner" Variant="Variant.Outlined">
                                 @foreach (var user in users)
                                 {
                                     <MudSelectItem T="Guid?" Value="@user.Id">@user.Username (@user.Role)</MudSelectItem>
                                 }
                             </MudSelect>
-                        </MudItem>
+                        </BentoItem>
                     }
-                    <MudItem xs="12" md="4">
+                    <BentoItem Width="4" Height="1">
                         <MudSelect T="string" @bind-Value="categoryFilter" Label="Genre/category" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             @foreach (var category in CategoryOptions)
@@ -102,16 +102,16 @@
                                 <MudSelectItem T="string" Value="@category">@category</MudSelectItem>
                             }
                         </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="4">
+                    </BentoItem>
+                    <BentoItem Width="4" Height="1">
                         <MudSelect T="string" @bind-Value="availabilityFilter" Label="Read availability" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("local")">Local files</MudSelectItem>
                             <MudSelectItem T="string" Value="@("mangadex")">MangaDex</MudSelectItem>
                             <MudSelectItem T="string" Value="@("missing")">Missing read source</MudSelectItem>
                         </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="4">
+                    </BentoItem>
+                    <BentoItem Width="4" Height="1">
                         <MudSelect T="string" @bind-Value="scoreFilter" Label="Score" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("rated")">Rated</MudSelectItem>
@@ -119,8 +119,8 @@
                             <MudSelectItem T="string" Value="@("4plus")">4+</MudSelectItem>
                             <MudSelectItem T="string" Value="@("5")">5 only</MudSelectItem>
                         </MudSelect>
-                    </MudItem>
-                </MudGrid>
+                    </BentoItem>
+                </BentoBlock>
 
                 <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="flex-wrap">
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ClearFilters">Clear</MudButton>
