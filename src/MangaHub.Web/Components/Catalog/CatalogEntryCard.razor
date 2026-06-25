@@ -1,102 +1,74 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <MudGrid Spacing="0" Class="mh-row-grid">
         <MudItem xs="12" md="2">
-            <div class="mh-cover-frame">
-                @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
-                {
-                    <MudImage Src="@Entry.CoverUrl" Alt="@($"{Entry.Title} cover")" Class="mh-row-cover" />
-                }
-                else
-                {
-                    <div class="mh-cover-placeholder" aria-hidden="true">
-                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
-                    </div>
-                }
-            </div>
+            <MangaCoverBlock CoverUrl="@Entry.CoverUrl"
+                             AltText="@($"{Entry.Title} cover")"
+                             PlaceholderIcon="@Icons.Material.Filled.Inventory2" />
         </MudItem>
 
-        <MudItem xs="12" md="8">
+        <MudItem xs="12" md="5">
             <MudCardContent Class="mh-row-content mh-row-content-main">
-                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
+                <MangaSummaryBlock Title="@Entry.Title" Subtitle="@Entry.Authors" Summary="@Entry.Description" />
+            </MudCardContent>
+        </MudItem>
+
+        <MudItem xs="12" md="3">
+            <MudCardContent Class="mh-row-content">
+                <MangaBlockGrid>
                     @if (!string.IsNullOrWhiteSpace(SourceLabel))
                     {
-                        <MudChip T="string"
-                                 Size="Size.Small"
-                                 Color="@SourceColor"
-                                 Variant="@SourceVariant"
-                                 Class="mh-click-chip"
-                                 OnClick="FilterBySource">@SourceLabel</MudChip>
+                        <MangaInfoBlock Label="Source"
+                                        Value="@SourceLabel"
+                                        Icon="@Icons.Material.Filled.TravelExplore"
+                                        Tone="source"
+                                        Class="mh-lego-hero"
+                                        Active="@IsSourceFilterActive"
+                                        OnClick="FilterBySource" />
                     }
                     @if (!string.IsNullOrWhiteSpace(Entry.Category))
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@Entry.Category</MudChip>
+                        <MangaInfoBlock Label="Category" Value="@Entry.Category" Icon="@Icons.Material.Filled.Category" Class="mh-lego-wide" />
                     }
-                    @if (Entry.IsInMyShelf)
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">In shelf</MudChip>
-                    }
-                </MudStack>
-
-                <div class="mh-title-block">
-                    <MudText Typo="Typo.h3" Class="mh-row-title">@Entry.Title</MudText>
-                    @if (!string.IsNullOrWhiteSpace(Entry.Authors))
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
-                    }
-                </div>
-
-                <MudStack Row="true" Spacing="1" Class="mh-chip-row flex-wrap">
                     @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.MediaType</MudChip>
+                        <MangaInfoBlock Label="Format" Value="@Entry.MediaType" Icon="@Icons.Material.Filled.Style" Class="mh-lego-small" />
                     }
                     @if (!string.IsNullOrWhiteSpace(Entry.PublishingStatus))
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.PublishingStatus</MudChip>
+                        <MangaInfoBlock Label="Release" Value="@Entry.PublishingStatus" Icon="@Icons.Material.Filled.Update" Tone="progress" Class="mh-lego-wide" />
                     }
                     @if (Entry.FirstPublishYear is not null)
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.FirstPublishYear</MudChip>
+                        <MangaInfoBlock Label="First year" Value="@FirstPublishYearLabel" Icon="@Icons.Material.Filled.CalendarMonth" Class="mh-lego-small" />
                     }
-                    @if (!string.IsNullOrWhiteSpace(Entry.MangaDexUrl))
+                    @if (Entry.IsInMyShelf)
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
+                        <MangaInfoBlock Label="Shelf" Value="In your list" Icon="@Icons.Material.Filled.CheckCircle" Tone="success" Class="mh-lego-wide" />
                     }
-                    @if (Entry.LocalSeriesId is not null)
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Local files</MudChip>
-                    }
-                </MudStack>
-
-                @if (!string.IsNullOrWhiteSpace(Entry.Description))
-                {
-                    <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Description</MudText>
-                }
+                </MangaBlockGrid>
             </MudCardContent>
         </MudItem>
 
         <MudItem xs="12" md="2">
             <MudCardContent Class="mh-row-content mh-row-side">
-                <div class="mh-facts">
+                <MangaBlockGrid Variant="side">
                     @if (Entry.ChapterCount is not null)
                     {
-                        <div>
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">Chapters</MudText>
-                            <strong>@Entry.ChapterCount</strong>
-                        </div>
+                        <MangaInfoBlock Label="Chapters" Value="@ChapterCountLabel" Icon="@Icons.Material.Filled.FormatListNumbered" Tone="progress" Class="mh-lego-wide" />
                     }
                     @if (Entry.VolumeCount is not null)
                     {
-                        <div>
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">Volumes</MudText>
-                            <strong>@Entry.VolumeCount</strong>
-                        </div>
+                        <MangaInfoBlock Label="Volumes" Value="@VolumeCountLabel" Icon="@Icons.Material.Filled.CollectionsBookmark" Class="mh-lego-small" />
                     }
-                </div>
+                    @if (!string.IsNullOrWhiteSpace(AvailabilityLabel))
+                    {
+                        <MangaInfoBlock Label="Read from" Value="@AvailabilityLabel" Icon="@Icons.Material.Filled.AutoStories" Class="mh-lego-wide" />
+                    }
+                </MangaBlockGrid>
 
-                <MudCardActions Class="mh-row-actions">
+                <MangaCardActions>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
-                </MudCardActions>
+                </MangaCardActions>
             </MudCardContent>
         </MudItem>
     </MudGrid>

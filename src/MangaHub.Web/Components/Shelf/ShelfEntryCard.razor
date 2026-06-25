@@ -1,104 +1,64 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <MudGrid Spacing="0" Class="mh-row-grid">
         <MudItem xs="12" md="2">
-            <div class="mh-cover-frame">
-                @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
-                {
-                    <MudImage Src="@Entry.CoverUrl" Alt="@($"{Entry.Title} cover")" Class="mh-row-cover" />
-                }
-                else
-                {
-                    <div class="mh-cover-placeholder" aria-hidden="true">
-                        <MudIcon Icon="@Icons.Material.Filled.MenuBook" />
-                    </div>
-                }
-            </div>
+            <MangaCoverBlock CoverUrl="@Entry.CoverUrl" AltText="@($"{Entry.Title} cover")" />
         </MudItem>
 
-        <MudItem xs="12" md="8">
+        <MudItem xs="12" md="5">
             <MudCardContent Class="mh-row-content mh-row-content-main">
-                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Color="@StatusColor"
-                             Variant="@StatusVariant"
-                             Class="mh-click-chip"
-                             OnClick="FilterByStatus">@StatusLabel</MudChip>
-                    @if (Entry.Score is not null)
+                <MangaSummaryBlock Title="@Entry.Title" Subtitle="@Entry.Authors" Summary="@SummaryText" Notes="@Entry.Notes" />
+            </MudCardContent>
+        </MudItem>
+
+        <MudItem xs="12" md="3">
+            <MudCardContent Class="mh-row-content">
+                <MangaBlockGrid>
+                    <MangaInfoBlock Label="Status"
+                                    Value="@StatusLabel"
+                                    Icon="@StatusIcon"
+                                    Tone="@StatusTone"
+                                    Class="mh-lego-hero"
+                                    Active="@IsStatusFilterActive"
+                                    OnClick="FilterByStatus" />
+                    @if (!string.IsNullOrWhiteSpace(GenreLabel))
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@($"{Entry.Score}/5")</MudChip>
+                        <MangaInfoBlock Label="Category" Value="@GenreLabel" Icon="@Icons.Material.Filled.Category" Class="mh-lego-wide" />
                     }
                     @if (!string.IsNullOrWhiteSpace(SourceLabel))
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@SourceLabel</MudChip>
-                    }
-                </MudStack>
-
-                <div class="mh-title-block">
-                    <MudText Typo="Typo.h3" Class="mh-row-title">@Entry.Title</MudText>
-                    @if (!string.IsNullOrWhiteSpace(Entry.Authors))
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
-                    }
-                </div>
-
-                <MudStack Row="true" Spacing="1" Class="mh-chip-row flex-wrap">
-                    @if (!string.IsNullOrWhiteSpace(GenreLabel))
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GenreLabel</MudChip>
+                        <MangaInfoBlock Label="Source" Value="@SourceLabel" Icon="@Icons.Material.Filled.TravelExplore" Tone="source" Class="mh-lego-small" />
                     }
                     @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.MediaType</MudChip>
+                        <MangaInfoBlock Label="Format" Value="@Entry.MediaType" Icon="@Icons.Material.Filled.Style" Class="mh-lego-small" />
                     }
                     @if (!string.IsNullOrWhiteSpace(Entry.PublishingStatus))
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.PublishingStatus</MudChip>
+                        <MangaInfoBlock Label="Release" Value="@Entry.PublishingStatus" Icon="@Icons.Material.Filled.Update" Tone="progress" Class="mh-lego-wide" />
                     }
-                    @if (Entry.ChapterCount is not null)
+                    @if (!string.IsNullOrWhiteSpace(AvailabilityLabel))
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{Entry.ChapterCount} ch.")</MudChip>
+                        <MangaInfoBlock Label="Read from" Value="@AvailabilityLabel" Icon="@Icons.Material.Filled.AutoStories" Class="mh-lego-wide" />
                     }
-                    @if (Entry.VolumeCount is not null)
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{Entry.VolumeCount} vol.")</MudChip>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(Entry.MangaDexUrl))
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
-                    }
-                </MudStack>
-
-                @if (!string.IsNullOrWhiteSpace(Entry.Summary))
-                {
-                    <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Summary</MudText>
-                }
-                else if (!string.IsNullOrWhiteSpace(Entry.Description))
-                {
-                    <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Description</MudText>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(Entry.Notes))
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mh-row-notes">@Entry.Notes</MudText>
-                }
+                </MangaBlockGrid>
             </MudCardContent>
         </MudItem>
 
         <MudItem xs="12" md="2">
             <MudCardContent Class="mh-row-content mh-row-side">
-                <div class="mh-progress-panel">
-                    <MudText Typo="Typo.overline" Color="Color.Secondary">Progress</MudText>
-                    <div class="mh-chapter-line">
-                        <span>@CurrentChapterLabel</span>
-                        <span>@LatestChapterLabel</span>
-                    </div>
-                </div>
+                <MangaBlockGrid Variant="side">
+                    <MangaInfoBlock Label="Current" Value="@CurrentChapterLabel" Icon="@Icons.Material.Filled.Bookmark" Tone="progress" Class="mh-lego-wide" />
+                    <MangaInfoBlock Label="Latest" Value="@LatestChapterLabel" Icon="@Icons.Material.Filled.NewReleases" Tone="progress" Class="mh-lego-small" />
+                    @if (Entry.Score is not null)
+                    {
+                        <MangaInfoBlock Label="Score" Value="@($"{Entry.Score}/5")" Icon="@Icons.Material.Filled.Star" Tone="success" Class="mh-lego-small" />
+                    }
+                </MangaBlockGrid>
 
-                <MudCardActions Class="mh-row-actions">
+                <MangaCardActions>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
-                </MudCardActions>
+                </MangaCardActions>
             </MudCardContent>
         </MudItem>
     </MudGrid>

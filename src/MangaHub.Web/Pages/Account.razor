@@ -1,11 +1,8 @@
 @page "/account"
-@using MangaHub.Web.API.Services
-@inject AuthSessionService Auth
-@inject AdminApiService AdminApi
 
 <PageTitle>Account</PageTitle>
 
-<MudStack Spacing="4">
+<MudStack Spacing="3" Class="mh-account">
     <MudStack Spacing="1" Class="mh-page-title">
         <MudText Typo="Typo.overline" Color="Color.Secondary">Profile</MudText>
         <MudText Typo="Typo.h1">Account</MudText>
@@ -13,114 +10,130 @@
 
     @if (currentUser is null)
     {
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Sign in first to manage your account.</MudAlert>
+        <MudGrid Spacing="3" Class="mh-account-grid">
+            <MudItem xs="12" md="7">
+                <MudPaper Elevation="0" Outlined="true" Class="mh-account-block mh-account-hero">
+                    <MudStack Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" />
+                        <MudText Typo="Typo.h2">Log in to manage MangaHub</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Your account controls shelf access, reading state, and admin tools.
+                        </MudText>
+                        <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login" OnClick="OpenLogin">Log in</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenLogin">Create account</MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <MangaInfoBlock Label="Access"
+                                Value="Session required"
+                                Icon="@Icons.Material.Filled.VerifiedUser"
+                                Tone="warning"
+                                Class="mh-account-block mh-account-tall" />
+            </MudItem>
+        </MudGrid>
     }
     else
     {
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.h2">@currentUser.Username</MudText>
-                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
-                    <MudChip T="string" Color="@(IsAdmin ? Color.Secondary : Color.Primary)" Variant="Variant.Filled">@currentUser.Role</MudChip>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshAccount">Refresh</MudButton>
-                    <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudButton>
-                </MudStack>
-            </MudStack>
-        </MudPaper>
-
-        @if (IsAdmin)
-        {
-            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-                <MudStack Spacing="3">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap">
+        <MudGrid Spacing="3" Class="mh-account-grid">
+            <MudItem xs="12" lg="5">
+                <MudPaper Elevation="0" Outlined="true" Class="mh-account-block mh-account-hero">
+                    <MudStack Spacing="3">
                         <MudStack Spacing="1">
-                            <MudText Typo="Typo.h2">Users</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Admins can promote or demote accounts.</MudText>
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">Signed in</MudText>
+                            <MudText Typo="Typo.h2">@currentUser.Username</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@AccountSummary</MudText>
                         </MudStack>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadUsers">Refresh users</MudButton>
+                        <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshAccount">Refresh</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudButton>
+                        </MudStack>
                     </MudStack>
+                </MudPaper>
+            </MudItem>
 
-                    @if (!string.IsNullOrWhiteSpace(message))
-                    {
-                        <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
-                    }
+            <MudItem xs="12" sm="6" lg="2">
+                <MangaInfoBlock Label="Role"
+                                Value="@currentUser.Role"
+                                Icon="@RoleIcon"
+                                Tone="@RoleTone"
+                                Class="mh-account-block mh-account-tall" />
+            </MudItem>
 
-                    <MudTable Items="@users" Dense="true" Hover="true">
-                        <HeaderContent>
-                            <MudTh>Username</MudTh>
-                            <MudTh>Role</MudTh>
-                            <MudTh>Created</MudTh>
-                            <MudTh></MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="Username">@context.Username</MudTd>
-                            <MudTd DataLabel="Role">
-                                <MudChip T="string" Size="Size.Small" Color="@(context.Role == "admin" ? Color.Secondary : Color.Primary)" Variant="Variant.Outlined">@context.Role</MudChip>
-                            </MudTd>
-                            <MudTd DataLabel="Created">@context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</MudTd>
-                            <MudTd DataLabel="Actions">
-                                @if (context.Role == "admin")
-                                {
-                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Secondary" OnClick="() => MakeUser(context)">Make user</MudButton>
-                                }
-                                else
-                                {
-                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="() => MakeAdmin(context)">Make admin</MudButton>
-                                }
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                </MudStack>
-            </MudPaper>
-        }
+            <MudItem xs="12" sm="6" lg="2">
+                <MangaInfoBlock Label="Users"
+                                Value="@UserCountLabel"
+                                Icon="@Icons.Material.Filled.Groups"
+                                Tone="source"
+                                Class="mh-account-block mh-account-tall"
+                                OnClick="LoadUsers" />
+            </MudItem>
+
+            <MudItem xs="12" lg="3">
+                <MudPaper Elevation="0" Outlined="true" Class="mh-account-block mh-account-action" @onclick="RefreshAccount" role="button" tabindex="0">
+                    <MudIcon Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" />
+                    <div>
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">Session</MudText>
+                        <MudText Typo="Typo.h3">Refresh account state</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Reload your role and admin access from the API.</MudText>
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
+                </MudItem>
+            }
+
+            @if (IsAdmin)
+            {
+                <MudItem xs="12">
+                    <MudPaper Elevation="0" Outlined="true" Class="mh-account-block mh-account-users">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap mh-account-users-head">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.overline" Color="Color.Secondary">Admin tools</MudText>
+                                <MudText Typo="Typo.h2">Users</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Promote or demote accounts from role blocks.</MudText>
+                            </MudStack>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadUsers">Refresh users</MudButton>
+                        </MudStack>
+
+                        <MangaBlockGrid Class="mh-user-block-grid">
+                            @foreach (var user in users)
+                            {
+                                <MudPaper Elevation="0" Outlined="true" Class="@UserBlockClass(user)">
+                                    <div class="mh-user-block-main">
+                                        <MudIcon Icon="@UserRoleIcon(user)" />
+                                        <div>
+                                            <MudText Typo="Typo.overline" Color="Color.Secondary">@user.Role</MudText>
+                                            <MudText Typo="Typo.h3">@user.Username</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Created @user.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</MudText>
+                                        </div>
+                                    </div>
+                                    <div class="mh-user-block-actions">
+                                        @if (IsSelf(user))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Current account</MudText>
+                                        }
+                                        @if (IsUserAdmin(user))
+                                        {
+                                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Secondary" OnClick="() => MakeUser(user)">Make user</MudButton>
+                                        }
+                                        else
+                                        {
+                                            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="() => MakeAdmin(user)">Make admin</MudButton>
+                                        }
+                                    </div>
+                                </MudPaper>
+                            }
+                        </MangaBlockGrid>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
     }
 </MudStack>
-
-    @code {
-
-    private UserResponse? currentUser;
-    private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
-    private List<UserAdminResponse> users = [];
-    private string message = "";
-    private Severity messageSeverity = Severity.Info;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return;
-        await RefreshAccount();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task RefreshAccount()
-    {
-        currentUser = await Auth.GetCurrentUserAsync(forceRefresh: true);
-        if (IsAdmin)
-        {
-            await LoadUsers();
-        }
-    }
-
-    private async Task LoadUsers()
-    {
-        users = await AdminApi.GetUsersAsync();
-    }
-
-    private async Task SetRole(UserAdminResponse user, string role)
-    {
-        var updated = await AdminApi.UpdateUserRoleAsync(user.Id, role);
-        messageSeverity = updated is null ? Severity.Error : Severity.Success;
-        message = updated is null ? "Could not update user role." : $"{updated.Username} is now {updated.Role}.";
-        await RefreshAccount();
-    }
-
-    private async Task MakeAdmin(UserAdminResponse user) => await SetRole(user, "admin");
-
-    private async Task MakeUser(UserAdminResponse user) => await SetRole(user, "user");
-
-    private async Task Logout()
-    {
-        await Auth.LogoutAsync();
-        currentUser = null;
-        users = [];
-    }
-}

@@ -1,0 +1,141 @@
+.mh-home-grid {
+    align-items: stretch;
+}
+
+::deep .mh-home-grid > .mud-grid-item {
+    display: flex;
+}
+
+.mh-home-block,
+::deep .mh-home-block {
+    height: 100%;
+    width: 100%;
+}
+
+.mh-home-hero-block {
+    align-items: flex-start;
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--mud-palette-primary) 16%, transparent), transparent 55%),
+        color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
+    display: flex;
+    min-height: 300px;
+    padding: clamp(1.25rem, 4vw, 2.4rem);
+}
+
+.mh-home-copy {
+    max-width: 700px;
+}
+
+.mh-home-action {
+    align-items: flex-start;
+    cursor: pointer;
+    display: grid;
+    gap: .9rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 160px;
+    padding: 1rem;
+    transition: border-color .16s ease, transform .16s ease, background .16s ease;
+}
+
+.mh-home-action:hover,
+.mh-home-action:focus-visible {
+    background: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface));
+    border-color: var(--mud-palette-primary);
+    transform: translateY(-1px);
+}
+
+::deep .mh-home-action .mud-icon-root {
+    font-size: 2rem;
+}
+
+.mh-home-admin {
+    min-height: 190px;
+}
+
+.mh-home-local {
+    min-height: 150px;
+}
+
+.mh-home-flow {
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+    padding: 1rem;
+}
+
+::deep .mh-home-mini {
+    grid-column: span 2;
+    min-height: 110px;
+}
+
+::deep .mh-home-mini:first-child {
+    grid-column: span 3;
+}
+
+::deep .mh-home-mini:last-child {
+    grid-column: span 3;
+}
+
+::deep .mh-home-tall {
+    min-height: 210px;
+}
+
+::deep .mh-home-wide {
+    min-height: 140px;
+}
+
+::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 1) .mh-info-block {
+    --mh-block-accent: var(--mud-palette-primary);
+}
+
+::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 2) .mh-info-block {
+    --mh-block-accent: var(--mud-palette-secondary);
+}
+
+::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 3) .mh-info-block {
+    --mh-block-accent: var(--mud-palette-info);
+}
+
+::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 4) .mh-info-block {
+    --mh-block-accent: var(--mud-palette-success);
+}
+
+::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 5) .mh-info-block {
+    --mh-block-accent: var(--mud-palette-warning);
+}
+
+::deep .mh-home-grid > .mud-grid-item:nth-child(6n) .mh-info-block {
+    --mh-block-accent: var(--mud-palette-tertiary);
+}
+
+@media (max-width: 960px) {
+    .mh-home-hero-block {
+        min-height: 240px;
+    }
+
+    ::deep .mh-home-tall,
+    ::deep .mh-home-wide,
+    .mh-home-action {
+        min-height: 150px;
+    }
+}
+
+@media (max-width: 640px) {
+    .mh-home-action {
+        grid-template-columns: 1fr;
+    }
+
+    ::deep .mh-home-mini,
+    ::deep .mh-home-mini:first-child,
+    ::deep .mh-home-mini:last-child {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 420px) {
+    ::deep .mh-home-mini,
+    ::deep .mh-home-mini:first-child,
+    ::deep .mh-home-mini:last-child {
+        grid-column: 1;
+    }
+}

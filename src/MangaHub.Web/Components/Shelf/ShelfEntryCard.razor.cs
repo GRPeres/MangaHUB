@@ -15,18 +15,32 @@ public partial class ShelfEntryCard
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
     private string GenreLabel => FirstNonEmpty(Entry.Category, Entry.CatalogCategory);
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "");
-    private string CurrentChapterLabel => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Current: not started" : $"Current: ch. {Entry.CurrentChapter}";
-    private string LatestChapterLabel => Entry.ChapterCount is null ? "Latest: unknown" : $"Latest: ch. {Entry.ChapterCount}";
-    private bool IsStatusFilterActive => string.Equals(ActiveStatusFilter, StatusLabel, StringComparison.OrdinalIgnoreCase);
-    private Variant StatusVariant => IsStatusFilterActive ? Variant.Filled : Variant.Outlined;
-    private Color StatusColor => StatusLabel.ToLowerInvariant() switch
+    private string SummaryText => FirstNonEmpty(Entry.Summary, Entry.Description);
+    private string CurrentChapterLabel => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
+    private string LatestChapterLabel => Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
+    private string AvailabilityLabel => string.Join(", ", new[]
     {
-        "reading" => Color.Info,
-        "done" => Color.Success,
-        "paused" => Color.Warning,
-        "planned" => Color.Secondary,
-        "dropped" => Color.Error,
-        _ => Color.Primary
+        !string.IsNullOrWhiteSpace(Entry.MangaDexUrl) ? "MangaDex" : "",
+        Entry.LocalSeriesId is not null ? "Local files" : ""
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private bool IsStatusFilterActive => string.Equals(ActiveStatusFilter, StatusLabel, StringComparison.OrdinalIgnoreCase);
+    private string StatusTone => StatusLabel.ToLowerInvariant() switch
+    {
+        "reading" => "progress",
+        "done" => "success",
+        "paused" => "warning",
+        "planned" => "source",
+        "dropped" => "error",
+        _ => "neutral"
+    };
+    private string StatusIcon => StatusLabel.ToLowerInvariant() switch
+    {
+        "reading" => Icons.Material.Filled.AutoStories,
+        "done" => Icons.Material.Filled.CheckCircle,
+        "paused" => Icons.Material.Filled.PauseCircle,
+        "planned" => Icons.Material.Filled.EventNote,
+        "dropped" => Icons.Material.Filled.Cancel,
+        _ => Icons.Material.Filled.Bookmark
     };
 
     private Task Edit() => OnEdit.InvokeAsync(Entry);

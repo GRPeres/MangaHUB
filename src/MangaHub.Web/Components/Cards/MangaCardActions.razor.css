@@ -1,0 +1,25 @@
+::deep .mh-card-actions {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding: .35rem 0 0;
+}
+
+@media (max-width: 960px) {
+    ::deep .mh-card-actions {
+        flex-direction: row;
+    }
+}
+
+@media (max-width: 640px) {
+    ::deep .mh-card-actions {
+        justify-content: stretch;
+    }
+
+    ::deep .mh-card-actions .mud-button-root {
+        flex: 1 1 0;
+    }
+}

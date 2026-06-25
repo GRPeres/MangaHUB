@@ -1,0 +1,15 @@
+<MudPaper Elevation="0"
+          Outlined="true"
+          Class="@BlockClass"
+          role="@(Clickable ? "button" : null)"
+          tabindex="@(Clickable ? "0" : null)"
+          @onclick="HandleClick"
+          @onkeydown="HandleKeyDown">
+    <div class="mh-info-icon" aria-hidden="true">
+        <MudIcon Icon="@Icon" />
+    </div>
+    <div class="mh-info-copy">
+        <MudText Typo="Typo.overline" Color="Color.Secondary">@Label</MudText>
+        <MudText Typo="Typo.body2" Class="mh-info-value">@Value</MudText>
+    </div>
+</MudPaper>

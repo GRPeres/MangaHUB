@@ -1,0 +1,72 @@
+.mh-info-block {
+    align-items: flex-start;
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 8%, transparent), transparent 72%),
+        var(--mud-palette-surface);
+    border-color: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 28%, var(--mud-palette-divider));
+    border-radius: 8px;
+    display: grid;
+    gap: .65rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 78px;
+    padding: .7rem .75rem;
+    transition: border-color .16s ease, transform .16s ease, background .16s ease;
+}
+
+.mh-info-icon {
+    align-items: center;
+    background: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 14%, transparent);
+    border-radius: 8px;
+    color: var(--mh-block-accent, var(--mud-palette-primary));
+    display: flex;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+}
+
+::deep .mh-info-icon .mud-icon-root {
+    font-size: 1.15rem;
+}
+
+.mh-info-copy {
+    min-width: 0;
+}
+
+.mh-info-value {
+    font-weight: 750;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.mh-info-source {
+    --mh-block-accent: var(--mud-palette-secondary) !important;
+}
+
+.mh-info-status,
+.mh-info-progress {
+    --mh-block-accent: var(--mud-palette-info) !important;
+}
+
+.mh-info-success {
+    --mh-block-accent: var(--mud-palette-success) !important;
+}
+
+.mh-info-warning {
+    --mh-block-accent: var(--mud-palette-warning) !important;
+}
+
+.mh-info-error {
+    --mh-block-accent: var(--mud-palette-error) !important;
+}
+
+.is-clickable {
+    cursor: pointer;
+}
+
+.is-clickable:hover,
+.is-clickable:focus-visible,
+.is-active {
+    border-color: var(--mh-block-accent, var(--mud-palette-primary));
+    background: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 12%, var(--mud-palette-surface));
+    transform: translateY(-1px);
+}
