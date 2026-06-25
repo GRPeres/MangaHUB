@@ -4,20 +4,18 @@
             <MangaCoverBlock CoverUrl="@Entry.CoverUrl" AltText="@($"{Entry.Title} cover")" />
         </MudItem>
 
-        <MudItem xs="12" md="5">
-            <MudCardContent Class="mh-row-content mh-row-content-main">
-                <MangaSummaryBlock Title="@Entry.Title" Subtitle="@Entry.Authors" Summary="@SummaryText" Notes="@Entry.Notes" />
-            </MudCardContent>
-        </MudItem>
+        <MudItem xs="12" md="10">
+            <MudCardContent Class="mh-row-content mh-row-bento">
+                <MangaBlockGrid Variant="card">
+                    <MudPaper Elevation="0" Outlined="true" Class="mh-bento-summary mh-lego-feature">
+                        <MangaSummaryBlock Title="@Entry.Title" Subtitle="@Entry.Authors" Summary="@SummaryText" Notes="@Entry.Notes" />
+                    </MudPaper>
 
-        <MudItem xs="12" md="3">
-            <MudCardContent Class="mh-row-content">
-                <MangaBlockGrid>
                     <MangaInfoBlock Label="Status"
                                     Value="@StatusLabel"
                                     Icon="@StatusIcon"
                                     Tone="@StatusTone"
-                                    Class="mh-lego-hero"
+                                    Class="mh-lego-tall"
                                     Active="@IsStatusFilterActive"
                                     OnClick="FilterByStatus" />
                     @if (!string.IsNullOrWhiteSpace(GenreLabel))
@@ -26,7 +24,7 @@
                     }
                     @if (!string.IsNullOrWhiteSpace(SourceLabel))
                     {
-                        <MangaInfoBlock Label="Source" Value="@SourceLabel" Icon="@Icons.Material.Filled.TravelExplore" Tone="source" Class="mh-lego-small" />
+                        <MangaInfoBlock Label="Source" Value="@SourceLabel" Icon="@Icons.Material.Filled.TravelExplore" Class="mh-lego-small" />
                     }
                     @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
                     {
@@ -40,25 +38,21 @@
                     {
                         <MangaInfoBlock Label="Read from" Value="@AvailabilityLabel" Icon="@Icons.Material.Filled.AutoStories" Class="mh-lego-wide" />
                     }
-                </MangaBlockGrid>
-            </MudCardContent>
-        </MudItem>
 
-        <MudItem xs="12" md="2">
-            <MudCardContent Class="mh-row-content mh-row-side">
-                <MangaBlockGrid Variant="side">
                     <MangaInfoBlock Label="Current" Value="@CurrentChapterLabel" Icon="@Icons.Material.Filled.Bookmark" Tone="progress" Class="mh-lego-wide" />
                     <MangaInfoBlock Label="Latest" Value="@LatestChapterLabel" Icon="@Icons.Material.Filled.NewReleases" Tone="progress" Class="mh-lego-small" />
                     @if (Entry.Score is not null)
                     {
                         <MangaInfoBlock Label="Score" Value="@($"{Entry.Score}/5")" Icon="@Icons.Material.Filled.Star" Tone="success" Class="mh-lego-small" />
                     }
-                </MangaBlockGrid>
 
-                <MangaCardActions>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
-                </MangaCardActions>
+                    <MudPaper Elevation="0" Outlined="true" Class="mh-bento-actions mh-lego-wide">
+                        <MangaCardActions>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
+                        </MangaCardActions>
+                    </MudPaper>
+                </MangaBlockGrid>
             </MudCardContent>
         </MudItem>
     </MudGrid>

@@ -1,21 +1,34 @@
 .mh-info-block {
     align-items: flex-start;
     background:
-        linear-gradient(135deg, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 8%, transparent), transparent 72%),
-        var(--mud-palette-surface);
-    border-color: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 28%, var(--mud-palette-divider));
+        linear-gradient(135deg, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 32%, var(--mud-palette-surface)), transparent 130%),
+        color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 14%, var(--mud-palette-surface));
+    border-color: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 62%, var(--mud-palette-divider));
     border-radius: 8px;
     display: grid;
     gap: .65rem;
     grid-template-columns: auto minmax(0, 1fr);
-    min-height: 78px;
+    min-height: 100%;
     padding: .7rem .75rem;
+    position: relative;
     transition: border-color .16s ease, transform .16s ease, background .16s ease;
+}
+
+.mh-info-block::before {
+    background: var(--mh-block-accent, var(--mud-palette-primary));
+    border-radius: 8px 0 0 8px;
+    bottom: 0;
+    content: "";
+    left: 0;
+    opacity: .72;
+    position: absolute;
+    top: 0;
+    width: 4px;
 }
 
 .mh-info-icon {
     align-items: center;
-    background: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 14%, transparent);
+    background: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 24%, var(--mud-palette-surface));
     border-radius: 8px;
     color: var(--mh-block-accent, var(--mud-palette-primary));
     display: flex;

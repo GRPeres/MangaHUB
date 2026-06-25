@@ -6,22 +6,19 @@
                              PlaceholderIcon="@Icons.Material.Filled.Inventory2" />
         </MudItem>
 
-        <MudItem xs="12" md="5">
-            <MudCardContent Class="mh-row-content mh-row-content-main">
-                <MangaSummaryBlock Title="@Entry.Title" Subtitle="@Entry.Authors" Summary="@Entry.Description" />
-            </MudCardContent>
-        </MudItem>
+        <MudItem xs="12" md="10">
+            <MudCardContent Class="mh-row-content mh-row-bento">
+                <MangaBlockGrid Variant="card">
+                    <MudPaper Elevation="0" Outlined="true" Class="mh-bento-summary mh-lego-feature">
+                        <MangaSummaryBlock Title="@Entry.Title" Subtitle="@Entry.Authors" Summary="@Entry.Description" />
+                    </MudPaper>
 
-        <MudItem xs="12" md="3">
-            <MudCardContent Class="mh-row-content">
-                <MangaBlockGrid>
                     @if (!string.IsNullOrWhiteSpace(SourceLabel))
                     {
                         <MangaInfoBlock Label="Source"
                                         Value="@SourceLabel"
                                         Icon="@Icons.Material.Filled.TravelExplore"
-                                        Tone="source"
-                                        Class="mh-lego-hero"
+                                        Class="mh-lego-tall"
                                         Active="@IsSourceFilterActive"
                                         OnClick="FilterBySource" />
                     }
@@ -45,13 +42,7 @@
                     {
                         <MangaInfoBlock Label="Shelf" Value="In your list" Icon="@Icons.Material.Filled.CheckCircle" Tone="success" Class="mh-lego-wide" />
                     }
-                </MangaBlockGrid>
-            </MudCardContent>
-        </MudItem>
 
-        <MudItem xs="12" md="2">
-            <MudCardContent Class="mh-row-content mh-row-side">
-                <MangaBlockGrid Variant="side">
                     @if (Entry.ChapterCount is not null)
                     {
                         <MangaInfoBlock Label="Chapters" Value="@ChapterCountLabel" Icon="@Icons.Material.Filled.FormatListNumbered" Tone="progress" Class="mh-lego-wide" />
@@ -64,11 +55,13 @@
                     {
                         <MangaInfoBlock Label="Read from" Value="@AvailabilityLabel" Icon="@Icons.Material.Filled.AutoStories" Class="mh-lego-wide" />
                     }
-                </MangaBlockGrid>
 
-                <MangaCardActions>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
-                </MangaCardActions>
+                    <MudPaper Elevation="0" Outlined="true" Class="mh-bento-actions mh-lego-wide">
+                        <MangaCardActions>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
+                        </MangaCardActions>
+                    </MudPaper>
+                </MangaBlockGrid>
             </MudCardContent>
         </MudItem>
     </MudGrid>

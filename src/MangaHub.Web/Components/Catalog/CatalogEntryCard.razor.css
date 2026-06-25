@@ -15,16 +15,32 @@
     padding: 1rem 1.1rem;
 }
 
-::deep .mh-row-side {
-    border-left: 1px solid var(--mud-palette-divider);
-    justify-content: flex-start;
+.mh-row-bento {
+    --mh-block-gap: .8rem;
 }
 
-@media (max-width: 960px) {
-    ::deep .mh-row-side {
-        border-left: 0;
-        border-top: 1px solid var(--mud-palette-divider);
-    }
+.mh-bento-summary,
+.mh-bento-actions {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--mh-bento-accent, var(--mud-palette-primary)) 28%, var(--mud-palette-surface)), transparent 125%),
+        color-mix(in srgb, var(--mh-bento-accent, var(--mud-palette-primary)) 12%, var(--mud-palette-surface));
+    border-color: color-mix(in srgb, var(--mh-bento-accent, var(--mud-palette-primary)) 55%, var(--mud-palette-divider));
+    border-radius: 8px;
+    height: 100%;
+    min-width: 0;
+    padding: 1rem;
+}
+
+.mh-bento-summary {
+    --mh-bento-accent: var(--mud-palette-primary);
+}
+
+.mh-bento-actions {
+    --mh-bento-accent: var(--mud-palette-tertiary);
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
 }
 
 ::deep .mh-row-grid > .mud-grid-item {

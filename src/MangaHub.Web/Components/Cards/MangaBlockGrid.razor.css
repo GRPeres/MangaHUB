@@ -3,16 +3,31 @@
     gap: var(--mh-block-gap, .7rem);
     grid-auto-flow: dense;
     grid-auto-rows: minmax(var(--mh-block-row-min, 74px), auto);
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--mh-block-columns, 6), minmax(0, 1fr));
     width: 100%;
 }
 
 .mh-block-grid-side {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    --mh-block-columns: 2;
+}
+
+.mh-block-grid-card {
+    --mh-block-columns: 10;
+    --mh-block-row-min: 82px;
 }
 
 ::deep .mh-lego-hero {
     grid-column: span 3;
+    grid-row: span 2;
+}
+
+::deep .mh-lego-feature {
+    grid-column: span 4;
+    grid-row: span 2;
+}
+
+::deep .mh-lego-tall {
+    grid-column: span 2;
     grid-row: span 2;
 }
 
@@ -72,8 +87,9 @@
 
 @media (max-width: 960px) {
     .mh-block-grid,
-    .mh-block-grid-side {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+    .mh-block-grid-side,
+    .mh-block-grid-card {
+        --mh-block-columns: 6;
     }
 
     ::deep .mh-block-grid-side .mh-lego-hero {
@@ -88,15 +104,27 @@
     ::deep .mh-block-grid-side .mh-lego-small {
         grid-column: span 2;
     }
+
+    ::deep .mh-block-grid-card .mh-lego-feature {
+        grid-column: span 4;
+        grid-row: span 2;
+    }
+
+    ::deep .mh-block-grid-card .mh-lego-tall {
+        grid-column: span 2;
+    }
 }
 
 @media (max-width: 640px) {
     .mh-block-grid,
-    .mh-block-grid-side {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .mh-block-grid-side,
+    .mh-block-grid-card {
+        --mh-block-columns: 2;
     }
 
     ::deep .mh-lego-hero,
+    ::deep .mh-lego-feature,
+    ::deep .mh-lego-tall,
     ::deep .mh-lego-wide,
     ::deep .mh-block-grid-side .mh-lego-hero,
     ::deep .mh-block-grid-side .mh-lego-wide {
@@ -112,11 +140,14 @@
 
 @media (max-width: 420px) {
     .mh-block-grid,
-    .mh-block-grid-side {
-        grid-template-columns: 1fr;
+    .mh-block-grid-side,
+    .mh-block-grid-card {
+        --mh-block-columns: 1;
     }
 
     ::deep .mh-lego-hero,
+    ::deep .mh-lego-feature,
+    ::deep .mh-lego-tall,
     ::deep .mh-lego-wide,
     ::deep .mh-lego-small,
     ::deep .mh-block-grid-side .mh-lego-hero,
