@@ -60,7 +60,7 @@
 }
 
 .mh-user-block-grid {
-    grid-auto-rows: minmax(112px, auto);
+    --mh-bento-row-height: 7rem;
 }
 
 .mh-user-block {
@@ -105,30 +105,6 @@
     display: flex;
     gap: .5rem;
     justify-content: space-between;
-}
-
-::deep .mh-account-grid > .mud-grid-item:nth-child(6n + 1) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-primary);
-}
-
-::deep .mh-account-grid > .mud-grid-item:nth-child(6n + 2) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-secondary);
-}
-
-::deep .mh-account-grid > .mud-grid-item:nth-child(6n + 3) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-info);
-}
-
-::deep .mh-account-grid > .mud-grid-item:nth-child(6n + 4) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-success);
-}
-
-::deep .mh-account-grid > .mud-grid-item:nth-child(6n + 5) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-warning);
-}
-
-::deep .mh-account-grid > .mud-grid-item:nth-child(6n) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-tertiary);
 }
 
 @media (max-width: 640px) {

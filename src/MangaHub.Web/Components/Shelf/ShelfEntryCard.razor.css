@@ -19,19 +19,7 @@
     --mh-block-gap: .8rem;
 }
 
-.mh-bento-summary,
-.mh-bento-actions {
-    background:
-        linear-gradient(135deg, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 28%, var(--mud-palette-surface)), transparent 125%),
-        color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 12%, var(--mud-palette-surface));
-    border-color: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 55%, var(--mud-palette-divider));
-    border-radius: 8px;
-    height: 100%;
-    min-width: 0;
-    padding: 1rem;
-}
-
-.mh-bento-actions {
+::deep .mh-bento-actions {
     align-items: stretch;
     display: flex;
     flex-direction: column;

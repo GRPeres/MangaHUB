@@ -71,30 +71,6 @@
     min-height: 140px;
 }
 
-::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 1) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-primary);
-}
-
-::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 2) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-secondary);
-}
-
-::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 3) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-info);
-}
-
-::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 4) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-success);
-}
-
-::deep .mh-home-grid > .mud-grid-item:nth-child(6n + 5) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-warning);
-}
-
-::deep .mh-home-grid > .mud-grid-item:nth-child(6n) .mh-info-block {
-    --mh-block-accent: var(--mud-palette-tertiary);
-}
-
 @media (max-width: 960px) {
     .mh-home-hero-block {
         min-height: 240px;

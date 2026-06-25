@@ -10,9 +10,9 @@
             <MudCardContent Class="mh-row-content mh-row-bento">
                 <BentoBlock Variant="card">
                     <BentoItem Size="BentoBlockSize.Feature">
-                        <MudPaper Elevation="0" Outlined="true" Class="mh-bento-summary">
+                        <BentoPanel>
                             <MangaSummaryBlock Title="@Entry.Title" Subtitle="@Entry.Authors" Summary="@Entry.Description" />
-                        </MudPaper>
+                        </BentoPanel>
                     </BentoItem>
 
                     @if (!string.IsNullOrWhiteSpace(SourceLabel))
@@ -76,11 +76,11 @@
                     }
 
                     <BentoItem Size="BentoBlockSize.Wide">
-                        <MudPaper Elevation="0" Outlined="true" Class="mh-bento-actions">
+                        <BentoPanel Class="mh-bento-actions">
                             <MangaCardActions>
                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
                             </MangaCardActions>
-                        </MudPaper>
+                        </BentoPanel>
                     </BentoItem>
                 </BentoBlock>
             </MudCardContent>
