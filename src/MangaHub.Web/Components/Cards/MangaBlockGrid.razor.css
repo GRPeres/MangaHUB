@@ -59,43 +59,37 @@
 }
 
 ::deep .mh-block-item:nth-child(6n + 1),
-::deep .mh-info-block:nth-child(6n + 1),
-::deep .mh-user-block:nth-child(6n + 1) {
+::deep .mh-info-block:nth-child(6n + 1) {
     --mh-block-accent: var(--mud-palette-primary);
     --mh-user-accent: var(--mud-palette-primary);
 }
 
 ::deep .mh-block-item:nth-child(6n + 2),
-::deep .mh-info-block:nth-child(6n + 2),
-::deep .mh-user-block:nth-child(6n + 2) {
+::deep .mh-info-block:nth-child(6n + 2) {
     --mh-block-accent: var(--mud-palette-secondary);
     --mh-user-accent: var(--mud-palette-secondary);
 }
 
 ::deep .mh-block-item:nth-child(6n + 3),
-::deep .mh-info-block:nth-child(6n + 3),
-::deep .mh-user-block:nth-child(6n + 3) {
+::deep .mh-info-block:nth-child(6n + 3) {
     --mh-block-accent: var(--mud-palette-info);
     --mh-user-accent: var(--mud-palette-info);
 }
 
 ::deep .mh-block-item:nth-child(6n + 4),
-::deep .mh-info-block:nth-child(6n + 4),
-::deep .mh-user-block:nth-child(6n + 4) {
+::deep .mh-info-block:nth-child(6n + 4) {
     --mh-block-accent: var(--mud-palette-success);
     --mh-user-accent: var(--mud-palette-success);
 }
 
 ::deep .mh-block-item:nth-child(6n + 5),
-::deep .mh-info-block:nth-child(6n + 5),
-::deep .mh-user-block:nth-child(6n + 5) {
+::deep .mh-info-block:nth-child(6n + 5) {
     --mh-block-accent: var(--mud-palette-warning);
     --mh-user-accent: var(--mud-palette-warning);
 }
 
 ::deep .mh-block-item:nth-child(6n),
-::deep .mh-info-block:nth-child(6n),
-::deep .mh-user-block:nth-child(6n) {
+::deep .mh-info-block:nth-child(6n) {
     --mh-block-accent: var(--mud-palette-tertiary);
     --mh-user-accent: var(--mud-palette-tertiary);
 }

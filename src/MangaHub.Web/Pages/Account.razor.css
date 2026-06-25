@@ -73,29 +73,8 @@
     display: flex;
     flex-direction: column;
     gap: .9rem;
-    grid-column: span 2;
     justify-content: space-between;
     padding: .9rem;
-}
-
-.mh-user-block:nth-child(5n + 1) {
-    grid-column: span 3;
-}
-
-.mh-user-block:nth-child(5n + 2) {
-    grid-column: span 2;
-}
-
-.mh-user-block:nth-child(5n + 3) {
-    grid-column: span 1;
-}
-
-.mh-user-block:nth-child(5n + 4) {
-    grid-column: span 2;
-}
-
-.mh-user-block:nth-child(5n) {
-    grid-column: span 4;
 }
 
 .mh-user-admin {
@@ -152,36 +131,8 @@
     --mh-block-accent: var(--mud-palette-tertiary);
 }
 
-@media (max-width: 960px) {
-    .mh-user-block-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .mh-user-block,
-    .mh-user-block:nth-child(5n + 1),
-    .mh-user-block:nth-child(5n + 2),
-    .mh-user-block:nth-child(5n + 3),
-    .mh-user-block:nth-child(5n + 4),
-    .mh-user-block:nth-child(5n) {
-        grid-column: span 2;
-    }
-}
-
 @media (max-width: 640px) {
     .mh-account-action {
         grid-template-columns: 1fr;
-    }
-
-    .mh-user-block-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .mh-user-block,
-    .mh-user-block:nth-child(5n + 1),
-    .mh-user-block:nth-child(5n + 2),
-    .mh-user-block:nth-child(5n + 3),
-    .mh-user-block:nth-child(5n + 4),
-    .mh-user-block:nth-child(5n) {
-        grid-column: span 2;
     }
 }

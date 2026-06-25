@@ -1,5 +1,6 @@
 using MangaHub.Web.API.DTOs;
 using MangaHub.Web.API.Services;
+using MangaHub.Web.Components.Cards;
 using MangaHub.Web.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -89,4 +90,12 @@ public partial class Account
         var selfClass = IsSelf(user) ? "mh-user-self" : "";
         return $"mh-user-block {roleClass} {selfClass}";
     }
+
+    private static MangaBlockSize UserBlockSize(int index) => (index % 5) switch
+    {
+        0 => MangaBlockSize.Wide,
+        2 => MangaBlockSize.Small,
+        4 => MangaBlockSize.Feature,
+        _ => MangaBlockSize.Wide
+    };
 }

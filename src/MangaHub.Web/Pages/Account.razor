@@ -103,32 +103,34 @@
                         </MudStack>
 
                         <MangaBlockGrid Class="mh-user-block-grid">
-                            @foreach (var user in users)
+                            @foreach (var userBlock in users.Select((User, Index) => new { User, Index }))
                             {
-                                <MudPaper Elevation="0" Outlined="true" Class="@UserBlockClass(user)">
-                                    <div class="mh-user-block-main">
-                                        <MudIcon Icon="@UserRoleIcon(user)" />
-                                        <div>
-                                            <MudText Typo="Typo.overline" Color="Color.Secondary">@user.Role</MudText>
-                                            <MudText Typo="Typo.h3">@user.Username</MudText>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Created @user.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</MudText>
+                                <MangaBlockItem Size="@UserBlockSize(userBlock.Index)">
+                                    <MudPaper Elevation="0" Outlined="true" Class="@UserBlockClass(userBlock.User)">
+                                        <div class="mh-user-block-main">
+                                            <MudIcon Icon="@UserRoleIcon(userBlock.User)" />
+                                            <div>
+                                                <MudText Typo="Typo.overline" Color="Color.Secondary">@userBlock.User.Role</MudText>
+                                                <MudText Typo="Typo.h3">@userBlock.User.Username</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Created @userBlock.User.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</MudText>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="mh-user-block-actions">
-                                        @if (IsSelf(user))
-                                        {
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Current account</MudText>
-                                        }
-                                        @if (IsUserAdmin(user))
-                                        {
-                                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Secondary" OnClick="() => MakeUser(user)">Make user</MudButton>
-                                        }
-                                        else
-                                        {
-                                            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="() => MakeAdmin(user)">Make admin</MudButton>
-                                        }
-                                    </div>
-                                </MudPaper>
+                                        <div class="mh-user-block-actions">
+                                            @if (IsSelf(userBlock.User))
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Current account</MudText>
+                                            }
+                                            @if (IsUserAdmin(userBlock.User))
+                                            {
+                                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Secondary" OnClick="() => MakeUser(userBlock.User)">Make user</MudButton>
+                                            }
+                                            else
+                                            {
+                                                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="() => MakeAdmin(userBlock.User)">Make admin</MudButton>
+                                            }
+                                        </div>
+                                    </MudPaper>
+                                </MangaBlockItem>
                             }
                         </MangaBlockGrid>
                     </MudPaper>

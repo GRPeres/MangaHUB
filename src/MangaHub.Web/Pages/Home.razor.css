@@ -63,19 +63,6 @@
     padding: 1rem;
 }
 
-::deep .mh-home-mini {
-    grid-column: span 2;
-    min-height: 110px;
-}
-
-::deep .mh-home-mini:first-child {
-    grid-column: span 3;
-}
-
-::deep .mh-home-mini:last-child {
-    grid-column: span 3;
-}
-
 ::deep .mh-home-tall {
     min-height: 210px;
 }
@@ -123,19 +110,5 @@
 @media (max-width: 640px) {
     .mh-home-action {
         grid-template-columns: 1fr;
-    }
-
-    ::deep .mh-home-mini,
-    ::deep .mh-home-mini:first-child,
-    ::deep .mh-home-mini:last-child {
-        grid-column: span 1;
-    }
-}
-
-@media (max-width: 420px) {
-    ::deep .mh-home-mini,
-    ::deep .mh-home-mini:first-child,
-    ::deep .mh-home-mini:last-child {
-        grid-column: 1;
     }
 }
