@@ -68,7 +68,7 @@ public sealed class MyAnimeListClient(HttpClient httpClient, IOptions<MangaHubOp
     private static string BuildSearchUrl(string query)
     {
         const string fields = "id,title,main_picture,start_date,synopsis,media_type,status,genres,authors,num_volumes,num_chapters";
-        return $"manga?q={Uri.EscapeDataString(query)}&limit=12&fields={Uri.EscapeDataString(fields)}";
+        return $"manga?q={Uri.EscapeDataString(query)}&limit=12&nsfw=true&fields={Uri.EscapeDataString(fields)}";
     }
 
     private static string ReadString(JsonElement element, string property) =>

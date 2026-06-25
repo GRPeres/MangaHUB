@@ -102,6 +102,8 @@ Preferred order:
 
 Duplicates between MAL and OpenLibrary should prefer MAL and ignore the OpenLibrary duplicate.
 
+MyAnimeList searches intentionally send `nsfw=true` so MAL does not hide adult/explicit manga from catalog metadata search. The app stores metadata; user-facing access control/content filtering should be handled separately if it becomes a product requirement.
+
 ## Imports
 
 CSV import was added to replace the original spreadsheet workflow.
@@ -113,4 +115,3 @@ Expected behavior:
 - import can create catalog entries when admin-controlled
 - import can add/update shelf entries for a user
 - imported catalog records should later be matchable to correct MAL/OpenLibrary metadata
-
