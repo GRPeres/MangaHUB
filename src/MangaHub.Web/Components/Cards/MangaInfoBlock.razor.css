@@ -51,27 +51,6 @@
     overflow-wrap: anywhere;
 }
 
-.mh-info-source {
-    --mh-block-accent: var(--mud-palette-secondary) !important;
-}
-
-.mh-info-status,
-.mh-info-progress {
-    --mh-block-accent: var(--mud-palette-info) !important;
-}
-
-.mh-info-success {
-    --mh-block-accent: var(--mud-palette-success) !important;
-}
-
-.mh-info-warning {
-    --mh-block-accent: var(--mud-palette-warning) !important;
-}
-
-.mh-info-error {
-    --mh-block-accent: var(--mud-palette-error) !important;
-}
-
 .is-clickable {
     cursor: pointer;
 }
