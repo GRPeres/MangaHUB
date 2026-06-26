@@ -1,35 +1,49 @@
 .mh-info-block {
     align-items: flex-start;
     background:
-        linear-gradient(135deg, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 32%, var(--mud-palette-surface)), transparent 130%),
-        color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 14%, var(--mud-palette-surface));
-    border-color: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 62%, var(--mud-palette-divider));
+        radial-gradient(circle at top right, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 24%, transparent), transparent 40%),
+        linear-gradient(135deg, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 16%, var(--mh-block-bg, var(--mud-palette-surface))), var(--mh-block-bg, var(--mud-palette-surface)));
+    border-color: var(--mh-block-border, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 62%, var(--mud-palette-divider)));
     border-radius: 8px;
+    color: var(--mh-block-fg, var(--mud-palette-text-primary));
     display: grid;
     gap: .65rem;
     grid-template-columns: auto minmax(0, 1fr);
     min-height: 100%;
+    overflow: hidden;
     padding: .7rem .75rem;
     position: relative;
     transition: border-color .16s ease, transform .16s ease, background .16s ease;
 }
 
 .mh-info-block::before {
-    background: var(--mh-block-accent, var(--mud-palette-primary));
-    border-radius: 8px 0 0 8px;
-    bottom: 0;
+    background: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 85%, transparent);
+    border-radius: 999px;
+    content: "";
+    height: 42px;
+    opacity: .9;
+    position: absolute;
+    right: -16px;
+    top: -18px;
+    width: 42px;
+}
+
+.mh-info-block::after {
+    background: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 85%, var(--mh-block-fg, white));
+    border-radius: 999px;
+    bottom: .65rem;
     content: "";
     left: 0;
-    opacity: .72;
+    opacity: .75;
     position: absolute;
-    top: 0;
     width: 4px;
+    top: .65rem;
 }
 
 .mh-info-icon {
     align-items: center;
-    background: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 24%, var(--mud-palette-surface));
-    border-radius: 8px;
+    background: var(--mh-block-icon-bg, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 18%, transparent));
+    border-radius: 999px;
     color: var(--mh-block-accent, var(--mud-palette-primary));
     display: flex;
     height: 34px;
@@ -43,12 +57,19 @@
 
 .mh-info-copy {
     min-width: 0;
+    position: relative;
+    z-index: 1;
 }
 
 .mh-info-value {
+    color: var(--mh-block-fg, var(--mud-palette-text-primary));
     font-weight: 750;
     line-height: 1.2;
     overflow-wrap: anywhere;
+}
+
+::deep .mh-info-copy .mud-typography-overline {
+    color: var(--mh-block-muted, var(--mud-palette-text-secondary)) !important;
 }
 
 .is-clickable {
@@ -59,6 +80,8 @@
 .is-clickable:focus-visible,
 .is-active {
     border-color: var(--mh-block-accent, var(--mud-palette-primary));
-    background: color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 12%, var(--mud-palette-surface));
+    background:
+        radial-gradient(circle at top right, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 30%, transparent), transparent 42%),
+        linear-gradient(135deg, color-mix(in srgb, var(--mh-block-accent, var(--mud-palette-primary)) 24%, var(--mh-block-bg, var(--mud-palette-surface))), var(--mh-block-bg, var(--mud-palette-surface)));
     transform: translateY(-1px);
 }

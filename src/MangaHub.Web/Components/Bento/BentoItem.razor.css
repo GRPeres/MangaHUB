@@ -1,3 +1,101 @@
 .mh-bento-item {
+    display: flex;
+    min-height: 0;
     min-width: 0;
+    overflow: hidden;
+}
+
+.mh-bento-item > * {
+    min-height: 0;
+    min-width: 0;
+}
+
+.mh-bento-scheme-1 {
+    --mh-block-bg: #22132f;
+    --mh-block-fg: #fbf7ff;
+    --mh-block-muted: #d8c9e8;
+    --mh-block-accent: #b987ff;
+    --mh-block-border: #7e4ec5;
+    --mh-block-icon-bg: rgba(185, 135, 255, .18);
+}
+
+.mh-bento-scheme-2 {
+    --mh-block-bg: #f5edff;
+    --mh-block-fg: #26143a;
+    --mh-block-muted: #6f5d80;
+    --mh-block-accent: #7a36d1;
+    --mh-block-border: #d7c0f6;
+    --mh-block-icon-bg: rgba(122, 54, 209, .12);
+}
+
+.mh-bento-scheme-3 {
+    --mh-block-bg: #34204b;
+    --mh-block-fg: #fff8ff;
+    --mh-block-muted: #decff1;
+    --mh-block-accent: #ff9bd8;
+    --mh-block-border: #935da8;
+    --mh-block-icon-bg: rgba(255, 155, 216, .17);
+}
+
+.mh-bento-scheme-4 {
+    --mh-block-bg: #eef1ff;
+    --mh-block-fg: #171d3f;
+    --mh-block-muted: #5c6380;
+    --mh-block-accent: #5266e8;
+    --mh-block-border: #c6cdfa;
+    --mh-block-icon-bg: rgba(82, 102, 232, .12);
+}
+
+.mh-bento-scheme-5 {
+    --mh-block-bg: #182f2d;
+    --mh-block-fg: #f4fffd;
+    --mh-block-muted: #bde1db;
+    --mh-block-accent: #70e0cb;
+    --mh-block-border: #3a8278;
+    --mh-block-icon-bg: rgba(112, 224, 203, .16);
+}
+
+.mh-bento-scheme-6 {
+    --mh-block-bg: #fff1f6;
+    --mh-block-fg: #3b1726;
+    --mh-block-muted: #7d5a67;
+    --mh-block-accent: #d94686;
+    --mh-block-border: #f0bfd2;
+    --mh-block-icon-bg: rgba(217, 70, 134, .12);
+}
+
+.mh-bento-scheme-7 {
+    --mh-block-bg: #2e2638;
+    --mh-block-fg: #fffaf5;
+    --mh-block-muted: #e3d3c5;
+    --mh-block-accent: #f0b35e;
+    --mh-block-border: #926b3f;
+    --mh-block-icon-bg: rgba(240, 179, 94, .16);
+}
+
+.mh-bento-scheme-8 {
+    --mh-block-bg: #eff8f3;
+    --mh-block-fg: #13281d;
+    --mh-block-muted: #557064;
+    --mh-block-accent: #2f9f68;
+    --mh-block-border: #b8dec8;
+    --mh-block-icon-bg: rgba(47, 159, 104, .12);
+}
+
+.mh-bento-scheme-9 {
+    --mh-block-bg: #201a42;
+    --mh-block-fg: #f9f7ff;
+    --mh-block-muted: #cdc8f0;
+    --mh-block-accent: #8fa0ff;
+    --mh-block-border: #5e5eb2;
+    --mh-block-icon-bg: rgba(143, 160, 255, .17);
+}
+
+.mh-bento-scheme-10 {
+    --mh-block-bg: #fff8e8;
+    --mh-block-fg: #332210;
+    --mh-block-muted: #735d43;
+    --mh-block-accent: #b56a12;
+    --mh-block-border: #efd5a6;
+    --mh-block-icon-bg: rgba(181, 106, 18, .12);
 }

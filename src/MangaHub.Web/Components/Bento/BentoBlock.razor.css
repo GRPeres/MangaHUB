@@ -14,6 +14,12 @@
     --mh-bento-row-height: 5.75rem;
 }
 
+.mh-bento-block-row {
+    --mh-bento-gap: 0;
+    --mh-bento-row-height: auto;
+    align-items: stretch;
+}
+
 .mh-filter-bento {
     --mh-bento-row-height: 4.75rem;
 }
@@ -21,42 +27,20 @@
 ::deep > .mh-bento-item {
     grid-column: span var(--mh-bento-item-width, 3);
     grid-row: span var(--mh-bento-item-height, 1);
+    min-height: 0;
     min-width: 0;
+    overflow: hidden;
 }
 
 ::deep > .mh-bento-item > * {
     height: 100%;
+    min-height: 0;
     width: 100%;
 }
 
-::deep > .mh-bento-item:nth-child(6n + 1) {
-    --mh-block-accent: var(--mud-palette-primary);
-    --mh-user-accent: var(--mud-palette-primary);
-}
-
-::deep > .mh-bento-item:nth-child(6n + 2) {
-    --mh-block-accent: var(--mud-palette-secondary);
-    --mh-user-accent: var(--mud-palette-secondary);
-}
-
-::deep > .mh-bento-item:nth-child(6n + 3) {
-    --mh-block-accent: var(--mud-palette-info);
-    --mh-user-accent: var(--mud-palette-info);
-}
-
-::deep > .mh-bento-item:nth-child(6n + 4) {
-    --mh-block-accent: var(--mud-palette-success);
-    --mh-user-accent: var(--mud-palette-success);
-}
-
-::deep > .mh-bento-item:nth-child(6n + 5) {
-    --mh-block-accent: var(--mud-palette-warning);
-    --mh-user-accent: var(--mud-palette-warning);
-}
-
-::deep > .mh-bento-item:nth-child(6n) {
-    --mh-block-accent: var(--mud-palette-tertiary);
-    --mh-user-accent: var(--mud-palette-tertiary);
+.mh-bento-block-row ::deep > .mh-bento-item,
+.mh-bento-block-row ::deep > .mh-bento-item > * {
+    overflow: visible;
 }
 
 @media (max-width: 960px) {
