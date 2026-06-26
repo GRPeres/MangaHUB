@@ -4,8 +4,6 @@ namespace MangaHub.Web.Components.Bento;
 
 public partial class BentoItem
 {
-    private readonly int randomScheme = Random.Shared.Next(1, 11);
-
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public BentoBlockSize Size { get; set; } = BentoBlockSize.Small;
     [Parameter] public int? Width { get; set; }
@@ -13,10 +11,9 @@ public partial class BentoItem
     [Parameter] public int? Columns { get; set; }
     [Parameter] public int? Rows { get; set; }
     [Parameter] public string Accent { get; set; } = "";
-    [Parameter] public int? Scheme { get; set; }
     [Parameter] public string Class { get; set; } = "";
 
-    private string ItemClass => $"mh-bento-item mh-bento-scheme-{Math.Clamp(Scheme ?? randomScheme, 1, 10)} {Class}";
+    private string ItemClass => $"mh-bento-item {Class}";
 
     private string ItemStyle
     {

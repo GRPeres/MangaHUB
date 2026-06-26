@@ -1,5 +1,4 @@
 .mh-row-card {
-    display: block;
     overflow: hidden;
 }
 
@@ -7,20 +6,19 @@
     --mh-bento-gap: 0;
     --mh-bento-row-height: auto;
     min-height: 100%;
-    overflow: visible;
 }
 
 ::deep .mh-row-content {
     display: flex;
     flex-direction: column;
     gap: .7rem;
+    height: 100%;
     min-width: 0;
     padding: 1rem 1.1rem;
 }
 
 ::deep .mh-row-bento {
     --mh-block-gap: .8rem;
-    height: auto;
 }
 
 ::deep .mh-bento-actions {
