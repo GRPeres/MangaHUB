@@ -1,116 +1,136 @@
 @page "/"
+@implements IDisposable
+@inject AuthSessionService Auth
+@inject NavigationManager Navigation
 
 <PageTitle>MangaHub</PageTitle>
 
-<MudStack Spacing="3" Class="mh-home">
-    <BentoBlock Class="mh-home-grid mh-home-bento">
-        <BentoItem Width="7" Height="3">
-            <MudPaper Elevation="0" Outlined="true" Class="mh-home-hero-block mh-home-block">
+<MudStack Spacing="4">
+    <section class="mh-home-hero">
+        <MudStack Spacing="3">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">Manga tracker</MudText>
+                <MudText Typo="Typo.h1">Keep your reading life in one quiet place.</MudText>
+                <MudText Typo="Typo.body1" Class="mh-hero-copy">
+                    Your shelf, current chapters, scores, notes, OpenLibrary metadata, MangaDex links, and local files all meet here.
+                </MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="GoLibrary">Open shelf</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddCircleOutline" OnClick="GoLibrary">Add manga</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageAccounts" OnClick="GoAccount">Account</MudButton>
+            </MudStack>
+        </MudStack>
+       @*  <div class="mh-home-pulse">
+            <MudText Typo="Typo.overline" Color="Color.Secondary">Current build</MudText>
+            <MudText Typo="Typo.h3">Home refresh</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">If you can see this panel, TrueNAS pulled the new web build.</MudText>
+        </div> *@
+    </section>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="5">
+            <MudPaper Class="pa-5" Elevation="0" Outlined="true">
                 <MudStack Spacing="3">
                     <MudStack Spacing="1">
-                        <MudText Typo="Typo.overline" Color="Color.Secondary">MangaHub</MudText>
-                        <MudText Typo="Typo.h1">Your manga shelf, without the spreadsheet drag.</MudText>
-                        <MudText Typo="Typo.body1" Class="mh-home-copy">
-                            Track reading status, chapters, scores, notes, covers, MAL metadata, local files, and MangaDex links from one quiet place.
-                        </MudText>
+                        <MudText Typo="Typo.h2">Account</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@AccountPrompt</MudText>
                     </MudStack>
-
                     <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="GoLibrary">Open shelf</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddCircleOutline" OnClick="GoLibrary">Add to shelf</MudButton>
-                        @if (IsAdmin)
+                        @if (currentUser is null)
                         {
-                            <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Inventory2" OnClick="GoCatalog">Catalog</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login" OnClick="OpenLogin">Log in</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenLogin">Create account</MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="GoLibrary">Open shelf</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="Logout">Log out</MudButton>
                         }
                     </MudStack>
                 </MudStack>
             </MudPaper>
-        </BentoItem>
-
-        <BentoItem Width="2" Height="2">
-            <MangaInfoBlock Label="Session"
-                            Value="@SessionLabel"
-                            Icon="@SessionIcon"
-                            Tone="@SessionTone"
-                            Class="mh-home-block mh-home-tall"
-                            OnClick="GoAccountOrLogin" />
-        </BentoItem>
-
-        <BentoItem Width="3" Height="2">
-            <MudPaper Elevation="0" Outlined="true" Class="mh-home-block mh-home-action" @onclick="GoLibrary" role="button" tabindex="0">
-                <MudIcon Icon="@Icons.Material.Filled.Bookmark" Color="Color.Primary" />
-                <div>
-                    <MudText Typo="Typo.overline" Color="Color.Secondary">Next step</MudText>
-                    <MudText Typo="Typo.h3">Continue reading</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Your shelf shows current and latest chapters side by side.</MudText>
-                </div>
-            </MudPaper>
-        </BentoItem>
-
-        <BentoItem Width="3" Height="1">
-            <MangaInfoBlock Label="Metadata"
-                            Value="MAL first"
-                            Icon="@Icons.Material.Filled.TravelExplore"
-                            Tone="source"
-                            Class="mh-home-block mh-home-wide"
-                            OnClick="GoCatalog" />
-        </BentoItem>
-
-        <BentoItem Width="3" Height="1">
-            <MangaInfoBlock Label="Fallback"
-                            Value="OpenLibrary when useful"
-                            Icon="@Icons.Material.Filled.LibraryBooks"
-                            Class="mh-home-block" />
-        </BentoItem>
-
-        <BentoItem Width="2" Height="2">
-            <MangaInfoBlock Label="Import"
-                            Value="CSV to shelf"
-                            Icon="@Icons.Material.Filled.UploadFile"
-                            Tone="progress"
-                            Class="mh-home-block mh-home-tall"
-                            OnClick="GoLibrary" />
-        </BentoItem>
-
-        <BentoItem Width="4" Height="2">
-            <MudPaper Elevation="0" Outlined="true" Class="mh-home-block mh-home-action mh-home-admin" @onclick="GoCatalogOrAccount" role="button" tabindex="0">
-                <MudIcon Icon="@AdminIcon" Color="@AdminColor" />
-                <div>
-                    <MudText Typo="Typo.overline" Color="Color.Secondary">@AdminEyebrow</MudText>
-                    <MudText Typo="Typo.h3">@AdminTitle</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@AdminCopy</MudText>
-                </div>
-            </MudPaper>
-        </BentoItem>
-
-        <BentoItem Width="5" Height="3">
-            <MudPaper Elevation="0" Outlined="true" Class="mh-home-block mh-home-flow">
-                <MudText Typo="Typo.overline" Color="Color.Secondary">Flow</MudText>
-                <BentoBlock Class="mh-home-flow-grid">
-                    <BentoItem Size="BentoBlockSize.Wide">
-                        <MangaInfoBlock Label="1" Value="Find or create catalog manga" Icon="@Icons.Material.Filled.Inventory2" />
-                    </BentoItem>
-                    <BentoItem Size="BentoBlockSize.Small">
-                        <MangaInfoBlock Label="2" Value="Add it to your shelf" Icon="@Icons.Material.Filled.PlaylistAdd" />
-                    </BentoItem>
-                    <BentoItem Size="BentoBlockSize.Wide">
-                        <MangaInfoBlock Label="3" Value="Track chapter, status, score" Icon="@Icons.Material.Filled.Checklist" Tone="success" />
-                    </BentoItem>
-                </BentoBlock>
-            </MudPaper>
-        </BentoItem>
-
-        <BentoItem Width="7" Height="2">
-            <MudPaper Elevation="0" Outlined="true" Class="mh-home-block mh-home-action mh-home-local" @onclick="GoLibrary" role="button" tabindex="0">
-                <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Secondary" />
-                <div>
-                    <MudText Typo="Typo.overline" Color="Color.Secondary">Reading sources</MudText>
-                    <MudText Typo="Typo.h3">Use catalog metadata, then read from MangaDex or your local registry.</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        The catalog stores identity and metadata. Your shelf stores the personal reading state.
-                    </MudText>
-                </div>
-            </MudPaper>
-        </BentoItem>
-    </BentoBlock>
+        </MudItem>
+        <MudItem xs="12" md="7">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoLibrary">
+                        <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h3">Read where you left off</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Use chapter, status, score, and notes as your personal memory.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoCatalog">
+                        <MudIcon Icon="@Icons.Material.Filled.TravelExplore" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h3">Curate the catalog</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Admins pull covers, descriptions, and category hints from OpenLibrary.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoLibrary">
+                        <MudIcon Icon="@Icons.Material.Filled.UploadFile" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.h3">Bring the old sheet</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Import status, chapter, score, type, and summaries into your shelf.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoAccount">
+                        <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.h3">Keep control</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Admins curate the catalog while users manage their own shelf.</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+    </MudGrid>
 </MudStack>
+
+@code {
+    private UserResponse? currentUser;
+    private string AccountPrompt => currentUser is null
+        ? "Sign in to manage your shelf and sync your reading state across the app."
+        : $"Signed in as {currentUser.Username}.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.Changed += OnAuthChanged;
+        currentUser = await Auth.GetCurrentUserAsync();
+    }
+
+    private async Task Logout()
+    {
+        await Auth.LogoutAsync();
+        currentUser = null;
+    }
+
+    private void OpenLogin() => Auth.RequestLogin("Log in to manage your shelf and account.");
+
+    private void GoTo(string route)
+    {
+        if (currentUser is null)
+        {
+            Auth.RequestLogin("Please log in to continue.", route);
+            return;
+        }
+
+        Navigation.NavigateTo(route);
+    }
+
+    private void GoLibrary() => GoTo("library");
+
+    private void GoCatalog() => GoTo("catalog");
+
+    private void GoAccount() => GoTo("account");
+
+    private void OnAuthChanged()
+    {
+        currentUser = Auth.CurrentUser;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Auth.Changed -= OnAuthChanged;
+    }
+}
