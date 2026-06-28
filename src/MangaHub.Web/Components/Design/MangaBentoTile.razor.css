@@ -1,0 +1,85 @@
+.mh-bento-tile {
+    --mh-bento-accent: var(--mud-palette-primary);
+    --mh-bento-bg: var(--mud-palette-surface);
+    --mh-bento-fg: var(--mud-palette-text-primary);
+    --mh-bento-muted: var(--mud-palette-text-secondary);
+    --mh-bento-border: var(--mud-palette-divider);
+    background:
+        radial-gradient(circle at 94% 8%, color-mix(in srgb, var(--mh-bento-accent) 18%, transparent), transparent 32%),
+        linear-gradient(135deg, color-mix(in srgb, var(--mh-bento-accent) 8%, var(--mh-bento-bg)), var(--mh-bento-bg));
+    border: 1px solid var(--mh-bento-border);
+    border-radius: 8px;
+    color: var(--mh-bento-fg);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding: 1rem;
+    position: relative;
+    transition: border-color .16s ease, transform .16s ease, background .16s ease;
+}
+
+.mh-bento-tile.is-clickable {
+    cursor: pointer;
+}
+
+.mh-bento-tile.is-clickable:hover,
+.mh-bento-tile.is-clickable:focus-visible {
+    border-color: var(--mh-bento-accent);
+    transform: translateY(-1px);
+}
+
+.mh-bento-tile :is(.mud-typography, .mud-icon-root) {
+    color: inherit;
+}
+
+.mh-bento-tile :is(.mud-typography-caption, .mud-typography-body2, .mud-typography-overline),
+.mh-bento-tile small {
+    color: var(--mh-bento-muted);
+}
+
+.mh-bento-corner-icon {
+    background: color-mix(in srgb, var(--mh-bento-accent) 16%, transparent);
+    border-radius: 999px;
+    padding: .35rem;
+    position: absolute;
+    right: .8rem;
+    top: .8rem;
+}
+
+.mh-bento-scheme-primary {
+    --mh-bento-accent: var(--mud-palette-primary);
+    --mh-bento-bg: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface));
+}
+
+.mh-bento-scheme-secondary {
+    --mh-bento-accent: var(--mud-palette-secondary);
+    --mh-bento-bg: color-mix(in srgb, var(--mud-palette-secondary) 8%, var(--mud-palette-surface));
+}
+
+.mh-bento-scheme-soft {
+    --mh-bento-accent: var(--mud-palette-tertiary);
+    --mh-bento-bg: color-mix(in srgb, var(--mud-palette-tertiary) 6%, var(--mud-palette-surface));
+}
+
+.mh-bento-scheme-deep {
+    --mh-bento-accent: var(--mud-palette-secondary);
+    --mh-bento-bg: #211330;
+    --mh-bento-fg: #fffaff;
+    --mh-bento-muted: #d8c9e8;
+    --mh-bento-border: #5b3a78;
+}
+
+.mh-bento-scheme-ink {
+    --mh-bento-accent: var(--mud-palette-primary);
+    --mh-bento-bg: #160d22;
+    --mh-bento-fg: #f7f2ff;
+    --mh-bento-muted: #c8b6dd;
+    --mh-bento-border: #4c2e65;
+}
+
+.mh-bento-scheme-warm {
+    --mh-bento-accent: var(--mud-palette-warning);
+    --mh-bento-bg: color-mix(in srgb, var(--mud-palette-warning) 8%, var(--mud-palette-surface));
+}

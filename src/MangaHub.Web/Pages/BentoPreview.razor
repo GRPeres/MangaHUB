@@ -3,13 +3,13 @@
 
 <PageTitle>Bento Preview</PageTitle>
 
-<MudStack Spacing="4" Class="mh-bento-preview">
+<MudStack Spacing="3" Class="mh-bento-preview">
     <section class="mh-bento-preview-hero">
         <MudStack Spacing="2">
             <MudText Typo="Typo.overline" Color="Color.Secondary">Design branch preview</MudText>
             <MudText Typo="Typo.h1">MangaHub dashboard concept</MudText>
             <MudText Typo="Typo.body1" Class="mh-bento-preview-copy">
-                A homepage direction using BlazzyMotion Bento for dense responsive packing, with MangaHub-specific cards layered inside.
+                A homepage direction using a MangaHub design wrapper over BlazzyMotion Bento, with tighter spacing and the site palette baked in.
             </MudText>
         </MudStack>
 
@@ -20,9 +20,9 @@
         </MudStack>
     </section>
 
-    <BzBento TItem="object" Theme="BzTheme.Minimal" Columns="4" Gap="14" AnimationEnabled="true" CssClass="mh-preview-bento">
-        <BzBentoItem ColSpan="2" RowSpan="2">
-            <section class="mh-preview-card mh-preview-card-hero">
+    <MangaBento Gap="8" Class="mh-preview-bento">
+        <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="deep" CornerIcon="@Icons.Material.Filled.AutoStories">
+            <div class="mh-preview-hero-tile">
                 <div>
                     <MudText Typo="Typo.overline">Now reading</MudText>
                     <MudText Typo="Typo.h2">Dandadan</MudText>
@@ -35,75 +35,68 @@
                         <small>Last update from MAL metadata</small>
                     </div>
                 </div>
-            </section>
-        </BzBentoItem>
+            </div>
+        </MangaBentoTile>
 
         @foreach (var metric in Metrics)
         {
-            <BzBentoItem>
-                <section class="@($"mh-preview-card mh-preview-metric {metric.Scheme}")">
-                    <MudIcon Icon="@metric.Icon" />
+            <MangaBentoTile Scheme="@metric.Scheme" CornerIcon="@metric.Icon">
+                <div class="mh-preview-metric">
                     <MudText Typo="Typo.h2">@metric.Value</MudText>
                     <MudText Typo="Typo.caption">@metric.Label</MudText>
-                </section>
-            </BzBentoItem>
+                </div>
+            </MangaBentoTile>
         }
 
-        <BzBentoItem ColSpan="2">
-            <section class="mh-preview-card mh-preview-card-row mh-preview-scheme-a">
-                <MudIcon Icon="@Icons.Material.Filled.UploadFile" />
+        <MangaBentoTile ColSpan="2" Scheme="primary" CornerIcon="@Icons.Material.Filled.UploadFile">
+            <div class="mh-preview-row-tile">
                 <div>
                     <MudText Typo="Typo.h3">Spreadsheet replacement</MudText>
                     <MudText Typo="Typo.body2">Import old rows, keep chapter, status, score, notes, and then clean metadata over time.</MudText>
                 </div>
-            </section>
-        </BzBentoItem>
+            </div>
+        </MangaBentoTile>
 
-        <BzBentoItem ColSpan="2" RowSpan="2">
-            <section class="mh-preview-card mh-preview-queue">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.overline">Reading queue</MudText>
-                    @foreach (var item in Queue)
-                    {
-                        <div class="mh-preview-queue-row">
-                            <span>@item.Initial</span>
-                            <div>
-                                <strong>@item.Title</strong>
-                                <small>@item.Status</small>
-                            </div>
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@item.Chapter</MudChip>
+        <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="ink" CornerIcon="@Icons.Material.Filled.Bookmark">
+            <MudStack Spacing="2" Class="mh-preview-queue">
+                <MudText Typo="Typo.overline">Reading queue</MudText>
+                @foreach (var item in Queue)
+                {
+                    <div class="mh-preview-queue-row">
+                        <span>@item.Initial</span>
+                        <div>
+                            <strong>@item.Title</strong>
+                            <small>@item.Status</small>
                         </div>
-                    }
-                </MudStack>
-            </section>
-        </BzBentoItem>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@item.Chapter</MudChip>
+                    </div>
+                }
+            </MudStack>
+        </MangaBentoTile>
 
-        <BzBentoItem>
-            <section class="mh-preview-card mh-preview-mini mh-preview-scheme-b">
-                <MudIcon Icon="@Icons.Material.Filled.TravelExplore" />
+        <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.TravelExplore">
+            <div class="mh-preview-mini">
                 <MudText Typo="Typo.h3">MAL first</MudText>
                 <MudText Typo="Typo.caption">Metadata source</MudText>
-            </section>
-        </BzBentoItem>
+            </div>
+        </MangaBentoTile>
 
-        <BzBentoItem>
-            <section class="mh-preview-card mh-preview-mini mh-preview-scheme-c">
-                <MudIcon Icon="@Icons.Material.Filled.Storage" />
+        <MangaBentoTile Scheme="soft" CornerIcon="@Icons.Material.Filled.Storage">
+            <div class="mh-preview-mini">
                 <MudText Typo="Typo.h3">Local files</MudText>
                 <MudText Typo="Typo.caption">Reader fallback</MudText>
-            </section>
-        </BzBentoItem>
+            </div>
+        </MangaBentoTile>
 
-        <BzBentoItem ColSpan="2">
-            <section class="mh-preview-card mh-preview-card-row mh-preview-scheme-d">
-                <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
+        <MangaBentoTile ColSpan="2" Scheme="warm" CornerIcon="@Icons.Material.Filled.AdminPanelSettings">
+            <div class="mh-preview-row-tile">
                 <div>
                     <MudText Typo="Typo.h3">Catalog stays controlled</MudText>
-                    <MudText Typo="Typo.body2">Admins curate shared manga entries. Users only add existing catalog manga to their shelf.</MudText>
+                    <MudText Typo="Typo.body2">Admins curate shared manga entries. Users add existing catalog manga to their shelf.</MudText>
                 </div>
-            </section>
-        </BzBentoItem>
-    </BzBento>
+            </div>
+        </MangaBentoTile>
+    </MangaBento>
 </MudStack>
 
 @code {
@@ -112,10 +105,10 @@
 
     private static readonly List<PreviewMetric> Metrics =
     [
-        new("153", "Shelf entries", Icons.Material.Filled.AutoStories, "mh-preview-scheme-b"),
-        new("42", "Finished manga", Icons.Material.Filled.CheckCircle, "mh-preview-scheme-c"),
-        new("18", "Reading now", Icons.Material.Filled.Bookmark, "mh-preview-scheme-d"),
-        new("9", "Needs metadata", Icons.Material.Filled.Troubleshoot, "mh-preview-scheme-a")
+        new("153", "Shelf entries", Icons.Material.Filled.AutoStories, "secondary"),
+        new("42", "Finished manga", Icons.Material.Filled.CheckCircle, "soft"),
+        new("18", "Reading now", Icons.Material.Filled.Bookmark, "warm"),
+        new("9", "Needs metadata", Icons.Material.Filled.Troubleshoot, "primary")
     ];
 
     private static readonly List<QueueItem> Queue =
