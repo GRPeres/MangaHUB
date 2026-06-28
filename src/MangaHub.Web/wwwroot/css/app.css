@@ -18,6 +18,42 @@ html.mh-theme-dark body {
     color-scheme: dark;
 }
 
+html.mh-theme-dark .mud-layout,
+html.mh-theme-dark .mh-layout-root,
+html.mh-theme-dark .mh-main,
+html.mh-theme-dark .mud-main-content {
+    background: #0f0718 !important;
+    color: #f7f2ff !important;
+}
+
+html.mh-theme-dark .mh-appbar,
+html.mh-theme-dark .mud-appbar.mh-appbar {
+    background: color-mix(in srgb, #160d22 92%, transparent) !important;
+    border-bottom-color: #3d2855 !important;
+    color: #f7f2ff !important;
+}
+
+html.mh-theme-dark .mh-drawer,
+html.mh-theme-dark .mud-drawer.mh-drawer {
+    background: #160d22 !important;
+    border-right-color: #3d2855 !important;
+    color: #f7f2ff !important;
+}
+
+html.mh-theme-dark .mh-mobile-nav {
+    background: color-mix(in srgb, #160d22 94%, transparent) !important;
+    border-top-color: #3d2855 !important;
+    color: #f7f2ff !important;
+}
+
+html.mh-theme-light .mud-layout,
+html.mh-theme-light .mh-layout-root,
+html.mh-theme-light .mh-main,
+html.mh-theme-light .mud-main-content {
+    background: #ffffff;
+    color: #271333;
+}
+
 a {
     color: inherit;
     text-decoration: none;
