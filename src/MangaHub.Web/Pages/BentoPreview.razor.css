@@ -83,9 +83,107 @@
     width: 32px;
 }
 
+.mh-preview-section-title {
+    margin-top: 1rem;
+}
+
+.mh-preview-card-shell {
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    padding: .75rem;
+}
+
+::deep .mh-preview-card-bento {
+    --bzb-row-height: 112px;
+}
+
+::deep .mh-preview-cover-tile .mh-bento-tile {
+    padding: .45rem;
+}
+
+.mh-preview-cover {
+    align-items: center;
+    border-radius: 7px;
+    display: flex;
+    height: 100%;
+    justify-content: center;
+    min-height: 220px;
+    overflow: hidden;
+    position: relative;
+}
+
+.mh-preview-cover::before {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, .2), transparent 38%),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .12) 0 6px, transparent 6px 14px);
+    content: "";
+    inset: 0;
+    position: absolute;
+}
+
+.mh-preview-cover span {
+    align-items: center;
+    background: rgba(255, 255, 255, .82);
+    border-radius: 999px;
+    color: #211330;
+    display: flex;
+    font-size: 2.1rem;
+    font-weight: 900;
+    height: 72px;
+    justify-content: center;
+    position: relative;
+    width: 72px;
+}
+
+.mh-preview-cover-dandadan {
+    background:
+        radial-gradient(circle at 70% 20%, #f0b35e, transparent 30%),
+        linear-gradient(160deg, #6d28d9, #211330);
+}
+
+.mh-preview-cover-berserk {
+    background:
+        radial-gradient(circle at 30% 20%, #a78bfa, transparent 26%),
+        linear-gradient(160deg, #160d22, #4c2e65);
+}
+
+.mh-preview-card-main {
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+    height: 100%;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.mh-preview-stat {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.mh-preview-card-actions {
+    align-items: flex-end;
+    display: flex;
+    gap: .5rem;
+    height: 100%;
+    justify-content: flex-end;
+}
+
 @media (max-width: 760px) {
     .mh-bento-preview-hero {
         align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .mh-preview-card-actions {
+        align-items: stretch;
         flex-direction: column;
     }
 }

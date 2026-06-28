@@ -97,6 +97,124 @@
             </div>
         </MangaBentoTile>
     </MangaBento>
+
+    <MudStack Spacing="1" Class="mh-preview-section-title">
+        <MudText Typo="Typo.overline" Color="Color.Secondary">Card concepts</MudText>
+        <MudText Typo="Typo.h2">Shelf and catalog samples</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            These are not wired to real data yet. They show how dense MangaHub bento cards could replace the current horizontal cards.
+        </MudText>
+    </MudStack>
+
+    <section class="mh-preview-card-shell">
+        <MudStack Spacing="1">
+            <MudText Typo="Typo.overline" Color="Color.Secondary">Shelf card</MudText>
+            <MudText Typo="Typo.h3">Personal reading state + metadata</MudText>
+        </MudStack>
+
+        <MangaBento Columns="4" Class="mh-preview-card-bento">
+            <MangaBentoTile RowSpan="2" Scheme="deep" Class="mh-preview-cover-tile">
+                <div class="mh-preview-cover mh-preview-cover-dandadan">
+                    <span>D</span>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="primary" CornerIcon="@Icons.Material.Filled.AutoStories">
+                <div class="mh-preview-card-main">
+                    <div>
+                        <MudStack Row="true" Spacing="1" Class="flex-wrap">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">Reading</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">MAL</MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Supernatural</MudChip>
+                        </MudStack>
+                        <MudText Typo="Typo.h2">Dandadan</MudText>
+                        <MudText Typo="Typo.body2">Yukinobu Tatsu</MudText>
+                    </div>
+                    <MudText Typo="Typo.body2">
+                        Chaotic occult action with aliens, ghosts, romance, and a very loud reading rhythm.
+                    </MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.Bookmark">
+                <div class="mh-preview-stat">
+                    <MudText Typo="Typo.overline">Current</MudText>
+                    <MudText Typo="Typo.h2">183</MudText>
+                    <MudText Typo="Typo.caption">of 190 chapters</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.Star">
+                <div class="mh-preview-stat">
+                    <MudText Typo="Typo.overline">Score</MudText>
+                    <MudText Typo="Typo.h2">4/5</MudText>
+                    <MudText Typo="Typo.caption">Personal rating</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="2" Scheme="ink">
+                <div class="mh-preview-card-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories">Read</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit">Edit shelf</MudButton>
+                </div>
+            </MangaBentoTile>
+        </MangaBento>
+    </section>
+
+    <section class="mh-preview-card-shell">
+        <MudStack Spacing="1">
+            <MudText Typo="Typo.overline" Color="Color.Secondary">Catalog card</MudText>
+            <MudText Typo="Typo.h3">Shared manga metadata + source health</MudText>
+        </MudStack>
+
+        <MangaBento Columns="4" Class="mh-preview-card-bento">
+            <MangaBentoTile RowSpan="2" Scheme="ink" Class="mh-preview-cover-tile">
+                <div class="mh-preview-cover mh-preview-cover-berserk">
+                    <span>B</span>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="soft" CornerIcon="@Icons.Material.Filled.Inventory2">
+                <div class="mh-preview-card-main">
+                    <div>
+                        <MudStack Row="true" Spacing="1" Class="flex-wrap">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">MAL</MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Seinen</MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Publishing</MudChip>
+                        </MudStack>
+                        <MudText Typo="Typo.h2">Berserk</MudText>
+                        <MudText Typo="Typo.body2">Kentaro Miura</MudText>
+                    </div>
+                    <MudText Typo="Typo.body2">
+                        Catalog entry stores cover, category, chapter count, source IDs, MangaDex link, and local binding.
+                    </MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile Scheme="primary" CornerIcon="@Icons.Material.Filled.FormatListNumbered">
+                <div class="mh-preview-stat">
+                    <MudText Typo="Typo.overline">Chapters</MudText>
+                    <MudText Typo="Typo.h2">376</MudText>
+                    <MudText Typo="Typo.caption">from metadata</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.Link">
+                <div class="mh-preview-stat">
+                    <MudText Typo="Typo.overline">Sources</MudText>
+                    <MudText Typo="Typo.h3">2 ready</MudText>
+                    <MudText Typo="Typo.caption">MangaDex + local</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="2" Scheme="warm">
+                <div class="mh-preview-card-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit">Edit metadata</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.PlaylistAdd">Add to shelf</MudButton>
+                </div>
+            </MangaBentoTile>
+        </MangaBento>
+    </section>
 </MudStack>
 
 @code {
