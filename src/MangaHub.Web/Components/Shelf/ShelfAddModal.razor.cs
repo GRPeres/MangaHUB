@@ -29,6 +29,9 @@ public partial class ShelfAddModal
     private string notes = "";
     private bool isSearchingCatalog;
     private bool isSaving;
+    private List<CatalogMangaResponse> AvailableCatalogResults => catalogResults
+        .Where(item => !item.IsInMyShelf)
+        .ToList();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -51,8 +54,13 @@ public partial class ShelfAddModal
         try
         {
             catalogResults = await CatalogApi.GetCatalogAsync(catalogQuery);
-            catalogSeverity = catalogResults.Count == 0 ? Severity.Warning : Severity.Success;
-            catalogMessage = catalogResults.Count == 0 ? "No catalog manga matched your search." : $"Found {catalogResults.Count} catalog entries.";
+            var availableCount = AvailableCatalogResults.Count;
+            catalogSeverity = availableCount == 0 ? Severity.Info : Severity.Success;
+            catalogMessage = availableCount == 0
+                ? catalogResults.Count == 0
+                    ? "No catalog manga matched your search."
+                    : "All matching catalog manga are already in your shelf."
+                : $"Found {availableCount} manga you can add.";
         }
         finally
         {

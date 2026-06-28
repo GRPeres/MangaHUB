@@ -40,37 +40,47 @@
 
                 @if (shelfWizardStep == 1)
                 {
-                    <MudGrid Spacing="3">
-                        @foreach (var item in catalogResults)
-                        {
-                            <MudItem xs="12" sm="6" md="4">
-                                <MudCard Elevation="0" Outlined="true" Class="mh-card">
-                                    @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
-                                    {
-                                        <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
-                                    }
-                                    <MudCardContent>
-                                        <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
-                                        <MudText Typo="Typo.h3">@item.Title</MudText>
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
-                                        @if (!string.IsNullOrWhiteSpace(item.Category))
+                    @if (AvailableCatalogResults.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                            @(catalogResults.Count == 0
+                                ? "No catalog manga matched your search."
+                                : "Every matching catalog manga is already in your shelf.")
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudGrid Spacing="3">
+                            @foreach (var item in AvailableCatalogResults)
+                            {
+                                <MudItem xs="12" sm="6" md="4">
+                                    <MudCard Elevation="0" Outlined="true" Class="mh-card">
+                                        @if (!string.IsNullOrWhiteSpace(item.CoverUrl))
                                         {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mt-2">@item.Category</MudChip>
+                                            <MudImage Src="@item.CoverUrl" Alt="@($"{item.Title} cover")" Class="mh-cover" />
                                         }
-                                    </MudCardContent>
-                                    <MudCardActions>
-                                        <MudButton Variant="Variant.Filled"
-                                                   Color="Color.Primary"
-                                                   Disabled="@item.IsInMyShelf"
-                                                   FullWidth="true"
-                                                   OnClick="() => SelectCatalogManga(item)">
-                                            @(item.IsInMyShelf ? "Already in shelf" : "Choose")
-                                        </MudButton>
-                                    </MudCardActions>
-                                </MudCard>
-                            </MudItem>
-                        }
-                    </MudGrid>
+                                        <MudCardContent>
+                                            <MudText Typo="Typo.overline" Color="Color.Secondary">@item.FirstPublishYear</MudText>
+                                            <MudText Typo="Typo.h3">@item.Title</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Authors</MudText>
+                                            @if (!string.IsNullOrWhiteSpace(item.Category))
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mt-2">@item.Category</MudChip>
+                                            }
+                                        </MudCardContent>
+                                        <MudCardActions>
+                                            <MudButton Variant="Variant.Filled"
+                                                       Color="Color.Primary"
+                                                       FullWidth="true"
+                                                       OnClick="() => SelectCatalogManga(item)">
+                                                Choose
+                                            </MudButton>
+                                        </MudCardActions>
+                                    </MudCard>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
                 }
 
                 @if (shelfWizardStep == 2 && selectedCatalogManga is not null)

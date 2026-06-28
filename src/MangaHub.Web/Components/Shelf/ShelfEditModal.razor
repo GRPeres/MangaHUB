@@ -76,9 +76,13 @@
                         {
                             <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
                         }
-                        @(isRemoving ? "Removing..." : "Remove from shelf")
+                        @(isRemoving ? "Removing..." : "Remove from my shelf")
                     </MudButton>
                 </MudStack>
+
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Removing keeps the catalog manga available for other users and future re-adds.
+                </MudText>
             </MudStack>
         </section>
     </div>
