@@ -2,7 +2,7 @@
     align-items: stretch;
     display: grid;
     gap: 0;
-    grid-template-columns: 116px minmax(0, 1fr);
+    grid-template-columns: 164px minmax(0, 1fr);
     min-height: 176px;
     overflow: hidden;
 }
@@ -12,6 +12,7 @@
     border-right: 1px solid var(--mud-palette-divider);
     min-height: 100%;
     overflow: hidden;
+    position: relative;
 }
 
 ::deep .mh-row-cover {
@@ -29,6 +30,38 @@
     height: 100%;
     justify-content: center;
     min-height: 176px;
+}
+
+.mh-cover-caption {
+    backdrop-filter: blur(10px);
+    background: color-mix(in srgb, #160d22 82%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 32%, transparent);
+    border-radius: 8px;
+    bottom: .45rem;
+    color: #fffaff;
+    display: flex;
+    flex-direction: column;
+    gap: .05rem;
+    left: .45rem;
+    max-width: calc(100% - .9rem);
+    padding: .4rem .5rem;
+    position: absolute;
+    right: .45rem;
+}
+
+.mh-cover-caption span {
+    color: #d8c9e8;
+    font-size: .65rem;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.mh-cover-caption strong {
+    font-size: .82rem;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 ::deep .mh-cover-placeholder .mud-icon-root {

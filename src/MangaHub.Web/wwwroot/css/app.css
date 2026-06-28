@@ -203,7 +203,7 @@ html body .mh-row-card .mh-bento-host .bzb-item {
 html body .mh-row-card {
     align-items: stretch !important;
     display: grid !important;
-    grid-template-columns: 116px minmax(0, 1fr) !important;
+    grid-template-columns: 164px minmax(0, 1fr) !important;
     min-height: 176px !important;
     overflow: hidden !important;
 }
@@ -213,6 +213,7 @@ html body .mh-row-card > .mh-cover-frame {
     border-right: 1px solid var(--mud-palette-divider) !important;
     min-height: 100% !important;
     overflow: hidden !important;
+    position: relative !important;
 }
 
 html body .mh-row-card > .mh-cover-frame .mh-row-cover {
