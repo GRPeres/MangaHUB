@@ -43,7 +43,7 @@
 
 ::deep .mh-entry-bento {
     --bzb-gap: 4px;
-    --bzb-row-height: 104px;
+    --bzb-row-height: 52px;
 }
 
 ::deep .mh-entry-cover-tile .mh-bento-tile {
@@ -125,7 +125,7 @@
 
 @media (max-width: 640px) {
     ::deep .mh-entry-bento {
-        --bzb-row-height: 96px;
+        --bzb-row-height: 48px;
     }
 
     ::deep .mh-row-cover {

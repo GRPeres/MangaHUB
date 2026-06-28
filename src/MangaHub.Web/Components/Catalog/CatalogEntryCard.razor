@@ -1,7 +1,7 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <MudCardContent Class="mh-bento-card-content">
-        <MangaBento Columns="4" Class="mh-entry-bento">
-            <MangaBentoTile RowSpan="2" Scheme="ink" Class="mh-entry-cover-tile">
+        <MangaBento Columns="8" Class="mh-entry-bento">
+            <MangaBentoTile ColSpan="2" RowSpan="4" Scheme="ink" Class="mh-entry-cover-tile">
                 <div class="mh-cover-frame">
                 @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
                 {
@@ -16,7 +16,7 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="soft">
+            <MangaBentoTile ColSpan="4" RowSpan="4" Scheme="soft">
                 <div class="mh-entry-main">
                     <div class="mh-entry-topline">
                         <div class="mh-title-block">
@@ -78,7 +78,7 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile Scheme="@SourceScheme" CornerIcon="@Icons.Material.Filled.TravelExplore" OnClick="FilterBySource" Class="mh-entry-stat-tile">
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="@SourceScheme" CornerIcon="@Icons.Material.Filled.TravelExplore" OnClick="FilterBySource" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Source</MudText>
                     <MudText Typo="Typo.h3">@SourceLabel</MudText>
@@ -86,7 +86,7 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.FormatListNumbered">
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="secondary" CornerIcon="@Icons.Material.Filled.FormatListNumbered">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Metadata</MudText>
                     <strong>@ChapterCountLabel</strong>

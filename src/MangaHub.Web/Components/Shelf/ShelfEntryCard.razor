@@ -1,7 +1,7 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <MudCardContent Class="mh-bento-card-content">
-        <MangaBento Columns="4" Class="mh-entry-bento">
-            <MangaBentoTile RowSpan="2" Scheme="deep" Class="mh-entry-cover-tile">
+        <MangaBento Columns="8" Class="mh-entry-bento">
+            <MangaBentoTile ColSpan="2" RowSpan="4" Scheme="deep" Class="mh-entry-cover-tile">
                 <div class="mh-cover-frame">
                 @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
                 {
@@ -16,7 +16,7 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="primary">
+            <MangaBentoTile ColSpan="4" RowSpan="4" Scheme="primary">
                 <div class="mh-entry-main">
                     <div class="mh-entry-topline">
                         <div class="mh-title-block">
@@ -88,7 +88,7 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile Scheme="@StatusScheme" CornerIcon="@StatusIcon" OnClick="FilterByStatus" Class="mh-entry-stat-tile">
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="@StatusScheme" CornerIcon="@StatusIcon" OnClick="FilterByStatus" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Status</MudText>
                     <MudText Typo="Typo.h3">@StatusLabel</MudText>
@@ -96,7 +96,7 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.FormatListNumbered">
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="secondary" CornerIcon="@Icons.Material.Filled.FormatListNumbered">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Progress</MudText>
                     <strong>@CurrentChapterLabel</strong>
