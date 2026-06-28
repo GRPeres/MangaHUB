@@ -40,6 +40,7 @@ public partial class MainLayout : IDisposable
     private void GoHome() => Navigation.NavigateTo("");
     private void GoLibrary() => Navigate("library");
     private void GoAccount() => Navigate("account");
+    private void GoBentoCardLab() => Navigate("bento-card-lab");
 
     private void Navigate(string route)
     {
@@ -104,7 +105,7 @@ public partial class MainLayout : IDisposable
     private static bool RequiresLogin(string route)
     {
         var cleanRoute = route.Trim('/').Split('?', '#')[0];
-        return cleanRoute is "library" or "search" or "catalog" or "account";
+        return cleanRoute is "library" or "search" or "catalog" or "account" or "bento-card-lab";
     }
 
     private bool IsActive(string route)

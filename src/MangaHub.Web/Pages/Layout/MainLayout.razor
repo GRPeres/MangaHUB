@@ -27,6 +27,10 @@
                 else
                 {
                     <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
+                    @if (IsAdmin)
+                    {
+                        <MudMenuItem Icon="@Icons.Material.Filled.BugReport" OnClick="GoBentoCardLab">Bento card lab</MudMenuItem>
+                    }
                     <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" OnClick="GoAccount">Manage account</MudMenuItem>
                     <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudMenuItem>
                 }
