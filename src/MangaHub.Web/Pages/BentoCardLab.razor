@@ -2,6 +2,7 @@
 @using MangaHub.Web.Components.Catalog
 @using MangaHub.Web.Components.Shelf
 @inject AuthSessionService Auth
+@inject NavigationManager Navigation
 
 <PageTitle>Bento Card Lab</PageTitle>
 
@@ -14,7 +15,7 @@
         </MudText>
     </MudStack>
 
-    @if (currentUser is null)
+    @if (!CanViewLab && currentUser is null)
     {
         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
             Sign in as an admin to use the card lab.
@@ -23,7 +24,7 @@
             Sign in
         </MudButton>
     }
-    else if (!IsAdmin)
+    else if (!CanViewLab)
     {
         <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
             Admin permissions are required to use this debug page.
@@ -59,6 +60,11 @@
 @code {
     private UserResponse? currentUser;
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
+        || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
+        || Navigation.Uri.StartsWith("http://127.0.0.1", StringComparison.OrdinalIgnoreCase)
+        || Navigation.Uri.StartsWith("https://127.0.0.1", StringComparison.OrdinalIgnoreCase);
+    private bool CanViewLab => IsLocalhost || IsAdmin;
     private string ActiveStatus { get; set; } = "";
     private string ActiveSource { get; set; } = "";
 
