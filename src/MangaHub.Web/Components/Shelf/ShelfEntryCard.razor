@@ -1,7 +1,7 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <MudCardContent Class="mh-bento-card-content">
         <MangaBento Columns="8" ItemMinHeight="52" RowHeight="52" Class="mh-entry-bento">
-            <MangaBentoTile ColSpan="1" RowSpan="4" Scheme="deep" Class="mh-entry-cover-tile">
+            <MangaBentoTile ColSpan="2" RowSpan="4" Scheme="deep" Class="mh-entry-cover-tile">
                 <div class="mh-cover-frame">
                 @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
                 {
@@ -16,7 +16,7 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="5" RowSpan="4" Scheme="primary">
+            <MangaBentoTile ColSpan="4" RowSpan="4" Scheme="primary">
                 <div class="mh-entry-main">
                     <div class="mh-entry-topline">
                         <div class="mh-title-block">
