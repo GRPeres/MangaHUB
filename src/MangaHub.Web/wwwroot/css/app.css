@@ -182,6 +182,24 @@ a {
     object-fit: contain;
 }
 
+html body .mh-row-card .mh-bento-host,
+html body .mh-row-card .mh-bento-host .mh-bento-grid,
+html body .mh-row-card .mh-bento-host .bzb-grid {
+    --mh-bento-item-min-height: 52px !important;
+    --mh-bento-row-height: 52px !important;
+    --bzb-item-min-height: 52px !important;
+    --bzb-row-height: 52px !important;
+}
+
+html body .mh-row-card .mh-bento-host .mh-bento-grid,
+html body .mh-row-card .mh-bento-host .bzb-grid {
+    grid-auto-rows: 52px !important;
+}
+
+html body .mh-row-card .mh-bento-host .bzb-item {
+    min-height: 0 !important;
+}
+
 #blazor-error-ui {
     background: #fff7ed;
     bottom: 0;
@@ -251,5 +269,21 @@ a {
     .mh-modal-cover {
         flex-basis: 72px;
         width: 72px;
+    }
+}
+
+@media (max-width: 600px) {
+    html body .mh-row-card .mh-bento-host,
+    html body .mh-row-card .mh-bento-host .mh-bento-grid,
+    html body .mh-row-card .mh-bento-host .bzb-grid {
+        --mh-bento-item-min-height: 48px !important;
+        --mh-bento-row-height: 48px !important;
+        --bzb-item-min-height: 48px !important;
+        --bzb-row-height: 48px !important;
+    }
+
+    html body .mh-row-card .mh-bento-host .mh-bento-grid,
+    html body .mh-row-card .mh-bento-host .bzb-grid {
+        grid-auto-rows: 48px !important;
     }
 }
