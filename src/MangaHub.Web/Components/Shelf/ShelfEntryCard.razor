@@ -43,23 +43,8 @@
                                          Class="mh-card-chip mh-click-chip"
                                          OnClick="OpenMetadata">+@HiddenGenreCount</MudChip>
                             }
-                            @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
-                            {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="mh-card-chip">@Entry.MediaType</MudChip>
-                            }
                         </MudStack>
                     </div>
-
-                    <MudStack Row="true" Spacing="1" Class="mh-chip-row mh-secondary-tags flex-wrap">
-                        @if (!string.IsNullOrWhiteSpace(Entry.PublishingStatus))
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.PublishingStatus</MudChip>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(Entry.MangaDexUrl))
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
-                        }
-                    </MudStack>
 
                     @if (!string.IsNullOrWhiteSpace(DescriptionText))
                     {
