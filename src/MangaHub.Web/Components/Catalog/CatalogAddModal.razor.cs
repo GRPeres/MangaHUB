@@ -37,6 +37,7 @@ public partial class CatalogAddModal
     private string metadataMessage = "";
     private Severity metadataSeverity = Severity.Info;
     private bool isSearchingMetadata;
+    private bool isSaving;
     private bool includeOpenLibrary;
     private List<MetadataResult> metadataResults = [];
 
@@ -102,6 +103,11 @@ public partial class CatalogAddModal
 
     private async Task Save()
     {
+        if (isSaving)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(title))
         {
             messageSeverity = Severity.Warning;
@@ -109,17 +115,29 @@ public partial class CatalogAddModal
             return;
         }
 
-        var created = await CatalogApi.CreateCatalogMangaAsync(BuildRequest());
-        if (created is null)
+        isSaving = true;
+        messageSeverity = Severity.Info;
+        message = "Adding catalog manga...";
+        try
         {
-            messageSeverity = Severity.Error;
-            message = "Catalog registration failed. Admin permissions are required.";
-            return;
-        }
+            var created = await CatalogApi.CreateCatalogMangaAsync(BuildRequest());
+            if (created is null)
+            {
+                messageSeverity = Severity.Error;
+                message = "Catalog registration failed. Admin permissions are required.";
+                return;
+            }
 
-        await OnSaved.InvokeAsync();
-        Reset();
-        await OpenChanged.InvokeAsync(false);
+            messageSeverity = Severity.Success;
+            message = $"Added {created.Title}.";
+            await OnSaved.InvokeAsync();
+            Reset();
+            await OpenChanged.InvokeAsync(false);
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private MangaEntryRequest BuildRequest()
@@ -147,6 +165,11 @@ public partial class CatalogAddModal
 
     private async Task Close()
     {
+        if (isSaving)
+        {
+            return;
+        }
+
         Reset();
         await OpenChanged.InvokeAsync(false);
     }
@@ -173,6 +196,7 @@ public partial class CatalogAddModal
         metadataQuery = "";
         metadataMessage = "";
         includeOpenLibrary = false;
+        isSaving = false;
         metadataResults = [];
     }
 }

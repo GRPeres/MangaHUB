@@ -15,7 +15,7 @@
                             <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
                         </MudStack>
                     </MudStack>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close catalog editor" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" Disabled="@isSaving" OnClick="Close" aria-label="Close catalog editor" />
                 </MudStack>
 
                 <MudDivider />
@@ -72,8 +72,14 @@
                 </MudGrid>
 
                 <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveCatalog">Save catalog metadata</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" OnClick="ToggleMetadata">Find metadata match</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(isSaving ? null : Icons.Material.Filled.Save)" Disabled="@isSaving" OnClick="SaveCatalog">
+                        @if (isSaving)
+                        {
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
+                        }
+                        @(isSaving ? "Saving..." : "Save catalog metadata")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" Disabled="@isSaving" OnClick="ToggleMetadata">Find metadata match</MudButton>
                 </MudStack>
 
                 @if (showMetadata)

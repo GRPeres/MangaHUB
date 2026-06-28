@@ -23,6 +23,9 @@ public partial class ShelfEditModal
     private string editNotes = "";
     private string message = "";
     private Severity messageSeverity = Severity.Warning;
+    private bool isSaving;
+    private bool isRemoving;
+    private bool IsBusy => isSaving || isRemoving;
 
     protected override void OnParametersSet()
     {
@@ -39,47 +42,78 @@ public partial class ShelfEditModal
         editSummary = Entry.Summary;
         editNotes = Entry.Notes;
         message = "";
+        isSaving = false;
+        isRemoving = false;
     }
 
     private async Task SaveEdit()
     {
-        if (Entry is null)
+        if (Entry is null || IsBusy)
         {
             return;
         }
 
-        var request = new AddToShelfRequest(Entry.Id, editStatus, editChapter, editScore, editCategory, editSummary, editNotes);
-        var updated = await ShelfApi.UpdateShelfAsync(Entry.Id, request, OwnerUserId);
-        if (updated is null)
+        isSaving = true;
+        messageSeverity = Severity.Info;
+        message = "Saving shelf changes...";
+        try
         {
-            messageSeverity = Severity.Error;
-            message = "Could not save shelf changes.";
-            return;
-        }
+            var request = new AddToShelfRequest(Entry.Id, editStatus, editChapter, editScore, editCategory, editSummary, editNotes);
+            var updated = await ShelfApi.UpdateShelfAsync(Entry.Id, request, OwnerUserId);
+            if (updated is null)
+            {
+                messageSeverity = Severity.Error;
+                message = "Could not save shelf changes.";
+                return;
+            }
 
-        await OnSaved.InvokeAsync($"Updated {updated.Title}.");
+            messageSeverity = Severity.Success;
+            message = $"Saved {updated.Title}.";
+            await OnSaved.InvokeAsync($"Updated {updated.Title}.");
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private async Task RemoveEntry()
     {
-        if (Entry is null)
+        if (Entry is null || IsBusy)
         {
             return;
         }
 
-        var removed = await ShelfApi.RemoveShelfAsync(Entry.Id, OwnerUserId);
-        if (!removed)
+        isRemoving = true;
+        messageSeverity = Severity.Info;
+        message = "Removing shelf entry...";
+        try
         {
-            messageSeverity = Severity.Error;
-            message = "Could not remove shelf entry.";
-            return;
-        }
+            var removed = await ShelfApi.RemoveShelfAsync(Entry.Id, OwnerUserId);
+            if (!removed)
+            {
+                messageSeverity = Severity.Error;
+                message = "Could not remove shelf entry.";
+                return;
+            }
 
-        await OnSaved.InvokeAsync($"Removed {Entry.Title} from shelf.");
+            messageSeverity = Severity.Success;
+            message = $"Removed {Entry.Title}.";
+            await OnSaved.InvokeAsync($"Removed {Entry.Title} from shelf.");
+        }
+        finally
+        {
+            isRemoving = false;
+        }
     }
 
     private async Task Close()
     {
+        if (IsBusy)
+        {
+            return;
+        }
+
         loadedEntryId = null;
         message = "";
         await OnClosed.InvokeAsync();

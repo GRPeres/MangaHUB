@@ -9,10 +9,18 @@
                         <MudText id="catalog-import-title" Typo="Typo.h2">Import catalog CSV</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Creates missing catalog entries from the CSV and adds those manga to your shelf.</MudText>
                     </MudStack>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close catalog import" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" Disabled="@isImporting" OnClick="Close" aria-label="Close catalog import" />
                 </MudStack>
 
-                <InputFile OnChange="ImportCatalogCsv" accept=".csv,text/csv" />
+                <InputFile OnChange="ImportCatalogCsv" accept=".csv,text/csv" disabled="@isImporting" />
+
+                @if (isImporting)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Importing catalog CSV...</MudText>
+                    </MudStack>
+                }
 
                 @if (!string.IsNullOrWhiteSpace(importMessage))
                 {

@@ -9,10 +9,18 @@
                         <MudText id="shelf-import-title" Typo="Typo.h2">Import shelf CSV</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Adds rows to your shelf when the manga already exists in the catalog.</MudText>
                     </MudStack>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close shelf import" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" Disabled="@isImporting" OnClick="Close" aria-label="Close shelf import" />
                 </MudStack>
 
-                <InputFile OnChange="ImportShelfCsv" accept=".csv,text/csv" />
+                <InputFile OnChange="ImportShelfCsv" accept=".csv,text/csv" disabled="@isImporting" />
+
+                @if (isImporting)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Importing shelf CSV...</MudText>
+                    </MudStack>
+                }
 
                 @if (!string.IsNullOrWhiteSpace(importMessage))
                 {

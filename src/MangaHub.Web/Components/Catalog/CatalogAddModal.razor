@@ -9,7 +9,7 @@
                         <MudText id="catalog-add-title" Typo="Typo.h2">Add catalog manga</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Create a shared catalog entry manually, or use MyAnimeList metadata to fill the form.</MudText>
                     </MudStack>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close catalog add form" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" Disabled="@isSaving" OnClick="Close" aria-label="Close catalog add form" />
                 </MudStack>
 
                 <MudGrid Spacing="3">
@@ -64,8 +64,14 @@
                 </MudGrid>
 
                 <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.LibraryAdd" OnClick="Save">Add to catalog</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" OnClick="ToggleMetadata">Use metadata</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(isSaving ? null : Icons.Material.Filled.LibraryAdd)" Disabled="@isSaving" OnClick="Save">
+                        @if (isSaving)
+                        {
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
+                        }
+                        @(isSaving ? "Adding..." : "Add to catalog")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" Disabled="@isSaving" OnClick="ToggleMetadata">Use metadata</MudButton>
                 </MudStack>
 
                 @if (showMetadata)

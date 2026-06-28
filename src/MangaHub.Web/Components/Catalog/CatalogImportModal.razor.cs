@@ -16,9 +16,15 @@ public partial class CatalogImportModal
 
     private string importMessage = "";
     private Severity importSeverity = Severity.Info;
+    private bool isImporting;
 
     private async Task ImportCatalogCsv(InputFileChangeEventArgs args)
     {
+        if (isImporting)
+        {
+            return;
+        }
+
         var file = args.File;
         if (file is null)
         {
@@ -27,6 +33,9 @@ public partial class CatalogImportModal
 
         try
         {
+            isImporting = true;
+            importSeverity = Severity.Info;
+            importMessage = "Importing catalog CSV...";
             using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
             using var reader = new StreamReader(stream);
             var csv = await reader.ReadToEndAsync();
@@ -47,10 +56,19 @@ public partial class CatalogImportModal
             importSeverity = Severity.Error;
             importMessage = "Could not read the CSV file.";
         }
+        finally
+        {
+            isImporting = false;
+        }
     }
 
     private async Task Close()
     {
+        if (isImporting)
+        {
+            return;
+        }
+
         importMessage = "";
         await OpenChanged.InvokeAsync(false);
     }

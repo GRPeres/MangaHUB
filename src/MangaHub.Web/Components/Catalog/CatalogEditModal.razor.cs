@@ -38,6 +38,7 @@ public partial class CatalogEditModal
     private string metadataMessage = "";
     private Severity metadataSeverity = Severity.Info;
     private bool isSearchingMetadata;
+    private bool isSaving;
     private bool includeOpenLibrary;
     private List<MetadataResult> metadataResults = [];
 
@@ -69,6 +70,7 @@ public partial class CatalogEditModal
         metadataMessage = "";
         includeOpenLibrary = false;
         message = "";
+        isSaving = false;
         showMetadata = false;
     }
 
@@ -127,20 +129,32 @@ public partial class CatalogEditModal
 
     private async Task SaveCatalog()
     {
-        if (Entry is null)
+        if (Entry is null || isSaving)
         {
             return;
         }
 
-        var updated = await CatalogApi.UpdateCatalogMangaAsync(Entry.Id, BuildRequest());
-        if (updated is null)
+        isSaving = true;
+        messageSeverity = Severity.Info;
+        message = "Saving catalog metadata...";
+        try
         {
-            messageSeverity = Severity.Error;
-            message = "Could not save catalog metadata.";
-            return;
-        }
+            var updated = await CatalogApi.UpdateCatalogMangaAsync(Entry.Id, BuildRequest());
+            if (updated is null)
+            {
+                messageSeverity = Severity.Error;
+                message = "Could not save catalog metadata.";
+                return;
+            }
 
-        await OnSaved.InvokeAsync(updated);
+            messageSeverity = Severity.Success;
+            message = $"Saved {updated.Title}.";
+            await OnSaved.InvokeAsync(updated);
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private MangaEntryRequest BuildRequest()
@@ -168,6 +182,11 @@ public partial class CatalogEditModal
 
     private async Task Close()
     {
+        if (isSaving)
+        {
+            return;
+        }
+
         loadedEntryId = null;
         await OnClosed.InvokeAsync();
     }

@@ -9,7 +9,7 @@
                         <MudText id="shelf-add-title" Typo="Typo.h2">Add manga to shelf</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Choose a catalog manga, then save your reading status and notes.</MudText>
                     </MudStack>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close add shelf form" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" Disabled="@isSaving" OnClick="Close" aria-label="Close add shelf form" />
                 </MudStack>
 
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
@@ -23,7 +23,13 @@
                         <MudTextField T="string" @bind-Value="catalogQuery" Label="Search catalog" Variant="Variant.Outlined" Immediate="true" />
                     </MudItem>
                     <MudItem xs="12" md="3" Class="d-flex align-center">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" FullWidth="true" OnClick="SearchCatalog">Search</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(isSearchingCatalog ? null : Icons.Material.Filled.Search)" FullWidth="true" Disabled="@(isSearchingCatalog || isSaving)" OnClick="SearchCatalog">
+                            @if (isSearchingCatalog)
+                            {
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
+                            }
+                            @(isSearchingCatalog ? "Searching..." : "Search")
+                        </MudButton>
                     </MudItem>
                 </MudGrid>
 
@@ -117,8 +123,14 @@
                         </MudGrid>
 
                         <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PlaylistAdd" OnClick="AddSelectedToShelf">Add to shelf</MudButton>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="BackToCatalog">Back</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(isSaving ? null : Icons.Material.Filled.PlaylistAdd)" Disabled="@isSaving" OnClick="AddSelectedToShelf">
+                                @if (isSaving)
+                                {
+                                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
+                                }
+                                @(isSaving ? "Adding..." : "Add to shelf")
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@isSaving" OnClick="BackToCatalog">Back</MudButton>
                         </MudStack>
                     </MudStack>
                 }

@@ -26,7 +26,7 @@
                             </MudStack>
                         </MudStack>
                     </MudStack>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close editor" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" Disabled="@IsBusy" OnClick="Close" aria-label="Close editor" />
                 </MudStack>
 
                 <MudDivider />
@@ -64,8 +64,20 @@
                 }
 
                 <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveEdit">Save changes</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="RemoveEntry">Remove from shelf</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(isSaving ? null : Icons.Material.Filled.Save)" Disabled="@IsBusy" OnClick="SaveEdit">
+                        @if (isSaving)
+                        {
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
+                        }
+                        @(isSaving ? "Saving..." : "Save changes")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@(isRemoving ? null : Icons.Material.Filled.Delete)" Disabled="@IsBusy" OnClick="RemoveEntry">
+                        @if (isRemoving)
+                        {
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
+                        }
+                        @(isRemoving ? "Removing..." : "Remove from shelf")
+                    </MudButton>
                 </MudStack>
             </MudStack>
         </section>
