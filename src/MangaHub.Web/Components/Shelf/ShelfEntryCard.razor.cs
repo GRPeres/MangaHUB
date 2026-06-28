@@ -14,11 +14,41 @@ public partial class ShelfEntryCard
 
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
     private string GenreLabel => FirstNonEmpty(Entry.Category, Entry.CatalogCategory);
-    private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "");
-    private string CurrentChapterLabel => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Current: not started" : $"Current: ch. {Entry.CurrentChapter}";
-    private string LatestChapterLabel => Entry.ChapterCount is null ? "Latest: unknown" : $"Latest: ch. {Entry.ChapterCount}";
+    private string ScoreLabel => Entry.Score is null ? "Not scored" : $"{Entry.Score}/5";
+    private string ReadSourceLabel => !string.IsNullOrWhiteSpace(Entry.MangaDexUrl)
+        ? "MangaDex"
+        : Entry.LocalSeriesId is not null ? "Local" : "Unlinked";
+    private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
+    private string LatestChapterValue => Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
+    private string FormatLabel => FirstNonEmpty(Entry.MediaType, GenreLabel, "Unknown");
+    private string FirstYearLabel => Entry.FirstPublishYear is null ? "Unknown" : Entry.FirstPublishYear.Value.ToString();
+    private string VolumeCountLabel => Entry.VolumeCount is null ? "Unknown" : Entry.VolumeCount.Value.ToString();
+    private string NextChapterValue => TryGetCurrentChapterNumber(out var currentChapter)
+        ? $"Ch. {currentChapter + 1}"
+        : StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) ? "Complete" : "Start";
     private bool IsStatusFilterActive => string.Equals(ActiveStatusFilter, StatusLabel, StringComparison.OrdinalIgnoreCase);
+    private string StatusFilterHint => IsStatusFilterActive ? "Filtered" : "Click to filter";
     private Variant StatusVariant => IsStatusFilterActive ? Variant.Filled : Variant.Outlined;
+    private string StatusIcon => StatusLabel.ToLowerInvariant() switch
+    {
+        "reading" => Icons.Material.Filled.AutoStories,
+        "done" => Icons.Material.Filled.TaskAlt,
+        "paused" => Icons.Material.Filled.PauseCircle,
+        "planned" => Icons.Material.Filled.BookmarkAdd,
+        "dropped" => Icons.Material.Filled.RemoveCircle,
+        _ => Icons.Material.Filled.LocalLibrary
+    };
+
+    private string StatusScheme => StatusLabel.ToLowerInvariant() switch
+    {
+        "reading" => "deep",
+        "done" => "soft",
+        "paused" => "warm",
+        "planned" => "secondary",
+        "dropped" => "ink",
+        _ => "primary"
+    };
+
     private Color StatusColor => StatusLabel.ToLowerInvariant() switch
     {
         "reading" => Color.Info,
@@ -36,10 +66,18 @@ public partial class ShelfEntryCard
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
 
-    private static string SourceName(string source) => source.ToLowerInvariant() switch
+    private bool TryGetCurrentChapterNumber(out int chapter)
     {
-        "myanimelist" => "MAL",
-        "openlibrary" => "OpenLibrary",
-        _ => source
-    };
+        chapter = 0;
+        if (string.IsNullOrWhiteSpace(Entry.CurrentChapter))
+        {
+            return false;
+        }
+
+        var digits = new string(Entry.CurrentChapter
+            .SkipWhile(value => !char.IsDigit(value))
+            .TakeWhile(char.IsDigit)
+            .ToArray());
+        return int.TryParse(digits, out chapter);
+    }
 }

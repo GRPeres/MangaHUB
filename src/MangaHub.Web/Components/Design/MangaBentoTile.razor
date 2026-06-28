@@ -1,0 +1,10 @@
+<BzBentoItem ColSpan="@ColSpan" RowSpan="@RowSpan">
+    <section class="@TileClass" role="@Role" @onclick="OnClick">
+        @if (!string.IsNullOrWhiteSpace(CornerIcon))
+        {
+            <MudIcon Icon="@CornerIcon" Class="mh-bento-corner-icon" />
+        }
+
+        @ChildContent
+    </section>
+</BzBentoItem>

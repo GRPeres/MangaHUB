@@ -27,6 +27,10 @@
                 else
                 {
                     <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
+                    @if (IsAdmin)
+                    {
+                        <MudMenuItem Icon="@Icons.Material.Filled.BugReport" OnClick="GoBentoCardLab">Bento card lab</MudMenuItem>
+                    }
                     <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" OnClick="GoAccount">Manage account</MudMenuItem>
                     <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudMenuItem>
                 }
@@ -67,6 +71,28 @@
                 @Body
             </MudContainer>
         </MudMainContent>
+
+        <nav class="mh-mobile-nav" aria-label="Primary navigation">
+            <button type="button" class="@MobileNavClass("")" @onclick="@(() => Navigate(""))">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" />
+                <span>Home</span>
+            </button>
+            <button type="button" class="@MobileNavClass("library")" @onclick="@(() => Navigate("library"))">
+                <MudIcon Icon="@Icons.Material.Filled.AutoStories" />
+                <span>Shelf</span>
+            </button>
+            @if (IsAdmin)
+            {
+                <button type="button" class="@MobileNavClass("catalog")" @onclick="@(() => Navigate("catalog"))">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
+                    <span>Catalog</span>
+                </button>
+            }
+            <button type="button" class="@MobileNavClass("account")" @onclick="@(() => Navigate("account"))">
+                <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" />
+                <span>Account</span>
+            </button>
+        </nav>
     </MudLayout>
 
     <LoginModal @bind-Open="_loginOpen"

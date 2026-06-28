@@ -12,7 +12,7 @@
                 <MudText Typo="Typo.overline" Color="Color.Secondary">Manga tracker</MudText>
                 <MudText Typo="Typo.h1">Keep your reading life in one quiet place.</MudText>
                 <MudText Typo="Typo.body1" Class="mh-hero-copy">
-                    Your shelf, current chapters, scores, notes, OpenLibrary metadata, MangaDex links, and local files all meet here.
+                    Your shelf, current chapters, scores, notes, MAL metadata, MangaDex links, and local files all meet here.
                 </MudText>
             </MudStack>
             <MudStack Row="true" Spacing="2" Class="flex-wrap">
@@ -28,13 +28,21 @@
         </div> *@
     </section>
 
-    <MudGrid Spacing="3">
-        <MudItem xs="12" md="5">
-            <MudPaper Class="pa-5" Elevation="0" Outlined="true">
+    <MangaBento Columns="4" Class="mh-home-bento">
+        <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="deep" CornerIcon="@Icons.Material.Filled.MenuBook" OnClick="GoLibrary">
+            <div class="mh-home-block mh-home-block-main">
+                <MudText Typo="Typo.overline">Your shelf</MudText>
+                <MudText Typo="Typo.h2">Read where you left off</MudText>
+                <MudText Typo="Typo.body2" Class="mh-home-detail">Track current chapter beside the latest known chapter, then filter by status when your shelf gets busy.</MudText>
+            </div>
+        </MangaBentoTile>
+
+        <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="primary" CornerIcon="@SessionIcon">
+            <div class="mh-home-block">
                 <MudStack Spacing="3">
                     <MudStack Spacing="1">
                         <MudText Typo="Typo.h2">Account</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@AccountPrompt</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mh-home-detail">@AccountPrompt</MudText>
                     </MudStack>
                     <MudStack Row="true" Spacing="2" Class="flex-wrap">
                         @if (currentUser is null)
@@ -49,41 +57,30 @@
                         }
                     </MudStack>
                 </MudStack>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="7">
-            <MudGrid Spacing="3">
-                <MudItem xs="12" sm="6">
-                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoLibrary">
-                        <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Primary" Size="Size.Large" />
-                        <MudText Typo="Typo.h3">Read where you left off</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Use chapter, status, score, and notes as your personal memory.</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoCatalog">
-                        <MudIcon Icon="@Icons.Material.Filled.TravelExplore" Color="Color.Primary" Size="Size.Large" />
-                        <MudText Typo="Typo.h3">Curate the catalog</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Admins pull covers, descriptions, and category hints from OpenLibrary.</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoLibrary">
-                        <MudIcon Icon="@Icons.Material.Filled.UploadFile" Color="Color.Secondary" Size="Size.Large" />
-                        <MudText Typo="Typo.h3">Bring the old sheet</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Import status, chapter, score, type, and summaries into your shelf.</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudPaper Class="pa-4 mh-home-tile" Elevation="0" Outlined="true" @onclick="GoAccount">
-                        <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Color="Color.Secondary" Size="Size.Large" />
-                        <MudText Typo="Typo.h3">Keep control</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Admins curate the catalog while users manage their own shelf.</MudText>
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
-        </MudItem>
-    </MudGrid>
+            </div>
+        </MangaBentoTile>
+
+        <MangaBentoTile ColSpan="2" Scheme="soft" CornerIcon="@Icons.Material.Filled.TravelExplore" OnClick="GoCatalog">
+            <div class="mh-home-block">
+                <MudText Typo="Typo.h3">Curate the catalog</MudText>
+                <MudText Typo="Typo.body2" Class="mh-home-detail">Admins can add manual entries or pull richer manga metadata from MAL first, with OpenLibrary as fallback.</MudText>
+            </div>
+        </MangaBentoTile>
+
+        <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.UploadFile" OnClick="GoCatalog">
+            <div class="mh-home-block">
+                <MudText Typo="Typo.h3">Import old sheets</MudText>
+                <MudText Typo="Typo.body2" Class="mh-home-detail">Bring status, chapters, scores, notes, and links into the app.</MudText>
+            </div>
+        </MangaBentoTile>
+
+        <MangaBentoTile Scheme="ink" CornerIcon="@Icons.Material.Filled.VerifiedUser" OnClick="GoAccount">
+            <div class="mh-home-block">
+                <MudText Typo="Typo.h3">Control access</MudText>
+                <MudText Typo="Typo.body2" Class="mh-home-detail">Admins own catalog changes while each user owns their shelf.</MudText>
+            </div>
+        </MangaBentoTile>
+    </MangaBento>
 </MudStack>
 
 @code {
@@ -91,6 +88,7 @@
     private string AccountPrompt => currentUser is null
         ? "Sign in to manage your shelf and sync your reading state across the app."
         : $"Signed in as {currentUser.Username}.";
+    private string SessionIcon => currentUser is null ? Icons.Material.Filled.Login : Icons.Material.Filled.AccountCircle;
 
     protected override async Task OnInitializedAsync()
     {

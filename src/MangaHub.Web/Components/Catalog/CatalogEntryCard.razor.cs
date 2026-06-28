@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components;
 using MangaHub.Web.API.DTOs;
-using MudBlazor;
 
 namespace MangaHub.Web.Components.Catalog;
 
@@ -12,14 +11,34 @@ public partial class CatalogEntryCard
     [Parameter] public EventCallback<string> OnSourceFilter { get; set; }
 
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "", "Manual");
-    private bool IsSourceFilterActive => string.Equals(ActiveSourceFilter, SourceLabel, StringComparison.OrdinalIgnoreCase);
-    private Variant SourceVariant => IsSourceFilterActive ? Variant.Filled : Variant.Outlined;
-    private Color SourceColor => SourceLabel.ToLowerInvariant() switch
+    private string ChapterCountLabel => Entry.ChapterCount is null ? "Unknown" : Entry.ChapterCount.Value.ToString();
+    private string VolumeCountLabel => Entry.VolumeCount is null ? "Unknown" : Entry.VolumeCount.Value.ToString();
+    private string FirstYearLabel => Entry.FirstPublishYear is null ? "Unknown" : Entry.FirstPublishYear.Value.ToString();
+    private string FormatLabel => FirstNonEmpty(Entry.MediaType, Entry.Category, "Unknown");
+    private string PublishingLabel => FirstNonEmpty(Entry.PublishingStatus, "Unknown");
+    private string ShelfAvailabilityLabel => Entry.IsInMyShelf ? "Already on shelf" : "Ready to add";
+    private string CatalogReferenceLabel => (Entry.MyAnimeListId, Entry.OpenLibraryKey) switch
     {
-        "mal" => Color.Primary,
-        "openlibrary" => Color.Secondary,
-        "manual" => Color.Default,
-        _ => Color.Info
+        ({ Length: > 0 }, { Length: > 0 }) => "MAL + OpenLibrary",
+        ({ Length: > 0 }, _) => $"MAL #{Entry.MyAnimeListId}",
+        (_, { Length: > 0 }) => "OpenLibrary linked",
+        _ => "Manual entry"
+    };
+    private string ReaderLinksLabel => (Entry.MangaDexUrl, Entry.LocalSeriesId) switch
+    {
+        ({ Length: > 0 }, not null) => "MangaDex + local",
+        ({ Length: > 0 }, null) => "MangaDex",
+        (_, not null) => "Local files",
+        _ => "No reader link"
+    };
+    private bool IsSourceFilterActive => string.Equals(ActiveSourceFilter, SourceLabel, StringComparison.OrdinalIgnoreCase);
+    private string SourceFilterHint => IsSourceFilterActive ? "Filtered" : "Click to filter";
+    private string SourceScheme => SourceLabel.ToLowerInvariant() switch
+    {
+        "mal" => "deep",
+        "openlibrary" => "warm",
+        "manual" => "ink",
+        _ => "primary"
     };
 
     private Task Edit() => OnEdit.InvokeAsync(Entry);

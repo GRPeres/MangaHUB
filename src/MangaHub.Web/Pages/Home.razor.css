@@ -1,0 +1,48 @@
+::deep .mh-home-bento {
+    --bzb-gap: 4px;
+    --mh-bento-item-min-height: 128px;
+    --mh-bento-row-height: 128px;
+}
+
+.mh-home-block {
+    display: flex;
+    flex-direction: column;
+    gap: .55rem;
+    height: 100%;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.mh-home-block-main {
+    justify-content: space-between;
+}
+
+@media (max-width: 640px) {
+    .mh-home-hero {
+        padding: 1rem;
+    }
+
+    .mh-hero-copy {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+    }
+
+    ::deep .mh-home-bento {
+        --mh-bento-item-min-height: 94px;
+        --mh-bento-row-height: 94px;
+    }
+
+    .mh-home-block {
+        gap: .35rem;
+    }
+
+    .mh-home-detail {
+        display: none !important;
+    }
+
+    ::deep .mh-home-bento .mh-bento-tile {
+        padding: .8rem;
+    }
+}

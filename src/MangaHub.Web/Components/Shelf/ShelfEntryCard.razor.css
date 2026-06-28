@@ -1,38 +1,67 @@
 .mh-row-card {
+    align-items: stretch;
+    display: grid;
+    gap: 0;
+    grid-template-columns: 164px minmax(0, 1fr);
+    min-height: 176px;
     overflow: hidden;
 }
 
-.mh-row-grid {
-    min-height: 100%;
-}
-
 .mh-cover-frame {
-    align-items: center;
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
-    display: flex;
-    height: 100%;
-    justify-content: center;
-    padding: .85rem;
+    border-right: 1px solid var(--mud-palette-divider);
+    min-height: 100%;
+    overflow: hidden;
+    position: relative;
 }
 
 ::deep .mh-row-cover {
-    aspect-ratio: 2 / 3;
-    border-radius: 8px;
     display: block;
-    max-height: 230px;
+    height: 100%;
+    min-height: 176px;
     object-fit: cover;
-    width: min(100%, 150px);
+    width: 100%;
 }
 
 .mh-cover-placeholder {
     align-items: center;
-    aspect-ratio: 2 / 3;
-    border-radius: 8px;
     color: var(--mud-palette-primary);
     display: flex;
+    height: 100%;
     justify-content: center;
-    max-height: 230px;
-    width: min(100%, 150px);
+    min-height: 176px;
+}
+
+.mh-cover-caption {
+    backdrop-filter: blur(10px);
+    background: color-mix(in srgb, #160d22 82%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 32%, transparent);
+    border-radius: 8px;
+    bottom: .45rem;
+    color: #fffaff;
+    display: flex;
+    flex-direction: column;
+    gap: .05rem;
+    left: .45rem;
+    max-width: calc(100% - .9rem);
+    padding: .4rem .5rem;
+    position: absolute;
+    right: .45rem;
+}
+
+.mh-cover-caption span {
+    color: #d8c9e8;
+    font-size: .65rem;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.mh-cover-caption strong {
+    font-size: .82rem;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 ::deep .mh-cover-placeholder .mud-icon-root {
@@ -40,22 +69,54 @@
     opacity: .65;
 }
 
-::deep .mh-row-content {
+::deep .mh-bento-card-content {
     display: flex;
     flex-direction: column;
-    gap: .8rem;
-    height: 100%;
+    gap: .65rem;
     min-width: 0;
-    padding: 1rem 1.1rem;
+    padding: .7rem;
 }
 
-::deep .mh-row-content-main {
-    padding-right: .75rem;
+::deep .mh-entry-bento {
+    --bzb-gap: 4px;
+    --mh-bento-item-min-height: 52px;
+    --mh-bento-row-height: 52px;
 }
 
-::deep .mh-row-side {
-    border-left: 1px solid var(--mud-palette-divider);
+::deep .mh-entry-bento .mh-bento-tile {
+    padding: .75rem;
+}
+
+.mh-entry-main {
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    height: 100%;
     justify-content: space-between;
+    min-width: 0;
+}
+
+.mh-entry-topline {
+    align-items: start;
+    display: grid;
+    gap: .5rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.mh-entry-stat {
+    display: flex;
+    flex-direction: column;
+    gap: .05rem;
+    height: 100%;
+    justify-content: center;
+    min-width: 0;
+}
+
+.mh-entry-stat strong,
+.mh-entry-stat span {
+    display: block;
+    font-size: .9rem;
+    line-height: 1.25;
 }
 
 .mh-title-block {
@@ -63,26 +124,30 @@
 }
 
 .mh-row-title {
-    margin-top: .2rem;
+    margin-top: .1rem;
 }
 
-.mh-progress-panel {
-    background: color-mix(in srgb, var(--mud-palette-primary) 7%, transparent);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-divider));
-    border-radius: 8px;
-    padding: .75rem;
-}
-
-.mh-chapter-line {
-    display: flex;
-    flex-direction: column;
-    font-size: .9rem;
-    font-weight: 700;
-    gap: .2rem;
+::deep .mh-row-title {
+    display: -webkit-box;
+    line-height: 1.1;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
 }
 
 .mh-chip-row {
     align-items: center;
+}
+
+::deep .mh-primary-tags {
+    justify-content: flex-end;
+    max-width: min(260px, 46vw);
+    text-align: right;
+}
+
+::deep .mh-secondary-tags {
+    max-height: 56px;
+    overflow: hidden;
 }
 
 ::deep .mh-click-chip {
@@ -92,7 +157,7 @@
 .mh-row-summary {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     overflow: hidden;
 }
 
@@ -103,54 +168,149 @@
     overflow: hidden;
 }
 
-::deep .mh-row-actions {
-    align-items: stretch;
-    display: flex;
-    flex-direction: column;
-    gap: .5rem;
-    justify-content: flex-end;
-    margin-top: auto;
-    padding: .35rem 0 0;
+.mh-entry-context {
+    display: grid;
+    gap: .4rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-@media (max-width: 960px) {
-    ::deep .mh-row-content-main {
-        padding-right: 1.1rem;
-    }
+.mh-entry-context div {
+    background: color-mix(in srgb, var(--mud-palette-surface) 72%, var(--mud-palette-primary) 28%);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    min-width: 0;
+    padding: .45rem .55rem;
+}
 
-    ::deep .mh-row-side {
-        border-left: 0;
-        border-top: 1px solid var(--mud-palette-divider);
-    }
+.mh-entry-context span {
+    color: var(--mud-palette-text-secondary);
+    font-size: .68rem;
+    line-height: 1;
+    text-transform: uppercase;
+}
 
-    ::deep .mh-row-actions {
-        flex-direction: row;
-    }
+.mh-entry-context strong {
+    font-size: .86rem;
+    font-weight: 700;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+::deep .mh-bento-card-actions {
+    align-items: stretch;
+    border-top: 1px solid var(--mud-palette-divider);
+    display: flex;
+    gap: .5rem;
+    justify-content: flex-end;
+    padding: .7rem 0 0;
+}
+
+::deep .mh-entry-stat-tile .mh-bento-tile {
+    padding: .55rem;
+}
+
+::deep .mh-entry-stat-tile .mh-bento-corner-icon {
+    display: none;
+}
+
+::deep .mh-entry-stat .mud-typography-h3 {
+    display: block;
+    font-size: clamp(.9rem, 1.5vw, 1.1rem);
+    line-height: 1.05;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 @media (max-width: 640px) {
+    .mh-row-card {
+        grid-template-columns: 1fr;
+    }
+
     .mh-cover-frame {
         border-bottom: 1px solid var(--mud-palette-divider);
-        padding: 0;
+        border-right: 0;
+        max-height: 280px;
+    }
+
+    ::deep .mh-entry-bento {
+        --mh-bento-item-min-height: 92px;
+        --mh-bento-row-height: 92px;
+        display: grid !important;
+        grid-auto-flow: row !important;
+        grid-auto-rows: auto !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    ::deep .mh-entry-bento > .bzb-item {
+        grid-column: span 1 !important;
+        grid-row: span 1 !important;
+        min-height: 92px !important;
+    }
+
+    ::deep .mh-entry-bento > .bzb-item:nth-child(1) {
+        grid-column: 1 / -1 !important;
+        min-height: 190px !important;
+    }
+
+    ::deep .mh-entry-bento > .bzb-item:nth-child(n + 2) {
+        min-height: 104px !important;
     }
 
     ::deep .mh-row-cover {
-        border-radius: 0;
-        max-height: 360px;
+        height: 280px;
+        max-height: 280px;
+        min-height: 280px;
         width: 100%;
     }
 
     .mh-cover-placeholder {
-        border-radius: 0;
-        max-height: 360px;
-        width: 100%;
+        height: 280px;
+        min-height: 280px;
     }
 
-    ::deep .mh-row-actions {
+    .mh-entry-main {
+        gap: .6rem;
+        justify-content: flex-start;
+    }
+
+    .mh-entry-topline {
+        grid-template-columns: 1fr;
+    }
+
+    ::deep .mh-primary-tags {
+        justify-content: flex-start;
+        max-width: none;
+        text-align: left;
+    }
+
+    ::deep .mh-secondary-tags,
+    .mh-mobile-hide {
+        display: none !important;
+    }
+
+    .mh-row-summary {
+        -webkit-line-clamp: 3;
+    }
+
+    ::deep .mh-entry-stat-tile .mh-bento-tile {
+        padding: .7rem;
+    }
+
+    .mh-entry-stat {
+        justify-content: space-between;
+    }
+
+    ::deep .mh-bento-card-actions {
         justify-content: stretch;
     }
 
-    ::deep .mh-row-actions .mud-button-root {
+    ::deep .mh-bento-card-actions .mud-button-root {
         flex: 1 1 0;
     }
 }
