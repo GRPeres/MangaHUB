@@ -4,6 +4,7 @@
 @inject NavigationManager Navigation
 @inject AdminApiService AdminApi
 @inject MangaApiService MangaApi
+@inject IJSRuntime Js
 
 <PageTitle>Shelf</PageTitle>
 
@@ -211,8 +212,26 @@
 
     private async Task Read(Guid entryId)
     {
-        await Task.CompletedTask;
-        Navigation.NavigateTo($"/reader/session/{entryId}");
+        var options = await MangaApi.GetReadOptionsAsync(entryId);
+        if (options is null)
+        {
+            ShowWarning("Could not load read options.");
+            return;
+        }
+
+        if (options.HasLocal)
+        {
+            Navigation.NavigateTo(options.LocalReaderUrl);
+            return;
+        }
+
+        if (options.HasMangaDex)
+        {
+            await Js.InvokeVoidAsync("open", options.MangaDexUrl, "_blank", "noopener,noreferrer");
+            return;
+        }
+
+        ShowWarning("No MangaDex URL or local series is registered for this manga yet.");
     }
 
     private void Edit(MangaEntryResponse entry)

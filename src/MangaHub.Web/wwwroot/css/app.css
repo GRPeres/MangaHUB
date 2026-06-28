@@ -252,83 +252,6 @@ a {
     object-fit: contain;
 }
 
-.mh-reader-state {
-    align-items: center;
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    min-height: 45vh;
-    padding: 2rem;
-}
-
-.mh-reader-shell {
-    min-height: calc(100vh - 120px);
-}
-
-.mh-reader-session-toolbar {
-    align-items: center;
-    display: flex;
-    gap: 1rem;
-    justify-content: space-between;
-    padding: .85rem 1rem;
-    position: sticky;
-    top: 76px;
-    z-index: 3;
-}
-
-.mh-reader-title {
-    min-width: 0;
-}
-
-.mh-reader-title .mud-typography-h2 {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.mh-reader-actions {
-    flex: 0 0 auto;
-    justify-content: flex-end;
-}
-
-.mh-reader-frame-wrap {
-    background:
-        radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--mud-palette-primary) 16%, transparent), transparent 28rem),
-        #08040d;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 8px;
-    min-height: calc(100vh - 220px);
-    overflow: hidden;
-    position: relative;
-}
-
-.mh-reader-frame {
-    background: #fff;
-    border: 0;
-    display: block;
-    height: calc(100vh - 220px);
-    min-height: 620px;
-    width: 100%;
-}
-
-.mh-reader-frame-loading {
-    align-items: center;
-    background: color-mix(in srgb, #160d22 82%, transparent);
-    color: #fffaff;
-    display: flex;
-    flex-direction: column;
-    gap: .75rem;
-    inset: 0;
-    justify-content: center;
-    pointer-events: none;
-    position: absolute;
-}
-
-.mh-reader-fallback-modal {
-    max-width: 620px;
-}
-
 html body .mh-row-card .mh-bento-host,
 html body .mh-row-card .mh-bento-host .mh-bento-grid,
 html body .mh-row-card .mh-bento-host .bzb-grid {
@@ -469,26 +392,6 @@ html.mh-theme-dark .loading-progress circle:last-child {
 
     .reader-toolbar {
         top: 64px;
-    }
-
-    .mh-reader-session-toolbar {
-        align-items: stretch;
-        display: grid;
-        grid-template-columns: 1fr;
-        top: 64px;
-    }
-
-    .mh-reader-actions {
-        justify-content: stretch;
-    }
-
-    .mh-reader-actions .mud-button-root {
-        flex: 1 1 0;
-    }
-
-    .mh-reader-frame,
-    .mh-reader-frame-wrap {
-        min-height: calc(100vh - 250px);
     }
 
     .mh-modal-backdrop {
