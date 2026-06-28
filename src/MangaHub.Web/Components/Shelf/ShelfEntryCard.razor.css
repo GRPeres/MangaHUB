@@ -53,10 +53,17 @@
 .mh-entry-main {
     display: flex;
     flex-direction: column;
-    gap: .55rem;
+    gap: .65rem;
     height: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
     min-width: 0;
+}
+
+.mh-entry-topline {
+    align-items: start;
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .mh-entry-stat {
@@ -87,6 +94,16 @@
     align-items: center;
 }
 
+::deep .mh-primary-tags {
+    justify-content: flex-end;
+    max-width: min(260px, 46vw);
+    text-align: right;
+}
+
+::deep .mh-secondary-tags {
+    margin-top: auto;
+}
+
 ::deep .mh-click-chip {
     cursor: pointer;
 }
@@ -115,15 +132,38 @@
 
 @media (max-width: 640px) {
     ::deep .mh-entry-bento {
-        --bzb-row-height: 122px;
+        --bzb-row-height: 96px;
     }
 
     ::deep .mh-row-cover {
-        max-height: 360px;
+        max-height: 260px;
     }
 
     .mh-cover-placeholder {
-        min-height: 240px;
+        min-height: 190px;
+    }
+
+    .mh-entry-main {
+        gap: .45rem;
+    }
+
+    .mh-entry-topline {
+        grid-template-columns: 1fr;
+    }
+
+    ::deep .mh-primary-tags {
+        justify-content: flex-start;
+        max-width: none;
+        text-align: left;
+    }
+
+    ::deep .mh-secondary-tags,
+    .mh-mobile-hide {
+        display: none !important;
+    }
+
+    ::deep .mh-entry-stat-tile .mh-bento-tile {
+        padding: .75rem;
     }
 
     ::deep .mh-bento-card-actions {

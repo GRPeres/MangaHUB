@@ -16,72 +16,74 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="primary" CornerIcon="@Icons.Material.Filled.AutoStories">
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="primary">
                 <div class="mh-entry-main">
-                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Color="@StatusColor"
-                             Variant="@StatusVariant"
-                             Class="mh-click-chip"
-                             OnClick="FilterByStatus">@StatusLabel</MudChip>
-                    @if (Entry.Score is not null)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@($"{Entry.Score}/5")</MudChip>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(SourceLabel))
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@SourceLabel</MudChip>
-                    }
-                </MudStack>
+                    <div class="mh-entry-topline">
+                        <div class="mh-title-block">
+                            <MudText Typo="Typo.h3" Class="mh-row-title">@Entry.Title</MudText>
+                            @if (!string.IsNullOrWhiteSpace(Entry.Authors))
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
+                            }
+                        </div>
 
-                <div class="mh-title-block">
-                    <MudText Typo="Typo.h3" Class="mh-row-title">@Entry.Title</MudText>
-                    @if (!string.IsNullOrWhiteSpace(Entry.Authors))
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
-                    }
-                </div>
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="@StatusColor"
+                                     Variant="@StatusVariant"
+                                     Class="mh-click-chip"
+                                     OnClick="FilterByStatus">@StatusLabel</MudChip>
+                            @if (Entry.Score is not null)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@($"{Entry.Score}/5")</MudChip>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(SourceLabel))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@SourceLabel</MudChip>
+                            }
+                        </MudStack>
+                    </div>
 
-                <MudStack Row="true" Spacing="1" Class="mh-chip-row flex-wrap">
-                    @if (!string.IsNullOrWhiteSpace(GenreLabel))
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GenreLabel</MudChip>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.MediaType</MudChip>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(Entry.PublishingStatus))
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.PublishingStatus</MudChip>
-                    }
-                    @if (Entry.ChapterCount is not null)
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{Entry.ChapterCount} ch.")</MudChip>
-                    }
-                    @if (Entry.VolumeCount is not null)
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{Entry.VolumeCount} vol.")</MudChip>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(Entry.MangaDexUrl))
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
-                    }
-                </MudStack>
+                    <MudStack Row="true" Spacing="1" Class="mh-chip-row mh-secondary-tags flex-wrap">
+                        @if (!string.IsNullOrWhiteSpace(GenreLabel))
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GenreLabel</MudChip>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.MediaType</MudChip>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Entry.PublishingStatus))
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.PublishingStatus</MudChip>
+                        }
+                        @if (Entry.ChapterCount is not null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{Entry.ChapterCount} ch.")</MudChip>
+                        }
+                        @if (Entry.VolumeCount is not null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{Entry.VolumeCount} vol.")</MudChip>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Entry.MangaDexUrl))
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
+                        }
+                    </MudStack>
 
                 @if (!string.IsNullOrWhiteSpace(Entry.Summary))
                 {
-                    <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Summary</MudText>
+                    <MudText Typo="Typo.body2" Class="mh-row-summary mh-mobile-hide">@Entry.Summary</MudText>
                 }
                 else if (!string.IsNullOrWhiteSpace(Entry.Description))
                 {
-                    <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Description</MudText>
+                    <MudText Typo="Typo.body2" Class="mh-row-summary mh-mobile-hide">@Entry.Description</MudText>
                 }
 
                 @if (!string.IsNullOrWhiteSpace(Entry.Notes))
                 {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mh-row-notes">@Entry.Notes</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mh-row-notes mh-mobile-hide">@Entry.Notes</MudText>
                 }
                 </div>
             </MangaBentoTile>
@@ -90,7 +92,7 @@
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Status</MudText>
                     <MudText Typo="Typo.h3">@StatusLabel</MudText>
-                    <MudText Typo="Typo.caption">Click to filter</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Click to filter</MudText>
                 </div>
             </MangaBentoTile>
 

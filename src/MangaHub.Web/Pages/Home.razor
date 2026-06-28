@@ -33,7 +33,7 @@
             <div class="mh-home-block mh-home-block-main">
                 <MudText Typo="Typo.overline">Your shelf</MudText>
                 <MudText Typo="Typo.h2">Read where you left off</MudText>
-                <MudText Typo="Typo.body2">Track current chapter beside the latest known chapter, then filter by status when your shelf gets busy.</MudText>
+                <MudText Typo="Typo.body2" Class="mh-home-detail">Track current chapter beside the latest known chapter, then filter by status when your shelf gets busy.</MudText>
             </div>
         </MangaBentoTile>
 
@@ -42,7 +42,7 @@
                 <MudStack Spacing="3">
                     <MudStack Spacing="1">
                         <MudText Typo="Typo.h2">Account</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@AccountPrompt</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mh-home-detail">@AccountPrompt</MudText>
                     </MudStack>
                     <MudStack Row="true" Spacing="2" Class="flex-wrap">
                         @if (currentUser is null)
@@ -63,21 +63,21 @@
         <MangaBentoTile ColSpan="2" Scheme="soft" CornerIcon="@Icons.Material.Filled.TravelExplore" OnClick="GoCatalog">
             <div class="mh-home-block">
                 <MudText Typo="Typo.h3">Curate the catalog</MudText>
-                <MudText Typo="Typo.body2">Admins can add manual entries or pull richer manga metadata from MAL first, with OpenLibrary as fallback.</MudText>
+                <MudText Typo="Typo.body2" Class="mh-home-detail">Admins can add manual entries or pull richer manga metadata from MAL first, with OpenLibrary as fallback.</MudText>
             </div>
         </MangaBentoTile>
 
         <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.UploadFile" OnClick="GoCatalog">
             <div class="mh-home-block">
                 <MudText Typo="Typo.h3">Import old sheets</MudText>
-                <MudText Typo="Typo.body2">Bring status, chapters, scores, notes, and links into the app.</MudText>
+                <MudText Typo="Typo.body2" Class="mh-home-detail">Bring status, chapters, scores, notes, and links into the app.</MudText>
             </div>
         </MangaBentoTile>
 
         <MangaBentoTile Scheme="ink" CornerIcon="@Icons.Material.Filled.VerifiedUser" OnClick="GoAccount">
             <div class="mh-home-block">
                 <MudText Typo="Typo.h3">Control access</MudText>
-                <MudText Typo="Typo.body2">Admins own catalog changes while each user owns their shelf.</MudText>
+                <MudText Typo="Typo.body2" Class="mh-home-detail">Admins own catalog changes while each user owns their shelf.</MudText>
             </div>
         </MangaBentoTile>
     </MangaBento>

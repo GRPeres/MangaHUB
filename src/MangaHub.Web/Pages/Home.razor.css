@@ -17,7 +17,30 @@
 }
 
 @media (max-width: 640px) {
+    .mh-home-hero {
+        padding: 1rem;
+    }
+
+    .mh-hero-copy {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+    }
+
     ::deep .mh-home-bento {
-        --bzb-row-height: 118px;
+        --bzb-row-height: 94px;
+    }
+
+    .mh-home-block {
+        gap: .35rem;
+    }
+
+    .mh-home-detail {
+        display: none !important;
+    }
+
+    ::deep .mh-home-bento .mh-bento-tile {
+        padding: .8rem;
     }
 }
