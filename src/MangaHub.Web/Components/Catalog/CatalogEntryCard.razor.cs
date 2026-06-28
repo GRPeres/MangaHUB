@@ -17,6 +17,13 @@ public partial class CatalogEntryCard
     private string FormatLabel => FirstNonEmpty(Entry.MediaType, Entry.Category, "Unknown");
     private string PublishingLabel => FirstNonEmpty(Entry.PublishingStatus, "Unknown");
     private string ShelfAvailabilityLabel => Entry.IsInMyShelf ? "Already on shelf" : "Ready to add";
+    private string CatalogReferenceLabel => (Entry.MyAnimeListId, Entry.OpenLibraryKey) switch
+    {
+        ({ Length: > 0 }, { Length: > 0 }) => "MAL + OpenLibrary",
+        ({ Length: > 0 }, _) => $"MAL #{Entry.MyAnimeListId}",
+        (_, { Length: > 0 }) => "OpenLibrary linked",
+        _ => "Manual entry"
+    };
     private string ReaderLinksLabel => (Entry.MangaDexUrl, Entry.LocalSeriesId) switch
     {
         ({ Length: > 0 }, not null) => "MangaDex + local",
@@ -24,7 +31,6 @@ public partial class CatalogEntryCard
         (_, not null) => "Local files",
         _ => "No reader link"
     };
-    private string LibraryFitLabel => FirstNonEmpty(Entry.Category, Entry.MediaType, "Uncategorized");
     private bool IsSourceFilterActive => string.Equals(ActiveSourceFilter, SourceLabel, StringComparison.OrdinalIgnoreCase);
     private string SourceFilterHint => IsSourceFilterActive ? "Filtered" : "Click to filter";
     private string SourceScheme => SourceLabel.ToLowerInvariant() switch

@@ -14,19 +14,18 @@ public partial class ShelfEntryCard
 
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
     private string GenreLabel => FirstNonEmpty(Entry.Category, Entry.CatalogCategory);
-    private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "");
     private string ScoreLabel => Entry.Score is null ? "Not scored" : $"{Entry.Score}/5";
     private string ReadSourceLabel => !string.IsNullOrWhiteSpace(Entry.MangaDexUrl)
         ? "MangaDex"
         : Entry.LocalSeriesId is not null ? "Local" : "Unlinked";
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
     private string LatestChapterValue => Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
+    private string FormatLabel => FirstNonEmpty(Entry.MediaType, GenreLabel, "Unknown");
+    private string FirstYearLabel => Entry.FirstPublishYear is null ? "Unknown" : Entry.FirstPublishYear.Value.ToString();
+    private string VolumeCountLabel => Entry.VolumeCount is null ? "Unknown" : Entry.VolumeCount.Value.ToString();
     private string NextChapterValue => TryGetCurrentChapterNumber(out var currentChapter)
         ? $"Ch. {currentChapter + 1}"
         : StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) ? "Complete" : "Start";
-    private string PersonalTrackLabel => Entry.Score is null
-        ? StatusLabel
-        : $"{StatusLabel} - {Entry.Score}/5";
     private bool IsStatusFilterActive => string.Equals(ActiveStatusFilter, StatusLabel, StringComparison.OrdinalIgnoreCase);
     private string StatusFilterHint => IsStatusFilterActive ? "Filtered" : "Click to filter";
     private Variant StatusVariant => IsStatusFilterActive ? Variant.Filled : Variant.Outlined;
@@ -66,13 +65,6 @@ public partial class ShelfEntryCard
 
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
-
-    private static string SourceName(string source) => source.ToLowerInvariant() switch
-    {
-        "myanimelist" => "MAL",
-        "openlibrary" => "OpenLibrary",
-        _ => source
-    };
 
     private bool TryGetCurrentChapterNumber(out int chapter)
     {

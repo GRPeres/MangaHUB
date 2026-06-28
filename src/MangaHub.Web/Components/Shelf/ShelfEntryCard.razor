@@ -44,10 +44,6 @@
                         {
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.PublishingStatus</MudChip>
                         }
-                        @if (Entry.VolumeCount is not null)
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{Entry.VolumeCount} vol.")</MudChip>
-                        }
                         @if (!string.IsNullOrWhiteSpace(Entry.MangaDexUrl))
                         {
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
@@ -70,16 +66,16 @@
 
                     <div class="mh-entry-context mh-mobile-hide">
                         <div>
-                            <span>Personal track</span>
-                            <strong>@PersonalTrackLabel</strong>
+                            <span>Format</span>
+                            <strong>@FormatLabel</strong>
                         </div>
                         <div>
-                            <span>Next up</span>
-                            <strong>@NextChapterValue</strong>
+                            <span>Published</span>
+                            <strong>@FirstYearLabel</strong>
                         </div>
                         <div>
-                            <span>Reader</span>
-                            <strong>@ReadSourceLabel</strong>
+                            <span>Volumes</span>
+                            <strong>@VolumeCountLabel</strong>
                         </div>
                     </div>
 

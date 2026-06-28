@@ -32,23 +32,8 @@
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@Entry.Category</MudChip>
                             }
-                            @if (Entry.IsInMyShelf)
-                            {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">In shelf</MudChip>
-                            }
                         </MudStack>
                     </div>
-
-                    <MudStack Row="true" Spacing="1" Class="mh-chip-row mh-secondary-tags flex-wrap">
-                        @if (!string.IsNullOrWhiteSpace(Entry.MangaDexUrl))
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
-                        }
-                        @if (Entry.LocalSeriesId is not null)
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Local files</MudChip>
-                        }
-                    </MudStack>
 
                 @if (!string.IsNullOrWhiteSpace(Entry.Description))
                 {
@@ -57,16 +42,16 @@
 
                     <div class="mh-entry-context mh-mobile-hide">
                         <div>
-                            <span>Catalog state</span>
-                            <strong>@ShelfAvailabilityLabel</strong>
+                            <span>Catalog refs</span>
+                            <strong>@CatalogReferenceLabel</strong>
                         </div>
                         <div>
-                            <span>Reader links</span>
+                            <span>Reader setup</span>
                             <strong>@ReaderLinksLabel</strong>
                         </div>
                         <div>
-                            <span>Library fit</span>
-                            <strong>@LibraryFitLabel</strong>
+                            <span>Shelf state</span>
+                            <strong>@ShelfAvailabilityLabel</strong>
                         </div>
                     </div>
 
