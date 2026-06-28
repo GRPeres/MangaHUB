@@ -1,0 +1,153 @@
+@page "/bento-card-lab"
+@using MangaHub.Web.Components.Catalog
+@using MangaHub.Web.Components.Shelf
+
+<PageTitle>Bento Card Lab</PageTitle>
+
+<MudStack Spacing="3" Class="mh-card-lab">
+    <MudStack Spacing="1">
+        <MudText Typo="Typo.overline" Color="Color.Secondary">Local visual test</MudText>
+        <MudText Typo="Typo.h1">Bento card lab</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Static sample data for checking card height, bento spans, mobile behavior, and CSS overrides without API calls.
+        </MudText>
+    </MudStack>
+
+    <MudStack Spacing="2">
+        <MudText Typo="Typo.h2">Shelf cards</MudText>
+        @foreach (var entry in ShelfEntries)
+        {
+            <ShelfEntryCard Entry="@entry"
+                            ActiveStatusFilter="@ActiveStatus"
+                            OnStatusFilter="SetStatusFilter"
+                            OnEdit="NoopShelfEdit"
+                            OnRead="NoopRead" />
+        }
+    </MudStack>
+
+    <MudStack Spacing="2">
+        <MudText Typo="Typo.h2">Catalog cards</MudText>
+        @foreach (var entry in CatalogEntries)
+        {
+            <CatalogEntryCard Entry="@entry"
+                              ActiveSourceFilter="@ActiveSource"
+                              OnSourceFilter="SetSourceFilter"
+                              OnEdit="NoopCatalogEdit" />
+        }
+    </MudStack>
+</MudStack>
+
+@code {
+    private string ActiveStatus { get; set; } = "";
+    private string ActiveSource { get; set; } = "";
+
+    private static readonly List<MangaEntryResponse> ShelfEntries =
+    [
+        new(
+            Guid.Parse("10000000-0000-0000-0000-000000000001"),
+            "Dandadan",
+            "Yukinobu Tatsu",
+            "Supernatural",
+            "A loud occult action series with aliens, ghosts, romance, and chapter counts that keep moving.",
+            "https://cdn.myanimelist.net/images/manga/2/253146.jpg",
+            "",
+            2021,
+            "myanimelist",
+            "135496",
+            "Manga",
+            "Publishing",
+            190,
+            18,
+            "reading",
+            "https://mangadex.org/title/f53a85bc-48bb-43cf-a427-6d7b9d1f0e90",
+            "f53a85bc-48bb-43cf-a427-6d7b9d1f0e90",
+            null,
+            "183",
+            5,
+            "Supernatural",
+            "Occult chaos, fast jokes, and surprisingly earnest character beats.",
+            "Testing notes should hide on mobile."),
+        new(
+            Guid.Parse("10000000-0000-0000-0000-000000000002"),
+            "Berserk",
+            "Kentaro Miura",
+            "Seinen",
+            "A dark fantasy epic about ambition, survival, trauma, loyalty, and the cost of power.",
+            "https://cdn.myanimelist.net/images/manga/1/157897.jpg",
+            "",
+            1989,
+            "myanimelist",
+            "2",
+            "Manga",
+            "Publishing",
+            376,
+            42,
+            "paused",
+            "",
+            "",
+            null,
+            "376",
+            5,
+            "Seinen",
+            "A dense long-running catalog entry with enough metadata to stress card layout.",
+            "")
+    ];
+
+    private static readonly List<CatalogMangaResponse> CatalogEntries =
+    [
+        new(
+            Guid.Parse("20000000-0000-0000-0000-000000000001"),
+            "Chainsaw Man",
+            "Tatsuki Fujimoto",
+            "Action",
+            "Devils, contracts, found family, workplace horror, and sharp turns in tone.",
+            "https://cdn.myanimelist.net/images/manga/3/216464.jpg",
+            "",
+            2018,
+            "myanimelist",
+            "116778",
+            "Manga",
+            "Publishing",
+            207,
+            19,
+            "https://mangadex.org/title/a96676e5-8ae2-425e-b549-7f15dd34a6d8",
+            "a96676e5-8ae2-425e-b549-7f15dd34a6d8",
+            null,
+            false),
+        new(
+            Guid.Parse("20000000-0000-0000-0000-000000000002"),
+            "One Piece",
+            "Eiichiro Oda",
+            "Adventure",
+            "A long-form pirate adventure with enormous worldbuilding and a very patient backlog.",
+            "https://cdn.myanimelist.net/images/manga/2/253146.jpg",
+            "",
+            1997,
+            "manual",
+            "",
+            "Manga",
+            "Publishing",
+            1118,
+            108,
+            "",
+            "",
+            Guid.Parse("30000000-0000-0000-0000-000000000001"),
+            true)
+    ];
+
+    private Task SetStatusFilter(string status)
+    {
+        ActiveStatus = string.Equals(ActiveStatus, status, StringComparison.OrdinalIgnoreCase) ? "" : status;
+        return Task.CompletedTask;
+    }
+
+    private Task SetSourceFilter(string source)
+    {
+        ActiveSource = string.Equals(ActiveSource, source, StringComparison.OrdinalIgnoreCase) ? "" : source;
+        return Task.CompletedTask;
+    }
+
+    private static Task NoopRead(Guid _) => Task.CompletedTask;
+    private static Task NoopShelfEdit(MangaEntryResponse _) => Task.CompletedTask;
+    private static Task NoopCatalogEdit(CatalogMangaResponse _) => Task.CompletedTask;
+}
