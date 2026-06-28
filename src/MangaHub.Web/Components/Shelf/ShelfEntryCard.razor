@@ -52,11 +52,11 @@
 
                 @if (!string.IsNullOrWhiteSpace(Entry.Summary))
                 {
-                    <MudText Typo="Typo.body2" Class="mh-row-summary mh-mobile-hide">@Entry.Summary</MudText>
+                    <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Summary</MudText>
                 }
                 else if (!string.IsNullOrWhiteSpace(Entry.Description))
                 {
-                    <MudText Typo="Typo.body2" Class="mh-row-summary mh-mobile-hide">@Entry.Description</MudText>
+                    <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Description</MudText>
                 }
 
                 @if (!string.IsNullOrWhiteSpace(Entry.Notes))
