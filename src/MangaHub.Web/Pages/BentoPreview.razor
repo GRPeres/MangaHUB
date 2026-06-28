@@ -1,0 +1,127 @@
+@page "/bento-preview"
+@inject NavigationManager Navigation
+
+<PageTitle>Bento Preview</PageTitle>
+
+<MudStack Spacing="4" Class="mh-bento-preview">
+    <section class="mh-bento-preview-hero">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.overline" Color="Color.Secondary">Design branch preview</MudText>
+            <MudText Typo="Typo.h1">MangaHub dashboard concept</MudText>
+            <MudText Typo="Typo.body1" Class="mh-bento-preview-copy">
+                A homepage direction using BlazzyMotion Bento for dense responsive packing, with MangaHub-specific cards layered inside.
+            </MudText>
+        </MudStack>
+
+        <MudStack Row="true" Spacing="2" Class="flex-wrap">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="@(() => Navigation.NavigateTo("library"))">Shelf</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Inventory2" OnClick="@(() => Navigation.NavigateTo("catalog"))">Catalog</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Home" OnClick="@(() => Navigation.NavigateTo(""))">Current home</MudButton>
+        </MudStack>
+    </section>
+
+    <BzBento TItem="object" Theme="BzTheme.Minimal" Columns="4" Gap="14" AnimationEnabled="true" CssClass="mh-preview-bento">
+        <BzBentoItem ColSpan="2" RowSpan="2">
+            <section class="mh-preview-card mh-preview-card-hero">
+                <div>
+                    <MudText Typo="Typo.overline">Now reading</MudText>
+                    <MudText Typo="Typo.h2">Dandadan</MudText>
+                    <MudText Typo="Typo.body2">Chapter 183 of 190 tracked, with MangaDex and local fallback ready.</MudText>
+                </div>
+                <div class="mh-preview-progress">
+                    <span>96%</span>
+                    <div>
+                        <strong>7 chapters left</strong>
+                        <small>Last update from MAL metadata</small>
+                    </div>
+                </div>
+            </section>
+        </BzBentoItem>
+
+        @foreach (var metric in Metrics)
+        {
+            <BzBentoItem>
+                <section class="@($"mh-preview-card mh-preview-metric {metric.Scheme}")">
+                    <MudIcon Icon="@metric.Icon" />
+                    <MudText Typo="Typo.h2">@metric.Value</MudText>
+                    <MudText Typo="Typo.caption">@metric.Label</MudText>
+                </section>
+            </BzBentoItem>
+        }
+
+        <BzBentoItem ColSpan="2">
+            <section class="mh-preview-card mh-preview-card-row mh-preview-scheme-a">
+                <MudIcon Icon="@Icons.Material.Filled.UploadFile" />
+                <div>
+                    <MudText Typo="Typo.h3">Spreadsheet replacement</MudText>
+                    <MudText Typo="Typo.body2">Import old rows, keep chapter, status, score, notes, and then clean metadata over time.</MudText>
+                </div>
+            </section>
+        </BzBentoItem>
+
+        <BzBentoItem ColSpan="2" RowSpan="2">
+            <section class="mh-preview-card mh-preview-queue">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.overline">Reading queue</MudText>
+                    @foreach (var item in Queue)
+                    {
+                        <div class="mh-preview-queue-row">
+                            <span>@item.Initial</span>
+                            <div>
+                                <strong>@item.Title</strong>
+                                <small>@item.Status</small>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@item.Chapter</MudChip>
+                        </div>
+                    }
+                </MudStack>
+            </section>
+        </BzBentoItem>
+
+        <BzBentoItem>
+            <section class="mh-preview-card mh-preview-mini mh-preview-scheme-b">
+                <MudIcon Icon="@Icons.Material.Filled.TravelExplore" />
+                <MudText Typo="Typo.h3">MAL first</MudText>
+                <MudText Typo="Typo.caption">Metadata source</MudText>
+            </section>
+        </BzBentoItem>
+
+        <BzBentoItem>
+            <section class="mh-preview-card mh-preview-mini mh-preview-scheme-c">
+                <MudIcon Icon="@Icons.Material.Filled.Storage" />
+                <MudText Typo="Typo.h3">Local files</MudText>
+                <MudText Typo="Typo.caption">Reader fallback</MudText>
+            </section>
+        </BzBentoItem>
+
+        <BzBentoItem ColSpan="2">
+            <section class="mh-preview-card mh-preview-card-row mh-preview-scheme-d">
+                <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
+                <div>
+                    <MudText Typo="Typo.h3">Catalog stays controlled</MudText>
+                    <MudText Typo="Typo.body2">Admins curate shared manga entries. Users only add existing catalog manga to their shelf.</MudText>
+                </div>
+            </section>
+        </BzBentoItem>
+    </BzBento>
+</MudStack>
+
+@code {
+    private sealed record PreviewMetric(string Value, string Label, string Icon, string Scheme);
+    private sealed record QueueItem(string Initial, string Title, string Status, string Chapter);
+
+    private static readonly List<PreviewMetric> Metrics =
+    [
+        new("153", "Shelf entries", Icons.Material.Filled.AutoStories, "mh-preview-scheme-b"),
+        new("42", "Finished manga", Icons.Material.Filled.CheckCircle, "mh-preview-scheme-c"),
+        new("18", "Reading now", Icons.Material.Filled.Bookmark, "mh-preview-scheme-d"),
+        new("9", "Needs metadata", Icons.Material.Filled.Troubleshoot, "mh-preview-scheme-a")
+    ];
+
+    private static readonly List<QueueItem> Queue =
+    [
+        new("B", "Berserk", "Paused, local files ready", "Ch. 376"),
+        new("C", "Chainsaw Man", "Reading from MangaDex", "Ch. 207"),
+        new("O", "One Piece", "Long-form backlog", "Ch. 1118")
+    ];
+}
