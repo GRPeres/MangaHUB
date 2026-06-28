@@ -12,8 +12,18 @@ public partial class CatalogEntryCard
     [Parameter] public EventCallback<string> OnSourceFilter { get; set; }
 
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "", "Manual");
+    private string ChapterCountLabel => Entry.ChapterCount is null ? "Chapters unknown" : $"{Entry.ChapterCount} chapters";
+    private string VolumeCountLabel => Entry.VolumeCount is null ? "Volumes unknown" : $"{Entry.VolumeCount} volumes";
     private bool IsSourceFilterActive => string.Equals(ActiveSourceFilter, SourceLabel, StringComparison.OrdinalIgnoreCase);
     private Variant SourceVariant => IsSourceFilterActive ? Variant.Filled : Variant.Outlined;
+    private string SourceScheme => SourceLabel.ToLowerInvariant() switch
+    {
+        "mal" => "deep",
+        "openlibrary" => "warm",
+        "manual" => "ink",
+        _ => "primary"
+    };
+
     private Color SourceColor => SourceLabel.ToLowerInvariant() switch
     {
         "mal" => Color.Primary,

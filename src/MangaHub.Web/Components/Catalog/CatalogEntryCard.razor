@@ -1,7 +1,8 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
-    <MudGrid Spacing="0" Class="mh-row-grid">
-        <MudItem xs="12" md="2">
-            <div class="mh-cover-frame">
+    <MudCardContent Class="mh-bento-card-content">
+        <MangaBento Columns="4" Class="mh-entry-bento">
+            <MangaBentoTile RowSpan="2" Scheme="ink" Class="mh-entry-cover-tile">
+                <div class="mh-cover-frame">
                 @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
                 {
                     <MudImage Src="@Entry.CoverUrl" Alt="@($"{Entry.Title} cover")" Class="mh-row-cover" />
@@ -12,11 +13,11 @@
                         <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
                     </div>
                 }
-            </div>
-        </MudItem>
+                </div>
+            </MangaBentoTile>
 
-        <MudItem xs="12" md="8">
-            <MudCardContent Class="mh-row-content mh-row-content-main">
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="soft" CornerIcon="@Icons.Material.Filled.Inventory2">
+                <div class="mh-entry-main">
                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
                     @if (!string.IsNullOrWhiteSpace(SourceLabel))
                     {
@@ -72,32 +73,28 @@
                 {
                     <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Description</MudText>
                 }
-            </MudCardContent>
-        </MudItem>
-
-        <MudItem xs="12" md="2">
-            <MudCardContent Class="mh-row-content mh-row-side">
-                <div class="mh-facts">
-                    @if (Entry.ChapterCount is not null)
-                    {
-                        <div>
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">Chapters</MudText>
-                            <strong>@Entry.ChapterCount</strong>
-                        </div>
-                    }
-                    @if (Entry.VolumeCount is not null)
-                    {
-                        <div>
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">Volumes</MudText>
-                            <strong>@Entry.VolumeCount</strong>
-                        </div>
-                    }
                 </div>
+            </MangaBentoTile>
 
-                <MudCardActions Class="mh-row-actions">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
-                </MudCardActions>
-            </MudCardContent>
-        </MudItem>
-    </MudGrid>
+            <MangaBentoTile Scheme="@SourceScheme" CornerIcon="@Icons.Material.Filled.TravelExplore" OnClick="FilterBySource" Class="mh-entry-stat-tile">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Source</MudText>
+                    <MudText Typo="Typo.h3">@SourceLabel</MudText>
+                    <MudText Typo="Typo.caption">Click to filter</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.FormatListNumbered">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Metadata</MudText>
+                    <strong>@ChapterCountLabel</strong>
+                    <span>@VolumeCountLabel</span>
+                </div>
+            </MangaBentoTile>
+        </MangaBento>
+
+        <MudCardActions Class="mh-bento-card-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
+        </MudCardActions>
+    </MudCardContent>
 </MudCard>

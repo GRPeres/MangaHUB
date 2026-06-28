@@ -19,6 +19,26 @@ public partial class ShelfEntryCard
     private string LatestChapterLabel => Entry.ChapterCount is null ? "Latest: unknown" : $"Latest: ch. {Entry.ChapterCount}";
     private bool IsStatusFilterActive => string.Equals(ActiveStatusFilter, StatusLabel, StringComparison.OrdinalIgnoreCase);
     private Variant StatusVariant => IsStatusFilterActive ? Variant.Filled : Variant.Outlined;
+    private string StatusIcon => StatusLabel.ToLowerInvariant() switch
+    {
+        "reading" => Icons.Material.Filled.AutoStories,
+        "done" => Icons.Material.Filled.TaskAlt,
+        "paused" => Icons.Material.Filled.PauseCircle,
+        "planned" => Icons.Material.Filled.BookmarkAdd,
+        "dropped" => Icons.Material.Filled.RemoveCircle,
+        _ => Icons.Material.Filled.LocalLibrary
+    };
+
+    private string StatusScheme => StatusLabel.ToLowerInvariant() switch
+    {
+        "reading" => "deep",
+        "done" => "soft",
+        "paused" => "warm",
+        "planned" => "secondary",
+        "dropped" => "ink",
+        _ => "primary"
+    };
+
     private Color StatusColor => StatusLabel.ToLowerInvariant() switch
     {
         "reading" => Color.Info,

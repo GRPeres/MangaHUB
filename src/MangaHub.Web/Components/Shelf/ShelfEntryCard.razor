@@ -1,7 +1,8 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
-    <MudGrid Spacing="0" Class="mh-row-grid">
-        <MudItem xs="12" md="2">
-            <div class="mh-cover-frame">
+    <MudCardContent Class="mh-bento-card-content">
+        <MangaBento Columns="4" Class="mh-entry-bento">
+            <MangaBentoTile RowSpan="2" Scheme="deep" Class="mh-entry-cover-tile">
+                <div class="mh-cover-frame">
                 @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
                 {
                     <MudImage Src="@Entry.CoverUrl" Alt="@($"{Entry.Title} cover")" Class="mh-row-cover" />
@@ -12,11 +13,11 @@
                         <MudIcon Icon="@Icons.Material.Filled.MenuBook" />
                     </div>
                 }
-            </div>
-        </MudItem>
+                </div>
+            </MangaBentoTile>
 
-        <MudItem xs="12" md="8">
-            <MudCardContent Class="mh-row-content mh-row-content-main">
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="primary" CornerIcon="@Icons.Material.Filled.AutoStories">
+                <div class="mh-entry-main">
                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
                     <MudChip T="string"
                              Size="Size.Small"
@@ -82,24 +83,29 @@
                 {
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mh-row-notes">@Entry.Notes</MudText>
                 }
-            </MudCardContent>
-        </MudItem>
-
-        <MudItem xs="12" md="2">
-            <MudCardContent Class="mh-row-content mh-row-side">
-                <div class="mh-progress-panel">
-                    <MudText Typo="Typo.overline" Color="Color.Secondary">Progress</MudText>
-                    <div class="mh-chapter-line">
-                        <span>@CurrentChapterLabel</span>
-                        <span>@LatestChapterLabel</span>
-                    </div>
                 </div>
+            </MangaBentoTile>
 
-                <MudCardActions Class="mh-row-actions">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
-                </MudCardActions>
-            </MudCardContent>
-        </MudItem>
-    </MudGrid>
+            <MangaBentoTile Scheme="@StatusScheme" CornerIcon="@StatusIcon" OnClick="FilterByStatus" Class="mh-entry-stat-tile">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Status</MudText>
+                    <MudText Typo="Typo.h3">@StatusLabel</MudText>
+                    <MudText Typo="Typo.caption">Click to filter</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.FormatListNumbered">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Progress</MudText>
+                    <strong>@CurrentChapterLabel</strong>
+                    <span>@LatestChapterLabel</span>
+                </div>
+            </MangaBentoTile>
+        </MangaBento>
+
+        <MudCardActions Class="mh-bento-card-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
+        </MudCardActions>
+    </MudCardContent>
 </MudCard>

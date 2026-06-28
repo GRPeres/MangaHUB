@@ -1,0 +1,23 @@
+::deep .mh-home-bento {
+    --bzb-gap: 4px;
+    --bzb-row-height: 128px;
+}
+
+.mh-home-block {
+    display: flex;
+    flex-direction: column;
+    gap: .55rem;
+    height: 100%;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.mh-home-block-main {
+    justify-content: space-between;
+}
+
+@media (max-width: 640px) {
+    ::deep .mh-home-bento {
+        --bzb-row-height: 118px;
+    }
+}
