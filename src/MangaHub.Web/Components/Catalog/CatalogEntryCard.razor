@@ -1,22 +1,19 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
-    <MudCardContent Class="mh-bento-card-content">
-        <div class="mh-entry-card-body">
-            <section class="mh-cover-panel">
-                <div class="mh-cover-frame">
-                @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
-                {
-                    <MudImage Src="@Entry.CoverUrl" Alt="@($"{Entry.Title} cover")" Class="mh-row-cover" />
-                }
-                else
-                {
-                    <div class="mh-cover-placeholder" aria-hidden="true">
-                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
-                    </div>
-                }
-                </div>
-            </section>
+    <div class="mh-cover-frame">
+        @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
+        {
+            <MudImage Src="@Entry.CoverUrl" Alt="@($"{Entry.Title} cover")" Class="mh-row-cover" />
+        }
+        else
+        {
+            <div class="mh-cover-placeholder" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
+            </div>
+        }
+    </div>
 
-            <MangaBento Columns="7" ItemMinHeight="52" RowHeight="52" Class="mh-entry-bento">
+    <MudCardContent Class="mh-bento-card-content">
+        <MangaBento Columns="7" ItemMinHeight="52" RowHeight="52" Class="mh-entry-bento">
             <MangaBentoTile ColSpan="4" RowSpan="4" Scheme="soft">
                 <div class="mh-entry-main">
                     <div class="mh-entry-topline">
@@ -106,8 +103,7 @@
                     <MudText Typo="Typo.caption" Class="mh-mobile-hide">First published</MudText>
                 </div>
             </MangaBentoTile>
-            </MangaBento>
-        </div>
+        </MangaBento>
 
         <MudCardActions Class="mh-bento-card-actions">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
