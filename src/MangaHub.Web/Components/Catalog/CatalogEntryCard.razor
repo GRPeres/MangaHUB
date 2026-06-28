@@ -28,15 +28,6 @@
                         </div>
 
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
-                            @if (!string.IsNullOrWhiteSpace(SourceLabel))
-                            {
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="@SourceColor"
-                                         Variant="@SourceVariant"
-                                         Class="mh-click-chip"
-                                         OnClick="FilterBySource">@SourceLabel</MudChip>
-                            }
                             @if (!string.IsNullOrWhiteSpace(Entry.Category))
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@Entry.Category</MudChip>
@@ -49,18 +40,6 @@
                     </div>
 
                     <MudStack Row="true" Spacing="1" Class="mh-chip-row mh-secondary-tags flex-wrap">
-                        @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.MediaType</MudChip>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(Entry.PublishingStatus))
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.PublishingStatus</MudChip>
-                        }
-                        @if (Entry.FirstPublishYear is not null)
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.FirstPublishYear</MudChip>
-                        }
                         @if (!string.IsNullOrWhiteSpace(Entry.MangaDexUrl))
                         {
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">MangaDex</MudChip>
@@ -89,17 +68,17 @@
 
             <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="secondary" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Metadata</MudText>
+                    <MudText Typo="Typo.overline">Chapters</MudText>
                     <strong>@ChapterCountLabel</strong>
-                    <span>@VolumeCountLabel</span>
+                    <span class="mh-mobile-hide">Current count</span>
                 </div>
             </MangaBentoTile>
 
             <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="soft" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Shelf</MudText>
-                    <MudText Typo="Typo.h3">@ShelfLabel</MudText>
-                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Availability</MudText>
+                    <MudText Typo="Typo.overline">Volumes</MudText>
+                    <MudText Typo="Typo.h3">@VolumeCountLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Current count</MudText>
                 </div>
             </MangaBentoTile>
 
@@ -121,9 +100,9 @@
 
             <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="ink" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Read from</MudText>
-                    <MudText Typo="Typo.h3">@ReadSourceLabel</MudText>
-                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Link</MudText>
+                    <MudText Typo="Typo.overline">Year</MudText>
+                    <MudText Typo="Typo.h3">@FirstYearLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">First published</MudText>
                 </div>
             </MangaBentoTile>
         </MangaBento>

@@ -16,13 +16,12 @@ public partial class ShelfEntryCard
     private string GenreLabel => FirstNonEmpty(Entry.Category, Entry.CatalogCategory);
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "");
     private string SourceOrManualLabel => FirstNonEmpty(SourceLabel, "Manual");
-    private string FormatLabel => FirstNonEmpty(Entry.MediaType, GenreLabel, "Unknown");
     private string ScoreLabel => Entry.Score is null ? "Not scored" : $"{Entry.Score}/5";
     private string ReadSourceLabel => !string.IsNullOrWhiteSpace(Entry.MangaDexUrl)
         ? "MangaDex"
         : Entry.LocalSeriesId is not null ? "Local" : "Unlinked";
-    private string CurrentChapterLabel => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Current: not started" : $"Current: ch. {Entry.CurrentChapter}";
-    private string LatestChapterLabel => Entry.ChapterCount is null ? "Latest: unknown" : $"Latest: ch. {Entry.ChapterCount}";
+    private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
+    private string LatestChapterValue => Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
     private bool IsStatusFilterActive => string.Equals(ActiveStatusFilter, StatusLabel, StringComparison.OrdinalIgnoreCase);
     private string StatusFilterHint => IsStatusFilterActive ? "Filtered" : "Click to filter";
     private Variant StatusVariant => IsStatusFilterActive ? Variant.Filled : Variant.Outlined;

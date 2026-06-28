@@ -28,39 +28,21 @@
                         </div>
 
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Color="@StatusColor"
-                                     Variant="@StatusVariant"
-                                     Class="mh-click-chip"
-                                     OnClick="FilterByStatus">@StatusLabel</MudChip>
-                            @if (Entry.Score is not null)
+                            @if (!string.IsNullOrWhiteSpace(GenreLabel))
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@($"{Entry.Score}/5")</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@GenreLabel</MudChip>
                             }
-                            @if (!string.IsNullOrWhiteSpace(SourceLabel))
+                            @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">@SourceLabel</MudChip>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.MediaType</MudChip>
                             }
                         </MudStack>
                     </div>
 
                     <MudStack Row="true" Spacing="1" Class="mh-chip-row mh-secondary-tags flex-wrap">
-                        @if (!string.IsNullOrWhiteSpace(GenreLabel))
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GenreLabel</MudChip>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(Entry.MediaType))
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.MediaType</MudChip>
-                        }
                         @if (!string.IsNullOrWhiteSpace(Entry.PublishingStatus))
                         {
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.PublishingStatus</MudChip>
-                        }
-                        @if (Entry.ChapterCount is not null)
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@($"{Entry.ChapterCount} ch.")</MudChip>
                         }
                         @if (Entry.VolumeCount is not null)
                         {
@@ -99,13 +81,21 @@
 
             <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="secondary" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Progress</MudText>
-                    <strong>@CurrentChapterLabel</strong>
-                    <span>@LatestChapterLabel</span>
+                    <MudText Typo="Typo.overline">Current</MudText>
+                    <MudText Typo="Typo.h3">@CurrentChapterValue</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Chapter</MudText>
                 </div>
             </MangaBentoTile>
 
             <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="soft" Class="mh-entry-stat-tile">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Newest</MudText>
+                    <MudText Typo="Typo.h3">@LatestChapterValue</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Known chapter</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="primary" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Score</MudText>
                     <MudText Typo="Typo.h3">@ScoreLabel</MudText>
@@ -113,27 +103,19 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="primary" Class="mh-entry-stat-tile">
-                <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Format</MudText>
-                    <MudText Typo="Typo.h3">@FormatLabel</MudText>
-                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">@GenreLabel</MudText>
-                </div>
-            </MangaBentoTile>
-
             <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="warm" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Source</MudText>
-                    <MudText Typo="Typo.h3">@SourceOrManualLabel</MudText>
-                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Metadata</MudText>
+                    <MudText Typo="Typo.overline">Read from</MudText>
+                    <MudText Typo="Typo.h3">@ReadSourceLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Reader link</MudText>
                 </div>
             </MangaBentoTile>
 
             <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="ink" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Read from</MudText>
-                    <MudText Typo="Typo.h3">@ReadSourceLabel</MudText>
-                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Link</MudText>
+                    <MudText Typo="Typo.overline">Metadata</MudText>
+                    <MudText Typo="Typo.h3">@SourceOrManualLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Catalog source</MudText>
                 </div>
             </MangaBentoTile>
         </MangaBento>
