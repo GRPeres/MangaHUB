@@ -200,6 +200,34 @@ html body .mh-row-card .mh-bento-host .bzb-item {
     min-height: 0 !important;
 }
 
+html body .mh-row-card {
+    align-items: stretch !important;
+    display: grid !important;
+    grid-template-columns: 116px minmax(0, 1fr) !important;
+    min-height: 176px !important;
+    overflow: hidden !important;
+}
+
+html body .mh-row-card > .mh-cover-frame {
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)) !important;
+    border-right: 1px solid var(--mud-palette-divider) !important;
+    min-height: 100% !important;
+    overflow: hidden !important;
+}
+
+html body .mh-row-card > .mh-cover-frame .mh-row-cover {
+    display: block !important;
+    height: 100% !important;
+    min-height: 176px !important;
+    object-fit: cover !important;
+    width: 100% !important;
+}
+
+html body .mh-row-card > .mh-bento-card-content,
+html body .mh-row-card > .mud-card-content.mh-bento-card-content {
+    min-width: 0 !important;
+}
+
 html body .mh-row-card .mh-bento-card-actions,
 html body .mh-row-card .mud-card-actions.mh-bento-card-actions {
     align-items: center !important;
@@ -285,6 +313,23 @@ html body .mh-row-card .mud-card-actions.mh-bento-card-actions {
 }
 
 @media (max-width: 600px) {
+    html body .mh-row-card {
+        grid-template-columns: 1fr !important;
+    }
+
+    html body .mh-row-card > .mh-cover-frame {
+        border-bottom: 1px solid var(--mud-palette-divider) !important;
+        border-right: 0 !important;
+        max-height: 280px !important;
+    }
+
+    html body .mh-row-card > .mh-cover-frame .mh-row-cover {
+        height: 280px !important;
+        max-height: 280px !important;
+        min-height: 280px !important;
+        width: 100% !important;
+    }
+
     html body .mh-row-card .mh-bento-host,
     html body .mh-row-card .mh-bento-host .mh-bento-grid,
     html body .mh-row-card .mh-bento-host .bzb-grid {
