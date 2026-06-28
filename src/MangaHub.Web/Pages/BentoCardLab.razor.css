@@ -1,9 +1,0 @@
-.mh-card-lab {
-    padding-bottom: 2rem;
-}
-
-@media (max-width: 640px) {
-    .mh-card-lab {
-        gap: 1rem;
-    }
-}
