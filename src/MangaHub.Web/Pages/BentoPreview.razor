@@ -113,7 +113,7 @@
         </MudStack>
 
         <MangaBento Columns="4" Class="mh-preview-card-bento">
-            <MangaBentoTile RowSpan="2" Scheme="deep" Class="mh-preview-cover-tile">
+            <MangaBentoTile RowSpan="3" Scheme="deep" Class="mh-preview-cover-tile">
                 <div class="mh-preview-cover mh-preview-cover-dandadan">
                     <span>D</span>
                 </div>
@@ -152,13 +152,27 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="2" Scheme="ink">
-                <div class="mh-preview-card-actions">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories">Read</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit">Edit shelf</MudButton>
+            <MangaBentoTile Scheme="soft" CornerIcon="@Icons.Material.Filled.Category">
+                <div class="mh-preview-stat">
+                    <MudText Typo="Typo.overline">Format</MudText>
+                    <MudText Typo="Typo.h3">Manga</MudText>
+                    <MudText Typo="Typo.caption">Supernatural</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile Scheme="ink" CornerIcon="@Icons.Material.Filled.Link">
+                <div class="mh-preview-stat">
+                    <MudText Typo="Typo.overline">Read from</MudText>
+                    <MudText Typo="Typo.h3">2 sources</MudText>
+                    <MudText Typo="Typo.caption">MangaDex + local</MudText>
                 </div>
             </MangaBentoTile>
         </MangaBento>
+
+        <div class="mh-preview-card-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories">Read</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit">Edit shelf</MudButton>
+        </div>
     </section>
 
     <section class="mh-preview-card-shell">
@@ -168,7 +182,7 @@
         </MudStack>
 
         <MangaBento Columns="4" Class="mh-preview-card-bento">
-            <MangaBentoTile RowSpan="2" Scheme="ink" Class="mh-preview-cover-tile">
+            <MangaBentoTile RowSpan="3" Scheme="ink" Class="mh-preview-cover-tile">
                 <div class="mh-preview-cover mh-preview-cover-berserk">
                     <span>B</span>
                 </div>
@@ -207,13 +221,27 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="2" Scheme="warm">
-                <div class="mh-preview-card-actions">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit">Edit metadata</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.PlaylistAdd">Add to shelf</MudButton>
+            <MangaBentoTile Scheme="deep" CornerIcon="@Icons.Material.Filled.CalendarMonth">
+                <div class="mh-preview-stat">
+                    <MudText Typo="Typo.overline">First year</MudText>
+                    <MudText Typo="Typo.h2">1989</MudText>
+                    <MudText Typo="Typo.caption">Catalog fact</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.CheckCircle">
+                <div class="mh-preview-stat">
+                    <MudText Typo="Typo.overline">Shelf</MudText>
+                    <MudText Typo="Typo.h3">Not added</MudText>
+                    <MudText Typo="Typo.caption">Available</MudText>
                 </div>
             </MangaBentoTile>
         </MangaBento>
+
+        <div class="mh-preview-card-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit">Edit metadata</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.PlaylistAdd">Add to shelf</MudButton>
+        </div>
     </section>
 </MudStack>
 
