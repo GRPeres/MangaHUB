@@ -255,6 +255,8 @@
         .Where(MatchesCategory)
         .Where(MatchesAvailability)
         .Where(MatchesScore)
+        .OrderBy(StatusSortRank)
+        .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
     private List<string> CategoryOptions => entries
@@ -305,6 +307,17 @@
         "5" => entry.Score == 5,
         _ => true
     };
+
+    private static int StatusSortRank(MangaEntryResponse entry) =>
+        (entry.ReadingStatus ?? "").ToLowerInvariant() switch
+        {
+            "reading" => 0,
+            "paused" => 1,
+            "planned" => 2,
+            "done" => 3,
+            "dropped" => 4,
+            _ => 5
+        };
 
     private static int Count(string value) => string.IsNullOrWhiteSpace(value) ? 0 : 1;
 
