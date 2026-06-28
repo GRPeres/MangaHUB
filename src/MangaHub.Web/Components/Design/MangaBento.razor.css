@@ -23,6 +23,11 @@
     max-width: none;
 }
 
+.mh-bento-host ::deep .mh-bento-grid.mh-entry-bento {
+    --bzb-item-min-height: 52px;
+    --bzb-row-height: 52px;
+}
+
 .mh-bento-host ::deep .mh-bento-grid .bzb-item {
     background: transparent !important;
     border: 0 !important;
@@ -44,5 +49,10 @@
 @media (max-width: 600px) {
     .mh-bento-host ::deep .mh-bento-grid {
         gap: 4px !important;
+    }
+
+    .mh-bento-host ::deep .mh-bento-grid.mh-entry-bento {
+        --bzb-item-min-height: 48px;
+        --bzb-row-height: 48px;
     }
 }
