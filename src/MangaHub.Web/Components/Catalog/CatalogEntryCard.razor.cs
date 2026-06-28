@@ -10,7 +10,12 @@ public partial class CatalogEntryCard
     [Parameter] public EventCallback<CatalogMangaResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<string> OnSourceFilter { get; set; }
 
+    private bool metadataOpen;
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "", "Manual");
+    private List<string> CategoryLabels => SplitLabels(Entry.Category);
+    private List<string> VisibleCategoryLabels => CategoryLabels.Take(2).ToList();
+    private bool HasHiddenCategories => CategoryLabels.Count > VisibleCategoryLabels.Count;
+    private int HiddenCategoryCount => Math.Max(0, CategoryLabels.Count - VisibleCategoryLabels.Count);
     private string ChapterCountLabel => Entry.ChapterCount is null ? "Unknown" : Entry.ChapterCount.Value.ToString();
     private string VolumeCountLabel => Entry.VolumeCount is null ? "Unknown" : Entry.VolumeCount.Value.ToString();
     private string FirstYearLabel => Entry.FirstPublishYear is null ? "Unknown" : Entry.FirstPublishYear.Value.ToString();
@@ -43,9 +48,18 @@ public partial class CatalogEntryCard
 
     private Task Edit() => OnEdit.InvokeAsync(Entry);
     private Task FilterBySource() => OnSourceFilter.InvokeAsync(SourceLabel);
+    private string MetadataTitleId => $"catalog-metadata-{Entry.Id:N}";
+    private void OpenMetadata() => metadataOpen = true;
+    private void CloseMetadata() => metadataOpen = false;
 
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
+
+    private static List<string> SplitLabels(string value) =>
+        (value ?? "").Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private static string SourceName(string source) => source.ToLowerInvariant() switch
     {

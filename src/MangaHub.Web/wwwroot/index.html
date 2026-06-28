@@ -6,10 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MangaHub</title>
     <base href="/" />
+    <script>
+        window.mangaHubTheme = {
+            apply: function (theme) {
+                var isDark = theme === "dark" || theme === true;
+                document.documentElement.classList.toggle("mh-theme-dark", isDark);
+                document.documentElement.classList.toggle("mh-theme-light", !isDark);
+            }
+        };
+
+        try {
+            window.mangaHubTheme.apply(localStorage.getItem("mangahub_theme") || "light");
+        } catch {
+            window.mangaHubTheme.apply("light");
+        }
+    </script>
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="css/app.css?v=8" />
+    <link rel="stylesheet" href="css/app.css?v=9" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <link href="MangaHub.Web.styles.css?v=8" rel="stylesheet" />
+    <link href="MangaHub.Web.styles.css?v=9" rel="stylesheet" />
 </head>
 
 <body>

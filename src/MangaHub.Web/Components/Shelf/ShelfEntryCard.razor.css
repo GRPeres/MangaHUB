@@ -154,11 +154,36 @@
     cursor: pointer;
 }
 
-.mh-row-summary {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
+::deep .mh-card-chip {
+    max-width: 11rem;
+}
+
+::deep .mh-card-chip .mud-chip-content {
+    display: block;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mh-row-summary {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: -webkit-box;
+    font: inherit;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+}
+
+.mh-row-summary:hover,
+.mh-row-summary:focus-visible {
+    color: var(--mud-palette-primary);
+    outline: none;
 }
 
 .mh-row-notes {

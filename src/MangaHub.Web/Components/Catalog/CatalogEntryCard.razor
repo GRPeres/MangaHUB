@@ -30,16 +30,27 @@
                         </div>
 
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
-                            @if (!string.IsNullOrWhiteSpace(Entry.Category))
+                            @foreach (var category in VisibleCategoryLabels)
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@Entry.Category</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@category</MudChip>
+                            }
+                            @if (HasHiddenCategories)
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="Color.Primary"
+                                         Variant="Variant.Outlined"
+                                         Class="mh-card-chip mh-click-chip"
+                                         OnClick="OpenMetadata">+@HiddenCategoryCount</MudChip>
                             }
                         </MudStack>
                     </div>
 
                 @if (!string.IsNullOrWhiteSpace(Entry.Description))
                 {
-                    <MudText Typo="Typo.body2" Class="mh-row-summary">@Entry.Description</MudText>
+                    <button type="button" class="mh-row-summary" @onclick="OpenMetadata">
+                        @Entry.Description
+                    </button>
                 }
 
                     <div class="mh-entry-context mh-mobile-hide">
@@ -107,3 +118,47 @@
         </MudCardActions>
     </MudCardContent>
 </MudCard>
+
+@if (metadataOpen)
+{
+    <div class="mh-modal-backdrop" @onclick="CloseMetadata">
+        <section class="mh-modal mh-card-metadata-modal" role="dialog" aria-modal="true" aria-labelledby="@MetadataTitleId" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Spacing="1">
+                        <MudText id="@MetadataTitleId" Typo="Typo.h2">@Entry.Title</MudText>
+                        @if (!string.IsNullOrWhiteSpace(Entry.Authors))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
+                        }
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CloseMetadata" aria-label="Close catalog metadata" />
+                </MudStack>
+
+                @if (CategoryLabels.Count > 0)
+                {
+                    <MudStack Row="true" Spacing="1" Class="flex-wrap">
+                        @foreach (var category in CategoryLabels)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@category</MudChip>
+                        }
+                    </MudStack>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Entry.Description))
+                {
+                    <MudText Typo="Typo.body1">@Entry.Description</MudText>
+                }
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Source</MudText><MudText Typo="Typo.body2">@SourceLabel</MudText></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Chapters</MudText><MudText Typo="Typo.body2">@ChapterCountLabel</MudText></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Volumes</MudText><MudText Typo="Typo.body2">@VolumeCountLabel</MudText></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Format</MudText><MudText Typo="Typo.body2">@FormatLabel</MudText></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.body2">@PublishingLabel</MudText></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Reader setup</MudText><MudText Typo="Typo.body2">@ReaderLinksLabel</MudText></MudItem>
+                </MudGrid>
+            </MudStack>
+        </section>
+    </div>
+}

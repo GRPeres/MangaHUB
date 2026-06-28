@@ -12,8 +12,14 @@ public partial class ShelfEntryCard
     [Parameter] public EventCallback<Guid> OnRead { get; set; }
     [Parameter] public EventCallback<string> OnStatusFilter { get; set; }
 
+    private bool metadataOpen;
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
     private string GenreLabel => FirstNonEmpty(Entry.Category, Entry.CatalogCategory);
+    private List<string> GenreLabels => SplitLabels(GenreLabel);
+    private List<string> VisibleGenreLabels => GenreLabels.Take(2).ToList();
+    private bool HasHiddenGenres => GenreLabels.Count > VisibleGenreLabels.Count;
+    private int HiddenGenreCount => Math.Max(0, GenreLabels.Count - VisibleGenreLabels.Count);
+    private string DescriptionText => FirstNonEmpty(Entry.Summary, Entry.Description);
     private string ScoreLabel => Entry.Score is null ? "Not scored" : $"{Entry.Score}/5";
     private string ReadSourceLabel => !string.IsNullOrWhiteSpace(Entry.MangaDexUrl)
         ? "MangaDex"
@@ -62,9 +68,18 @@ public partial class ShelfEntryCard
     private Task Edit() => OnEdit.InvokeAsync(Entry);
     private Task Read() => OnRead.InvokeAsync(Entry.Id);
     private Task FilterByStatus() => OnStatusFilter.InvokeAsync(StatusLabel);
+    private string MetadataTitleId => $"shelf-metadata-{Entry.Id:N}";
+    private void OpenMetadata() => metadataOpen = true;
+    private void CloseMetadata() => metadataOpen = false;
 
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
+
+    private static List<string> SplitLabels(string value) =>
+        (value ?? "").Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private bool TryGetCurrentChapterNumber(out int chapter)
     {

@@ -29,6 +29,7 @@ public sealed class ThemePreferenceService(IJSRuntime js)
         try
         {
             await js.InvokeVoidAsync("localStorage.setItem", StorageKey, darkMode ? "dark" : "light");
+            await js.InvokeVoidAsync("mangaHubTheme.apply", darkMode ? "dark" : "light");
         }
         catch
         {

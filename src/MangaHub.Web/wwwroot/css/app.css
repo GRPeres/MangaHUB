@@ -4,6 +4,20 @@ body {
     margin: 0;
 }
 
+html.mh-theme-light,
+html.mh-theme-light body {
+    background: #ffffff;
+    color: #271333;
+    color-scheme: light;
+}
+
+html.mh-theme-dark,
+html.mh-theme-dark body {
+    background: #0f0718;
+    color: #f7f2ff;
+    color-scheme: dark;
+}
+
 a {
     color: inherit;
     text-decoration: none;
@@ -156,6 +170,10 @@ a {
     max-width: 760px;
 }
 
+.mh-card-metadata-modal {
+    max-width: 860px;
+}
+
 .reader-toolbar {
     align-items: center;
     display: flex;
@@ -278,6 +296,14 @@ html body .mh-row-card .mud-card-actions.mh-bento-card-actions {
 .loading-progress circle:last-child {
     stroke: #7c3aed;
     stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * .8), 500%;
+}
+
+html.mh-theme-dark .loading-progress circle {
+    stroke: #3d2855;
+}
+
+html.mh-theme-dark .loading-progress circle:last-child {
+    stroke: #c4b5fd;
 }
 
 .loading-progress-text {
