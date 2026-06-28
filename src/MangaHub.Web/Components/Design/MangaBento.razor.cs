@@ -10,5 +10,6 @@ public partial class MangaBento
     [Parameter] public bool AnimationEnabled { get; set; } = true;
     [Parameter] public string Class { get; set; } = "";
 
+    private string HostClass => $"mh-bento-host {Class}".Trim();
     private string GridClass => $"mh-bento-grid {Class}".Trim();
 }

@@ -28,6 +28,12 @@
     --bzb-row-height: 52px;
 }
 
+.mh-bento-host.mh-entry-bento,
+.mh-bento-host.mh-entry-bento ::deep .mh-bento-grid {
+    --bzb-item-min-height: 52px;
+    --bzb-row-height: 52px;
+}
+
 .mh-bento-host ::deep .mh-bento-grid .bzb-item {
     background: transparent !important;
     border: 0 !important;
@@ -52,6 +58,12 @@
     }
 
     .mh-bento-host ::deep .mh-bento-grid.mh-entry-bento {
+        --bzb-item-min-height: 48px;
+        --bzb-row-height: 48px;
+    }
+
+    .mh-bento-host.mh-entry-bento,
+    .mh-bento-host.mh-entry-bento ::deep .mh-bento-grid {
         --bzb-item-min-height: 48px;
         --bzb-row-height: 48px;
     }
