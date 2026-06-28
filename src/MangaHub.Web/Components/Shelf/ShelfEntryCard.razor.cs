@@ -26,6 +26,15 @@ public partial class ShelfEntryCard
         : Entry.LocalSeriesId is not null ? "Local" : "Unlinked";
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
     private string LatestChapterValue => Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
+    private int NewChapterCount => Entry.ChapterCount is not null && TryGetCurrentChapterNumber(out var currentChapter)
+        ? Math.Max(0, Entry.ChapterCount.Value - currentChapter)
+        : 0;
+    private bool HasNewChapters => NewChapterCount > 0;
+    private string ProgressHint => HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
+    private string ProgressScheme => HasNewChapters ? "warm" : "secondary";
+    private string MangaDexSyncLabel => Entry.MangaDexLastSyncedAt is null
+        ? "Not checked yet"
+        : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
     private string FormatLabel => FirstNonEmpty(Entry.MediaType, GenreLabel, "Unknown");
     private string FirstYearLabel => Entry.FirstPublishYear is null ? "Unknown" : Entry.FirstPublishYear.Value.ToString();
     private string VolumeCountLabel => Entry.VolumeCount is null ? "Unknown" : Entry.VolumeCount.Value.ToString();

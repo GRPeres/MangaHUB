@@ -9,4 +9,7 @@ public sealed class MangaHubOptions
     public bool SessionCookieSecure { get; set; }
     public string SessionCookieSameSite { get; set; } = "Lax";
     public string MyAnimeListClientId { get; set; } = "";
+    public int MangaDexSyncIntervalHours { get; set; } = 24;
+    public int MangaDexSyncDelayMilliseconds { get; set; } = 1500;
+    public int MangaDexSyncBatchSize { get; set; } = 50;
 }

@@ -30,6 +30,7 @@ public static class ApiMapping
             shelf.ReadingStatus,
             entry.MangaDexUrl,
             entry.MangaDexId,
+            entry.MangaDexLastSyncedAt,
             entry.LocalSeriesId,
             shelf.CurrentChapter,
             shelf.Score,
@@ -55,6 +56,7 @@ public static class ApiMapping
             entry.VolumeCount,
             entry.MangaDexUrl,
             entry.MangaDexId,
+            entry.MangaDexLastSyncedAt,
             entry.LocalSeriesId,
             isInMyShelf);
 }

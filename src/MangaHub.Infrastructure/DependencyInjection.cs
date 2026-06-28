@@ -28,6 +28,11 @@ public static class DependencyInjection
         services.AddHttpClient<IOpenLibraryClient, OpenLibraryClient>(client => client.BaseAddress = new Uri("https://openlibrary.org"));
         services.AddHttpClient<IMyAnimeListClient, MyAnimeListClient>(client => client.BaseAddress = new Uri("https://api.myanimelist.net/v2/"));
         services.AddHttpClient<MangaDexSource>(client => client.BaseAddress = new Uri("https://api.mangadex.org"));
+        services.AddHttpClient("mangadex-sync", client =>
+        {
+            client.BaseAddress = new Uri("https://api.mangadex.org");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("MangaHub/0.1 self-hosted catalog sync");
+        });
         services.AddScoped<IMangaSource, LocalMangaSource>();
         services.AddScoped<IMangaSource, MangaDexSource>();
         services.AddScoped<MangaSourceRegistry>();

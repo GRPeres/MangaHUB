@@ -39,6 +39,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
                 x.ReadingStatus,
                 x.MangaEntry.MangaDexUrl,
                 x.MangaEntry.MangaDexId,
+                x.MangaEntry.MangaDexLastSyncedAt,
                 x.MangaEntry.LocalSeriesId,
                 x.CurrentChapter,
                 x.Score,

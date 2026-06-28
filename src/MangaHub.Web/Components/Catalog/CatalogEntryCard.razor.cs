@@ -22,6 +22,9 @@ public partial class CatalogEntryCard
     private string FormatLabel => FirstNonEmpty(Entry.MediaType, Entry.Category, "Unknown");
     private string PublishingLabel => FirstNonEmpty(Entry.PublishingStatus, "Unknown");
     private string ShelfAvailabilityLabel => Entry.IsInMyShelf ? "Already on shelf" : "Ready to add";
+    private string MangaDexSyncLabel => Entry.MangaDexLastSyncedAt is null
+        ? "Not checked yet"
+        : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
     private string CatalogReferenceLabel => (Entry.MyAnimeListId, Entry.OpenLibraryKey) switch
     {
         ({ Length: > 0 }, { Length: > 0 }) => "MAL + OpenLibrary",

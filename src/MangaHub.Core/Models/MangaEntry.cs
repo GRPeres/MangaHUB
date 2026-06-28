@@ -19,6 +19,7 @@ public sealed class MangaEntry
     public int? VolumeCount { get; set; }
     public string MangaDexUrl { get; set; } = "";
     public string MangaDexId { get; set; } = "";
+    public DateTimeOffset? MangaDexLastSyncedAt { get; set; }
     public Guid? LocalSeriesId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

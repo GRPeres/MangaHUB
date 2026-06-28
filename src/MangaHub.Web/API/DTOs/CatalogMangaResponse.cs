@@ -17,5 +17,6 @@ public sealed record CatalogMangaResponse(
     int? VolumeCount,
     string MangaDexUrl,
     string MangaDexId,
+    DateTimeOffset? MangaDexLastSyncedAt,
     Guid? LocalSeriesId,
     bool IsInMyShelf);

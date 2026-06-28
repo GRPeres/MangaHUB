@@ -35,6 +35,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.Property(x => x.MediaType).HasMaxLength(80);
             entity.Property(x => x.PublishingStatus).HasMaxLength(80);
             entity.Property(x => x.MangaDexId).HasMaxLength(80);
+            entity.HasIndex(x => x.MangaDexLastSyncedAt);
         });
 
         modelBuilder.Entity<UserMangaEntry>(entity =>

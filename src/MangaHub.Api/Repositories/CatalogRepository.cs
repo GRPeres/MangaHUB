@@ -56,6 +56,7 @@ public sealed class CatalogRepository(MangaHubDbContext db)
                 x.VolumeCount,
                 x.MangaDexUrl,
                 x.MangaDexId,
+                x.MangaDexLastSyncedAt,
                 x.LocalSeriesId,
                 shelfIds.Contains(x.Id)))
             .ToListAsync(cancellationToken);

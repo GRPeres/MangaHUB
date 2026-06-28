@@ -43,6 +43,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "VolumeCount" integer NULL,
                 "MangaDexUrl" text NOT NULL,
                 "MangaDexId" character varying(80) NOT NULL,
+                "MangaDexLastSyncedAt" timestamp with time zone NULL,
                 "LocalSeriesId" uuid NULL,
                 "CreatedAt" timestamp with time zone NOT NULL,
                 "UpdatedAt" timestamp with time zone NOT NULL
@@ -57,6 +58,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "PublishingStatus" character varying(80) NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ChapterCount" integer NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "VolumeCount" integer NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastSyncedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "UserId" uuid NULL;
             ALTER TABLE manga_entries ALTER COLUMN "UserId" DROP NOT NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReadingStatus" character varying(40) NULL;
@@ -106,6 +108,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
 
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_OpenLibraryKey" ON manga_entries ("OpenLibraryKey");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MyAnimeListId" ON manga_entries ("MyAnimeListId");
+            CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastSyncedAt" ON manga_entries ("MangaDexLastSyncedAt");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_MangaEntryId" ON user_manga_entries ("UserId", "MangaEntryId");
             """);
     }

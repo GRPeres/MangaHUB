@@ -125,6 +125,14 @@ a {
     justify-content: flex-end;
 }
 
+.mh-shelf-title-row {
+    min-width: 0;
+}
+
+.mh-new-chapter-bubble {
+    flex: 0 0 auto;
+}
+
 .mh-filter {
     min-width: 180px;
 }

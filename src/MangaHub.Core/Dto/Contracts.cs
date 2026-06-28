@@ -60,6 +60,7 @@ public sealed record MangaEntryResponse(
     string ReadingStatus,
     string MangaDexUrl,
     string MangaDexId,
+    DateTimeOffset? MangaDexLastSyncedAt,
     Guid? LocalSeriesId,
     string CurrentChapter,
     int? Score,
@@ -83,6 +84,7 @@ public sealed record CatalogMangaResponse(
     int? VolumeCount,
     string MangaDexUrl,
     string MangaDexId,
+    DateTimeOffset? MangaDexLastSyncedAt,
     Guid? LocalSeriesId,
     bool IsInMyShelf);
 public sealed record AddToShelfRequest(
