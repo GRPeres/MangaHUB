@@ -3,8 +3,10 @@
     --bzb-gap: 4px;
     --bzb-item-padding: 0;
     --bzb-item-radius: 8px;
-    --bzb-item-min-height: 116px;
-    --bzb-row-height: 116px;
+    --mh-bento-item-min-height: 116px;
+    --mh-bento-row-height: 116px;
+    --bzb-item-min-height: var(--mh-bento-item-min-height);
+    --bzb-row-height: var(--mh-bento-row-height);
 }
 
 .mh-bento-host ::deep .mh-bento-grid {
@@ -12,8 +14,8 @@
     --bzb-gap: 4px;
     --bzb-item-padding: 0;
     --bzb-item-radius: 8px;
-    --bzb-item-min-height: 116px;
-    --bzb-row-height: 116px;
+    --bzb-item-min-height: var(--mh-bento-item-min-height) !important;
+    --bzb-row-height: var(--mh-bento-row-height) !important;
     gap: 4px !important;
     padding: 0 !important;
 }
@@ -24,14 +26,14 @@
 }
 
 .mh-bento-host ::deep .mh-bento-grid.mh-entry-bento {
-    --bzb-item-min-height: 52px;
-    --bzb-row-height: 52px;
+    --mh-bento-item-min-height: 52px;
+    --mh-bento-row-height: 52px;
 }
 
 .mh-bento-host.mh-entry-bento,
 .mh-bento-host.mh-entry-bento ::deep .mh-bento-grid {
-    --bzb-item-min-height: 52px;
-    --bzb-row-height: 52px;
+    --mh-bento-item-min-height: 52px;
+    --mh-bento-row-height: 52px;
 }
 
 .mh-bento-host ::deep .mh-bento-grid .bzb-item {
@@ -58,13 +60,13 @@
     }
 
     .mh-bento-host ::deep .mh-bento-grid.mh-entry-bento {
-        --bzb-item-min-height: 48px;
-        --bzb-row-height: 48px;
+        --mh-bento-item-min-height: 48px;
+        --mh-bento-row-height: 48px;
     }
 
     .mh-bento-host.mh-entry-bento,
     .mh-bento-host.mh-entry-bento ::deep .mh-bento-grid {
-        --bzb-item-min-height: 48px;
-        --bzb-row-height: 48px;
+        --mh-bento-item-min-height: 48px;
+        --mh-bento-row-height: 48px;
     }
 }

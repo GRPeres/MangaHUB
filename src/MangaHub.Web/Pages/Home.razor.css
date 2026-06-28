@@ -1,6 +1,7 @@
 ::deep .mh-home-bento {
     --bzb-gap: 4px;
-    --bzb-row-height: 128px;
+    --mh-bento-item-min-height: 128px;
+    --mh-bento-row-height: 128px;
 }
 
 .mh-home-block {
@@ -29,7 +30,8 @@
     }
 
     ::deep .mh-home-bento {
-        --bzb-row-height: 94px;
+        --mh-bento-item-min-height: 94px;
+        --mh-bento-row-height: 94px;
     }
 
     .mh-home-block {
