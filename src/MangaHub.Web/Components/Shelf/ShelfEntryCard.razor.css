@@ -8,25 +8,28 @@
     height: 100%;
     justify-content: center;
     min-height: 100%;
+    overflow: hidden;
     width: 100%;
 }
 
 ::deep .mh-row-cover {
+    aspect-ratio: 2 / 3;
     border-radius: 8px;
     display: block;
     height: 100%;
     object-fit: cover;
-    width: 100%;
+    width: auto;
 }
 
 .mh-cover-placeholder {
     align-items: center;
+    aspect-ratio: 2 / 3;
     border-radius: 8px;
     color: var(--mud-palette-primary);
     display: flex;
     height: 100%;
     justify-content: center;
-    width: 100%;
+    width: auto;
 }
 
 ::deep .mh-cover-placeholder .mud-icon-root {
@@ -48,13 +51,17 @@
 }
 
 ::deep .mh-entry-cover-tile .mh-bento-tile {
-    padding: .35rem;
+    padding: .25rem;
+}
+
+::deep .mh-entry-bento .mh-bento-tile {
+    padding: .75rem;
 }
 
 .mh-entry-main {
     display: flex;
     flex-direction: column;
-    gap: .65rem;
+    gap: .45rem;
     height: 100%;
     justify-content: flex-start;
     min-width: 0;
@@ -63,16 +70,16 @@
 .mh-entry-topline {
     align-items: start;
     display: grid;
-    gap: .75rem;
+    gap: .5rem;
     grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .mh-entry-stat {
     display: flex;
     flex-direction: column;
-    gap: .15rem;
+    gap: .05rem;
     height: 100%;
-    justify-content: flex-end;
+    justify-content: center;
     min-width: 0;
 }
 
@@ -91,6 +98,14 @@
     margin-top: .1rem;
 }
 
+::deep .mh-row-title {
+    display: -webkit-box;
+    line-height: 1.1;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
 .mh-chip-row {
     align-items: center;
 }
@@ -102,7 +117,8 @@
 }
 
 ::deep .mh-secondary-tags {
-    margin-top: auto;
+    max-height: 56px;
+    overflow: hidden;
 }
 
 ::deep .mh-click-chip {
@@ -112,7 +128,7 @@
 .mh-row-summary {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     overflow: hidden;
 }
 
@@ -165,7 +181,7 @@
     }
 
     ::deep .mh-entry-stat-tile .mh-bento-tile {
-        padding: .75rem;
+        padding: .6rem;
     }
 
     ::deep .mh-bento-card-actions {
