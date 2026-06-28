@@ -1,7 +1,7 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <MudCardContent Class="mh-bento-card-content">
-        <MangaBento Columns="8" ItemMinHeight="52" RowHeight="52" Class="mh-entry-bento">
-            <MangaBentoTile ColSpan="1" RowSpan="4" Scheme="deep" Class="mh-entry-cover-tile">
+        <div class="mh-entry-card-body">
+            <section class="mh-cover-panel">
                 <div class="mh-cover-frame">
                 @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
                 {
@@ -14,8 +14,9 @@
                     </div>
                 }
                 </div>
-            </MangaBentoTile>
+            </section>
 
+            <MangaBento Columns="7" ItemMinHeight="52" RowHeight="52" Class="mh-entry-bento">
             <MangaBentoTile ColSpan="4" RowSpan="4" Scheme="primary">
                 <div class="mh-entry-main">
                     <div class="mh-entry-topline">
@@ -129,7 +130,8 @@
                     <MudText Typo="Typo.caption" Class="mh-mobile-hide">Reading queue</MudText>
                 </div>
             </MangaBentoTile>
-        </MangaBento>
+            </MangaBento>
+        </div>
 
         <MudCardActions Class="mh-bento-card-actions">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
