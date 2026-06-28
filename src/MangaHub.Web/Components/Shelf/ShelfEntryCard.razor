@@ -1,7 +1,7 @@
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <MudCardContent Class="mh-bento-card-content">
         <MangaBento Columns="8" ItemMinHeight="52" RowHeight="52" Class="mh-entry-bento">
-            <MangaBentoTile ColSpan="2" RowSpan="4" Scheme="deep" Class="mh-entry-cover-tile">
+            <MangaBentoTile ColSpan="1" RowSpan="4" Scheme="deep" Class="mh-entry-cover-tile">
                 <div class="mh-cover-frame">
                 @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
                 {
@@ -86,28 +86,10 @@
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mh-row-notes mh-mobile-hide">@Entry.Notes</MudText>
                 }
 
-                    <div class="mh-entry-facts mh-mobile-hide">
-                        <div>
-                            <span>Format</span>
-                            <strong>@FormatLabel</strong>
-                        </div>
-                        <div>
-                            <span>Source</span>
-                            <strong>@SourceOrManualLabel</strong>
-                        </div>
-                        <div>
-                            <span>Score</span>
-                            <strong>@ScoreLabel</strong>
-                        </div>
-                        <div>
-                            <span>Read from</span>
-                            <strong>@ReadSourceLabel</strong>
-                        </div>
-                    </div>
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="@StatusScheme" CornerIcon="@StatusIcon" OnClick="FilterByStatus" Class="mh-entry-stat-tile">
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="@StatusScheme" OnClick="FilterByStatus" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Status</MudText>
                     <MudText Typo="Typo.h3">@StatusLabel</MudText>
@@ -115,11 +97,43 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="secondary" CornerIcon="@Icons.Material.Filled.FormatListNumbered">
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="secondary" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Progress</MudText>
                     <strong>@CurrentChapterLabel</strong>
                     <span>@LatestChapterLabel</span>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="soft" Class="mh-entry-stat-tile">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Score</MudText>
+                    <MudText Typo="Typo.h3">@ScoreLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Personal</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="primary" Class="mh-entry-stat-tile">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Format</MudText>
+                    <MudText Typo="Typo.h3">@FormatLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">@GenreLabel</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="warm" Class="mh-entry-stat-tile">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Source</MudText>
+                    <MudText Typo="Typo.h3">@SourceOrManualLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Metadata</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="ink" Class="mh-entry-stat-tile">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Read from</MudText>
+                    <MudText Typo="Typo.h3">@ReadSourceLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Link</MudText>
                 </div>
             </MangaBentoTile>
         </MangaBento>
