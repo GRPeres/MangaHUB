@@ -1,0 +1,26 @@
+{
+  "name": "MangaHub",
+  "short_name": "MangaHub",
+  "description": "A self-hosted manga catalog and reading shelf.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#160d22",
+  "theme_color": "#6d3bb6",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icons/book.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

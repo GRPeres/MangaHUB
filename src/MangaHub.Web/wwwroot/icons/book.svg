@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MangaHub book logo">
+  <rect width="512" height="512" rx="112" fill="#160d22"/>
+  <path d="M142 128c0-21 17-38 38-38h88c32 0 61 11 84 30 8 7 18 7 26 0 7-6 15-11 24-16v282c-18 15-41 23-66 23h-78c-24 0-46 10-62 26-7 7-18 2-18-8V166c0-21-15-38-36-38z" fill="#8c5de8"/>
+  <path d="M110 128c0-21 17-38 38-38h26c-16 17-26 39-26 64v255c0 10-11 15-18 8-12-12-28-19-45-21-10-1-17-10-17-20V170c0-23 19-42 42-42z" fill="#f7f2ff"/>
+  <path d="M222 153h55c24 0 46 8 64 22v181c-18-9-38-14-59-14h-60V153z" fill="#fffaff" opacity=".92"/>
+  <path d="M371 153c17-13 38-21 61-21h13v244c0 10-7 19-17 20-20 2-40 9-57 21V153z" fill="#d8c9e8"/>
+  <path d="M232 205h82M232 253h82M232 301h60" stroke="#6d3bb6" stroke-width="22" stroke-linecap="round"/>
+</svg>

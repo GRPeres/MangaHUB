@@ -13,9 +13,9 @@ public partial class CatalogEntryCard
     private bool metadataOpen;
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "", "Manual");
     private List<string> CategoryLabels => SplitLabels(Entry.Category);
-    private List<string> VisibleCategoryLabels => CategoryLabels.Take(2).ToList();
-    private bool HasHiddenCategories => CategoryLabels.Count > VisibleCategoryLabels.Count;
-    private int HiddenCategoryCount => Math.Max(0, CategoryLabels.Count - VisibleCategoryLabels.Count);
+    private string VisibleCategoryLabel => CategoryLabels.Count == 0 ? "" : CompactCategoryLabel(CategoryLabels[0]);
+    private bool HasHiddenCategories => CategoryLabels.Count > 1;
+    private int HiddenCategoryCount => Math.Max(0, CategoryLabels.Count - 1);
     private string ChapterCountLabel => Entry.ChapterCount is null ? "Unknown" : Entry.ChapterCount.Value.ToString();
     private string VolumeCountLabel => Entry.VolumeCount is null ? "Unknown" : Entry.VolumeCount.Value.ToString();
     private string FirstYearLabel => Entry.FirstPublishYear is null ? "Unknown" : Entry.FirstPublishYear.Value.ToString();
@@ -60,6 +60,18 @@ public partial class CatalogEntryCard
             .Where(label => !string.IsNullOrWhiteSpace(label))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+    private static string CompactCategoryLabel(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length <= 14 && !trimmed.Any(char.IsWhiteSpace))
+        {
+            return trimmed;
+        }
+
+        var firstWord = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? trimmed;
+        return firstWord.Length <= 12 ? $"{firstWord}..." : $"{firstWord[..12]}...";
+    }
 
     private static string SourceName(string source) => source.ToLowerInvariant() switch
     {

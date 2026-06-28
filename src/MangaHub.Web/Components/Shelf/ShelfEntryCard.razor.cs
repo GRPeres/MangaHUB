@@ -16,9 +16,9 @@ public partial class ShelfEntryCard
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
     private string GenreLabel => FirstNonEmpty(Entry.Category, Entry.CatalogCategory);
     private List<string> GenreLabels => SplitLabels(GenreLabel);
-    private List<string> VisibleGenreLabels => GenreLabels.Take(2).ToList();
-    private bool HasHiddenGenres => GenreLabels.Count > VisibleGenreLabels.Count;
-    private int HiddenGenreCount => Math.Max(0, GenreLabels.Count - VisibleGenreLabels.Count);
+    private string VisibleGenreLabel => GenreLabels.Count == 0 ? "" : CompactCategoryLabel(GenreLabels[0]);
+    private bool HasHiddenGenres => GenreLabels.Count > 1;
+    private int HiddenGenreCount => Math.Max(0, GenreLabels.Count - 1);
     private string DescriptionText => FirstNonEmpty(Entry.Summary, Entry.Description);
     private string ScoreLabel => Entry.Score is null ? "Not scored" : $"{Entry.Score}/5";
     private string ReadSourceLabel => !string.IsNullOrWhiteSpace(Entry.MangaDexUrl)
@@ -80,6 +80,18 @@ public partial class ShelfEntryCard
             .Where(label => !string.IsNullOrWhiteSpace(label))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+    private static string CompactCategoryLabel(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length <= 14 && !trimmed.Any(char.IsWhiteSpace))
+        {
+            return trimmed;
+        }
+
+        var firstWord = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? trimmed;
+        return firstWord.Length <= 12 ? $"{firstWord}..." : $"{firstWord[..12]}...";
+    }
 
     private bool TryGetCurrentChapterNumber(out int chapter)
     {

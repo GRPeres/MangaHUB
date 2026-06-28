@@ -1,5 +1,10 @@
 <BzBentoItem ColSpan="@ColSpan" RowSpan="@RowSpan">
-    <section class="@TileClass" role="@Role" @onclick="OnClick">
+    <section class="@TileClass"
+             role="@Role"
+             tabindex="@TabIndex"
+             aria-label="@AriaLabel"
+             @onclick="OnClick"
+             @onkeydown="HandleKeyDown">
         @if (!string.IsNullOrWhiteSpace(CornerIcon))
         {
             <MudIcon Icon="@CornerIcon" Class="mh-bento-corner-icon" />

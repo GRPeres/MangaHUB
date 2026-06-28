@@ -18,7 +18,7 @@
 
     <MudCardContent Class="mh-bento-card-content">
         <MangaBento Columns="5" ItemMinHeight="52" RowHeight="52" Class="mh-entry-bento">
-            <MangaBentoTile ColSpan="4" RowSpan="4" Scheme="primary">
+            <MangaBentoTile ColSpan="4" RowSpan="4" Scheme="primary" OnClick="OpenMetadata" AriaLabel="@($"Open metadata for {Entry.Title}")">
                 <div class="mh-entry-main">
                     <div class="mh-entry-topline">
                         <div class="mh-title-block">
@@ -30,9 +30,9 @@
                         </div>
 
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
-                            @foreach (var category in VisibleGenreLabels)
+                            @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@category</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleGenreLabel</MudChip>
                             }
                             @if (HasHiddenGenres)
                             {
@@ -40,17 +40,16 @@
                                          Size="Size.Small"
                                          Color="Color.Primary"
                                          Variant="Variant.Outlined"
-                                         Class="mh-card-chip mh-click-chip"
-                                         OnClick="OpenMetadata">+@HiddenGenreCount</MudChip>
+                                         Class="mh-card-chip mh-count-chip">+@HiddenGenreCount</MudChip>
                             }
                         </MudStack>
                     </div>
 
                     @if (!string.IsNullOrWhiteSpace(DescriptionText))
                     {
-                        <button type="button" class="mh-row-summary" @onclick="OpenMetadata">
+                        <div class="mh-row-summary">
                             @DescriptionText
-                        </button>
+                        </div>
                     }
 
                 @if (!string.IsNullOrWhiteSpace(Entry.Notes))

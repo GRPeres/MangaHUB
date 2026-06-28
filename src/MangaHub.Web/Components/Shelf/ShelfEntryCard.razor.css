@@ -142,7 +142,9 @@
 ::deep .mh-primary-tags {
     justify-content: flex-end;
     max-width: min(260px, 46vw);
+    min-width: 0;
     text-align: right;
+    flex-wrap: nowrap !important;
 }
 
 ::deep .mh-secondary-tags {
@@ -150,12 +152,13 @@
     overflow: hidden;
 }
 
-::deep .mh-click-chip {
-    cursor: pointer;
+::deep .mh-count-chip {
+    flex: 0 0 auto;
 }
 
 ::deep .mh-card-chip {
-    max-width: 11rem;
+    max-width: 8rem;
+    min-width: 0;
 }
 
 ::deep .mh-card-chip .mud-chip-content {
@@ -169,7 +172,6 @@
     background: transparent;
     border: 0;
     color: inherit;
-    cursor: pointer;
     display: -webkit-box;
     font: inherit;
     -webkit-box-orient: vertical;
@@ -178,12 +180,6 @@
     padding: 0;
     text-align: left;
     width: 100%;
-}
-
-.mh-row-summary:hover,
-.mh-row-summary:focus-visible {
-    color: var(--mud-palette-primary);
-    outline: none;
 }
 
 .mh-row-notes {
