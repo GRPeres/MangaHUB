@@ -200,6 +200,18 @@ html body .mh-row-card .mh-bento-host .bzb-item {
     min-height: 0 !important;
 }
 
+html body .mh-row-card .mh-bento-card-actions,
+html body .mh-row-card .mud-card-actions.mh-bento-card-actions {
+    align-items: center !important;
+    border-top: 1px solid var(--mud-palette-divider) !important;
+    display: flex !important;
+    gap: .5rem !important;
+    justify-content: flex-end !important;
+    margin-top: .65rem !important;
+    padding: .75rem 0 0 !important;
+    width: 100% !important;
+}
+
 #blazor-error-ui {
     background: #fff7ed;
     bottom: 0;
@@ -285,5 +297,15 @@ html body .mh-row-card .mh-bento-host .bzb-item {
     html body .mh-row-card .mh-bento-host .mh-bento-grid,
     html body .mh-row-card .mh-bento-host .bzb-grid {
         grid-auto-rows: 48px !important;
+    }
+
+    html body .mh-row-card .mh-bento-card-actions,
+    html body .mh-row-card .mud-card-actions.mh-bento-card-actions {
+        justify-content: stretch !important;
+    }
+
+    html body .mh-row-card .mh-bento-card-actions .mud-button-root,
+    html body .mh-row-card .mud-card-actions.mh-bento-card-actions .mud-button-root {
+        flex: 1 1 0 !important;
     }
 }
