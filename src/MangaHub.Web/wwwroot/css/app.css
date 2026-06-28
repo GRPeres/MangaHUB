@@ -117,6 +117,14 @@ a {
     margin-bottom: .25rem;
 }
 
+.mh-page-heading {
+    min-width: 0;
+}
+
+.mh-page-actions {
+    justify-content: flex-end;
+}
+
 .mh-filter {
     min-width: 180px;
 }
@@ -352,6 +360,24 @@ html.mh-theme-dark .loading-progress circle:last-child {
 }
 
 @media (max-width: 720px) {
+    .mh-page-title {
+        align-items: start !important;
+        display: grid !important;
+        gap: .75rem !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+    }
+
+    .mh-page-kicker,
+    .mh-page-subtitle {
+        display: none !important;
+    }
+
+    .mh-page-actions {
+        align-items: center !important;
+        justify-content: flex-end !important;
+        justify-self: end;
+    }
+
     .mh-home-hero {
         grid-template-columns: 1fr;
     }

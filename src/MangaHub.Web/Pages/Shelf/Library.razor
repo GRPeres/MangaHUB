@@ -9,17 +9,16 @@
 
 <MudStack Spacing="4">
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mh-page-title">
-        <MudStack Spacing="1">
-            <MudText Typo="Typo.overline" Color="Color.Secondary">Personal tracker</MudText>
+        <MudStack Spacing="1" Class="mh-page-heading">
+            <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mh-page-kicker">Personal tracker</MudText>
             <MudText Typo="Typo.h1">Shelf</MudText>
         </MudStack>
-        <MudStack Row="true" Spacing="2" Class="flex-wrap">
+        <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
                 <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">Add manga</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportShelf">Import CSV</MudMenuItem>
             </MudMenu>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterList" OnClick="OpenFilters">@FilterButtonLabel</MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="Load">Refresh</MudButton>
         </MudStack>
     </MudStack>
 

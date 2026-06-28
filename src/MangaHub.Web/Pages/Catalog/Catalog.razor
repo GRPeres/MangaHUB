@@ -8,18 +8,17 @@
 
 <MudStack Spacing="4">
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mh-page-title">
-        <MudStack Spacing="1">
-            <MudText Typo="Typo.overline" Color="Color.Secondary">Admin catalog</MudText>
+        <MudStack Spacing="1" Class="mh-page-heading">
+            <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mh-page-kicker">Admin catalog</MudText>
             <MudText Typo="Typo.h1">Catalog</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Manage shared manga metadata, covers, OpenLibrary matches, MangaDex links, and local series bindings.</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mh-page-subtitle">Manage shared manga metadata, covers, OpenLibrary matches, MangaDex links, and local series bindings.</MudText>
         </MudStack>
-        <MudStack Row="true" Spacing="2" Class="flex-wrap">
+        <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
                 <MudMenuItem Icon="@Icons.Material.Filled.LibraryAdd" OnClick="OpenAddCatalog">Add manga</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportCatalog">Import CSV</MudMenuItem>
             </MudMenu>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterList" OnClick="OpenFilters">@FilterButtonLabel</MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadCatalog">Refresh</MudButton>
         </MudStack>
     </MudStack>
 
