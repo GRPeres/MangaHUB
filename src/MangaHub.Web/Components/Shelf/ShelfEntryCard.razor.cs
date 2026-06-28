@@ -15,13 +15,18 @@ public partial class ShelfEntryCard
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
     private string GenreLabel => FirstNonEmpty(Entry.Category, Entry.CatalogCategory);
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "");
-    private string SourceOrManualLabel => FirstNonEmpty(SourceLabel, "Manual");
     private string ScoreLabel => Entry.Score is null ? "Not scored" : $"{Entry.Score}/5";
     private string ReadSourceLabel => !string.IsNullOrWhiteSpace(Entry.MangaDexUrl)
         ? "MangaDex"
         : Entry.LocalSeriesId is not null ? "Local" : "Unlinked";
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
     private string LatestChapterValue => Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
+    private string NextChapterValue => TryGetCurrentChapterNumber(out var currentChapter)
+        ? $"Ch. {currentChapter + 1}"
+        : StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) ? "Complete" : "Start";
+    private string PersonalTrackLabel => Entry.Score is null
+        ? StatusLabel
+        : $"{StatusLabel} - {Entry.Score}/5";
     private bool IsStatusFilterActive => string.Equals(ActiveStatusFilter, StatusLabel, StringComparison.OrdinalIgnoreCase);
     private string StatusFilterHint => IsStatusFilterActive ? "Filtered" : "Click to filter";
     private Variant StatusVariant => IsStatusFilterActive ? Variant.Filled : Variant.Outlined;
@@ -68,4 +73,19 @@ public partial class ShelfEntryCard
         "openlibrary" => "OpenLibrary",
         _ => source
     };
+
+    private bool TryGetCurrentChapterNumber(out int chapter)
+    {
+        chapter = 0;
+        if (string.IsNullOrWhiteSpace(Entry.CurrentChapter))
+        {
+            return false;
+        }
+
+        var digits = new string(Entry.CurrentChapter
+            .SkipWhile(value => !char.IsDigit(value))
+            .TakeWhile(char.IsDigit)
+            .ToArray());
+        return int.TryParse(digits, out chapter);
+    }
 }

@@ -139,6 +139,39 @@
     overflow: hidden;
 }
 
+.mh-entry-context {
+    display: grid;
+    gap: .4rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mh-entry-context div {
+    background: color-mix(in srgb, var(--mud-palette-surface) 72%, var(--mud-palette-primary) 28%);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, transparent);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    min-width: 0;
+    padding: .45rem .55rem;
+}
+
+.mh-entry-context span {
+    color: var(--mud-palette-text-secondary);
+    font-size: .68rem;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.mh-entry-context strong {
+    font-size: .86rem;
+    font-weight: 700;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 ::deep .mh-bento-card-actions {
     align-items: stretch;
     border-top: 1px solid var(--mud-palette-divider);

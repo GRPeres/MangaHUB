@@ -68,6 +68,21 @@
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mh-row-notes mh-mobile-hide">@Entry.Notes</MudText>
                 }
 
+                    <div class="mh-entry-context mh-mobile-hide">
+                        <div>
+                            <span>Personal track</span>
+                            <strong>@PersonalTrackLabel</strong>
+                        </div>
+                        <div>
+                            <span>Next up</span>
+                            <strong>@NextChapterValue</strong>
+                        </div>
+                        <div>
+                            <span>Reader</span>
+                            <strong>@ReadSourceLabel</strong>
+                        </div>
+                    </div>
+
                 </div>
             </MangaBentoTile>
 
@@ -113,9 +128,9 @@
 
             <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="ink" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Metadata</MudText>
-                    <MudText Typo="Typo.h3">@SourceOrManualLabel</MudText>
-                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Catalog source</MudText>
+                    <MudText Typo="Typo.overline">Next up</MudText>
+                    <MudText Typo="Typo.h3">@NextChapterValue</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Reading queue</MudText>
                 </div>
             </MangaBentoTile>
         </MangaBento>
