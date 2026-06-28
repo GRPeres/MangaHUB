@@ -85,6 +85,25 @@
                 {
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mh-row-notes mh-mobile-hide">@Entry.Notes</MudText>
                 }
+
+                    <div class="mh-entry-facts mh-mobile-hide">
+                        <div>
+                            <span>Format</span>
+                            <strong>@FormatLabel</strong>
+                        </div>
+                        <div>
+                            <span>Source</span>
+                            <strong>@SourceOrManualLabel</strong>
+                        </div>
+                        <div>
+                            <span>Score</span>
+                            <strong>@ScoreLabel</strong>
+                        </div>
+                        <div>
+                            <span>Read from</span>
+                            <strong>@ReadSourceLabel</strong>
+                        </div>
+                    </div>
                 </div>
             </MangaBentoTile>
 
@@ -92,7 +111,7 @@
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Status</MudText>
                     <MudText Typo="Typo.h3">@StatusLabel</MudText>
-                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">Click to filter</MudText>
+                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">@StatusFilterHint</MudText>
                 </div>
             </MangaBentoTile>
 

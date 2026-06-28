@@ -14,7 +14,14 @@ public partial class CatalogEntryCard
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "", "Manual");
     private string ChapterCountLabel => Entry.ChapterCount is null ? "Chapters unknown" : $"{Entry.ChapterCount} chapters";
     private string VolumeCountLabel => Entry.VolumeCount is null ? "Volumes unknown" : $"{Entry.VolumeCount} volumes";
+    private string FormatLabel => FirstNonEmpty(Entry.MediaType, Entry.Category, "Unknown");
+    private string PublishingLabel => FirstNonEmpty(Entry.PublishingStatus, "Unknown");
+    private string ShelfLabel => Entry.IsInMyShelf ? "In shelf" : "Available";
+    private string ReadSourceLabel => !string.IsNullOrWhiteSpace(Entry.MangaDexUrl)
+        ? "MangaDex"
+        : Entry.LocalSeriesId is not null ? "Local" : "Unlinked";
     private bool IsSourceFilterActive => string.Equals(ActiveSourceFilter, SourceLabel, StringComparison.OrdinalIgnoreCase);
+    private string SourceFilterHint => IsSourceFilterActive ? "Filtered" : "Click to filter";
     private Variant SourceVariant => IsSourceFilterActive ? Variant.Filled : Variant.Outlined;
     private string SourceScheme => SourceLabel.ToLowerInvariant() switch
     {
