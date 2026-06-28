@@ -115,6 +115,9 @@ public partial class MainLayout : IDisposable
             : string.Equals(relative, route, StringComparison.OrdinalIgnoreCase);
     }
 
+    private string MobileNavClass(string route) =>
+        IsActive(route) ? "mh-mobile-nav-item mh-mobile-nav-item-active" : "mh-mobile-nav-item";
+
     private async Task Logout()
     {
         await Auth.LogoutAsync();
