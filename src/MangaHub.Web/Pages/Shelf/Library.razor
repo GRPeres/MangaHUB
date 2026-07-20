@@ -49,15 +49,24 @@
         <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
     }
 
-    @if (isPreparingReader)
-    {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Preparing the chapter for the local reader...</MudAlert>
-    }
 </MudStack>
 
 <ShelfAddModal Open="@isAddShelfOpen" OpenChanged="OnAddShelfOpenChanged" OnSaved="Load" />
 <ShelfImportModal Open="@isImportShelfOpen" OpenChanged="OnImportShelfOpenChanged" OnImported="Load" />
 <ShelfEditModal Entry="@editingEntry" OwnerUserId="@(IsAdmin ? selectedUserId : null)" OnSaved="OnShelfEditSaved" OnClosed="CloseEdit" />
+
+@if (isPreparingReader)
+{
+    <div class="mh-modal-backdrop">
+        <section class="mh-modal mh-reader-preparing-modal" role="status" aria-live="polite">
+            <MudStack Spacing="3" AlignItems="AlignItems.Center">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.h3">Preparing your chapter</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">MangaHub is fetching the chapter into your local reader cache.</MudText>
+            </MudStack>
+        </section>
+    </div>
+}
 
 @if (filtersOpen)
 {

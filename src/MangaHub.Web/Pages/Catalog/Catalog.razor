@@ -63,7 +63,7 @@
 <CatalogAddModal Open="@isAddCatalogOpen" OpenChanged="OnAddCatalogOpenChanged" LocalSeries="@localSeries" OnSaved="LoadCatalog" />
 <CatalogImportModal Open="@isImportCatalogOpen" OpenChanged="OnImportCatalogOpenChanged" OnImported="LoadCatalog" />
 <CatalogEditModal Entry="@editingEntry" LocalSeries="@localSeries" OnSaved="OnCatalogSaved" OnClosed="CloseEdit" />
-<CatalogCacheModal Entry="@cacheEntry" OnClosed="CloseCache" />
+<CatalogCacheModal Entry="@cacheEntry" OnClosed="CloseCache" OnChanged="LoadCatalog" />
 
 @if (filtersOpen)
 {
@@ -243,7 +243,7 @@
     {
         messageSeverity = Severity.Success;
         message = $"Updated catalog metadata for {updated.Title}.";
-        await RefreshCatalogEntry(updated);
+        await LoadCatalog();
     }
 
     private async Task RefreshCatalogEntry(CatalogMangaResponse updated)

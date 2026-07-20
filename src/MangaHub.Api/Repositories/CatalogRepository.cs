@@ -58,6 +58,10 @@ public sealed class CatalogRepository(MangaHubDbContext db)
                 x.MangaDexId,
                 x.MangaDexLastSyncedAt,
                 x.LocalSeriesId,
+                db.Series
+                    .Where(series => series.Source == "mangadex-cache" && series.ExternalId == x.MangaDexId)
+                    .SelectMany(series => series.Chapters)
+                    .Count(),
                 shelfIds.Contains(x.Id)))
             .ToListAsync(cancellationToken);
     }

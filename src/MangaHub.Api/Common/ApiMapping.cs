@@ -58,5 +58,6 @@ public static class ApiMapping
             entry.MangaDexId,
             entry.MangaDexLastSyncedAt,
             entry.LocalSeriesId,
+            0,
             isInMyShelf);
 }

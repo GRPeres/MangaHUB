@@ -27,6 +27,7 @@ public partial class CatalogEntryCard
     private string MangaDexSyncLabel => Entry.MangaDexLastSyncedAt is null
         ? "Not checked yet"
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
+    private string CachedChapterLabel => Entry.CachedChapterCount == 1 ? "1 chapter" : $"{Entry.CachedChapterCount} chapters";
     private string IdentityLabel => IsMissingMyAnimeListId ? "MAL ID missing" : $"MAL #{Entry.MyAnimeListId}";
     private string ReaderLinksLabel => (Entry.MangaDexUrl, Entry.LocalSeriesId) switch
     {

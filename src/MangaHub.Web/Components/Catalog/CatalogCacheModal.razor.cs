@@ -12,6 +12,7 @@ public partial class CatalogCacheModal
 
     [Parameter] public CatalogMangaResponse? Entry { get; set; }
     [Parameter] public EventCallback OnClosed { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
 
     private Guid? loadedEntryId;
     private MangaDexCacheResponse? cache;
@@ -80,6 +81,10 @@ public partial class CatalogCacheModal
         {
             cache = await CatalogApi.DownloadMangaDexChapterAsync(Entry.Id, chapterToDownload.Trim());
             SetMessage(cache is null ? Severity.Error : Severity.Success, cache is null ? "MangaDex could not provide that chapter." : $"Cached chapter {chapterToDownload}.");
+            if (cache is not null)
+            {
+                await OnChanged.InvokeAsync();
+            }
         }
         finally
         {
@@ -108,6 +113,7 @@ public partial class CatalogCacheModal
             selectedFile = null;
             manualChapterTitle = "";
             SetMessage(Severity.Success, $"Imported chapter {manualChapterNumber} into the cache.");
+            await OnChanged.InvokeAsync();
         }
         finally
         {
@@ -134,6 +140,7 @@ public partial class CatalogCacheModal
 
             cache = await CatalogApi.GetMangaDexCacheAsync(Entry.Id);
             SetMessage(Severity.Success, $"Removed cached chapter {chapter.ChapterNumber}.");
+            await OnChanged.InvokeAsync();
         }
         finally
         {
