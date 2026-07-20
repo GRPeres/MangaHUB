@@ -69,6 +69,7 @@ ConnectionStrings__MangaHub=Host=postgres;Database=mangahub;Username=mangahub;Pa
 FrontendOrigin=https://mangahub.app
 MangaHub__JwtSecret=<long secret>
 MangaHub__LibraryPath=/library
+MangaHub__MangaDexCachePath=/mangadex-cache
 MangaHub__MangaDexEnabled=true
 MangaHub__MyAnimeListClientId=<client id>
 MangaHub__SessionCookieSameSite=Lax
@@ -96,6 +97,25 @@ Current placeholder mount:
 
 Change `/mnt/storage/manga` to the actual TrueNAS manga dataset path.
 
+## MangaDex Reader Cache
+
+The admin-only MangaDex reader downloads only chapters explicitly opened by an admin, then stores each chapter as a CBZ cache file. The reader serves later page views from this local cache and does not request those pages from MangaDex again.
+
+Add a separate writable mount to `mangahub-api`; do not use the read-only `/library` mount:
+
+```yaml
+mangahub-api:
+  environment:
+    MangaHub__MangaDexCachePath: /mangadex-cache
+  volumes:
+    - mangadex-cache:/mangadex-cache
+
+volumes:
+  mangadex-cache:
+```
+
+For a cache visible in a TrueNAS dataset instead, use a bind mount such as `/mnt/Shared/NAS/MangaHubMangaDexCache:/mangadex-cache`. Keep this cache separate from the original manga library: it is derived reader data, not your owned-library mount.
+
 ## Historical DuckDNS Deploy
 
 `deploy.duckdns.yml` exists for a direct-DNS/port-forward setup, but CGNAT made that unsuitable.
@@ -119,4 +139,3 @@ Future recommended release flow:
 2. Push images to GHCR.
 3. Compose uses `image: ghcr.io/grperes/...`.
 4. Watchtower or TrueNAS update flow pulls new images.
-

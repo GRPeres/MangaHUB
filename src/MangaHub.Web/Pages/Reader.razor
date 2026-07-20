@@ -1,14 +1,21 @@
 @page "/reader/{ChapterId:guid}/{PageCount:int}"
 @using MangaHub.Web.API.Services
 @inject ReadApiService ReadApi
+@inject MangaApiService MangaApi
+@inject NavigationManager Navigation
 
 <PageTitle>Reader</PageTitle>
 
 <MudPaper Class="reader-toolbar" Elevation="0" Outlined="true">
     <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ChevronLeft" OnClick="Previous" Disabled="@(page <= 0)">Previous</MudButton>
     <MudText Typo="Typo.body2">Page @(page + 1) / @PageCount</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight" OnClick="Next" Disabled="@(page >= PageCount - 1)">Next</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight" OnClick="Next" Disabled="@(isPreparingNext || (page >= PageCount - 1 && EntryId is null))">@NextLabel</MudButton>
 </MudPaper>
+
+@if (!string.IsNullOrWhiteSpace(readerMessage))
+{
+    <MudAlert Severity="Severity.Info" Dense="true">@readerMessage</MudAlert>
+}
 
 <main class="reader">
     <img src="@ReadApi.GetPageUrl(ChapterId, page)" alt="Manga page @(page + 1)" />
@@ -17,8 +24,43 @@
 @code {
     [Parameter] public Guid ChapterId { get; set; }
     [Parameter] public int PageCount { get; set; }
+    [SupplyParameterFromQuery] public Guid? EntryId { get; set; }
     private int page;
+    private bool isPreparingNext;
+    private string readerMessage = "";
+    private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
 
     private void Previous() => page = Math.Max(0, page - 1);
-    private void Next() => page = Math.Min(PageCount - 1, page + 1);
+
+    private async Task Next()
+    {
+        if (page < PageCount - 1)
+        {
+            page++;
+            return;
+        }
+
+        if (EntryId is null)
+        {
+            return;
+        }
+
+        isPreparingNext = true;
+        readerMessage = "Preparing the next chapter...";
+        try
+        {
+            var launch = await MangaApi.PrepareMangaDexChapterAsync(EntryId.Value, ChapterId);
+            if (launch is null)
+            {
+                readerMessage = "No later readable MangaDex chapter is available yet.";
+                return;
+            }
+
+            Navigation.NavigateTo(launch.ReaderUrl);
+        }
+        finally
+        {
+            isPreparingNext = false;
+        }
+    }
 }

@@ -1,6 +1,7 @@
 using MangaHub.Core.Services;
 using MangaHub.Core.Sources;
 using MangaHub.Infrastructure.Data;
+using MangaHub.Infrastructure.Caching;
 using MangaHub.Infrastructure.Local;
 using MangaHub.Infrastructure.Security;
 using MangaHub.Infrastructure.Sources;
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddScoped<ILibraryScanner, LocalLibraryScanner>();
         services.AddSingleton<IArchiveReader, CbzArchiveReader>();
+        services.AddSingleton<IMangaDexChapterCache, MangaDexChapterCache>();
         services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
         services.AddSingleton<ISessionTokenService, JwtSessionTokenService>();
         services.AddHttpClient<IOpenLibraryClient, OpenLibraryClient>(client => client.BaseAddress = new Uri("https://openlibrary.org"));

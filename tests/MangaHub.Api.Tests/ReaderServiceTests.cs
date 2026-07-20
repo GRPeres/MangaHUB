@@ -35,7 +35,6 @@ public sealed class ReaderServiceTests
         Assert.True(options.HasMangaDex);
         Assert.True(options.HasLocal);
         Assert.Equal($"/reader/{chapter.Id}/24", options.LocalReaderUrl);
-        Assert.Equal($"/reader/mangadex/{entry.Id}", options.MangaDexReaderUrl);
     }
 
     [Fact]
@@ -59,13 +58,32 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
-    public async Task GetMangaDexReaderSessionAsync_ChoosesTheNextUnreadChapter()
+    public async Task GetPageAsync_ReadsCachedMangaDexChapterFromCacheRoot()
+    {
+        await using var db = TestDb.Create();
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var series = new MangaSeries { Title = "Cached Berserk", Source = "mangadex-cache", ExternalId = "manga-id" };
+        var chapter = new MangaChapter { Series = series, SourceId = "chapter-id", ChapterNumber = "1", PageCount = 2 };
+        db.Series.Add(series);
+        db.Chapters.Add(chapter);
+        await db.SaveChangesAsync();
+        var archive = new FakeArchiveReader();
+        var service = CreateReaderService(db, archive, root);
+
+        var page = await service.GetPageAsync(chapter.Id, 0, CancellationToken.None);
+
+        Assert.NotNull(page);
+        Assert.Equal(Path.Combine(root, "mangadex", "manga-id", "chapter-id.cbz"), Assert.Single(archive.RequestedPaths));
+    }
+
+    [Fact]
+    public async Task PrepareMangaDexChapterAsync_CachesAndOpensTheCurrentChapter()
     {
         await using var db = TestDb.Create();
         var userId = Guid.NewGuid();
         var entry = new MangaEntry { Title = "Berserk", MangaDexId = "berserk-id" };
         db.MangaEntries.Add(entry);
-        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "1" });
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "1", ReadingStatus = "planned" });
         await db.SaveChangesAsync();
 
         var mangaDex = new FakeMangaDexSource();
@@ -73,22 +91,26 @@ public sealed class ReaderServiceTests
             new MangaHub.Core.Sources.MangaSourceChapter("chapter-1", "1", "Beginning", 20),
             new MangaHub.Core.Sources.MangaSourceChapter("chapter-2", "2", "The next step", 18)
         ]);
-        mangaDex.Pages["chapter-2"] = [
+        mangaDex.Pages["chapter-1"] = [
             new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/001.jpg"),
             new MangaHub.Core.Sources.MangaPage(1, "https://uploads.mangadex.org/data/hash/002.jpg")
         ];
-        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex);
+        var cache = new FakeMangaDexChapterCache();
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, cache);
 
-        var session = await service.GetMangaDexReaderSessionAsync(userId, entry.Id, null, CancellationToken.None);
+        var launch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, null, CancellationToken.None);
 
-        Assert.NotNull(session);
-        Assert.Equal("chapter-2", session.SelectedChapter.Id);
-        Assert.Equal("2", session.SelectedChapter.Number);
-        Assert.Equal(2, session.SelectedChapter.PageCount);
+        Assert.NotNull(launch);
+        Assert.Equal("1", launch.CurrentChapter);
+        Assert.Equal(2, launch.PageCount);
+        Assert.Contains(entry.Id.ToString(), launch.ReaderUrl);
+        Assert.Equal(["chapter-1"], cache.CachedChapterIds);
+        var shelf = await new ShelfRepository(db).GetAsync(userId, entry.Id, CancellationToken.None);
+        Assert.Equal("reading", shelf!.ReadingStatus);
     }
 
     [Fact]
-    public async Task SaveMangaDexProgressAsync_CompletingChapterUpdatesShelfProgress()
+    public async Task PrepareMangaDexChapterAsync_NextChapterUpdatesCurrentChapter()
     {
         await using var db = TestDb.Create();
         var userId = Guid.NewGuid();
@@ -98,18 +120,24 @@ public sealed class ReaderServiceTests
         await db.SaveChangesAsync();
 
         var mangaDex = new FakeMangaDexSource();
-        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-2", "2", "The next step", 18));
-        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex);
+        mangaDex.Chapters.AddRange([
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-1", "1", "Beginning", 20),
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-2", "2", "The next step", 18)
+        ]);
+        mangaDex.Pages["chapter-1"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/001.jpg")];
+        mangaDex.Pages["chapter-2"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/002.jpg")];
+        var cache = new FakeMangaDexChapterCache();
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, cache);
 
-        var progress = await service.SaveMangaDexProgressAsync(
-            userId,
-            entry.Id,
-            new MangaHub.Core.Dto.MangaDexReaderProgressRequest("chapter-2", 17, true),
-            CancellationToken.None);
+        var firstLaunch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, null, CancellationToken.None);
+        Assert.NotNull(firstLaunch);
+        var cachedSeries = await new SeriesRepository(db).GetBySourceAndExternalIdAsync("mangadex-cache", "berserk-id", CancellationToken.None);
+        var firstChapter = Assert.Single(cachedSeries!.Chapters);
+        var nextLaunch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, firstChapter.Id, CancellationToken.None);
 
-        Assert.NotNull(progress);
-        Assert.Equal("2", progress.CurrentChapter);
-        Assert.Equal("reading", progress.ReadingStatus);
+        Assert.NotNull(nextLaunch);
+        Assert.Equal("2", nextLaunch.CurrentChapter);
+        Assert.Equal(["chapter-1", "chapter-2"], cache.CachedChapterIds);
         var shelf = await new ShelfRepository(db).GetAsync(userId, entry.Id, CancellationToken.None);
         Assert.Equal("2", shelf!.CurrentChapter);
         Assert.Equal("reading", shelf.ReadingStatus);
@@ -119,12 +147,13 @@ public sealed class ReaderServiceTests
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         FakeArchiveReader archive,
         string libraryPath,
-        FakeMangaDexSource? mangaDex = null) =>
+        FakeMangaDexSource? mangaDex = null,
+        FakeMangaDexChapterCache? cache = null) =>
         new(
             new ShelfRepository(db),
             new SeriesRepository(db),
             archive,
-            Options.Create(new MangaHubOptions { LibraryPath = libraryPath }),
-            new MangaSourceRegistry([mangaDex ?? new FakeMangaDexSource()]),
-            new FakeHttpClientFactory());
+            cache ?? new FakeMangaDexChapterCache(),
+            Options.Create(new MangaHubOptions { LibraryPath = libraryPath, MangaDexCachePath = libraryPath }),
+            new MangaSourceRegistry([mangaDex ?? new FakeMangaDexSource()]));
 }

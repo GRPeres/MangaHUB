@@ -63,6 +63,7 @@ Series/Library/Reader/Progress:
 - series/chapter browsing
 - reader page serving
 - reading progress APIs
+- admin-only reader preparation and cached chapter page delivery
 
 ## DTO Guidance
 
@@ -81,10 +82,10 @@ Frontend API call wrappers live under `src/MangaHub.Web/API/Services`, ideally o
 - catalog mutations require admin
 - CSV import that creates catalog entries belongs in admin/catalog flows
 - admin role assignment requires admin
+- reader options, chapter preparation, and reader page endpoints require admin
 
 ## Error Handling
 
 Prefer clear failure messages at service/controller boundaries.
 
 For DB errors during import, return row-level skipped messages where possible. Avoid dumping sensitive connection details.
-

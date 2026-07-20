@@ -1,6 +1,7 @@
 @page "/series/{SeriesId:guid}"
 @using MangaHub.Web.API.Services
 @inject SeriesApiService SeriesApi
+@inject AuthSessionService Auth
 
 <PageTitle>Series</PageTitle>
 
@@ -16,19 +17,26 @@ else
             <MudText Typo="Typo.h1">@series.Title</MudText>
         </MudStack>
 
-        <MudPaper Elevation="0" Outlined="true">
-            <MudList T="ChapterResponse">
-                @foreach (var chapter in chapters)
-                {
-                    <MudListItem Href="@($"/reader/{chapter.Id}/{chapter.PageCount}")" Icon="@Icons.Material.Filled.MenuBook">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
-                            <MudText>@chapter.Title</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@chapter.PageCount pages</MudText>
-                        </MudStack>
-                    </MudListItem>
-                }
-            </MudList>
-        </MudPaper>
+        @if (canRead)
+        {
+            <MudPaper Elevation="0" Outlined="true">
+                <MudList T="ChapterResponse">
+                    @foreach (var chapter in chapters)
+                    {
+                        <MudListItem Href="@($"/reader/{chapter.Id}/{chapter.PageCount}")" Icon="@Icons.Material.Filled.MenuBook">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                                <MudText>@chapter.Title</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@chapter.PageCount pages</MudText>
+                            </MudStack>
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPaper>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Chapter reading is available to admins only.</MudAlert>
+        }
     </MudStack>
 }
 
@@ -36,10 +44,13 @@ else
     [Parameter] public Guid SeriesId { get; set; }
     private SeriesResponse? series;
     private List<ChapterResponse> chapters = [];
+    private bool canRead;
 
     protected override async Task OnParametersSetAsync()
     {
+        var currentUser = await Auth.GetCurrentUserAsync();
+        canRead = string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
         series = await SeriesApi.GetSeriesAsync(SeriesId);
-        chapters = await SeriesApi.GetChaptersAsync(SeriesId);
+        chapters = canRead ? await SeriesApi.GetChaptersAsync(SeriesId) : [];
     }
 }

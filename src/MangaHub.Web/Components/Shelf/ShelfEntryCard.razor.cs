@@ -8,6 +8,7 @@ public partial class ShelfEntryCard
 {
     [Parameter, EditorRequired] public MangaEntryResponse Entry { get; set; } = default!;
     [Parameter] public string ActiveStatusFilter { get; set; } = "";
+    [Parameter] public bool CanRead { get; set; }
     [Parameter] public EventCallback<MangaEntryResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<Guid> OnRead { get; set; }
     [Parameter] public EventCallback<string> OnStatusFilter { get; set; }

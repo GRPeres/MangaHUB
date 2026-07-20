@@ -47,6 +47,14 @@ public sealed class SeriesRepository(MangaHubDbContext db)
     public Task<MangaChapter?> GetChapterWithSeriesAsync(Guid chapterId, CancellationToken cancellationToken) =>
         db.Chapters.Include(x => x.Series).FirstOrDefaultAsync(x => x.Id == chapterId, cancellationToken);
 
+    public Task<MangaSeries?> GetBySourceAndExternalIdAsync(string source, string externalId, CancellationToken cancellationToken) =>
+        db.Series.Include(x => x.Chapters)
+            .FirstOrDefaultAsync(x => x.Source == source && x.ExternalId == externalId, cancellationToken);
+
+    public void AddSeries(MangaSeries series) => db.Series.Add(series);
+
+    public void AddChapter(MangaChapter chapter) => db.Chapters.Add(chapter);
+
     public Task<List<ChapterResponse>> ListChaptersAsync(Guid seriesId, CancellationToken cancellationToken) =>
         db.Chapters.AsNoTracking()
             .Where(x => x.SeriesId == seriesId)

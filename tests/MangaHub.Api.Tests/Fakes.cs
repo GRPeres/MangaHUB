@@ -55,6 +55,25 @@ internal sealed class FakeMangaDexSource : IMangaSource
         Task.FromResult(Pages.TryGetValue(chapterId, out var pages) ? pages : (IReadOnlyList<MangaPage>)[]);
 }
 
+internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
+{
+    public List<string> CachedChapterIds { get; } = [];
+
+    public Task<MangaDexCachedChapter> EnsureCachedAsync(
+        string mangaDexId,
+        string chapterId,
+        IReadOnlyList<MangaPage> pages,
+        CancellationToken cancellationToken)
+    {
+        CachedChapterIds.Add(chapterId);
+        return Task.FromResult(new MangaDexCachedChapter(
+            Path.Combine("mangadex", mangaDexId, $"{chapterId}.cbz"),
+            pages.Count,
+            $"hash-{chapterId}",
+            false));
+    }
+}
+
 internal sealed class FakeHttpClientFactory(HttpClient? client = null) : IHttpClientFactory
 {
     private readonly HttpClient httpClient = client ?? new HttpClient(new FakeImageHandler());

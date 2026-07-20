@@ -20,6 +20,7 @@ services:
     environment:
       ConnectionStrings__MangaHub: Host=postgres;Database=mangahub;Username=mangahub;Password=mangahub
       MangaHub__LibraryPath: /library
+      MangaHub__MangaDexCachePath: /mangadex-cache
       MangaHub__JwtSecret: ${JWT_SECRET:-change-me-before-deploying-to-a-long-random-secret}
       MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
       MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:-}
@@ -28,6 +29,7 @@ services:
       FrontendOrigin: http://localhost:3000
     volumes:
       - ${HOST_LIBRARY_PATH:-./library}:/library:ro
+      - mangadex-cache:/mangadex-cache
     ports:
       - "8000:8080"
     networks:
@@ -65,3 +67,4 @@ services:
 
 volumes:
   postgres-data:
+  mangadex-cache:

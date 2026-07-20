@@ -6,5 +6,4 @@ public sealed record ReadOptions(
     bool HasMangaDex,
     string MangaDexUrl,
     bool HasLocal,
-    string LocalReaderUrl,
-    string MangaDexReaderUrl);
+    string LocalReaderUrl);

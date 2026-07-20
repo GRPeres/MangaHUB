@@ -39,7 +39,7 @@
         <MudStack Spacing="2">
             @foreach (var item in FilteredEntries)
             {
-                <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" OnRead="Read" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" />
+                <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="Read" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" />
             }
         </MudStack>
     }
@@ -47,6 +47,11 @@
     @if (!string.IsNullOrWhiteSpace(message))
     {
         <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
+    }
+
+    @if (isPreparingReader)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Preparing the chapter for the local reader...</MudAlert>
     }
 </MudStack>
 
@@ -155,6 +160,7 @@
     private bool isAddShelfOpen;
     private bool isImportShelfOpen;
     private bool filtersOpen;
+    private bool isPreparingReader;
     private MangaEntryResponse? editingEntry;
 
     protected override async Task OnInitializedAsync()
@@ -211,26 +217,48 @@
 
     private async Task Read(Guid entryId)
     {
-        var options = await MangaApi.GetReadOptionsAsync(entryId);
-        if (options is null)
+        if (!IsAdmin)
         {
-            ShowWarning("Could not load read options.");
+            ShowWarning("Reader access is available to admins only.");
             return;
         }
 
-        if (options.HasLocal)
+        isPreparingReader = true;
+        await InvokeAsync(StateHasChanged);
+        try
         {
-            Navigation.NavigateTo(options.LocalReaderUrl);
-            return;
-        }
+            var options = await MangaApi.GetReadOptionsAsync(entryId);
+            if (options is null)
+            {
+                ShowWarning("Could not load read options.");
+                return;
+            }
 
-        if (options.HasMangaDex)
+            if (options.HasLocal)
+            {
+                Navigation.NavigateTo(options.LocalReaderUrl);
+                return;
+            }
+
+            if (options.HasMangaDex)
+            {
+                var launch = await MangaApi.PrepareMangaDexChapterAsync(entryId);
+                if (launch is null)
+                {
+                    ShowWarning("Could not prepare a MangaDex chapter for the local reader.");
+                    return;
+                }
+
+                Navigation.NavigateTo(launch.ReaderUrl);
+                return;
+            }
+
+            ShowWarning("No MangaDex URL or local series is registered for this manga yet.");
+        }
+        finally
         {
-            Navigation.NavigateTo(options.MangaDexReaderUrl);
-            return;
+            isPreparingReader = false;
         }
-
-        ShowWarning("No MangaDex URL or local series is registered for this manga yet.");
     }
 
     private void Edit(MangaEntryResponse entry)

@@ -117,7 +117,10 @@
         </MangaBento>
 
         <MudCardActions Class="mh-bento-card-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
+            @if (CanRead)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
+            }
             <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
         </MudCardActions>
     </MudCardContent>

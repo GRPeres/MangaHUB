@@ -103,7 +103,9 @@ Shelf data is per-user and points to a catalog entry.
 
 Local library series/chapters are scanned from the mounted library path and can be bound to catalog entries.
 
-MangaDex links are stored on catalog entries and are used only when the user chooses to read.
+MangaDex links are stored on catalog entries. When an admin chooses to read, MangaHub resolves the selected chapter through the MangaDex API, caches that chapter as a local CBZ file, and then uses the same protected internal reader used for local files. The cache records MangaDex chapter IDs separately from the NAS library and is never treated as original local-library metadata.
+
+Reader endpoints and page delivery are admin-only. Normal users can manage their shelf/list data but cannot prepare or open reader chapters.
 
 MyAnimeList metadata is preferred for catalog search/enrichment. OpenLibrary remains available as fallback or explicit "load more" behavior.
 
@@ -130,4 +132,3 @@ The app uses MudBlazor with a custom purple-based palette. Main layout has:
 - login modal available from anywhere
 
 Shelf and catalog list pages use component cards, not large inline page blocks.
-
