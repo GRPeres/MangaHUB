@@ -12,6 +12,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
     public DbSet<MangaChapter> Chapters => Set<MangaChapter>();
     public DbSet<ReadingProgress> ReadingProgress => Set<ReadingProgress>();
     public DbSet<Follow> Follows => Set<Follow>();
+    public DbSet<SiteActivity> SiteActivities => Set<SiteActivity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,6 +39,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.HasIndex(x => x.MangaDexLastSyncedAt);
             entity.Property(x => x.MangaDexLastPrefetchedChapter).HasPrecision(10, 3);
             entity.HasIndex(x => x.MangaDexLastPrefetchedAt);
+            entity.HasIndex(x => x.MangaDexLastBackfilledAt);
         });
 
         modelBuilder.Entity<UserMangaEntry>(entity =>
@@ -75,6 +77,12 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
         {
             entity.ToTable("follows");
             entity.HasIndex(x => new { x.UserId, x.SeriesId }).IsUnique();
+        });
+
+        modelBuilder.Entity<SiteActivity>(entity =>
+        {
+            entity.ToTable("site_activity");
+            entity.HasKey(x => x.Id);
         });
     }
 }

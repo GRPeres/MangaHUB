@@ -22,20 +22,33 @@ public sealed class RemoteSyncWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var nextMaintenanceAt = DateTimeOffset.MinValue;
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (!await RunMaintenanceAsync(stoppingToken))
+            if (DateTimeOffset.UtcNow >= nextMaintenanceAt)
             {
-                logger.LogWarning(
-                    "MangaDex maintenance will retry in {RetryDelay} after an infrastructure failure.",
-                    FailedMaintenanceRetryDelay);
-                await Task.Delay(FailedMaintenanceRetryDelay, stoppingToken);
+                if (!await RunMaintenanceAsync(stoppingToken))
+                {
+                    logger.LogWarning(
+                        "MangaDex maintenance will retry in {RetryDelay} after an infrastructure failure.",
+                        FailedMaintenanceRetryDelay);
+                    await Task.Delay(FailedMaintenanceRetryDelay, stoppingToken);
+                    continue;
+                }
+
+                nextMaintenanceAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
+                logger.LogInformation("Next MangaDex maintenance run is scheduled for {ScheduledAt}.", nextMaintenanceAt);
                 continue;
             }
 
-            var delay = GetDelayUntilNextMaintenance();
-            logger.LogInformation("Next MangaDex maintenance run is scheduled in {Delay}.", delay);
+            var idleCheckDelay = TimeSpan.FromMinutes(Math.Clamp(options.Value.MangaDexIdleBackfillCheckMinutes, 5, 720));
+            var delay = new[] { nextMaintenanceAt - DateTimeOffset.UtcNow, idleCheckDelay }.Min();
             await Task.Delay(delay, stoppingToken);
+
+            if (DateTimeOffset.UtcNow < nextMaintenanceAt)
+            {
+                await RunIdleBackfillAsync(stoppingToken);
+            }
         }
     }
 
@@ -176,48 +189,11 @@ public sealed class RemoteSyncWorker(
                     continue;
                 }
 
-                var cacheSeries = await db.Series.Include(series => series.Chapters)
-                    .FirstOrDefaultAsync(series => series.Source == MangaDexCacheSource && series.ExternalId == entry.MangaDexId, cancellationToken);
-                if (cacheSeries is null)
-                {
-                    cacheSeries = new MangaSeries
-                    {
-                        Title = entry.Title,
-                        Description = entry.Description,
-                        CoverUrl = entry.CoverUrl,
-                        Status = entry.PublishingStatus,
-                        Source = MangaDexCacheSource,
-                        ExternalId = entry.MangaDexId
-                    };
-                    db.Series.Add(cacheSeries);
-                }
+                var cacheSeries = await GetOrCreateCachedSeriesAsync(db, entry, cancellationToken);
 
                 foreach (var item in pending)
                 {
-                    var pages = await mangaDex.GetPagesAsync(item.Chapter.Id, cancellationToken);
-                    var archive = await cache.EnsureCachedAsync(entry.MangaDexId, item.Chapter.Id, pages, cancellationToken);
-                    var cachedChapter = cacheSeries.Chapters.FirstOrDefault(chapter => chapter.SourceId == item.Chapter.Id);
-                    if (cachedChapter is null)
-                    {
-                        cachedChapter = new MangaChapter
-                        {
-                            Series = cacheSeries,
-                            ChapterNumber = item.Chapter.Number,
-                            Title = item.Chapter.Title,
-                            SourceId = item.Chapter.Id,
-                            PageCount = archive.PageCount,
-                            FileHash = archive.FileHash
-                        };
-                        cacheSeries.Chapters.Add(cachedChapter);
-                        db.Chapters.Add(cachedChapter);
-                    }
-                    else
-                    {
-                        cachedChapter.ChapterNumber = item.Chapter.Number;
-                        cachedChapter.Title = item.Chapter.Title;
-                        cachedChapter.PageCount = archive.PageCount;
-                        cachedChapter.FileHash = archive.FileHash;
-                    }
+                    await CacheChapterAsync(db, cache, mangaDex, entry, cacheSeries, item.Chapter, cancellationToken);
 
                     entry.MangaDexLastPrefetchedChapter = item.Number!.Value;
                     entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
@@ -237,6 +213,170 @@ public sealed class RemoteSyncWorker(
             baselined,
             downloaded,
             entries.Count);
+    }
+
+    private async Task RunIdleBackfillAsync(CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaDexEnabled || !options.Value.MangaDexIdleBackfillEnabled)
+        {
+            return;
+        }
+
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+        if (!await IsSiteIdleAsync(db, cancellationToken))
+        {
+            logger.LogDebug("MangaDex historical backfill skipped because the site is active.");
+            return;
+        }
+
+        var batchSize = Math.Clamp(options.Value.MangaDexIdleBackfillBatchSize, 1, 5);
+        var perMangaLimit = Math.Clamp(options.Value.MangaDexIdleBackfillMaxChaptersPerManga, 1, 5);
+        var delay = TimeSpan.FromMilliseconds(Math.Max(3000, options.Value.MangaDexIdleBackfillDelayMilliseconds));
+        var entries = await db.MangaEntries
+            .Where(entry => entry.MangaDexId != ""
+                && db.UserMangaEntries.Any(shelf => shelf.MangaEntryId == entry.Id
+                    && shelf.CurrentChapter != ""))
+            .OrderBy(entry => entry.MangaDexLastBackfilledAt ?? DateTimeOffset.MinValue)
+            .ThenBy(entry => entry.Title)
+            .Take(batchSize)
+            .ToListAsync(cancellationToken);
+
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        var mangaDex = scope.ServiceProvider.GetRequiredService<MangaSourceRegistry>().Get("mangadex");
+        var cache = scope.ServiceProvider.GetRequiredService<IMangaDexChapterCache>();
+        var cachedChapters = 0;
+        foreach (var entry in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var currentChapters = await db.UserMangaEntries
+                    .Where(shelf => shelf.MangaEntryId == entry.Id
+                        && shelf.CurrentChapter != "")
+                    .Select(shelf => shelf.CurrentChapter)
+                    .ToListAsync(cancellationToken);
+                var highestReadChapter = currentChapters
+                    .Select(ParseChapterNumber)
+                    .Where(number => number is not null)
+                    .Select(number => number!.Value)
+                    .DefaultIfEmpty()
+                    .Max();
+                if (highestReadChapter <= 0)
+                {
+                    entry.MangaDexLastBackfilledAt = DateTimeOffset.UtcNow;
+                    await db.SaveChangesAsync(cancellationToken);
+                    continue;
+                }
+
+                var cacheSeries = await GetOrCreateCachedSeriesAsync(db, entry, cancellationToken);
+                var cachedSourceIds = cacheSeries.Chapters.Select(chapter => chapter.SourceId).ToHashSet(StringComparer.Ordinal);
+                var pending = (await mangaDex.GetChaptersAsync(entry.MangaDexId, cancellationToken))
+                    .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
+                    .Where(item => item.Number is not null
+                        && item.Number.Value <= highestReadChapter
+                        && !cachedSourceIds.Contains(item.Chapter.Id))
+                    .OrderByDescending(item => item.Number)
+                    .Take(perMangaLimit)
+                    .ToList();
+
+                foreach (var item in pending)
+                {
+                    if (!await IsSiteIdleAsync(db, cancellationToken))
+                    {
+                        logger.LogInformation("MangaDex historical backfill paused because the site is active again.");
+                        return;
+                    }
+
+                    await CacheChapterAsync(db, cache, mangaDex, entry, cacheSeries, item.Chapter, cancellationToken);
+                    cachedChapters++;
+                    await db.SaveChangesAsync(cancellationToken);
+                    await Task.Delay(delay, cancellationToken);
+                }
+
+                entry.MangaDexLastBackfilledAt = DateTimeOffset.UtcNow;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException or IOException)
+            {
+                logger.LogWarning(ex, "MangaDex historical backfill failed for {Title} ({MangaDexId}).", entry.Title, entry.MangaDexId);
+            }
+        }
+
+        logger.LogInformation("MangaDex historical backfill cached {ChapterCount} chapters across {MangaCount} manga.", cachedChapters, entries.Count);
+    }
+
+    private async Task<bool> IsSiteIdleAsync(MangaHubDbContext db, CancellationToken cancellationToken)
+    {
+        var lastActivity = await db.SiteActivities.AsNoTracking()
+            .Where(activity => activity.Id == SiteActivity.SingletonId)
+            .Select(activity => (DateTimeOffset?)activity.LastActivityAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        var idleFor = TimeSpan.FromMinutes(Math.Clamp(options.Value.MangaDexIdleMinutes, 5, 1440));
+        return lastActivity is null || lastActivity <= DateTimeOffset.UtcNow.Subtract(idleFor);
+    }
+
+    private static async Task<MangaSeries> GetOrCreateCachedSeriesAsync(
+        MangaHubDbContext db,
+        MangaEntry entry,
+        CancellationToken cancellationToken)
+    {
+        var cacheSeries = await db.Series.Include(series => series.Chapters)
+            .FirstOrDefaultAsync(series => series.Source == MangaDexCacheSource && series.ExternalId == entry.MangaDexId, cancellationToken);
+        if (cacheSeries is not null)
+        {
+            return cacheSeries;
+        }
+
+        cacheSeries = new MangaSeries
+        {
+            Title = entry.Title,
+            Description = entry.Description,
+            CoverUrl = entry.CoverUrl,
+            Status = entry.PublishingStatus,
+            Source = MangaDexCacheSource,
+            ExternalId = entry.MangaDexId
+        };
+        db.Series.Add(cacheSeries);
+        return cacheSeries;
+    }
+
+    private static async Task CacheChapterAsync(
+        MangaHubDbContext db,
+        IMangaDexChapterCache cache,
+        IMangaSource mangaDex,
+        MangaEntry entry,
+        MangaSeries cacheSeries,
+        MangaSourceChapter sourceChapter,
+        CancellationToken cancellationToken)
+    {
+        var pages = await mangaDex.GetPagesAsync(sourceChapter.Id, cancellationToken);
+        var archive = await cache.EnsureCachedAsync(entry.MangaDexId, sourceChapter.Id, pages, cancellationToken);
+        var cachedChapter = cacheSeries.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
+        if (cachedChapter is null)
+        {
+            cachedChapter = new MangaChapter
+            {
+                Series = cacheSeries,
+                ChapterNumber = sourceChapter.Number,
+                Title = sourceChapter.Title,
+                SourceId = sourceChapter.Id,
+                PageCount = archive.PageCount,
+                FileHash = archive.FileHash
+            };
+            cacheSeries.Chapters.Add(cachedChapter);
+            db.Chapters.Add(cachedChapter);
+            return;
+        }
+
+        cachedChapter.ChapterNumber = sourceChapter.Number;
+        cachedChapter.Title = sourceChapter.Title;
+        cachedChapter.PageCount = archive.PageCount;
+        cachedChapter.FileHash = archive.FileHash;
     }
 
     private TimeSpan GetDelayUntilNextMaintenance()

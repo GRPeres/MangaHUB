@@ -107,6 +107,8 @@ MangaDex links are stored on catalog entries. When an admin chooses to read, Man
 
 The workers also run MangaDex maintenance once at startup and then daily at 04:00 in the configured timezone. Maintenance refreshes stale catalog chapter metadata and conservatively pre-downloads only newly released chapters for manga currently being read. A persistent per-catalog watermark prevents historical backfills and bounds API use.
 
+Separately, an API-maintained site activity timestamp lets workers make small historical cache backfill requests only while the authenticated site is idle. The worker uses each shelf's recorded current chapter as an upper bound, caches nearest missing chapters first, and pauses again when activity resumes.
+
 Reader endpoints and page delivery are admin-only. Normal users can manage their shelf/list data but cannot prepare or open reader chapters.
 
 MyAnimeList metadata is preferred for catalog search/enrichment. OpenLibrary remains available as fallback or explicit "load more" behavior.

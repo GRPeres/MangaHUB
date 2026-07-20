@@ -91,6 +91,12 @@ MangaHub__MangaDexMaintenanceTimeZone=America/Sao_Paulo
 MangaHub__MangaDexPrefetchBatchSize=6
 MangaHub__MangaDexPrefetchMaxChaptersPerManga=3
 MangaHub__MangaDexPrefetchDelayMilliseconds=5000
+MangaHub__MangaDexIdleBackfillEnabled=true
+MangaHub__MangaDexIdleMinutes=30
+MangaHub__MangaDexIdleBackfillCheckMinutes=60
+MangaHub__MangaDexIdleBackfillBatchSize=1
+MangaHub__MangaDexIdleBackfillMaxChaptersPerManga=2
+MangaHub__MangaDexIdleBackfillDelayMilliseconds=10000
 ```
 
 ## Library Mount
@@ -137,6 +143,8 @@ The workers run MangaDex maintenance immediately when the container starts, then
 Each run first refreshes stale MangaDex catalog metadata, then checks manga with at least one shelf entry in `reading` status. The first pre-download run records the currently known chapter as a watermark, without downloading historical chapters. Later runs cache only chapters above that watermark.
 
 The defaults are intentionally conservative: 50 metadata checks per run, up to 6 reading manga, at most 3 chapters per manga, and a 5-second pause between chapter downloads. Increase the batch values only after observing MangaDex usage and container performance.
+
+While the authenticated site has been idle for 30 minutes, the worker also performs a tiny historical backfill every hour. It uses the highest recorded current chapter for each shelf manga and works backwards through missing cached chapters. Its defaults are one manga, two chapters, and a 10-second pause, and it pauses again immediately when site activity resumes. This backfill includes any shelf entry with a recorded current chapter, so paused or completed manga can be warmed too.
 
 ## Historical DuckDNS Deploy
 

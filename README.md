@@ -28,7 +28,7 @@ A aplicação usa MyAnimeList como fonte principal de metadados, mantém OpenLib
 - Supports cover images and external metadata ids.
 - Connects manga to MangaDex and local library entries.
 - Scans local CBZ-style manga libraries.
-- Caches MangaDex chapters for the internal admin reader and checks reading manga daily for new releases.
+- Caches MangaDex chapters for the internal admin reader, checks reading manga daily for new releases, and gradually backfills already-read chapters while the site is idle.
 - Runs behind Cloudflare Tunnel for CGNAT-friendly hosting.
 - Backs up PostgreSQL dumps to a NAS share.
 

@@ -95,6 +95,8 @@ Check the worker logs for `MangaDex catalog sync` and `MangaDex pre-download`. T
 
 Both `mangahub-api` and `mangahub-workers` must mount the exact same writable `/mangadex-cache` volume. If one does not, the worker may download a chapter that the reader cannot find.
 
+When the authenticated site has been idle for 30 minutes, the worker performs a small historical cache backfill every hour. It only downloads chapters at or below a user's recorded current chapter, prioritizing closest missing chapters first. Default limits are one manga, two chapters, and a 10-second delay. It stops before each chapter if site activity has resumed.
+
 ## Secret Rotation
 
 Rotate these if they were pasted into chat, logs, screenshots, or Git:

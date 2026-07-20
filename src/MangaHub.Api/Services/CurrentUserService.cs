@@ -6,6 +6,8 @@ namespace MangaHub.Api.Services;
 
 public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenService tokens)
 {
+    private static long nextActivityWriteTicks;
+
     public async Task<MangaUser?> GetCurrentUserAsync(HttpRequest request, CancellationToken cancellationToken)
     {
         var bearerToken = ReadBearerToken(request);
@@ -14,7 +16,9 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
             var bearerUserId = tokens.ReadUserId(bearerToken);
             if (bearerUserId is not null)
             {
-                return await db.Users.FindAsync([bearerUserId.Value], cancellationToken);
+                var bearerUser = await db.Users.FindAsync([bearerUserId.Value], cancellationToken);
+                await RecordActivityAsync(bearerUser, cancellationToken);
+                return bearerUser;
             }
         }
 
@@ -24,7 +28,9 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
         }
 
         var userId = tokens.ReadUserId(token);
-        return userId is null ? null : await db.Users.FindAsync([userId.Value], cancellationToken);
+        var user = userId is null ? null : await db.Users.FindAsync([userId.Value], cancellationToken);
+        await RecordActivityAsync(user, cancellationToken);
+        return user;
     }
 
     public static bool IsAdmin(MangaUser user) =>
@@ -35,5 +41,33 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
         var header = request.Headers.Authorization.ToString();
         const string prefix = "Bearer ";
         return header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? header[prefix.Length..].Trim() : "";
+    }
+
+    private async Task RecordActivityAsync(MangaUser? user, CancellationToken cancellationToken)
+    {
+        if (user is null)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var nowTicks = now.UtcDateTime.Ticks;
+        var nextTicks = Interlocked.Read(ref nextActivityWriteTicks);
+        if (nowTicks < nextTicks || Interlocked.CompareExchange(ref nextActivityWriteTicks, nowTicks + TimeSpan.TicksPerMinute, nextTicks) != nextTicks)
+        {
+            return;
+        }
+
+        var activity = await db.SiteActivities.FindAsync([SiteActivity.SingletonId], cancellationToken);
+        if (activity is null)
+        {
+            db.SiteActivities.Add(new SiteActivity { LastActivityAt = now });
+        }
+        else
+        {
+            activity.LastActivityAt = now;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }
