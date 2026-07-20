@@ -25,7 +25,7 @@ postgres
 mangahub-workers
   scheduled background work
   same PostgreSQL database
-  same mounted library path
+  same mounted library path and MangaDex cache
 
 cloudflared
   named Cloudflare Tunnel to mangahub-web:80
@@ -104,6 +104,8 @@ Shelf data is per-user and points to a catalog entry.
 Local library series/chapters are scanned from the mounted library path and can be bound to catalog entries.
 
 MangaDex links are stored on catalog entries. When an admin chooses to read, MangaHub resolves the selected chapter through the MangaDex API, caches that chapter as a local CBZ file, and then uses the same protected internal reader used for local files. The cache records MangaDex chapter IDs separately from the NAS library and is never treated as original local-library metadata.
+
+The workers also run MangaDex maintenance once at startup and then daily at 04:00 in the configured timezone. Maintenance refreshes stale catalog chapter metadata and conservatively pre-downloads only newly released chapters for manga currently being read. A persistent per-catalog watermark prevents historical backfills and bounds API use.
 
 Reader endpoints and page delivery are admin-only. Normal users can manage their shelf/list data but cannot prepare or open reader chapters.
 

@@ -87,6 +87,14 @@ If UI loads but API calls fail:
 - verify secure cookie setting is true
 - verify nginx proxy config still routes `/api`, `/auth`, and `/health`
 
+## MangaDex Maintenance
+
+`mangahub-workers` performs MangaDex maintenance immediately at startup and then at 04:00 in `America/Sao_Paulo` by default. It first refreshes stale chapter metadata, then pre-downloads recent chapters for manga that are actively being read.
+
+Check the worker logs for `MangaDex catalog sync` and `MangaDex pre-download`. The first run only records each reading manga's current chapter watermark. Subsequent runs cache newer releases, up to the configured batch limits.
+
+Both `mangahub-api` and `mangahub-workers` must mount the exact same writable `/mangadex-cache` volume. If one does not, the worker may download a chapter that the reader cannot find.
+
 ## Secret Rotation
 
 Rotate these if they were pasted into chat, logs, screenshots, or Git:
@@ -98,4 +106,3 @@ Rotate these if they were pasted into chat, logs, screenshots, or Git:
 - PostgreSQL password, if feasible
 
 The app currently needs the MyAnimeList client id. It does not need the MyAnimeList client secret for metadata search.
-

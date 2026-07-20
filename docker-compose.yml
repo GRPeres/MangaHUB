@@ -47,11 +47,18 @@ services:
     environment:
       ConnectionStrings__MangaHub: Host=postgres;Database=mangahub;Username=mangahub;Password=mangahub
       MangaHub__LibraryPath: /library
+      MangaHub__MangaDexCachePath: /mangadex-cache
       MangaHub__JwtSecret: ${JWT_SECRET:-change-me-before-deploying-to-a-long-random-secret}
       MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
       MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:-}
+      MangaHub__MangaDexMaintenanceHour: 4
+      MangaHub__MangaDexMaintenanceTimeZone: America/Sao_Paulo
+      MangaHub__MangaDexPrefetchBatchSize: 6
+      MangaHub__MangaDexPrefetchMaxChaptersPerManga: 3
+      MangaHub__MangaDexPrefetchDelayMilliseconds: 5000
     volumes:
       - ${HOST_LIBRARY_PATH:-./library}:/library:ro
+      - mangadex-cache:/mangadex-cache
     depends_on:
       postgres:
         condition: service_healthy

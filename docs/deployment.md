@@ -85,6 +85,12 @@ MangaHub__JwtSecret=<long secret>
 MangaHub__LibraryPath=/library
 MangaHub__MangaDexEnabled=true
 MangaHub__MyAnimeListClientId=<client id>
+MangaHub__MangaDexCachePath=/mangadex-cache
+MangaHub__MangaDexMaintenanceHour=4
+MangaHub__MangaDexMaintenanceTimeZone=America/Sao_Paulo
+MangaHub__MangaDexPrefetchBatchSize=6
+MangaHub__MangaDexPrefetchMaxChaptersPerManga=3
+MangaHub__MangaDexPrefetchDelayMilliseconds=5000
 ```
 
 ## Library Mount
@@ -99,9 +105,9 @@ Change `/mnt/storage/manga` to the actual TrueNAS manga dataset path.
 
 ## MangaDex Reader Cache
 
-The admin-only MangaDex reader downloads only chapters explicitly opened by an admin, then stores each chapter as a CBZ cache file. The reader serves later page views from this local cache and does not request those pages from MangaDex again.
+The admin-only MangaDex reader downloads chapters as CBZ cache files. The reader serves later page views from this local cache and does not request those pages from MangaDex again.
 
-Add a separate writable mount to `mangahub-api`; do not use the read-only `/library` mount:
+Add the same separate writable mount to both `mangahub-api` and `mangahub-workers`; do not use the read-only `/library` mount. The API reads cached chapters, while the worker pre-downloads newly released MangaDex chapters.
 
 ```yaml
 mangahub-api:
@@ -110,11 +116,27 @@ mangahub-api:
   volumes:
     - mangadex-cache:/mangadex-cache
 
+mangahub-workers:
+  environment:
+    MangaHub__MangaDexCachePath: /mangadex-cache
+    MangaHub__MangaDexMaintenanceHour: 4
+    MangaHub__MangaDexMaintenanceTimeZone: America/Sao_Paulo
+  volumes:
+    - mangadex-cache:/mangadex-cache
+
 volumes:
   mangadex-cache:
 ```
 
 For a cache visible in a TrueNAS dataset instead, use a bind mount such as `/mnt/Shared/NAS/MangaHubMangaDexCache:/mangadex-cache`. Keep this cache separate from the original manga library: it is derived reader data, not your owned-library mount.
+
+## MangaDex Daily Maintenance
+
+The workers run MangaDex maintenance immediately when the container starts, then every day at the configured hour. This means a server that was off at 04:00 catches up as soon as it returns.
+
+Each run first refreshes stale MangaDex catalog metadata, then checks manga with at least one shelf entry in `reading` status. The first pre-download run records the currently known chapter as a watermark, without downloading historical chapters. Later runs cache only chapters above that watermark.
+
+The defaults are intentionally conservative: 50 metadata checks per run, up to 6 reading manga, at most 3 chapters per manga, and a 5-second pause between chapter downloads. Increase the batch values only after observing MangaDex usage and container performance.
 
 ## Historical DuckDNS Deploy
 

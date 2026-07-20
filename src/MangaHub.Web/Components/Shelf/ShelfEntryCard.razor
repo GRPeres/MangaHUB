@@ -30,6 +30,12 @@
                         </div>
 
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
+                            @if (HasNewChapters)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled" Class="mh-card-chip">
+                                    @NewChapterCount new
+                                </MudChip>
+                            }
                             @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleGenreLabel</MudChip>
