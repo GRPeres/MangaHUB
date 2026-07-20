@@ -8,6 +8,7 @@ public partial class CatalogEntryCard
     [Parameter, EditorRequired] public CatalogMangaResponse Entry { get; set; } = default!;
     [Parameter] public string ActiveSourceFilter { get; set; } = "";
     [Parameter] public EventCallback<CatalogMangaResponse> OnEdit { get; set; }
+    [Parameter] public EventCallback<CatalogMangaResponse> OnManageCache { get; set; }
     [Parameter] public EventCallback<string> OnSourceFilter { get; set; }
 
     private bool metadataOpen;
@@ -22,7 +23,7 @@ public partial class CatalogEntryCard
     private string FirstYearLabel => Entry.FirstPublishYear is null ? "Unknown" : Entry.FirstPublishYear.Value.ToString();
     private string FormatLabel => FirstNonEmpty(Entry.MediaType, Entry.Category, "Unknown");
     private string PublishingLabel => FirstNonEmpty(Entry.PublishingStatus, "Unknown");
-    private string ShelfAvailabilityLabel => Entry.IsInMyShelf ? "Already on shelf" : "Ready to add";
+    private bool HasMangaDexLink => !string.IsNullOrWhiteSpace(Entry.MangaDexId);
     private string MangaDexSyncLabel => Entry.MangaDexLastSyncedAt is null
         ? "Not checked yet"
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
@@ -45,6 +46,7 @@ public partial class CatalogEntryCard
     };
 
     private Task Edit() => OnEdit.InvokeAsync(Entry);
+    private Task ManageCache() => OnManageCache.InvokeAsync(Entry);
     private Task FilterBySource() => OnSourceFilter.InvokeAsync(SourceLabel);
     private string MetadataTitleId => $"catalog-metadata-{Entry.Id:N}";
     private void OpenMetadata() => metadataOpen = true;

@@ -72,10 +72,6 @@
                             <span>MangaDex sync</span>
                             <strong>@MangaDexSyncLabel</strong>
                         </div>
-                        <div>
-                            <span>Shelf state</span>
-                            <strong>@ShelfAvailabilityLabel</strong>
-                        </div>
                     </div>
 
                 </div>
@@ -124,6 +120,10 @@
         </MangaBento>
 
         <MudCardActions Class="mh-bento-card-actions">
+            @if (HasMangaDexLink)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="ManageCache">Manage cached chapters</MudButton>
+            }
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
         </MudCardActions>
     </MudCardContent>

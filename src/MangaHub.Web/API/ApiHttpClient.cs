@@ -34,6 +34,15 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<TResponse?> SendMultipartAsync<TResponse>(string url, MultipartFormDataContent content)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+        await AddAuthorizationAsync(request);
+        request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+        using var response = await http.SendAsync(request);
+        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
+    }
+
     public string GetAbsoluteUrl(string url) => new Uri(http.BaseAddress!, url).ToString();
 
     private async Task AddAuthorizationAsync(HttpRequestMessage request)

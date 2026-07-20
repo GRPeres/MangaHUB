@@ -6,7 +6,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/catalog")]
-public sealed class CatalogController(CurrentUserService currentUsers, CatalogService catalog) : ControllerBase
+public sealed class CatalogController(CurrentUserService currentUsers, CatalogService catalog, CatalogCacheService cache) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] string? q, CancellationToken cancellationToken)
@@ -49,5 +49,45 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
 
         var updated = await catalog.UpdateAsync(user.Id, entryId, request, cancellationToken);
         return updated is null ? NotFound() : Ok(updated);
+    }
+
+    [HttpGet("{entryId:guid}/mangadex-cache")]
+    public async Task<IActionResult> ListCache(Guid entryId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var result = await cache.ListAsync(entryId, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("{entryId:guid}/mangadex-cache/download")]
+    public async Task<IActionResult> DownloadCache(Guid entryId, [FromBody] CacheMangaDexChapterRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var result = await cache.DownloadAsync(entryId, request, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("{entryId:guid}/mangadex-cache/import")]
+    [RequestSizeLimit(1024L * 1024 * 1024)]
+    public async Task<IActionResult> ImportCache(Guid entryId, [FromForm] string chapterNumber, [FromForm] string? title, [FromForm] IFormFile file, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var result = await cache.ImportAsync(entryId, chapterNumber, title, file, cancellationToken);
+        return result is null ? BadRequest("Provide a MangaDex-linked catalog entry, chapter number, and non-empty .cbz file.") : Ok(result);
+    }
+
+    [HttpDelete("{entryId:guid}/mangadex-cache/{chapterId:guid}")]
+    public async Task<IActionResult> DeleteCache(Guid entryId, Guid chapterId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return await cache.DeleteAsync(entryId, chapterId, cancellationToken) ? NoContent() : NotFound();
     }
 }

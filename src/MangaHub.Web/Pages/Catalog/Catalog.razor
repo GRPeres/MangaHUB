@@ -53,7 +53,7 @@
             <MudStack Spacing="2">
                 @foreach (var item in FilteredCatalog)
                 {
-                    <CatalogEntryCard Entry="@item" ActiveSourceFilter="@sourceFilter" OnEdit="EditCatalog" OnSourceFilter="ToggleSourceFilter" />
+                    <CatalogEntryCard Entry="@item" ActiveSourceFilter="@sourceFilter" OnEdit="EditCatalog" OnManageCache="OpenCache" OnSourceFilter="ToggleSourceFilter" />
                 }
             </MudStack>
         }
@@ -63,6 +63,7 @@
 <CatalogAddModal Open="@isAddCatalogOpen" OpenChanged="OnAddCatalogOpenChanged" LocalSeries="@localSeries" OnSaved="LoadCatalog" />
 <CatalogImportModal Open="@isImportCatalogOpen" OpenChanged="OnImportCatalogOpenChanged" OnImported="LoadCatalog" />
 <CatalogEditModal Entry="@editingEntry" LocalSeries="@localSeries" OnSaved="OnCatalogSaved" OnClosed="CloseEdit" />
+<CatalogCacheModal Entry="@cacheEntry" OnClosed="CloseCache" />
 
 @if (filtersOpen)
 {
@@ -160,6 +161,7 @@
     private bool isImportCatalogOpen;
     private bool filtersOpen;
     private CatalogMangaResponse? editingEntry;
+    private CatalogMangaResponse? cacheEntry;
 
     protected override async Task OnInitializedAsync()
     {
@@ -232,6 +234,10 @@
     {
         editingEntry = null;
     }
+
+    private void OpenCache(CatalogMangaResponse entry) => cacheEntry = entry;
+
+    private void CloseCache() => cacheEntry = null;
 
     private async Task OnCatalogSaved(CatalogMangaResponse updated)
     {

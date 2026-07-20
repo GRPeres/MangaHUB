@@ -55,6 +55,10 @@ public sealed class SeriesRepository(MangaHubDbContext db)
 
     public void AddChapter(MangaChapter chapter) => db.Chapters.Add(chapter);
 
+    public void RemoveChapter(MangaChapter chapter) => db.Chapters.Remove(chapter);
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
+
     public Task<List<ChapterResponse>> ListChaptersAsync(Guid seriesId, CancellationToken cancellationToken) =>
         db.Chapters.AsNoTracking()
             .Where(x => x.SeriesId == seriesId)

@@ -44,6 +44,7 @@ Catalog:
 - list/search catalog
 - create catalog manga
 - update catalog manga
+- admin cache management: list, download, import, and delete MangaDex CBZ chapters
 
 Shelf:
 
@@ -83,6 +84,7 @@ Frontend API call wrappers live under `src/MangaHub.Web/API/Services`, ideally o
 - CSV import that creates catalog entries belongs in admin/catalog flows
 - admin role assignment requires admin
 - reader options, chapter preparation, and reader page endpoints require admin
+- MangaDex cache management endpoints require admin and verify the catalog entry owns each cached chapter
 
 ## Error Handling
 

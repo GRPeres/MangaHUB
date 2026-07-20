@@ -24,13 +24,7 @@ public sealed class MangaDexChapterCache(
             throw new InvalidOperationException("MangaDex did not provide any readable pages for this chapter.");
         }
 
-        var relativePath = Path.Combine("mangadex", SafePathSegment(mangaDexId), $"{SafePathSegment(chapterId)}.cbz");
-        var cacheRoot = Path.GetFullPath(options.Value.MangaDexCachePath);
-        var archivePath = Path.GetFullPath(Path.Combine(cacheRoot, relativePath));
-        if (!archivePath.StartsWith(cacheRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("The MangaDex cache path is invalid.");
-        }
+        var (relativePath, archivePath) = GetArchivePath(mangaDexId, chapterId);
 
         Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
         var downloadLock = DownloadLocks.GetOrAdd(archivePath, _ => new SemaphoreSlim(1, 1));
@@ -90,12 +84,89 @@ public sealed class MangaDexChapterCache(
         }
     }
 
+    public async Task<MangaDexCachedChapter> ImportAsync(
+        string mangaDexId,
+        string chapterId,
+        Stream content,
+        CancellationToken cancellationToken)
+    {
+        var (relativePath, archivePath) = GetArchivePath(mangaDexId, chapterId);
+        Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
+        var downloadLock = DownloadLocks.GetOrAdd(archivePath, _ => new SemaphoreSlim(1, 1));
+        await downloadLock.WaitAsync(cancellationToken);
+        try
+        {
+            var temporaryPath = $"{archivePath}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await using (var output = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    await content.CopyToAsync(output, cancellationToken);
+                }
+
+                _ = await ReadCachedArchiveAsync(temporaryPath, relativePath, cancellationToken);
+                File.Move(temporaryPath, archivePath, overwrite: true);
+            }
+            catch
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+                throw;
+            }
+
+            var cached = await ReadCachedArchiveAsync(archivePath, relativePath, cancellationToken);
+            return cached with { WasCached = false };
+        }
+        finally
+        {
+            downloadLock.Release();
+        }
+    }
+
+    public async Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
+    {
+        var (_, archivePath) = GetArchivePath(mangaDexId, chapterId);
+        var downloadLock = DownloadLocks.GetOrAdd(archivePath, _ => new SemaphoreSlim(1, 1));
+        await downloadLock.WaitAsync(cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (File.Exists(archivePath))
+            {
+                File.Delete(archivePath);
+            }
+        }
+        finally
+        {
+            downloadLock.Release();
+        }
+    }
+
+    private (string RelativePath, string ArchivePath) GetArchivePath(string mangaDexId, string chapterId)
+    {
+        var relativePath = Path.Combine("mangadex", SafePathSegment(mangaDexId), $"{SafePathSegment(chapterId)}.cbz");
+        var cacheRoot = Path.GetFullPath(options.Value.MangaDexCachePath);
+        var archivePath = Path.GetFullPath(Path.Combine(cacheRoot, relativePath));
+        if (!archivePath.StartsWith(cacheRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The MangaDex cache path is invalid.");
+        }
+
+        return (relativePath, archivePath);
+    }
+
     private static async Task<MangaDexCachedChapter> ReadCachedArchiveAsync(string archivePath, string relativePath, CancellationToken cancellationToken)
     {
         var pageCount = 0;
         using (var archive = ZipFile.OpenRead(archivePath))
         {
             pageCount = archive.Entries.Count(entry => !string.IsNullOrWhiteSpace(entry.Name));
+        }
+        if (pageCount == 0)
+        {
+            throw new InvalidOperationException("The CBZ archive does not contain any readable pages.");
         }
 
         await using var stream = File.OpenRead(archivePath);

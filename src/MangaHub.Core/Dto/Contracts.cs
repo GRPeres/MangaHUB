@@ -98,3 +98,6 @@ public sealed record AddToShelfRequest(
 public sealed record ShelfImportRequest(string CsvText, bool CreateMissingCatalogEntries);
 public sealed record ShelfImportResponse(int Imported, int CreatedCatalogEntries, int UpdatedShelfEntries, int Skipped, List<string> Messages);
 public sealed record ReaderLaunchResponse(string ReaderUrl, string CurrentChapter, int PageCount);
+public sealed record CachedMangaDexChapterResponse(Guid Id, string ChapterNumber, string Title, int PageCount, DateTimeOffset CachedAt, bool IsManual);
+public sealed record MangaDexCacheResponse(string MangaDexId, List<CachedMangaDexChapterResponse> Chapters);
+public sealed record CacheMangaDexChapterRequest(string ChapterNumber);

@@ -51,6 +51,7 @@
                 <CatalogEntryCard Entry="@entry"
                                   ActiveSourceFilter="@ActiveSource"
                                   OnSourceFilter="SetSourceFilter"
+                                  OnManageCache="NoopCatalogCache"
                                   OnEdit="NoopCatalogEdit" />
             }
         </MudStack>
@@ -188,4 +189,5 @@
     private static Task NoopRead(Guid _) => Task.CompletedTask;
     private static Task NoopShelfEdit(MangaEntryResponse _) => Task.CompletedTask;
     private static Task NoopCatalogEdit(CatalogMangaResponse _) => Task.CompletedTask;
+    private static Task NoopCatalogCache(CatalogMangaResponse _) => Task.CompletedTask;
 }
