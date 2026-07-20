@@ -1,4 +1,16 @@
-<MudCard Elevation="0" Outlined="true" Class="mh-row-card">
+<MudCard Elevation="0" Outlined="true" Class="mh-row-card mh-shelf-entry-card">
+    @if (HasNewChapters)
+    {
+        <MudChip T="string"
+                 Size="Size.Small"
+                 Color="Color.Error"
+                 Variant="Variant.Filled"
+                 Icon="@Icons.Material.Filled.NotificationsActive"
+                 Class="mh-new-chapter-notification">
+            @NewChapterCount new
+        </MudChip>
+    }
+
     <div class="mh-cover-frame">
         @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
         {
@@ -30,12 +42,6 @@
                         </div>
 
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
-                            @if (HasNewChapters)
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled" Class="mh-card-chip">
-                                    @NewChapterCount new
-                                </MudChip>
-                            }
                             @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleGenreLabel</MudChip>
