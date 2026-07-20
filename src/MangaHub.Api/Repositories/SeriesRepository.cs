@@ -66,14 +66,14 @@ public sealed class SeriesRepository(MangaHubDbContext db)
             .Select(x => new ChapterResponse(x.Id, x.SeriesId, x.ChapterNumber, x.Title, x.PageCount))
             .ToListAsync(cancellationToken);
 
-    public async Task<(Guid Id, int PageCount)?> GetFirstChapterAsync(Guid seriesId, CancellationToken cancellationToken)
+    public async Task<(Guid Id, string ChapterNumber, int PageCount)?> GetFirstChapterAsync(Guid seriesId, CancellationToken cancellationToken)
     {
         var chapter = await db.Chapters.AsNoTracking()
             .Where(x => x.SeriesId == seriesId)
             .OrderBy(x => x.ChapterNumber)
-            .Select(x => new { x.Id, x.PageCount })
+            .Select(x => new { x.Id, x.ChapterNumber, x.PageCount })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return chapter is null ? null : (chapter.Id, chapter.PageCount);
+        return chapter is null ? null : (chapter.Id, chapter.ChapterNumber, chapter.PageCount);
     }
 }

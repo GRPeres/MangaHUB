@@ -55,18 +55,7 @@
 <ShelfImportModal Open="@isImportShelfOpen" OpenChanged="OnImportShelfOpenChanged" OnImported="Load" />
 <ShelfEditModal Entry="@editingEntry" OwnerUserId="@(IsAdmin ? selectedUserId : null)" OnSaved="OnShelfEditSaved" OnClosed="CloseEdit" />
 
-@if (isPreparingReader)
-{
-    <div class="mh-modal-backdrop">
-        <section class="mh-modal mh-reader-preparing-modal" role="status" aria-live="polite">
-            <MudStack Spacing="3" AlignItems="AlignItems.Center">
-                <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
-                <MudText Typo="Typo.h3">Preparing your chapter</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">MangaHub is fetching the chapter into your local reader cache.</MudText>
-            </MudStack>
-        </section>
-    </div>
-}
+<ReaderPreparingOverlay Open="@isPreparingReader" />
 
 @if (filtersOpen)
 {
@@ -129,6 +118,7 @@
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("local")">Local files</MudSelectItem>
                             <MudSelectItem T="string" Value="@("mangadex")">MangaDex</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("external")">External link</MudSelectItem>
                             <MudSelectItem T="string" Value="@("missing")">Missing read source</MudSelectItem>
                         </MudSelect>
                     </MudItem>
@@ -299,7 +289,8 @@
         .Where(MatchesCategory)
         .Where(MatchesAvailability)
         .Where(MatchesScore)
-        .OrderBy(StatusSortRank)
+        .OrderByDescending(HasNewChapters)
+        .ThenBy(StatusSortRank)
         .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
@@ -339,8 +330,9 @@
     private bool MatchesAvailability(MangaEntryResponse entry) => availabilityFilter switch
     {
         "local" => entry.LocalSeriesId is not null,
-        "mangadex" => !string.IsNullOrWhiteSpace(entry.MangaDexUrl),
-        "missing" => entry.LocalSeriesId is null && string.IsNullOrWhiteSpace(entry.MangaDexUrl),
+        "mangadex" => HasMangaDexLink(entry),
+        "external" => entry.LocalSeriesId is null && !HasMangaDexLink(entry) && IsHttpUrl(entry.MangaDexUrl),
+        "missing" => entry.LocalSeriesId is null && !HasMangaDexLink(entry) && !IsHttpUrl(entry.MangaDexUrl),
         _ => true
     };
 
@@ -367,9 +359,16 @@
     private static int Count(string value) => string.IsNullOrWhiteSpace(value) ? 0 : 1;
 
     private static bool HasNewChapters(MangaEntryResponse entry) =>
-        entry.ChapterCount is not null
+        HasMangaDexLink(entry)
+        && entry.ChapterCount is not null
         && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
         && entry.ChapterCount.Value > currentChapter;
+
+    private static bool HasMangaDexLink(MangaEntryResponse entry) => !string.IsNullOrWhiteSpace(entry.MangaDexId);
+
+    private static bool IsHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     private static bool Contains(string value, string query) =>
         !string.IsNullOrWhiteSpace(value) && value.Contains(query, StringComparison.OrdinalIgnoreCase);

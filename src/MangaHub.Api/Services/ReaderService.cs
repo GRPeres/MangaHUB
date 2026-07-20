@@ -30,7 +30,7 @@ public sealed class ReaderService(
 
         var entry = shelfEntry.MangaEntry;
         var mangaDexId = GetMangaDexId(entry);
-        (Guid Id, int PageCount)? localFirstChapter = entry.LocalSeriesId is null
+        (Guid Id, string ChapterNumber, int PageCount)? localFirstChapter = entry.LocalSeriesId is null
             ? null
             : await series.GetFirstChapterAsync(entry.LocalSeriesId.Value, cancellationToken);
 
@@ -40,13 +40,16 @@ public sealed class ReaderService(
             !string.IsNullOrWhiteSpace(mangaDexId),
             entry.MangaDexUrl,
             localFirstChapter is not null,
-            localFirstChapter is null ? "" : $"/reader/{localFirstChapter.Value.Id}/{localFirstChapter.Value.PageCount}");
+            localFirstChapter is null
+                ? ""
+                : $"/reader/{localFirstChapter.Value.Id}/{localFirstChapter.Value.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(localFirstChapter.Value.ChapterNumber)}&source=local");
     }
 
     public async Task<ReaderLaunchResponse?> PrepareMangaDexChapterAsync(
         Guid userId,
         Guid entryId,
         Guid? afterCachedChapterId,
+        Guid? beforeCachedChapterId,
         CancellationToken cancellationToken)
     {
         var shelfEntry = await shelf.GetWithMangaAsync(userId, entryId, cancellationToken);
@@ -61,15 +64,20 @@ public sealed class ReaderService(
         {
             return null;
         }
+        if (afterCachedChapterId is not null && beforeCachedChapterId is not null)
+        {
+            return null;
+        }
 
         var cachedSeries = await series.GetBySourceAndExternalIdAsync(MangaDexCacheSource, mangaDexId, cancellationToken);
         var isNewCachedSeries = cachedSeries is null;
         MangaChapter? cachedChapter = null;
         MangaSourceChapter? sourceChapter = null;
 
-        if (afterCachedChapterId is not null)
+        if (afterCachedChapterId is not null || beforeCachedChapterId is not null)
         {
-            var current = await series.GetChapterWithSeriesAsync(afterCachedChapterId.Value, cancellationToken);
+            var currentChapterId = afterCachedChapterId ?? beforeCachedChapterId!.Value;
+            var current = await series.GetChapterWithSeriesAsync(currentChapterId, cancellationToken);
             if (current?.Series is null
                 || !string.Equals(current.Series.Source, MangaDexCacheSource, StringComparison.Ordinal)
                 || !string.Equals(current.Series.ExternalId, mangaDexId, StringComparison.Ordinal))
@@ -77,7 +85,9 @@ public sealed class ReaderService(
                 return null;
             }
 
-            sourceChapter = await FindNextMangaDexChapterAsync(mangaDexId, current.SourceId, cancellationToken);
+            sourceChapter = afterCachedChapterId is not null
+                ? await FindNextMangaDexChapterAsync(mangaDexId, current.SourceId, cancellationToken)
+                : await FindPreviousMangaDexChapterAsync(mangaDexId, current.SourceId, cancellationToken);
             if (sourceChapter is null)
             {
                 return null;
@@ -144,7 +154,7 @@ public sealed class ReaderService(
 
         await shelf.SaveChangesAsync(cancellationToken);
         return new ReaderLaunchResponse(
-            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}",
+            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex",
             cachedChapter.ChapterNumber,
             cachedChapter.PageCount);
     }
@@ -181,6 +191,14 @@ public sealed class ReaderService(
         var currentIndex = chapters.Select((chapter, index) => new { chapter, index })
             .FirstOrDefault(item => string.Equals(item.chapter.Id, currentChapterId, StringComparison.Ordinal))?.index;
         return currentIndex is null || currentIndex.Value + 1 >= chapters.Count ? null : chapters[currentIndex.Value + 1];
+    }
+
+    private async Task<MangaSourceChapter?> FindPreviousMangaDexChapterAsync(string mangaDexId, string currentChapterId, CancellationToken cancellationToken)
+    {
+        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, cancellationToken);
+        var currentIndex = chapters.Select((chapter, index) => new { chapter, index })
+            .FirstOrDefault(item => string.Equals(item.chapter.Id, currentChapterId, StringComparison.Ordinal))?.index;
+        return currentIndex is null || currentIndex.Value == 0 ? null : chapters[currentIndex.Value - 1];
     }
 
     private static MangaSourceChapter? SelectCurrentMangaDexChapter(IReadOnlyList<MangaSourceChapter> chapters, string currentChapter) =>

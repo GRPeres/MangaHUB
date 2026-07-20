@@ -21,9 +21,22 @@ public sealed class MangaApiService(ApiHttpClient api)
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
         await api.GetAsync<ReadOptions>($"/api/manga/{entryId}/read-options");
 
-    public async Task<ReaderLaunchResponse?> PrepareMangaDexChapterAsync(Guid entryId, Guid? afterCachedChapterId = null)
+    public async Task<ReaderLaunchResponse?> PrepareMangaDexChapterAsync(
+        Guid entryId,
+        Guid? afterCachedChapterId = null,
+        Guid? beforeCachedChapterId = null)
     {
-        var query = afterCachedChapterId is null ? "" : $"?afterCachedChapterId={afterCachedChapterId}";
+        var queryValues = new List<string>();
+        if (afterCachedChapterId is not null)
+        {
+            queryValues.Add($"afterCachedChapterId={afterCachedChapterId}");
+        }
+        if (beforeCachedChapterId is not null)
+        {
+            queryValues.Add($"beforeCachedChapterId={beforeCachedChapterId}");
+        }
+
+        var query = queryValues.Count == 0 ? "" : $"?{string.Join("&", queryValues)}";
         return await api.SendAsync<object, ReaderLaunchResponse>(
             HttpMethod.Post,
             $"/api/manga/{entryId}/mangadex-reader/prepare{query}",

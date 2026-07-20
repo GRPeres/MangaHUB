@@ -57,6 +57,31 @@ public sealed class SecurityAndArchiveTests
         Assert.Null(missing);
     }
 
+    [Fact]
+    public async Task CbzArchiveReader_ReadsAvifPagesWrittenByMangaDexCache()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.cbz");
+        try
+        {
+            using (var zip = ZipFile.Open(path, ZipArchiveMode.Create))
+            {
+                AddEntry(zip, "0001.avif", [1, 2, 3]);
+            }
+
+            var reader = new CbzArchiveReader();
+            var page = await reader.ReadPageAsync(path, 0, CancellationToken.None);
+
+            Assert.Equal(1, reader.CountPages(path));
+            Assert.NotNull(page);
+            Assert.Equal("image/avif", page.ContentType);
+            Assert.Equal([1, 2, 3], page.Bytes);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static JwtSessionTokenService TokenService(string secret) =>
         new(Options.Create(new MangaHubOptions { JwtSecret = secret }));
 

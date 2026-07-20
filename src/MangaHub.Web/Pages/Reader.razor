@@ -6,31 +6,100 @@
 
 <PageTitle>Reader</PageTitle>
 
-<MudPaper Class="reader-toolbar" Elevation="0" Outlined="true">
-    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ChevronLeft" OnClick="Previous" Disabled="@(page <= 0)">Previous</MudButton>
-    <MudText Typo="Typo.body2">Page @(page + 1) / @PageCount</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight" OnClick="Next" Disabled="@(isPreparingNext || (page >= PageCount - 1 && EntryId is null))">@NextLabel</MudButton>
-</MudPaper>
+<section class="reader-workspace">
+    <div class="reader-top-stack">
+        <MudPaper Class="reader-toolbar" Elevation="0" Outlined="true">
+            <div class="reader-toolbar-previous">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ChevronLeft" OnClick="Previous" Disabled="@PreviousDisabled">Previous</MudButton>
+            </div>
+            <MudText Typo="Typo.body2" Class="reader-page-count">Page @(page + 1) / @PageCount</MudText>
+            <div class="reader-toolbar-next">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight" OnClick="Next" Disabled="@NextDisabled">@NextLabel</MudButton>
+            </div>
+        </MudPaper>
 
-@if (!string.IsNullOrWhiteSpace(readerMessage))
-{
-    <MudAlert Severity="Severity.Info" Dense="true">@readerMessage</MudAlert>
-}
+        @if (!string.IsNullOrWhiteSpace(readerMessage))
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="reader-message">@readerMessage</MudAlert>
+        }
+    </div>
 
-<main class="reader">
-    <img src="@ReadApi.GetPageUrl(ChapterId, page)" alt="Manga page @(page + 1)" />
-</main>
+    <main class="reader">
+        <div class="reader-page-frame">
+            <img src="@ReadApi.GetPageUrl(ChapterId, page)" alt="Manga page @(page + 1)" />
+            <button type="button"
+                    class="reader-page-hit-area reader-page-hit-area-previous"
+                    aria-label="Previous page"
+                    title="Previous page"
+                    @onclick="Previous"
+                    disabled="@PreviousDisabled">
+                <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" aria-hidden="true" />
+            </button>
+            <button type="button"
+                    class="reader-page-hit-area reader-page-hit-area-next"
+                    aria-label="@NextLabel"
+                    title="@NextLabel"
+                    @onclick="Next"
+                    disabled="@NextDisabled">
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" aria-hidden="true" />
+            </button>
+        </div>
+    </main>
+
+    <MudPaper Class="reader-toolbar reader-chapter-toolbar" Elevation="0" Outlined="true">
+        <div class="reader-toolbar-previous">
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="BackToShelf">Back to shelf</MudButton>
+        </div>
+        <MudText Typo="Typo.body2" Class="reader-page-count">@ChapterLabel</MudText>
+        <div aria-hidden="true"></div>
+    </MudPaper>
+</section>
+
+<ReaderPreparingOverlay Open="@isPreparingChapter"
+                         Title="Preparing chapter"
+                         Message="MangaHub is fetching the chapter into your local reader cache." />
 
 @code {
     [Parameter] public Guid ChapterId { get; set; }
     [Parameter] public int PageCount { get; set; }
     [SupplyParameterFromQuery] public Guid? EntryId { get; set; }
+    [SupplyParameterFromQuery(Name = "chapter")] public string? CurrentChapter { get; set; }
+    [SupplyParameterFromQuery(Name = "source")] public string? ReaderSource { get; set; }
     private int page;
-    private bool isPreparingNext;
+    private Guid loadedChapterId;
+    private bool isPreparingChapter;
     private string readerMessage = "";
     private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
+    private bool IsMangaDexReader => string.Equals(ReaderSource, "mangadex", StringComparison.OrdinalIgnoreCase)
+        || (string.IsNullOrWhiteSpace(ReaderSource) && EntryId is not null);
+    private bool CanPrepareAdjacentChapter => IsMangaDexReader && EntryId is not null;
+    private bool PreviousDisabled => isPreparingChapter || (page <= 0 && !CanPrepareAdjacentChapter);
+    private bool NextDisabled => isPreparingChapter || (page >= PageCount - 1 && !CanPrepareAdjacentChapter);
+    private string ChapterLabel => string.IsNullOrWhiteSpace(CurrentChapter) ? "Chapter" : $"Chapter {CurrentChapter}";
 
-    private void Previous() => page = Math.Max(0, page - 1);
+    protected override void OnParametersSet()
+    {
+        if (loadedChapterId != ChapterId)
+        {
+            loadedChapterId = ChapterId;
+            page = 0;
+            readerMessage = "";
+            isPreparingChapter = false;
+        }
+    }
+
+    private async Task Previous()
+    {
+        if (page > 0)
+        {
+            page--;
+            return;
+        }
+
+        await PrepareAdjacentChapterAsync(next: false);
+    }
+
+    private void BackToShelf() => Navigation.NavigateTo("/library");
 
     private async Task Next()
     {
@@ -40,19 +109,30 @@
             return;
         }
 
-        if (EntryId is null)
+        await PrepareAdjacentChapterAsync(next: true);
+    }
+
+    private async Task PrepareAdjacentChapterAsync(bool next)
+    {
+        if (!CanPrepareAdjacentChapter || EntryId is null)
         {
             return;
         }
 
-        isPreparingNext = true;
-        readerMessage = "Preparing the next chapter...";
+        isPreparingChapter = true;
+        readerMessage = "";
+        await InvokeAsync(StateHasChanged);
         try
         {
-            var launch = await MangaApi.PrepareMangaDexChapterAsync(EntryId.Value, ChapterId);
+            var launch = await MangaApi.PrepareMangaDexChapterAsync(
+                EntryId.Value,
+                afterCachedChapterId: next ? ChapterId : null,
+                beforeCachedChapterId: next ? null : ChapterId);
             if (launch is null)
             {
-                readerMessage = "No later readable MangaDex chapter is available yet.";
+                readerMessage = next
+                    ? "No later readable MangaDex chapter is available yet."
+                    : "No earlier readable MangaDex chapter is available.";
                 return;
             }
 
@@ -60,7 +140,7 @@
         }
         finally
         {
-            isPreparingNext = false;
+            isPreparingChapter = false;
         }
     }
 }

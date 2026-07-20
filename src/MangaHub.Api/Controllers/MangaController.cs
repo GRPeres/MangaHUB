@@ -46,6 +46,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
     public async Task<IActionResult> PrepareMangaDexChapter(
         Guid entryId,
         [FromQuery] Guid? afterCachedChapterId,
+        [FromQuery] Guid? beforeCachedChapterId,
         CancellationToken cancellationToken)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
@@ -58,7 +59,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        var launch = await reader.PrepareMangaDexChapterAsync(user.Id, entryId, afterCachedChapterId, cancellationToken);
+        var launch = await reader.PrepareMangaDexChapterAsync(user.Id, entryId, afterCachedChapterId, beforeCachedChapterId, cancellationToken);
         return launch is null ? NotFound() : Ok(launch);
     }
 }

@@ -7,7 +7,7 @@ public sealed class CbzArchiveReader : IArchiveReader
 {
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".jpg", ".jpeg", ".png", ".webp", ".gif"
+        ".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"
     };
 
     public int CountPages(string archivePath)
@@ -38,7 +38,7 @@ public sealed class CbzArchiveReader : IArchiveReader
         ".png" => "image/png",
         ".webp" => "image/webp",
         ".gif" => "image/gif",
+        ".avif" => "image/avif",
         _ => "image/jpeg"
     };
 }
-

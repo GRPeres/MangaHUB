@@ -1,0 +1,8 @@
+.mh-reader-preparing-progress {
+    width: min(100%, 22rem);
+}
+
+.mh-reader-preparing-steps {
+    max-width: 28rem;
+    text-align: center;
+}

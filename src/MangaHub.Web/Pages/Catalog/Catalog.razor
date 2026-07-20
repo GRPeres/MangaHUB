@@ -122,6 +122,7 @@
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("mangadex")">MangaDex</MudSelectItem>
                             <MudSelectItem T="string" Value="@("local")">Local files</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("external")">External link</MudSelectItem>
                             <MudSelectItem T="string" Value="@("missing")">Missing read source</MudSelectItem>
                         </MudSelect>
                     </MudItem>
@@ -307,11 +308,16 @@
 
     private bool MatchesLink(CatalogMangaResponse entry) => linkFilter switch
     {
-        "mangadex" => !string.IsNullOrWhiteSpace(entry.MangaDexUrl),
+        "mangadex" => !string.IsNullOrWhiteSpace(entry.MangaDexId),
         "local" => entry.LocalSeriesId is not null,
-        "missing" => entry.LocalSeriesId is null && string.IsNullOrWhiteSpace(entry.MangaDexUrl),
+        "external" => entry.LocalSeriesId is null && string.IsNullOrWhiteSpace(entry.MangaDexId) && IsHttpUrl(entry.MangaDexUrl),
+        "missing" => entry.LocalSeriesId is null && string.IsNullOrWhiteSpace(entry.MangaDexId) && !IsHttpUrl(entry.MangaDexUrl),
         _ => true
     };
+
+    private static bool IsHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     private bool MatchesShelf(CatalogMangaResponse entry) => shelfFilter switch
     {

@@ -22,18 +22,26 @@ public partial class ShelfEntryCard
     private int HiddenGenreCount => Math.Max(0, GenreLabels.Count - 1);
     private string DescriptionText => FirstNonEmpty(Entry.Summary, Entry.Description);
     private string ScoreLabel => Entry.Score is null ? "Not scored" : $"{Entry.Score}/5";
-    private string ReadSourceLabel => !string.IsNullOrWhiteSpace(Entry.MangaDexUrl)
-        ? "MangaDex"
-        : Entry.LocalSeriesId is not null ? "Local" : "Unlinked";
+    private bool HasMangaDexLink => !string.IsNullOrWhiteSpace(Entry.MangaDexId);
+    private bool HasExternalReaderLink => !HasMangaDexLink && IsHttpUrl(Entry.MangaDexUrl);
+    private bool OpensExternalReader => Entry.LocalSeriesId is null && HasExternalReaderLink;
+    private string ReadSourceLabel => Entry.LocalSeriesId is not null
+        ? "Local"
+        : HasMangaDexLink ? "MangaDex"
+        : HasExternalReaderLink ? "External link" : "Unlinked";
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
     private string LatestChapterValue => Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
-    private int NewChapterCount => Entry.ChapterCount is not null && TryGetCurrentChapterNumber(out var currentChapter)
+    private int NewChapterCount => HasMangaDexLink && Entry.ChapterCount is not null && TryGetCurrentChapterNumber(out var currentChapter)
         ? Math.Max(0, Entry.ChapterCount.Value - currentChapter)
         : 0;
     private bool HasNewChapters => NewChapterCount > 0;
-    private string ProgressHint => HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
+    private string ProgressHint => !HasMangaDexLink
+        ? "MangaDex sync unavailable"
+        : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
     private string ProgressScheme => HasNewChapters ? "warm" : "secondary";
-    private string MangaDexSyncLabel => Entry.MangaDexLastSyncedAt is null
+    private string MangaDexSyncLabel => !HasMangaDexLink
+        ? "Not linked"
+        : Entry.MangaDexLastSyncedAt is null
         ? "Not checked yet"
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
     private string FormatLabel => FirstNonEmpty(Entry.MediaType, GenreLabel, "Unknown");
@@ -102,6 +110,10 @@ public partial class ShelfEntryCard
         var firstWord = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? trimmed;
         return firstWord.Length <= 12 ? $"{firstWord}..." : $"{firstWord[..12]}...";
     }
+
+    private static bool IsHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     private bool TryGetCurrentChapterNumber(out int chapter)
     {

@@ -7,6 +7,17 @@
     overflow: hidden;
 }
 
+::deep .mh-entry-card-badge {
+    display: block;
+    width: 100%;
+}
+
+::deep .mh-entry-card-badge .mud-badge {
+    font-weight: 800;
+    min-width: 2rem;
+    pointer-events: none;
+}
+
 .mh-cover-frame {
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
     border-right: 1px solid var(--mud-palette-divider);

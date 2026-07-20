@@ -1,3 +1,13 @@
+<MudBadge Content="@($"+{NewChapterCount}")"
+          Visible="@HasNewChapters"
+          Color="Color.Error"
+          Origin="Origin.TopRight"
+          Overlap="true"
+          Bordered="true"
+          Elevation="8"
+          Class="mh-entry-card-badge"
+          BadgeClass="mh-new-chapter-badge"
+          BadgeAriaLabel="@($"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")} available")">
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <div class="mh-cover-frame">
         @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
@@ -30,12 +40,6 @@
                         </div>
 
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
-                            @if (HasNewChapters)
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled" Class="mh-card-chip">
-                                    @NewChapterCount new
-                                </MudChip>
-                            }
                             @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleGenreLabel</MudChip>
@@ -125,12 +129,27 @@
         <MudCardActions Class="mh-bento-card-actions">
             @if (CanRead)
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
+                @if (OpensExternalReader)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.OpenInNew"
+                               Href="@Entry.MangaDexUrl"
+                               Target="_blank"
+                               Rel="noopener noreferrer">
+                        Read
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
+                }
             }
             <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
         </MudCardActions>
     </MudCardContent>
 </MudCard>
+</MudBadge>
 
 @if (metadataOpen)
 {

@@ -29,11 +29,14 @@ public partial class CatalogEntryCard
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
     private string CachedChapterLabel => Entry.CachedChapterCount == 1 ? "1 chapter" : $"{Entry.CachedChapterCount} chapters";
     private string IdentityLabel => IsMissingMyAnimeListId ? "MAL ID missing" : $"MAL #{Entry.MyAnimeListId}";
-    private string ReaderLinksLabel => (Entry.MangaDexUrl, Entry.LocalSeriesId) switch
+    private bool HasExternalReaderLink => !HasMangaDexLink && IsHttpUrl(Entry.MangaDexUrl);
+    private string ReaderLinksLabel => (HasMangaDexLink, HasExternalReaderLink, Entry.LocalSeriesId) switch
     {
-        ({ Length: > 0 }, not null) => "MangaDex + local",
-        ({ Length: > 0 }, null) => "MangaDex",
-        (_, not null) => "Local files",
+        (true, _, not null) => "MangaDex + local",
+        (true, _, null) => "MangaDex",
+        (_, true, not null) => "External + local",
+        (_, true, null) => "External link",
+        (_, _, not null) => "Local files",
         _ => "No reader link"
     };
     private bool IsSourceFilterActive => string.Equals(ActiveSourceFilter, SourceLabel, StringComparison.OrdinalIgnoreCase);
@@ -80,4 +83,8 @@ public partial class CatalogEntryCard
         "openlibrary" => "OpenLibrary",
         _ => source
     };
+
+    private static bool IsHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }
