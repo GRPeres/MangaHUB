@@ -12,4 +12,6 @@ public sealed class MangaHubOptions
     public int MangaDexSyncIntervalHours { get; set; } = 24;
     public int MangaDexSyncDelayMilliseconds { get; set; } = 1500;
     public int MangaDexSyncBatchSize { get; set; } = 50;
+    public int MangaDexReaderCacheMinutes { get; set; } = 15;
+    public int MangaDexReaderMaxChapters { get; set; } = 1000;
 }

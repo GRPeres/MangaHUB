@@ -4,7 +4,6 @@
 @inject NavigationManager Navigation
 @inject AdminApiService AdminApi
 @inject MangaApiService MangaApi
-@inject IJSRuntime Js
 
 <PageTitle>Shelf</PageTitle>
 
@@ -227,7 +226,7 @@
 
         if (options.HasMangaDex)
         {
-            await Js.InvokeVoidAsync("open", options.MangaDexUrl, "_blank", "noopener,noreferrer");
+            Navigation.NavigateTo(options.MangaDexReaderUrl);
             return;
         }
 

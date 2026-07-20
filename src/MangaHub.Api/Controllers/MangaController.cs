@@ -1,3 +1,4 @@
+using MangaHub.Core.Dto;
 using MangaHub.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,5 +37,34 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
 
         var options = await reader.GetReadOptionsAsync(user.Id, entryId, cancellationToken);
         return options is null ? NotFound() : Ok(options);
+    }
+
+    [HttpGet("{entryId:guid}/mangadex-reader")]
+    public async Task<IActionResult> MangaDexReaderSession(Guid entryId, [FromQuery] string? chapterId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var session = await reader.GetMangaDexReaderSessionAsync(user.Id, entryId, chapterId, cancellationToken);
+        return session is null ? NotFound() : Ok(session);
+    }
+
+    [HttpPost("{entryId:guid}/mangadex-reader/progress")]
+    public async Task<IActionResult> SaveMangaDexProgress(
+        Guid entryId,
+        [FromBody] MangaDexReaderProgressRequest request,
+        CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var progress = await reader.SaveMangaDexProgressAsync(user.Id, entryId, request, cancellationToken);
+        return progress is null ? NotFound() : Ok(progress);
     }
 }

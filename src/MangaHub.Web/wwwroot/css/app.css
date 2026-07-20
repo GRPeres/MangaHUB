@@ -252,6 +252,15 @@ a {
     object-fit: contain;
 }
 
+.mh-reader-page {
+    margin: 0 auto;
+    max-width: 1120px;
+}
+
+.mh-reader-chapter-select {
+    min-width: min(360px, 42vw);
+}
+
 html body .mh-row-card .mh-bento-host,
 html body .mh-row-card .mh-bento-host .mh-bento-grid,
 html body .mh-row-card .mh-bento-host .bzb-grid {
@@ -392,6 +401,10 @@ html.mh-theme-dark .loading-progress circle:last-child {
 
     .reader-toolbar {
         top: 64px;
+    }
+
+    .mh-reader-chapter-select {
+        min-width: 0;
     }
 
     .mh-modal-backdrop {

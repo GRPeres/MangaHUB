@@ -1,4 +1,6 @@
 using MangaHub.Core.Services;
+using MangaHub.Core.Sources;
+using MangaHub.Infrastructure.Sources;
 
 namespace MangaHub.Api.Tests;
 
@@ -31,5 +33,43 @@ internal sealed class FakeArchiveReader : IArchiveReader
     {
         RequestedPaths.Add(archivePath);
         return Task.FromResult<ArchivePage?>(new ArchivePage($"page-{pageIndex}.jpg", "image/jpeg", [1, 2, 3]));
+    }
+}
+
+internal sealed class FakeMangaDexSource : IMangaSource
+{
+    public string Name => "mangadex";
+    public List<MangaSourceChapter> Chapters { get; } = [];
+    public Dictionary<string, IReadOnlyList<MangaPage>> Pages { get; } = [];
+
+    public Task<IReadOnlyList<MangaSearchResult>> SearchAsync(string query, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<MangaSearchResult>>([]);
+
+    public Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken) =>
+        Task.FromResult<MangaSourceSeries?>(null);
+
+    public Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<MangaSourceChapter>>(Chapters);
+
+    public Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken) =>
+        Task.FromResult(Pages.TryGetValue(chapterId, out var pages) ? pages : (IReadOnlyList<MangaPage>)[]);
+}
+
+internal sealed class FakeHttpClientFactory(HttpClient? client = null) : IHttpClientFactory
+{
+    private readonly HttpClient httpClient = client ?? new HttpClient(new FakeImageHandler());
+
+    public HttpClient CreateClient(string name) => httpClient;
+
+    private sealed class FakeImageHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent([1, 2, 3])
+                {
+                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg") }
+                }
+            });
     }
 }

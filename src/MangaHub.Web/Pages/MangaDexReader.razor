@@ -1,0 +1,107 @@
+@page "/reader/mangadex/{EntryId:guid}"
+@using MangaHub.Web.API.Services
+@inject MangaApiService MangaApi
+@inject ReadApiService ReadApi
+@inject NavigationManager Navigation
+
+<PageTitle>@(session is null ? "MangaDex reader" : $"{session.Title} reader")</PageTitle>
+
+@if (isLoading)
+{
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+}
+else if (session is null)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">This MangaDex chapter could not be loaded. It may have been removed or has no readable English pages.</MudAlert>
+}
+else
+{
+    <MudStack Spacing="2" Class="mh-reader-page">
+        <MudPaper Class="reader-toolbar" Elevation="0" Outlined="true">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ChevronLeft" OnClick="Previous" Disabled="@(page <= 0)">Previous</MudButton>
+            <MudSelect T="string" Value="@session.SelectedChapter.Id" ValueChanged="SelectChapter" Variant="Variant.Outlined" Dense="true" Class="mh-reader-chapter-select" aria-label="Select chapter">
+                @foreach (var chapter in session.Chapters)
+                {
+                    <MudSelectItem T="string" Value="@chapter.Id">@ChapterLabel(chapter)</MudSelectItem>
+                }
+            </MudSelect>
+            <MudText Typo="Typo.body2">Page @(page + 1) / @session.SelectedChapter.PageCount</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight" OnClick="Next" Disabled="@(page >= session.SelectedChapter.PageCount - 1)">Next</MudButton>
+        </MudPaper>
+
+        @if (!string.IsNullOrWhiteSpace(progressMessage))
+        {
+            <MudAlert Severity="Severity.Success" Dense="true">@progressMessage</MudAlert>
+        }
+
+        <main class="reader">
+            <img src="@ReadApi.GetMangaDexPageUrl(EntryId, session.SelectedChapter.Id, page)"
+                 alt="@($"{session.Title}, chapter {session.SelectedChapter.Number}, page {page + 1}")"
+                 @onload="PageLoaded" />
+        </main>
+    </MudStack>
+}
+
+@code {
+    [Parameter] public Guid EntryId { get; set; }
+
+    private MangaDexReaderSession? session;
+    private bool isLoading = true;
+    private bool chapterCompleted;
+    private int page;
+    private string progressMessage = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadChapter();
+    }
+
+    private async Task LoadChapter(string? chapterId = null)
+    {
+        isLoading = true;
+        progressMessage = "";
+        session = await MangaApi.GetMangaDexReaderSessionAsync(EntryId, chapterId);
+        page = 0;
+        chapterCompleted = false;
+        isLoading = false;
+    }
+
+    private void Previous() => page = Math.Max(0, page - 1);
+
+    private async Task Next()
+    {
+        if (session is null)
+        {
+            return;
+        }
+
+        page = Math.Min(session.SelectedChapter.PageCount - 1, page + 1);
+        await CompleteChapterIfNeeded();
+    }
+
+    private async Task SelectChapter(string chapterId) => await LoadChapter(chapterId);
+
+    private async Task PageLoaded() => await CompleteChapterIfNeeded();
+
+    private async Task CompleteChapterIfNeeded()
+    {
+        if (session is null || chapterCompleted || page != session.SelectedChapter.PageCount - 1)
+        {
+            return;
+        }
+
+        var progress = await MangaApi.SaveMangaDexReaderProgressAsync(
+            EntryId,
+            new MangaDexReaderProgressRequest(session.SelectedChapter.Id, page, true));
+        if (progress is null)
+        {
+            return;
+        }
+
+        chapterCompleted = true;
+        progressMessage = $"Chapter {progress.CurrentChapter} added to your reading progress.";
+    }
+
+    private static string ChapterLabel(MangaDexReaderChapter chapter) =>
+        string.IsNullOrWhiteSpace(chapter.Title) ? $"Chapter {chapter.Number}" : $"Chapter {chapter.Number} - {chapter.Title}";
+}

@@ -20,5 +20,17 @@ public sealed class MangaApiService(ApiHttpClient api)
 
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
         await api.GetAsync<ReadOptions>($"/api/manga/{entryId}/read-options");
+
+    public async Task<MangaDexReaderSession?> GetMangaDexReaderSessionAsync(Guid entryId, string? chapterId = null)
+    {
+        var query = string.IsNullOrWhiteSpace(chapterId) ? "" : $"?chapterId={Uri.EscapeDataString(chapterId)}";
+        return await api.GetAsync<MangaDexReaderSession>($"/api/manga/{entryId}/mangadex-reader{query}");
+    }
+
+    public async Task<MangaDexReaderProgressResponse?> SaveMangaDexReaderProgressAsync(Guid entryId, MangaDexReaderProgressRequest request) =>
+        await api.SendAsync<MangaDexReaderProgressRequest, MangaDexReaderProgressResponse>(
+            HttpMethod.Post,
+            $"/api/manga/{entryId}/mangadex-reader/progress",
+            request);
 }
 

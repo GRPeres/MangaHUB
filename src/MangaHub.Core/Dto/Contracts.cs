@@ -97,3 +97,12 @@ public sealed record AddToShelfRequest(
     string Notes);
 public sealed record ShelfImportRequest(string CsvText, bool CreateMissingCatalogEntries);
 public sealed record ShelfImportResponse(int Imported, int CreatedCatalogEntries, int UpdatedShelfEntries, int Skipped, List<string> Messages);
+public sealed record MangaDexReaderChapter(string Id, string Number, string Title, int PageCount);
+public sealed record MangaDexReaderSession(
+    Guid MangaEntryId,
+    string Title,
+    string CurrentChapter,
+    MangaDexReaderChapter SelectedChapter,
+    IReadOnlyList<MangaDexReaderChapter> Chapters);
+public sealed record MangaDexReaderProgressRequest(string ChapterId, int Page, bool Completed);
+public sealed record MangaDexReaderProgressResponse(string CurrentChapter, string ReadingStatus, int Page, bool Completed);
