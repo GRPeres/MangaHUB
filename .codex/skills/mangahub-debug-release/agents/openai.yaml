@@ -1,0 +1,4 @@
+interface:
+  display_name: "MangaHub Debug Release"
+  short_description: "Validate and release completed hotfixes"
+  default_prompt: "Use $mangahub-debug-release while debugging MangaHub."

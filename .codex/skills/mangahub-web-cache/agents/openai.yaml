@@ -1,0 +1,4 @@
+interface:
+  display_name: "MangaHub Web Cache"
+  short_description: "Version PWA assets after UI updates"
+  default_prompt: "Use $mangahub-web-cache after a MangaHub web UI change."
