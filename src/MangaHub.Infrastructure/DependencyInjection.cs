@@ -45,7 +45,7 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MangaHub/0.1 self-hosted reader");
         });
         services.AddScoped<IMangaSource, LocalMangaSource>();
-        services.AddScoped<IMangaSource, MangaDexSource>();
+        services.AddScoped<IMangaSource>(serviceProvider => serviceProvider.GetRequiredService<MangaDexSource>());
         services.AddScoped<MangaSourceRegistry>();
 
         return services;
