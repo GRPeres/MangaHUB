@@ -34,7 +34,7 @@ public sealed class ReaderServiceTests
         Assert.NotNull(options);
         Assert.True(options.HasMangaDex);
         Assert.True(options.HasLocal);
-        Assert.Equal($"/reader/{chapter.Id}/24?entryId={entry.Id}&chapter=1", options.LocalReaderUrl);
+        Assert.Equal($"/reader/{chapter.Id}/24", options.LocalReaderUrl);
     }
 
     [Fact]
@@ -104,7 +104,6 @@ public sealed class ReaderServiceTests
         Assert.Equal("1", launch.CurrentChapter);
         Assert.Equal(2, launch.PageCount);
         Assert.Contains(entry.Id.ToString(), launch.ReaderUrl);
-        Assert.Contains("chapter=1", launch.ReaderUrl);
         Assert.Equal(["chapter-1"], cache.CachedChapterIds);
         var shelf = await new ShelfRepository(db).GetAsync(userId, entry.Id, CancellationToken.None);
         Assert.Equal("reading", shelf!.ReadingStatus);

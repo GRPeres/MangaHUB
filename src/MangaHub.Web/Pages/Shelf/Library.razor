@@ -13,6 +13,12 @@
             <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mh-page-kicker">Personal tracker</MudText>
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mh-shelf-title-row">
                 <MudText Typo="Typo.h1">Shelf</MudText>
+                @if (NewChapterEntryCount > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled" Class="mh-new-chapter-bubble">
+                        @NewChapterEntryCount new
+                    </MudChip>
+                }
             </MudStack>
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
@@ -305,6 +311,8 @@
         .ToList();
 
     private string FilterButtonLabel => ActiveFilterCount == 0 ? "Filters" : $"Filters ({ActiveFilterCount})";
+    private int NewChapterEntryCount => entries.Count(HasNewChapters);
+
     private int ActiveFilterCount =>
         Count(status) + Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
 
@@ -358,11 +366,31 @@
 
     private static int Count(string value) => string.IsNullOrWhiteSpace(value) ? 0 : 1;
 
+    private static bool HasNewChapters(MangaEntryResponse entry) =>
+        entry.ChapterCount is not null
+        && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
+        && entry.ChapterCount.Value > currentChapter;
+
     private static bool Contains(string value, string query) =>
         !string.IsNullOrWhiteSpace(value) && value.Contains(query, StringComparison.OrdinalIgnoreCase);
 
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
+
+    private static bool TryGetCurrentChapterNumber(string currentChapter, out int chapter)
+    {
+        chapter = 0;
+        if (string.IsNullOrWhiteSpace(currentChapter))
+        {
+            return false;
+        }
+
+        var digits = new string(currentChapter
+            .SkipWhile(value => !char.IsDigit(value))
+            .TakeWhile(char.IsDigit)
+            .ToArray());
+        return int.TryParse(digits, out chapter);
+    }
 
     private static string GetSourceLabel(string metadataSource, string myAnimeListId, string openLibraryKey)
     {

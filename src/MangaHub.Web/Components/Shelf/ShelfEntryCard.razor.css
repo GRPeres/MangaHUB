@@ -7,19 +7,6 @@
     overflow: hidden;
 }
 
-.mh-shelf-entry-card {
-    position: relative;
-}
-
-::deep .mh-new-chapter-notification {
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--mud-palette-error) 38%, transparent);
-    font-weight: 800;
-    position: absolute;
-    right: .7rem;
-    top: .7rem;
-    z-index: 3;
-}
-
 .mh-cover-frame {
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
     border-right: 1px solid var(--mud-palette-divider);
@@ -264,11 +251,6 @@
 @media (max-width: 640px) {
     .mh-row-card {
         grid-template-columns: 1fr;
-    }
-
-    ::deep .mh-new-chapter-notification {
-        right: .5rem;
-        top: .5rem;
     }
 
     .mh-cover-frame {

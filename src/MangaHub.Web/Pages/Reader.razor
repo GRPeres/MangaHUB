@@ -8,12 +8,6 @@
 
 <MudPaper Class="reader-toolbar" Elevation="0" Outlined="true">
     <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ChevronLeft" OnClick="Previous" Disabled="@(page <= 0)">Previous</MudButton>
-    @if (!string.IsNullOrWhiteSpace(CurrentChapter))
-    {
-        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Bookmark">
-            Reading chapter @CurrentChapter
-        </MudChip>
-    }
     <MudText Typo="Typo.body2">Page @(page + 1) / @PageCount</MudText>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight" OnClick="Next" Disabled="@(isPreparingNext || (page >= PageCount - 1 && EntryId is null))">@NextLabel</MudButton>
 </MudPaper>
@@ -31,7 +25,6 @@
     [Parameter] public Guid ChapterId { get; set; }
     [Parameter] public int PageCount { get; set; }
     [SupplyParameterFromQuery] public Guid? EntryId { get; set; }
-    [SupplyParameterFromQuery(Name = "chapter")] public string? CurrentChapter { get; set; }
     private int page;
     private bool isPreparingNext;
     private string readerMessage = "";

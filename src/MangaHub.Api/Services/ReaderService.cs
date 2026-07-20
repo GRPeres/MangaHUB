@@ -30,7 +30,7 @@ public sealed class ReaderService(
 
         var entry = shelfEntry.MangaEntry;
         var mangaDexId = GetMangaDexId(entry);
-        (Guid Id, string ChapterNumber, int PageCount)? localFirstChapter = entry.LocalSeriesId is null
+        (Guid Id, int PageCount)? localFirstChapter = entry.LocalSeriesId is null
             ? null
             : await series.GetFirstChapterAsync(entry.LocalSeriesId.Value, cancellationToken);
 
@@ -40,9 +40,7 @@ public sealed class ReaderService(
             !string.IsNullOrWhiteSpace(mangaDexId),
             entry.MangaDexUrl,
             localFirstChapter is not null,
-            localFirstChapter is null
-                ? ""
-                : $"/reader/{localFirstChapter.Value.Id}/{localFirstChapter.Value.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(localFirstChapter.Value.ChapterNumber)}");
+            localFirstChapter is null ? "" : $"/reader/{localFirstChapter.Value.Id}/{localFirstChapter.Value.PageCount}");
     }
 
     public async Task<ReaderLaunchResponse?> PrepareMangaDexChapterAsync(
@@ -146,7 +144,7 @@ public sealed class ReaderService(
 
         await shelf.SaveChangesAsync(cancellationToken);
         return new ReaderLaunchResponse(
-            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}",
+            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}",
             cachedChapter.ChapterNumber,
             cachedChapter.PageCount);
     }
