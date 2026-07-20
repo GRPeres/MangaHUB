@@ -305,7 +305,7 @@ a {
     max-height: 100%;
     max-width: 100%;
     object-fit: contain;
-    width: 100%;
+    width: auto;
 }
 
 .reader-page-hit-area {
