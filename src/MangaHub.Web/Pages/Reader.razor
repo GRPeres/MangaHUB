@@ -26,7 +26,7 @@
 
     <main class="reader">
         <div class="reader-page-frame">
-            <img src="@ReadApi.GetPageUrl(ChapterId, page)" alt="Manga page @(page + 1)" />
+            <img @key="pageImageVersion" src="@ReadApi.GetPageUrl(ChapterId, page, pageImageVersion)" alt="Manga page @(page + 1)" @onerror="OnPageLoadFailed" />
             <button type="button"
                     class="reader-page-hit-area reader-page-hit-area-previous"
                     aria-label="Previous page"
@@ -50,14 +50,19 @@
         <div class="reader-toolbar-previous">
             <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="BackToShelf">Back to shelf</MudButton>
         </div>
-        <MudText Typo="Typo.body2" Class="reader-page-count">@ChapterLabel</MudText>
         <div aria-hidden="true"></div>
+        <div class="reader-toolbar-next">
+            <MudText Typo="Typo.body2">@ChapterLabel</MudText>
+        </div>
     </MudPaper>
 </section>
 
 <ReaderPreparingOverlay Open="@isPreparingChapter"
                          Title="Preparing chapter"
-                         Message="MangaHub is fetching the chapter into your local reader cache." />
+                         Stage="@PreparingStage"
+                         Progress="@(readerPreparation?.Progress ?? 0)"
+                         CompletedPages="@(readerPreparation?.CompletedPages ?? 0)"
+                         TotalPages="@(readerPreparation?.TotalPages ?? 0)" />
 
 @code {
     [Parameter] public Guid ChapterId { get; set; }
@@ -68,6 +73,9 @@
     private int page;
     private Guid loadedChapterId;
     private bool isPreparingChapter;
+    private string pageImageVersion = Guid.NewGuid().ToString("N");
+    private ReaderPreparationStatus? readerPreparation;
+    private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private string readerMessage = "";
     private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
     private bool IsMangaDexReader => string.Equals(ReaderSource, "mangadex", StringComparison.OrdinalIgnoreCase)
@@ -85,6 +93,8 @@
             page = 0;
             readerMessage = "";
             isPreparingChapter = false;
+            readerPreparation = null;
+            pageImageVersion = Guid.NewGuid().ToString("N");
         }
     }
 
@@ -124,23 +134,54 @@
         await InvokeAsync(StateHasChanged);
         try
         {
-            var launch = await MangaApi.PrepareMangaDexChapterAsync(
+            readerPreparation = await MangaApi.StartMangaDexPreparationAsync(
                 EntryId.Value,
                 afterCachedChapterId: next ? ChapterId : null,
                 beforeCachedChapterId: next ? null : ChapterId);
-            if (launch is null)
+            if (readerPreparation is null)
             {
-                readerMessage = next
-                    ? "No later readable MangaDex chapter is available yet."
-                    : "No earlier readable MangaDex chapter is available.";
+                readerMessage = "Could not start MangaDex chapter preparation.";
                 return;
             }
 
-            Navigation.NavigateTo(launch.ReaderUrl);
+            var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
+            if (completedPreparation?.Launch is null)
+            {
+                readerMessage = completedPreparation?.Error ?? (next
+                    ? "No later readable MangaDex chapter is available yet."
+                    : "No earlier readable MangaDex chapter is available.");
+                return;
+            }
+
+            Navigation.NavigateTo(completedPreparation.Launch.ReaderUrl);
         }
         finally
         {
             isPreparingChapter = false;
+            readerPreparation = null;
         }
     }
+
+    private async Task<ReaderPreparationStatus?> WaitForReaderPreparationAsync(Guid jobId)
+    {
+        while (true)
+        {
+            await Task.Delay(350);
+            var preparation = await MangaApi.GetMangaDexPreparationAsync(jobId);
+            if (preparation is null)
+            {
+                return null;
+            }
+
+            readerPreparation = preparation;
+            await InvokeAsync(StateHasChanged);
+            if (preparation.IsComplete)
+            {
+                return preparation;
+            }
+        }
+    }
+
+    private void OnPageLoadFailed() =>
+        readerMessage = "This reader page could not be loaded. Try opening the chapter again to refresh its local cache.";
 }

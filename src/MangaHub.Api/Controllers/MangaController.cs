@@ -5,7 +5,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/manga")]
-public sealed class MangaController(CurrentUserService currentUsers, ShelfService shelf, ReaderService reader) : ControllerBase
+public sealed class MangaController(CurrentUserService currentUsers, ShelfService shelf, ReaderService reader, ReaderPreparationService preparations) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] string? status, [FromQuery] Guid? userId, CancellationToken cancellationToken)
@@ -59,7 +59,23 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        var launch = await reader.PrepareMangaDexChapterAsync(user.Id, entryId, afterCachedChapterId, beforeCachedChapterId, cancellationToken);
-        return launch is null ? NotFound() : Ok(launch);
+        return Accepted(preparations.Start(user.Id, entryId, afterCachedChapterId, beforeCachedChapterId));
+    }
+
+    [HttpGet("mangadex-reader/jobs/{jobId:guid}")]
+    public async Task<IActionResult> GetMangaDexPreparation(Guid jobId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+        if (!CurrentUserService.IsAdmin(user))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var preparation = preparations.Get(jobId, user.Id);
+        return preparation is null ? NotFound() : Ok(preparation);
     }
 }

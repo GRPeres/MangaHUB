@@ -17,7 +17,8 @@ public sealed class MangaDexChapterCache(
         string mangaDexId,
         string chapterId,
         IReadOnlyList<MangaPage> pages,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<ReaderPreparationProgress>? progress = null)
     {
         if (pages.Count == 0)
         {
@@ -33,6 +34,7 @@ public sealed class MangaDexChapterCache(
         {
             if (File.Exists(archivePath))
             {
+                progress?.Report(new ReaderPreparationProgress("Using the cached local chapter", 100));
                 return await ReadCachedArchiveAsync(archivePath, relativePath, cancellationToken);
             }
 
@@ -42,9 +44,16 @@ public sealed class MangaDexChapterCache(
                 await using (var output = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: false))
                 {
-                    foreach (var page in pages.OrderBy(page => page.Index))
+                    var orderedPages = pages.OrderBy(page => page.Index).ToList();
+                    for (var index = 0; index < orderedPages.Count; index++)
                     {
+                        var page = orderedPages[index];
                         cancellationToken.ThrowIfCancellationRequested();
+                        progress?.Report(new ReaderPreparationProgress(
+                            $"Downloading page {index + 1} of {orderedPages.Count}",
+                            25 + (int)Math.Round(index * 65d / orderedPages.Count),
+                            index,
+                            orderedPages.Count));
                         if (!IsMangaDexImageUrl(page.Url))
                         {
                             throw new InvalidOperationException("MangaDex returned an unsafe page URL.");
@@ -61,9 +70,15 @@ public sealed class MangaDexChapterCache(
                         var entry = archive.CreateEntry($"{page.Index + 1:D4}{ExtensionFor(contentType!)}", CompressionLevel.Fastest);
                         await using var entryStream = entry.Open();
                         await response.Content.CopyToAsync(entryStream, cancellationToken);
+                        progress?.Report(new ReaderPreparationProgress(
+                            $"Downloaded page {index + 1} of {orderedPages.Count}",
+                            25 + (int)Math.Round((index + 1) * 65d / orderedPages.Count),
+                            index + 1,
+                            orderedPages.Count));
                     }
                 }
 
+                progress?.Report(new ReaderPreparationProgress("Building the local reader file", 95, pages.Count, pages.Count));
                 File.Move(temporaryPath, archivePath);
             }
             catch
@@ -76,6 +91,7 @@ public sealed class MangaDexChapterCache(
             }
 
             var cached = await ReadCachedArchiveAsync(archivePath, relativePath, cancellationToken);
+            progress?.Report(new ReaderPreparationProgress("Local chapter is ready", 100, cached.PageCount, cached.PageCount));
             return cached with { WasCached = false };
         }
         finally

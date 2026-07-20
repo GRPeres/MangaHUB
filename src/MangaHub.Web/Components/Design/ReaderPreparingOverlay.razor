@@ -3,13 +3,14 @@
     <div class="mh-modal-backdrop">
         <section class="mh-modal mh-reader-preparing-modal" role="status" aria-live="polite">
             <MudStack Spacing="3" AlignItems="AlignItems.Center">
-                <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
                 <MudText Typo="Typo.h3">@Title</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@Message</MudText>
-                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mh-reader-preparing-progress" />
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mh-reader-preparing-steps">
-                    Loading MangaDex details - Downloading chapter pages - Building the local reader file
-                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@Stage</MudText>
+                <MudProgressLinear Value="@Progress" Color="Color.Primary" Class="mh-reader-preparing-progress" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mh-reader-preparing-steps">@Progress% complete</MudText>
+                @if (TotalPages > 0)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Downloaded @CompletedPages of @TotalPages pages</MudText>
+                }
             </MudStack>
         </section>
     </div>
@@ -18,5 +19,8 @@
 @code {
     [Parameter] public bool Open { get; set; }
     [Parameter] public string Title { get; set; } = "Preparing your chapter";
-    [Parameter] public string Message { get; set; } = "MangaHub is fetching the chapter into your local reader cache.";
+    [Parameter] public string Stage { get; set; } = "Waiting to start";
+    [Parameter] public int Progress { get; set; }
+    [Parameter] public int CompletedPages { get; set; }
+    [Parameter] public int TotalPages { get; set; }
 }

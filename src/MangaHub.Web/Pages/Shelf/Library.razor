@@ -55,7 +55,11 @@
 <ShelfImportModal Open="@isImportShelfOpen" OpenChanged="OnImportShelfOpenChanged" OnImported="Load" />
 <ShelfEditModal Entry="@editingEntry" OwnerUserId="@(IsAdmin ? selectedUserId : null)" OnSaved="OnShelfEditSaved" OnClosed="CloseEdit" />
 
-<ReaderPreparingOverlay Open="@isPreparingReader" />
+<ReaderPreparingOverlay Open="@isPreparingReader"
+                         Stage="@PreparingStage"
+                         Progress="@(readerPreparation?.Progress ?? 0)"
+                         CompletedPages="@(readerPreparation?.CompletedPages ?? 0)"
+                         TotalPages="@(readerPreparation?.TotalPages ?? 0)" />
 
 @if (filtersOpen)
 {
@@ -160,6 +164,8 @@
     private bool isImportShelfOpen;
     private bool filtersOpen;
     private bool isPreparingReader;
+    private ReaderPreparationStatus? readerPreparation;
+    private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private MangaEntryResponse? editingEntry;
 
     protected override async Task OnInitializedAsync()
@@ -241,14 +247,21 @@
 
             if (options.HasMangaDex)
             {
-                var launch = await MangaApi.PrepareMangaDexChapterAsync(entryId);
-                if (launch is null)
+                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId);
+                if (readerPreparation is null)
                 {
-                    ShowWarning("Could not prepare a MangaDex chapter for the local reader.");
+                    ShowWarning("Could not start MangaDex chapter preparation.");
                     return;
                 }
 
-                Navigation.NavigateTo(launch.ReaderUrl);
+                var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
+                if (completedPreparation?.Launch is null)
+                {
+                    ShowWarning(completedPreparation?.Error ?? "Could not prepare a MangaDex chapter for the local reader.");
+                    return;
+                }
+
+                Navigation.NavigateTo(completedPreparation.Launch.ReaderUrl);
                 return;
             }
 
@@ -257,6 +270,27 @@
         finally
         {
             isPreparingReader = false;
+            readerPreparation = null;
+        }
+    }
+
+    private async Task<ReaderPreparationStatus?> WaitForReaderPreparationAsync(Guid jobId)
+    {
+        while (true)
+        {
+            await Task.Delay(350);
+            var preparation = await MangaApi.GetMangaDexPreparationAsync(jobId);
+            if (preparation is null)
+            {
+                return null;
+            }
+
+            readerPreparation = preparation;
+            await InvokeAsync(StateHasChanged);
+            if (preparation.IsComplete)
+            {
+                return preparation;
+            }
         }
     }
 

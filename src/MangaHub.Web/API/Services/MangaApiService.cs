@@ -21,7 +21,7 @@ public sealed class MangaApiService(ApiHttpClient api)
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
         await api.GetAsync<ReadOptions>($"/api/manga/{entryId}/read-options");
 
-    public async Task<ReaderLaunchResponse?> PrepareMangaDexChapterAsync(
+    public async Task<ReaderPreparationStatus?> StartMangaDexPreparationAsync(
         Guid entryId,
         Guid? afterCachedChapterId = null,
         Guid? beforeCachedChapterId = null)
@@ -37,10 +37,13 @@ public sealed class MangaApiService(ApiHttpClient api)
         }
 
         var query = queryValues.Count == 0 ? "" : $"?{string.Join("&", queryValues)}";
-        return await api.SendAsync<object, ReaderLaunchResponse>(
+        return await api.SendAsync<object, ReaderPreparationStatus>(
             HttpMethod.Post,
             $"/api/manga/{entryId}/mangadex-reader/prepare{query}",
             new { });
     }
+
+    public async Task<ReaderPreparationStatus?> GetMangaDexPreparationAsync(Guid jobId) =>
+        await api.GetAsync<ReaderPreparationStatus>($"/api/manga/mangadex-reader/jobs/{jobId}");
 }
 

@@ -8,7 +8,8 @@ public interface IMangaDexChapterCache
         string mangaDexId,
         string chapterId,
         IReadOnlyList<MangaPage> pages,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        IProgress<ReaderPreparationProgress>? progress = null);
 
     Task<MangaDexCachedChapter> ImportAsync(
         string mangaDexId,
@@ -20,3 +21,4 @@ public interface IMangaDexChapterCache
 }
 
 public sealed record MangaDexCachedChapter(string RelativePath, int PageCount, string FileHash, bool WasCached);
+public sealed record ReaderPreparationProgress(string Stage, int Progress, int CompletedPages = 0, int TotalPages = 0);

@@ -21,6 +21,12 @@ public sealed class ReadController(CurrentUserService currentUsers, ReaderServic
         }
 
         var page = await reader.GetPageAsync(chapterId, pageIndex, cancellationToken);
-        return page is null ? NotFound() : File(page.Bytes, page.ContentType);
+        if (page is null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        return File(page.Bytes, page.ContentType);
     }
 }

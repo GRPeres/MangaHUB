@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Net;
+using MangaHub.Core.Services;
 using MangaHub.Core.Sources;
 using MangaHub.Infrastructure;
 using MangaHub.Infrastructure.Caching;
@@ -45,6 +46,37 @@ public sealed class MangaDexChapterCacheTests
         }
     }
 
+    [Fact]
+    public async Task EnsureCachedAsync_ReportsActualPageDownloadProgress()
+    {
+        var cacheRoot = Path.Combine(Path.GetTempPath(), $"mangahub-cache-{Guid.NewGuid():N}");
+        var cache = new MangaDexChapterCache(
+            new FakeHttpClientFactory(new HttpClient(new ImageHandler())),
+            Options.Create(new MangaHubOptions { MangaDexCachePath = cacheRoot }));
+        var progress = new RecordingProgress();
+        var pages = new List<MangaPage>
+        {
+            new(0, "https://uploads.mangadex.org/data/hash/001.jpg"),
+            new(1, "https://uploads.mangadex.org/data/hash/002.jpg")
+        };
+
+        try
+        {
+            await cache.EnsureCachedAsync("manga-id", "chapter-id", pages, CancellationToken.None, progress);
+
+            Assert.Contains(progress.Values, value => value.Stage == "Downloaded page 1 of 2" && value.CompletedPages == 1 && value.TotalPages == 2);
+            Assert.Contains(progress.Values, value => value.Stage == "Downloaded page 2 of 2" && value.Progress == 90);
+            Assert.Equal("Local chapter is ready", progress.Values.Last().Stage);
+        }
+        finally
+        {
+            if (Directory.Exists(cacheRoot))
+            {
+                Directory.Delete(cacheRoot, recursive: true);
+            }
+        }
+    }
+
     private sealed class ImageHandler : HttpMessageHandler
     {
         public int RequestCount { get; private set; }
@@ -60,5 +92,12 @@ public sealed class MangaDexChapterCacheTests
                 }
             });
         }
+    }
+
+    private sealed class RecordingProgress : IProgress<ReaderPreparationProgress>
+    {
+        public List<ReaderPreparationProgress> Values { get; } = [];
+
+        public void Report(ReaderPreparationProgress value) => Values.Add(value);
     }
 }

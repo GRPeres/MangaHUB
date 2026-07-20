@@ -63,9 +63,11 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
         string mangaDexId,
         string chapterId,
         IReadOnlyList<MangaPage> pages,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<ReaderPreparationProgress>? progress = null)
     {
         CachedChapterIds.Add(chapterId);
+        progress?.Report(new ReaderPreparationProgress("Local chapter is ready", 100, pages.Count, pages.Count));
         return Task.FromResult(new MangaDexCachedChapter(
             Path.Combine("mangadex", mangaDexId, $"{chapterId}.cbz"),
             pages.Count,

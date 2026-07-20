@@ -50,7 +50,8 @@ public sealed class ReaderService(
         Guid entryId,
         Guid? afterCachedChapterId,
         Guid? beforeCachedChapterId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<ReaderPreparationProgress>? progress = null)
     {
         var shelfEntry = await shelf.GetWithMangaAsync(userId, entryId, cancellationToken);
         if (shelfEntry?.MangaEntry is null)
@@ -102,9 +103,17 @@ public sealed class ReaderService(
                 .FirstOrDefault(chapter => string.Equals(chapter.ChapterNumber, shelfEntry.CurrentChapter, StringComparison.OrdinalIgnoreCase));
         }
 
+        if (cachedChapter is not null && !HasReadableCachedArchive(cachedChapter, mangaDexId))
+        {
+            progress?.Report(new ReaderPreparationProgress("Refreshing an unreadable local chapter", 12));
+            await mangaDexCache.DeleteAsync(mangaDexId, cachedChapter.SourceId, cancellationToken);
+            cachedChapter = null;
+        }
+
         if (cachedChapter is null)
         {
             var mangaDex = sources.Get("mangadex");
+            progress?.Report(new ReaderPreparationProgress("Loading MangaDex chapter list", 8));
             sourceChapter ??= SelectCurrentMangaDexChapter(
                 await mangaDex.GetChaptersAsync(mangaDexId, cancellationToken),
                 shelfEntry.CurrentChapter);
@@ -113,8 +122,9 @@ public sealed class ReaderService(
                 return null;
             }
 
+            progress?.Report(new ReaderPreparationProgress("Loading the MangaDex page list", 20));
             var pages = await mangaDex.GetPagesAsync(sourceChapter.Id, cancellationToken);
-            var cachedArchive = await mangaDexCache.EnsureCachedAsync(mangaDexId, sourceChapter.Id, pages, cancellationToken);
+            var cachedArchive = await mangaDexCache.EnsureCachedAsync(mangaDexId, sourceChapter.Id, pages, cancellationToken, progress);
             cachedSeries ??= CreateCachedSeries(entry, mangaDexId);
             if (isNewCachedSeries)
             {
@@ -152,7 +162,9 @@ public sealed class ReaderService(
         }
         shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
 
+        progress?.Report(new ReaderPreparationProgress("Saving your reading progress", 98));
         await shelf.SaveChangesAsync(cancellationToken);
+        progress?.Report(new ReaderPreparationProgress("Opening the local reader", 100));
         return new ReaderLaunchResponse(
             $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex",
             cachedChapter.ChapterNumber,
@@ -222,6 +234,30 @@ public sealed class ReaderService(
         MangaDexCacheSource => Path.GetFullPath(options.Value.MangaDexCachePath),
         _ => null
     };
+
+    private bool HasReadableCachedArchive(MangaChapter chapter, string mangaDexId)
+    {
+        try
+        {
+            var root = GetReaderRoot(MangaDexCacheSource);
+            if (root is null)
+            {
+                return false;
+            }
+
+            var archivePath = Path.GetFullPath(Path.Combine(root, "mangadex", mangaDexId, $"{chapter.SourceId}.cbz"));
+            return archivePath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && archives.CountPages(archivePath) > 0;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (InvalidDataException)
+        {
+            return false;
+        }
+    }
 
     private static string GetMangaDexId(MangaEntry entry) =>
         string.IsNullOrWhiteSpace(entry.MangaDexId) ? TextRules.ExtractMangaDexId(entry.MangaDexUrl) : entry.MangaDexId;
