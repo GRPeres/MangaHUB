@@ -12,6 +12,7 @@ public partial class CatalogEntryCard
 
     private bool metadataOpen;
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "", "Manual");
+    private bool IsMissingMyAnimeListId => string.IsNullOrWhiteSpace(Entry.MyAnimeListId);
     private List<string> CategoryLabels => SplitLabels(Entry.Category);
     private string VisibleCategoryLabel => CategoryLabels.Count == 0 ? "" : CompactCategoryLabel(CategoryLabels[0]);
     private bool HasHiddenCategories => CategoryLabels.Count > 1;
@@ -25,13 +26,7 @@ public partial class CatalogEntryCard
     private string MangaDexSyncLabel => Entry.MangaDexLastSyncedAt is null
         ? "Not checked yet"
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
-    private string CatalogReferenceLabel => (Entry.MyAnimeListId, Entry.OpenLibraryKey) switch
-    {
-        ({ Length: > 0 }, { Length: > 0 }) => "MAL + OpenLibrary",
-        ({ Length: > 0 }, _) => $"MAL #{Entry.MyAnimeListId}",
-        (_, { Length: > 0 }) => "OpenLibrary linked",
-        _ => "Manual entry"
-    };
+    private string IdentityLabel => IsMissingMyAnimeListId ? "MAL ID missing" : $"MAL #{Entry.MyAnimeListId}";
     private string ReaderLinksLabel => (Entry.MangaDexUrl, Entry.LocalSeriesId) switch
     {
         ({ Length: > 0 }, not null) => "MangaDex + local",

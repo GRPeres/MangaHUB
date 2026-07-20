@@ -168,6 +168,11 @@
     white-space: nowrap;
 }
 
+::deep .mh-metadata-warning {
+    flex: 0 1 auto;
+    max-width: 9.5rem;
+}
+
 .mh-row-summary {
     background: transparent;
     border: 0;

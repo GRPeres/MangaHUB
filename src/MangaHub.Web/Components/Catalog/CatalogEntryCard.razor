@@ -30,6 +30,17 @@
                         </div>
 
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
+                            @if (IsMissingMyAnimeListId)
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="Color.Warning"
+                                         Variant="Variant.Filled"
+                                         Icon="@Icons.Material.Filled.WarningAmber"
+                                         Class="mh-card-chip mh-metadata-warning">
+                                    MAL ID missing
+                                </MudChip>
+                            }
                             @if (!string.IsNullOrWhiteSpace(VisibleCategoryLabel))
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleCategoryLabel</MudChip>
@@ -54,8 +65,8 @@
 
                     <div class="mh-entry-context mh-mobile-hide">
                         <div>
-                            <span>Catalog refs</span>
-                            <strong>@CatalogReferenceLabel</strong>
+                            <span>Identity</span>
+                            <strong>@IdentityLabel</strong>
                         </div>
                         <div>
                             <span>MangaDex sync</span>
@@ -150,6 +161,7 @@
                 }
 
                 <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">MAL identity</MudText><MudText Typo="Typo.body2" Color="@(IsMissingMyAnimeListId ? Color.Warning : Color.Default)">@IdentityLabel</MudText></MudItem>
                     <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Source</MudText><MudText Typo="Typo.body2">@SourceLabel</MudText></MudItem>
                     <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Chapters</MudText><MudText Typo="Typo.body2">@ChapterCountLabel</MudText></MudItem>
                     <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Volumes</MudText><MudText Typo="Typo.body2">@VolumeCountLabel</MudText></MudItem>
