@@ -20,14 +20,61 @@
         } catch {
             window.mangaHubTheme.apply("light");
         }
+
+        window.mangaHubReader = {
+            fitPage: function (frame, image) {
+                if (!frame || !image || !frame.parentElement) {
+                    return;
+                }
+
+                if (frame.mangaHubResizeObserver) {
+                    frame.mangaHubResizeObserver.disconnect();
+                }
+
+                var reader = frame.parentElement;
+                var fit = function () {
+                    if (!image.naturalWidth || !image.naturalHeight) {
+                        return;
+                    }
+
+                    var readerStyle = window.getComputedStyle(reader);
+                    var horizontalPadding = parseFloat(readerStyle.paddingLeft) + parseFloat(readerStyle.paddingRight);
+                    var verticalPadding = parseFloat(readerStyle.paddingTop) + parseFloat(readerStyle.paddingBottom);
+                    var availableWidth = Math.max(1, reader.clientWidth - horizontalPadding);
+                    var availableHeight = Math.max(1, reader.clientHeight - verticalPadding);
+                    var ratio = image.naturalWidth / image.naturalHeight;
+                    var width = availableWidth;
+                    var height = width / ratio;
+
+                    if (height > availableHeight) {
+                        height = availableHeight;
+                        width = height * ratio;
+                    }
+
+                    frame.style.width = Math.floor(width) + "px";
+                    frame.style.height = Math.floor(height) + "px";
+                    frame.style.aspectRatio = image.naturalWidth + " / " + image.naturalHeight;
+                };
+
+                frame.mangaHubResizeObserver = new ResizeObserver(fit);
+                frame.mangaHubResizeObserver.observe(reader);
+                fit();
+            },
+            disposePage: function (frame) {
+                if (frame && frame.mangaHubResizeObserver) {
+                    frame.mangaHubResizeObserver.disconnect();
+                    delete frame.mangaHubResizeObserver;
+                }
+            }
+        };
     </script>
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=26" />
-    <link href="MangaHub.Web.styles.css?v=26" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=27" />
+    <link href="MangaHub.Web.styles.css?v=27" rel="stylesheet" />
 </head>
 
 <body>

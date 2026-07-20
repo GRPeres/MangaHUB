@@ -284,7 +284,6 @@ a {
     min-height: 0;
     overflow: hidden;
     padding: .5rem 0;
-    container-type: size;
     width: 100%;
 }
 
@@ -293,13 +292,14 @@ a {
     aspect-ratio: 2 / 3;
     display: grid;
     flex: 0 1 auto;
-    height: min(100cqh, 150cqw);
+    height: 100%;
     justify-items: center;
     min-height: 0;
     min-width: 0;
+    max-height: 100%;
     max-width: 100%;
     position: relative;
-    width: min(66.6667cqh, 100cqw);
+    width: auto;
 }
 
 .reader-page-frame img {

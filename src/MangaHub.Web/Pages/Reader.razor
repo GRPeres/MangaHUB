@@ -3,6 +3,8 @@
 @inject ReadApiService ReadApi
 @inject MangaApiService MangaApi
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>Reader</PageTitle>
 
@@ -25,8 +27,13 @@
     </div>
 
     <main class="reader">
-        <div class="reader-page-frame">
-            <img @key="pageImageVersion" src="@ReadApi.GetPageUrl(ChapterId, page, pageImageVersion)" alt="Manga page @(page + 1)" @onerror="OnPageLoadFailed" />
+        <div class="reader-page-frame" @ref="pageFrame">
+            <img @key="pageImageVersion"
+                 @ref="pageImage"
+                 src="@ReadApi.GetPageUrl(ChapterId, page, pageImageVersion)"
+                 alt="Manga page @(page + 1)"
+                 @onload="FitPageToImage"
+                 @onerror="OnPageLoadFailed" />
             <button type="button"
                     class="reader-page-hit-area reader-page-hit-area-previous"
                     aria-label="Previous page"
@@ -73,6 +80,8 @@
     private int page;
     private Guid loadedChapterId;
     private bool isPreparingChapter;
+    private ElementReference pageFrame;
+    private ElementReference pageImage;
     private string pageImageVersion = Guid.NewGuid().ToString("N");
     private ReaderPreparationStatus? readerPreparation;
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
@@ -184,4 +193,20 @@
 
     private void OnPageLoadFailed() =>
         readerMessage = "This reader page could not be loaded. Try opening the chapter again to refresh its local cache.";
+
+    private async Task FitPageToImage()
+    {
+        await JS.InvokeVoidAsync("mangaHubReader.fitPage", pageFrame, pageImage);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("mangaHubReader.disposePage", pageFrame);
+        }
+        catch (JSException)
+        {
+        }
+    }
 }
