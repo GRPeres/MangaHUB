@@ -4,6 +4,7 @@
 @inject NavigationManager Navigation
 @inject AdminApiService AdminApi
 @inject MangaApiService MangaApi
+@inject MessageService Messages
 
 <PageTitle>Shelf</PageTitle>
 
@@ -42,11 +43,6 @@
                 <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="Read" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" />
             }
         </MudStack>
-    }
-
-    @if (!string.IsNullOrWhiteSpace(message))
-    {
-        <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
     }
 
 </MudStack>
@@ -158,8 +154,6 @@
     private string categoryFilter = "";
     private string availabilityFilter = "";
     private string scoreFilter = "";
-    private string message = "";
-    private Severity messageSeverity = Severity.Warning;
     private bool isAddShelfOpen;
     private bool isImportShelfOpen;
     private bool filtersOpen;
@@ -306,16 +300,11 @@
 
     private async Task OnShelfEditSaved(string text)
     {
-        messageSeverity = Severity.Success;
-        message = text;
+        Messages.Success(text);
         await Load();
     }
 
-    private void ShowWarning(string text)
-    {
-        messageSeverity = Severity.Warning;
-        message = text;
-    }
+    private void ShowWarning(string text) => Messages.Warning(text);
 
     private List<MangaEntryResponse> FilteredEntries => entries
         .Where(MatchesSearch)

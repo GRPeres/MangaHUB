@@ -4,9 +4,12 @@ using MangaHub.Core.Services;
 
 namespace MangaHub.Api.Services;
 
-public sealed class ReaderPreparationService(IServiceScopeFactory scopeFactory)
+public sealed class ReaderPreparationService(
+    IServiceScopeFactory scopeFactory,
+    ILogger<ReaderPreparationService> logger)
 {
     private readonly ConcurrentDictionary<Guid, ReaderPreparationJob> jobs = new();
+    private readonly ConcurrentDictionary<ReaderPrefetchKey, byte> activePrefetches = new();
 
     public ReaderPreparationStatus Start(
         Guid userId,
@@ -26,6 +29,33 @@ public sealed class ReaderPreparationService(IServiceScopeFactory scopeFactory)
 
     public ReaderPreparationStatus? Get(Guid jobId, Guid userId) =>
         jobs.TryGetValue(jobId, out var job) && job.UserId == userId ? job.Status : null;
+
+    public void PrefetchNext(Guid userId, Guid entryId, Guid afterCachedChapterId)
+    {
+        var key = new ReaderPrefetchKey(userId, entryId, afterCachedChapterId);
+        if (!activePrefetches.TryAdd(key, 0))
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+                var reader = scope.ServiceProvider.GetRequiredService<ReaderService>();
+                await reader.PrefetchNextMangaDexChapterAsync(userId, entryId, afterCachedChapterId, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Background prefetch failed for MangaDex entry {EntryId} after chapter {ChapterId}.", entryId, afterCachedChapterId);
+            }
+            finally
+            {
+                activePrefetches.TryRemove(key, out _);
+            }
+        });
+    }
 
     private async Task PrepareAsync(
         Guid jobId,
@@ -58,12 +88,17 @@ public sealed class ReaderPreparationService(IServiceScopeFactory scopeFactory)
 
             if (launch is null)
             {
+                var unavailableMessage = afterCachedChapterId is not null
+                    ? "No later readable MangaDex chapter is available."
+                    : beforeCachedChapterId is not null
+                        ? "No earlier readable MangaDex chapter is available."
+                        : "No readable MangaDex chapter is available.";
                 Update(jobId, status => status with
                 {
                     Stage = "No readable MangaDex chapter was found",
                     IsComplete = true,
                     IsFailed = true,
-                    Error = "No readable MangaDex chapter is available."
+                    Error = unavailableMessage
                 });
                 return;
             }
@@ -106,6 +141,7 @@ public sealed class ReaderPreparationService(IServiceScopeFactory scopeFactory)
     }
 
     private sealed record ReaderPreparationJob(Guid UserId, DateTimeOffset CreatedAt, ReaderPreparationStatus Status);
+    private sealed record ReaderPrefetchKey(Guid UserId, Guid EntryId, Guid ChapterId);
 
     private sealed class CallbackProgress(Action<ReaderPreparationProgress> report) : IProgress<ReaderPreparationProgress>
     {

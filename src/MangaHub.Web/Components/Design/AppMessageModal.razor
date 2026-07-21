@@ -1,0 +1,44 @@
+@implements IDisposable
+@inject MessageService Messages
+
+@if (Messages.Current is { } message)
+{
+    <div class="mh-modal-backdrop" @onclick="Dismiss">
+        <section class="mh-modal mh-message-modal" role="alertdialog" aria-modal="true" aria-labelledby="app-message-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3" AlignItems="AlignItems.Center">
+                <MudIcon Icon="@IconFor(message.Level)" Color="@ColorFor(message.Level)" Size="Size.Large" aria-hidden="true" />
+                <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                    <MudText id="app-message-title" Typo="Typo.h3">@message.Title</MudText>
+                    <MudText Typo="Typo.body1" Align="Align.Center">@message.Message</MudText>
+                </MudStack>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Dismiss">Continue</MudButton>
+            </MudStack>
+        </section>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => Messages.Changed += OnMessagesChanged;
+
+    private void OnMessagesChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void Dismiss() => Messages.Dismiss();
+
+    private static string IconFor(MessageLevel level) => level switch
+    {
+        MessageLevel.Success => Icons.Material.Filled.CheckCircleOutline,
+        MessageLevel.Warning => Icons.Material.Filled.WarningAmber,
+        MessageLevel.Error => Icons.Material.Filled.ErrorOutline,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private static Color ColorFor(MessageLevel level) => level switch
+    {
+        MessageLevel.Success => Color.Success,
+        MessageLevel.Warning => Color.Warning,
+        MessageLevel.Error => Color.Error,
+        _ => Color.Info
+    };
+
+    public void Dispose() => Messages.Changed -= OnMessagesChanged;
+}

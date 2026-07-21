@@ -4,6 +4,7 @@
 @inject MangaApiService MangaApi
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject MessageService Messages
 @implements IAsyncDisposable
 
 <PageTitle>Reader</PageTitle>
@@ -79,6 +80,7 @@
     [SupplyParameterFromQuery(Name = "source")] public string? ReaderSource { get; set; }
     private int page;
     private Guid loadedChapterId;
+    private Guid prefetchedChapterId;
     private bool isPreparingChapter;
     private ElementReference pageFrame;
     private ElementReference pageImage;
@@ -104,6 +106,24 @@
             isPreparingChapter = false;
             readerPreparation = null;
             pageImageVersion = Guid.NewGuid().ToString("N");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!CanPrepareAdjacentChapter || EntryId is null || prefetchedChapterId == ChapterId)
+        {
+            return;
+        }
+
+        prefetchedChapterId = ChapterId;
+        try
+        {
+            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId);
+        }
+        catch (HttpRequestException)
+        {
+            // The reader stays usable; moving to the next chapter will retry the normal preparation path.
         }
     }
 
@@ -156,6 +176,13 @@
             var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
             if (completedPreparation?.Launch is null)
             {
+                if (next && IsNoLaterChapter(completedPreparation))
+                {
+                    Messages.Warning("You've read all available chapters.", "All caught up");
+                    Navigation.NavigateTo("/library");
+                    return;
+                }
+
                 readerMessage = completedPreparation?.Error ?? (next
                     ? "No later readable MangaDex chapter is available yet."
                     : "No earlier readable MangaDex chapter is available.");
@@ -190,6 +217,9 @@
             }
         }
     }
+
+    private static bool IsNoLaterChapter(ReaderPreparationStatus? preparation) =>
+        string.Equals(preparation?.Error, "No later readable MangaDex chapter is available.", StringComparison.Ordinal);
 
     private void OnPageLoadFailed() =>
         readerMessage = "This reader page could not be loaded. Try opening the chapter again to refresh its local cache.";

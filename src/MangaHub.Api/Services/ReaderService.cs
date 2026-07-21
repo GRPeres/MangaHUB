@@ -51,7 +51,8 @@ public sealed class ReaderService(
         Guid? afterCachedChapterId,
         Guid? beforeCachedChapterId,
         CancellationToken cancellationToken,
-        IProgress<ReaderPreparationProgress>? progress = null)
+        IProgress<ReaderPreparationProgress>? progress = null,
+        bool updateReadingProgress = true)
     {
         var shelfEntry = await shelf.GetWithMangaAsync(userId, entryId, cancellationToken);
         if (shelfEntry?.MangaEntry is null)
@@ -155,21 +156,43 @@ public sealed class ReaderService(
             }
         }
 
-        shelfEntry.CurrentChapter = cachedChapter.ChapterNumber;
-        if (string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase))
+        if (updateReadingProgress)
         {
-            shelfEntry.ReadingStatus = "reading";
-        }
-        shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
+            shelfEntry.CurrentChapter = cachedChapter.ChapterNumber;
+            if (string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase))
+            {
+                shelfEntry.ReadingStatus = "reading";
+            }
+            shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
 
-        progress?.Report(new ReaderPreparationProgress("Saving your reading progress", 98));
-        await shelf.SaveChangesAsync(cancellationToken);
-        progress?.Report(new ReaderPreparationProgress("Opening the local reader", 100));
+            progress?.Report(new ReaderPreparationProgress("Saving your reading progress", 98));
+            await shelf.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            await series.SaveChangesAsync(cancellationToken);
+        }
+
+        progress?.Report(new ReaderPreparationProgress(
+            updateReadingProgress ? "Opening the local reader" : "The next chapter is ready", 100));
         return new ReaderLaunchResponse(
             $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex",
             cachedChapter.ChapterNumber,
             cachedChapter.PageCount);
     }
+
+    public async Task PrefetchNextMangaDexChapterAsync(
+        Guid userId,
+        Guid entryId,
+        Guid afterCachedChapterId,
+        CancellationToken cancellationToken) =>
+        await PrepareMangaDexChapterAsync(
+            userId,
+            entryId,
+            afterCachedChapterId,
+            null,
+            cancellationToken,
+            updateReadingProgress: false);
 
     public async Task<ArchivePage?> GetPageAsync(Guid chapterId, int pageIndex, CancellationToken cancellationToken)
     {

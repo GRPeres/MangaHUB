@@ -62,6 +62,26 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
         return Accepted(preparations.Start(user.Id, entryId, afterCachedChapterId, beforeCachedChapterId));
     }
 
+    [HttpPost("{entryId:guid}/mangadex-reader/prefetch-next")]
+    public async Task<IActionResult> PrefetchNextMangaDexChapter(
+        Guid entryId,
+        [FromQuery] Guid afterCachedChapterId,
+        CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+        if (!CurrentUserService.IsAdmin(user))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        preparations.PrefetchNext(user.Id, entryId, afterCachedChapterId);
+        return Accepted();
+    }
+
     [HttpGet("mangadex-reader/jobs/{jobId:guid}")]
     public async Task<IActionResult> GetMangaDexPreparation(Guid jobId, CancellationToken cancellationToken)
     {
