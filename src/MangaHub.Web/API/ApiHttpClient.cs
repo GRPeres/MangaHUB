@@ -25,6 +25,15 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
     }
 
+    public async Task<bool> SendWithoutResponseAsync<TRequest>(HttpMethod method, string url, TRequest payload)
+    {
+        using var request = new HttpRequestMessage(method, url) { Content = JsonContent.Create(payload) };
+        await AddAuthorizationAsync(request);
+        request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+        using var response = await http.SendAsync(request);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> DeleteAsync(string url)
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, url);

@@ -51,7 +51,7 @@ public sealed class MangaApiService(ApiHttpClient api)
     }
 
     public async Task PrefetchNextMangaDexChapterAsync(Guid entryId, Guid currentCachedChapterId, string language = "en") =>
-        await api.SendAsync<object, object>(
+        await api.SendWithoutResponseAsync(
             HttpMethod.Post,
             $"/api/manga/{entryId}/mangadex-reader/prefetch-next?afterCachedChapterId={currentCachedChapterId}&language={Uri.EscapeDataString(language)}",
             new { });

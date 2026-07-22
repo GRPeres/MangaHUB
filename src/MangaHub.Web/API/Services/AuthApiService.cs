@@ -9,7 +9,7 @@ public sealed class AuthApiService(ApiHttpClient api)
         await api.SendAsync<AuthRequest, UserResponse>(HttpMethod.Post, "/auth/login", new(username, password));
 
     public async Task LogoutAsync() =>
-        await api.SendAsync<object, object>(HttpMethod.Post, "/auth/logout", new { });
+        await api.SendWithoutResponseAsync(HttpMethod.Post, "/auth/logout", new { });
 
     public async Task<UserResponse?> MeAsync() =>
         await api.GetAsync<UserResponse>("/auth/me");
