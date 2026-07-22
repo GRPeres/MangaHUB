@@ -196,9 +196,11 @@
                     return;
                 }
 
-                readerMessage = completedPreparation?.Error ?? (next
-                    ? "No later readable MangaDex chapter is available yet."
-                    : "No earlier readable MangaDex chapter is available.");
+                Messages.Error(
+                    completedPreparation?.Error ?? (next
+                        ? "No later readable MangaDex chapter is available yet."
+                        : "No earlier readable MangaDex chapter is available."),
+                    "Chapter unavailable");
                 return;
             }
 

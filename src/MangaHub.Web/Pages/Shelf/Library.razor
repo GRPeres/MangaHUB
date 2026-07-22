@@ -299,7 +299,7 @@
                         return;
                     }
 
-                    ShowWarning(completedPreparation?.Error ?? "Could not prepare a MangaDex chapter for the local reader.");
+                    Messages.Error(completedPreparation?.Error ?? "Could not prepare a MangaDex chapter for the local reader.", "Chapter unavailable");
                     return;
                 }
 
