@@ -1,7 +1,8 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Components.WebAssembly.Http;
+using System.Text.Json;
 using MangaHub.Web.Services;
+using Microsoft.AspNetCore.Components.WebAssembly.Http;
 
 namespace MangaHub.Web.API;
 
@@ -13,7 +14,7 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         await AddAuthorizationAsync(request);
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
         using var response = await http.SendAsync(request);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
+        return response.IsSuccessStatusCode ? await ReadJsonOrDefaultAsync<TResponse>(response) : default;
     }
 
     public async Task<TResponse?> SendAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest payload)
@@ -22,7 +23,7 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         await AddAuthorizationAsync(request);
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
         using var response = await http.SendAsync(request);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
+        return response.IsSuccessStatusCode ? await ReadJsonOrDefaultAsync<TResponse>(response) : default;
     }
 
     public async Task<bool> SendWithoutResponseAsync<TRequest>(HttpMethod method, string url, TRequest payload)
@@ -49,7 +50,7 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         await AddAuthorizationAsync(request);
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
         using var response = await http.SendAsync(request);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TResponse>() : default;
+        return response.IsSuccessStatusCode ? await ReadJsonOrDefaultAsync<TResponse>(response) : default;
     }
 
     public string GetAbsoluteUrl(string url) => new Uri(http.BaseAddress!, url).ToString();
@@ -62,5 +63,17 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
         }
     }
-}
 
+    private static async Task<TResponse?> ReadJsonOrDefaultAsync<TResponse>(HttpResponseMessage response)
+    {
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent || response.Content.Headers.ContentLength == 0)
+        {
+            return default;
+        }
+
+        var json = await response.Content.ReadAsStringAsync();
+        return string.IsNullOrWhiteSpace(json)
+            ? default
+            : JsonSerializer.Deserialize<TResponse>(json, JsonSerializerOptions.Web);
+    }
+}
