@@ -87,8 +87,10 @@ public sealed class RemoteSyncWorker(
         var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
 
         var entries = await db.MangaEntries
-            .Where(entry => entry.MangaDexId != "" && (entry.MangaDexLastSyncedAt == null || entry.MangaDexLastSyncedAt < cutoff))
-            .OrderBy(entry => entry.MangaDexLastSyncedAt ?? DateTimeOffset.MinValue)
+            .Where(entry => entry.MangaDexId != "" &&
+                (entry.MangaDexLatestChapter == null || entry.MangaDexLastSyncedAt == null || entry.MangaDexLastSyncedAt < cutoff))
+            .OrderByDescending(entry => entry.MangaDexLatestChapter == null)
+            .ThenBy(entry => entry.MangaDexLastSyncedAt ?? DateTimeOffset.MinValue)
             .ThenBy(entry => entry.Title)
             .Take(batchSize)
             .ToListAsync(cancellationToken);
@@ -112,11 +114,16 @@ public sealed class RemoteSyncWorker(
                 var latestChapter = await GetLatestChapterNumberAsync(client, entry.MangaDexId, cancellationToken);
                 entry.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
 
-                if (latestChapter is not null && latestChapter != entry.ChapterCount)
+                if (latestChapter is not null)
                 {
-                    entry.ChapterCount = latestChapter;
-                    entry.UpdatedAt = DateTimeOffset.UtcNow;
-                    updated++;
+                    var latestWholeChapter = (int)Math.Floor(latestChapter.Value);
+                    if (entry.MangaDexLatestChapter != latestChapter || entry.ChapterCount != latestWholeChapter)
+                    {
+                        entry.MangaDexLatestChapter = latestChapter;
+                        entry.ChapterCount = latestWholeChapter;
+                        entry.UpdatedAt = DateTimeOffset.UtcNow;
+                        updated++;
+                    }
                 }
             }
             catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
@@ -414,7 +421,7 @@ public sealed class RemoteSyncWorker(
     private static decimal? ParseChapterNumber(string value) =>
         decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
 
-    private static async Task<int?> GetLatestChapterNumberAsync(HttpClient client, string mangaDexId, CancellationToken cancellationToken)
+    private static async Task<decimal?> GetLatestChapterNumberAsync(HttpClient client, string mangaDexId, CancellationToken cancellationToken)
     {
         var path = $"/manga/{Uri.EscapeDataString(mangaDexId)}/feed?limit=1&translatedLanguage[]=en&includeExternalUrl=0&order[chapter]=desc";
         using var response = await client.GetAsync(path, cancellationToken);
@@ -439,6 +446,6 @@ public sealed class RemoteSyncWorker(
             return null;
         }
 
-        return (int)Math.Floor(value);
+        return value;
     }
 }

@@ -103,6 +103,7 @@ public sealed class ReaderService(
             sourceChapter = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, cancellationToken);
             if (sourceChapter is null)
             {
+                await RecordCompletedMangaDexChapterAsync(entry, shelfEntry.CurrentChapter, cancellationToken);
                 throw new NoNextMangaDexChapterException();
             }
 
@@ -284,6 +285,21 @@ public sealed class ReaderService(
         return decimal.TryParse(currentChapterNumber, NumberStyles.Number, CultureInfo.InvariantCulture, out var currentNumber)
             ? chapters.FirstOrDefault(chapter => decimal.TryParse(chapter.Number, NumberStyles.Number, CultureInfo.InvariantCulture, out var chapterNumber) && chapterNumber > currentNumber)
             : null;
+    }
+
+    private async Task RecordCompletedMangaDexChapterAsync(MangaEntry entry, string currentChapterNumber, CancellationToken cancellationToken)
+    {
+        var normalizedChapter = currentChapterNumber.Replace(',', '.');
+        if (!decimal.TryParse(normalizedChapter, NumberStyles.Number, CultureInfo.InvariantCulture, out var chapterNumber))
+        {
+            return;
+        }
+
+        entry.MangaDexLatestChapter = chapterNumber;
+        entry.ChapterCount = (int)Math.Floor(chapterNumber);
+        entry.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
+        entry.UpdatedAt = DateTimeOffset.UtcNow;
+        await shelf.SaveChangesAsync(cancellationToken);
     }
 
     private static MangaSourceChapter? SelectCurrentMangaDexChapter(IReadOnlyList<MangaSourceChapter> chapters, string currentChapter) =>

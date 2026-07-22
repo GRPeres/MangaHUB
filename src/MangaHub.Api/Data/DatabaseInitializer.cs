@@ -43,6 +43,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "VolumeCount" integer NULL,
                 "MangaDexUrl" text NOT NULL,
                 "MangaDexId" character varying(80) NOT NULL,
+                "MangaDexLatestChapter" numeric(10,3) NULL,
                 "MangaDexLastSyncedAt" timestamp with time zone NULL,
                 "MangaDexLastPrefetchedChapter" numeric(10,3) NULL,
                 "MangaDexLastPrefetchedAt" timestamp with time zone NULL,
@@ -61,6 +62,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "PublishingStatus" character varying(80) NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ChapterCount" integer NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "VolumeCount" integer NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastSyncedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedAt" timestamp with time zone NULL;

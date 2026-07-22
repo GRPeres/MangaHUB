@@ -56,6 +56,7 @@ public sealed class CatalogRepository(MangaHubDbContext db)
                 x.VolumeCount,
                 x.MangaDexUrl,
                 x.MangaDexId,
+                x.MangaDexLatestChapter,
                 x.MangaDexLastSyncedAt,
                 x.LocalSeriesId,
                 db.Series

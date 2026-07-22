@@ -19,6 +19,7 @@ public sealed class MangaEntry
     public int? VolumeCount { get; set; }
     public string MangaDexUrl { get; set; } = "";
     public string MangaDexId { get; set; } = "";
+    public decimal? MangaDexLatestChapter { get; set; }
     public DateTimeOffset? MangaDexLastSyncedAt { get; set; }
     public decimal? MangaDexLastPrefetchedChapter { get; set; }
     public DateTimeOffset? MangaDexLastPrefetchedAt { get; set; }

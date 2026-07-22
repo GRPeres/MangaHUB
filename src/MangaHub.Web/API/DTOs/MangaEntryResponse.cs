@@ -18,6 +18,7 @@ public sealed record MangaEntryResponse(
     string ReadingStatus,
     string MangaDexUrl,
     string MangaDexId,
+    decimal? MangaDexLatestChapter,
     DateTimeOffset? MangaDexLastSyncedAt,
     Guid? LocalSeriesId,
     string CurrentChapter,
