@@ -18,6 +18,16 @@
     pointer-events: none;
 }
 
+::deep .mh-entry-card-badge .mh-new-chapter-badge {
+    background: var(--mud-palette-error) !important;
+    color: var(--mud-palette-error-text) !important;
+    font-size: .72rem;
+    letter-spacing: 0;
+    line-height: 1.1;
+    padding: .35rem .55rem;
+    white-space: nowrap;
+}
+
 .mh-cover-frame {
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
     border-right: 1px solid var(--mud-palette-divider);

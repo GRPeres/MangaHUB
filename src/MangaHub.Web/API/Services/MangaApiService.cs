@@ -49,6 +49,12 @@ public sealed class MangaApiService(ApiHttpClient api)
             $"/api/manga/{entryId}/mangadex-reader/prefetch-next?afterCachedChapterId={currentCachedChapterId}",
             new { });
 
+    public async Task<bool> MarkCurrentChapterReadAsync(Guid entryId, Guid chapterId) =>
+        await api.SendAsync<object, bool>(
+            HttpMethod.Post,
+            $"/api/manga/{entryId}/reader/current-chapter-read/{chapterId}",
+            new { });
+
     public async Task<ReaderPreparationStatus?> GetMangaDexPreparationAsync(Guid jobId) =>
         await api.GetAsync<ReaderPreparationStatus>($"/api/manga/mangadex-reader/jobs/{jobId}");
 }

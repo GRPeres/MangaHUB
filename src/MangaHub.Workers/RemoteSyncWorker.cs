@@ -112,7 +112,7 @@ public sealed class RemoteSyncWorker(
                 var latestChapter = await GetLatestChapterNumberAsync(client, entry.MangaDexId, cancellationToken);
                 entry.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
 
-                if (latestChapter is not null && latestChapter > (entry.ChapterCount ?? 0))
+                if (latestChapter is not null && latestChapter != entry.ChapterCount)
                 {
                     entry.ChapterCount = latestChapter;
                     entry.UpdatedAt = DateTimeOffset.UtcNow;
@@ -439,6 +439,6 @@ public sealed class RemoteSyncWorker(
             return null;
         }
 
-        return (int)Math.Ceiling(value);
+        return (int)Math.Floor(value);
     }
 }

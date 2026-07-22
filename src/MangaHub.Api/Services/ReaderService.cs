@@ -1,3 +1,4 @@
+using System.Globalization;
 using MangaHub.Api.Common;
 using MangaHub.Api.Repositories;
 using MangaHub.Core.Dto;
@@ -97,6 +98,16 @@ public sealed class ReaderService(
 
             cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
         }
+        else if (shelfEntry.IsRead && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
+        {
+            sourceChapter = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, cancellationToken);
+            if (sourceChapter is null)
+            {
+                throw new NoNextMangaDexChapterException();
+            }
+
+            cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
+        }
         else if (cachedSeries is not null && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
         {
             cachedChapter = cachedSeries.Chapters
@@ -156,9 +167,11 @@ public sealed class ReaderService(
             }
         }
 
-        if (updateReadingProgress)
+        var shouldAdvanceReadingProgress = updateReadingProgress && beforeCachedChapterId is null;
+        if (shouldAdvanceReadingProgress)
         {
             shelfEntry.CurrentChapter = cachedChapter.ChapterNumber;
+            shelfEntry.IsRead = false;
             if (string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase))
             {
                 shelfEntry.ReadingStatus = "reading";
@@ -174,7 +187,7 @@ public sealed class ReaderService(
         }
 
         progress?.Report(new ReaderPreparationProgress(
-            updateReadingProgress ? "Opening the local reader" : "The next chapter is ready", 100));
+            shouldAdvanceReadingProgress ? "Opening the local reader" : "The chapter is ready", 100));
         return new ReaderLaunchResponse(
             $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex",
             cachedChapter.ChapterNumber,
@@ -193,6 +206,28 @@ public sealed class ReaderService(
             null,
             cancellationToken,
             updateReadingProgress: false);
+
+    public async Task<bool> MarkCurrentChapterReadAsync(
+        Guid userId,
+        Guid entryId,
+        Guid chapterId,
+        CancellationToken cancellationToken)
+    {
+        var shelfEntry = await shelf.GetWithMangaAsync(userId, entryId, cancellationToken);
+        var chapter = await series.GetChapterWithSeriesAsync(chapterId, cancellationToken);
+        if (shelfEntry?.MangaEntry is null
+            || chapter?.Series is null
+            || !string.Equals(chapter.ChapterNumber, shelfEntry.CurrentChapter, StringComparison.OrdinalIgnoreCase)
+            || !IsChapterForEntry(chapter, shelfEntry.MangaEntry))
+        {
+            return false;
+        }
+
+        shelfEntry.IsRead = true;
+        shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
+        await shelf.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 
     public async Task<ArchivePage?> GetPageAsync(Guid chapterId, int pageIndex, CancellationToken cancellationToken)
     {
@@ -234,6 +269,21 @@ public sealed class ReaderService(
         var currentIndex = chapters.Select((chapter, index) => new { chapter, index })
             .FirstOrDefault(item => string.Equals(item.chapter.Id, currentChapterId, StringComparison.Ordinal))?.index;
         return currentIndex is null || currentIndex.Value == 0 ? null : chapters[currentIndex.Value - 1];
+    }
+
+    private async Task<MangaSourceChapter?> FindNextMangaDexChapterAfterNumberAsync(string mangaDexId, string currentChapterNumber, CancellationToken cancellationToken)
+    {
+        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, cancellationToken);
+        var exactIndex = chapters.Select((chapter, index) => new { chapter, index })
+            .FirstOrDefault(item => string.Equals(item.chapter.Number, currentChapterNumber, StringComparison.OrdinalIgnoreCase))?.index;
+        if (exactIndex is not null)
+        {
+            return exactIndex.Value + 1 < chapters.Count ? chapters[exactIndex.Value + 1] : null;
+        }
+
+        return decimal.TryParse(currentChapterNumber, NumberStyles.Number, CultureInfo.InvariantCulture, out var currentNumber)
+            ? chapters.FirstOrDefault(chapter => decimal.TryParse(chapter.Number, NumberStyles.Number, CultureInfo.InvariantCulture, out var chapterNumber) && chapterNumber > currentNumber)
+            : null;
     }
 
     private static MangaSourceChapter? SelectCurrentMangaDexChapter(IReadOnlyList<MangaSourceChapter> chapters, string currentChapter) =>
@@ -284,6 +334,15 @@ public sealed class ReaderService(
 
     private static string GetMangaDexId(MangaEntry entry) =>
         string.IsNullOrWhiteSpace(entry.MangaDexId) ? TextRules.ExtractMangaDexId(entry.MangaDexUrl) : entry.MangaDexId;
+
+    private static bool IsChapterForEntry(MangaChapter chapter, MangaEntry entry) =>
+        (entry.LocalSeriesId is not null && chapter.SeriesId == entry.LocalSeriesId)
+        || (chapter.Series is { Source: MangaDexCacheSource } series
+            && string.Equals(series.ExternalId, GetMangaDexId(entry), StringComparison.Ordinal));
+
+    public sealed class NoNextMangaDexChapterException : Exception
+    {
+    }
 }
 
 public sealed record ReadOptions(

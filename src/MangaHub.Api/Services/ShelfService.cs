@@ -34,7 +34,12 @@ public sealed class ShelfService(
         }
         else
         {
+            var currentChapterChanged = !string.Equals(existingShelf.CurrentChapter, request.CurrentChapter.Trim(), StringComparison.Ordinal);
             TextRules.ApplyShelfRequest(existingShelf, request, manga);
+            if (currentChapterChanged)
+            {
+                existingShelf.IsRead = false;
+            }
             existingShelf.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
@@ -50,7 +55,12 @@ public sealed class ShelfService(
             return null;
         }
 
+        var currentChapterChanged = !string.Equals(shelfEntry.CurrentChapter, request.CurrentChapter.Trim(), StringComparison.Ordinal);
         TextRules.ApplyShelfRequest(shelfEntry, request, shelfEntry.MangaEntry);
+        if (currentChapterChanged)
+        {
+            shelfEntry.IsRead = false;
+        }
         shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
         await shelf.SaveChangesAsync(cancellationToken);
         return ApiMapping.ToMangaEntryResponse(shelfEntry.MangaEntry, shelfEntry);
@@ -198,7 +208,12 @@ public sealed class ShelfService(
                 }
 
                 shelfEntry.ReadingStatus = TextRules.NormalizeShelfStatus(TextRules.FirstValue(values, "status", "readingstatus"));
-                shelfEntry.CurrentChapter = TextRules.FirstValue(values, "chapter", "currentchapter", "chapters").Trim();
+                var currentChapter = TextRules.FirstValue(values, "chapter", "currentchapter", "chapters").Trim();
+                if (!string.Equals(shelfEntry.CurrentChapter, currentChapter, StringComparison.Ordinal))
+                {
+                    shelfEntry.IsRead = false;
+                }
+                shelfEntry.CurrentChapter = currentChapter;
                 shelfEntry.Score = TextRules.ParseScore(TextRules.FirstValue(values, "rating", "score"));
                 shelfEntry.Category = TextRules.FirstValue(values, "tipo", "type", "category", "genre").Trim();
                 shelfEntry.Summary = TextRules.FirstValue(values, "summary", "description").Trim();

@@ -13,11 +13,15 @@
     <div class="reader-top-stack">
         <MudPaper Class="reader-toolbar" Elevation="0" Outlined="true">
             <div class="reader-toolbar-previous">
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ChevronLeft" OnClick="Previous" Disabled="@PreviousDisabled">Previous</MudButton>
+                <MudTooltip Text="@PreviousLabel">
+                    <MudIconButton Icon="@PreviousIcon" Color="Color.Primary" OnClick="Previous" Disabled="@PreviousDisabled" aria-label="@PreviousLabel" />
+                </MudTooltip>
             </div>
             <MudText Typo="Typo.body2" Class="reader-page-count">Page @(page + 1) / @PageCount</MudText>
             <div class="reader-toolbar-next">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight" OnClick="Next" Disabled="@NextDisabled">@NextLabel</MudButton>
+                <MudTooltip Text="@NextLabel">
+                    <MudIconButton Icon="@NextIcon" Color="Color.Primary" OnClick="Next" Disabled="@NextDisabled" aria-label="@NextLabel" />
+                </MudTooltip>
             </div>
         </MudPaper>
 
@@ -41,7 +45,7 @@
                     title="Previous page"
                     @onclick="Previous"
                     disabled="@PreviousDisabled">
-                <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" aria-hidden="true" />
+                <MudIcon Icon="@PreviousIcon" aria-hidden="true" />
             </button>
             <button type="button"
                     class="reader-page-hit-area reader-page-hit-area-next"
@@ -49,14 +53,16 @@
                     title="@NextLabel"
                     @onclick="Next"
                     disabled="@NextDisabled">
-                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" aria-hidden="true" />
+                <MudIcon Icon="@NextIcon" aria-hidden="true" />
             </button>
         </div>
     </main>
 
     <MudPaper Class="reader-toolbar reader-chapter-toolbar" Elevation="0" Outlined="true">
         <div class="reader-toolbar-previous">
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="BackToShelf">Back to shelf</MudButton>
+            <MudTooltip Text="Back to shelf">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Secondary" OnClick="BackToShelf" aria-label="Back to shelf" />
+            </MudTooltip>
         </div>
         <div aria-hidden="true"></div>
         <div class="reader-toolbar-next">
@@ -81,6 +87,7 @@
     private int page;
     private Guid loadedChapterId;
     private Guid prefetchedChapterId;
+    private Guid markedReadChapterId;
     private bool isPreparingChapter;
     private ElementReference pageFrame;
     private ElementReference pageImage;
@@ -89,6 +96,9 @@
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private string readerMessage = "";
     private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
+    private string NextIcon => page < PageCount - 1 ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.SkipNext;
+    private string PreviousLabel => page > 0 ? "Previous" : EntryId is null ? "Previous" : "Previous chapter";
+    private string PreviousIcon => page > 0 ? Icons.Material.Filled.ChevronLeft : Icons.Material.Filled.SkipPrevious;
     private bool IsMangaDexReader => string.Equals(ReaderSource, "mangadex", StringComparison.OrdinalIgnoreCase)
         || (string.IsNullOrWhiteSpace(ReaderSource) && EntryId is not null);
     private bool CanPrepareAdjacentChapter => IsMangaDexReader && EntryId is not null;
@@ -106,6 +116,7 @@
             isPreparingChapter = false;
             readerPreparation = null;
             pageImageVersion = Guid.NewGuid().ToString("N");
+            markedReadChapterId = Guid.Empty;
         }
     }
 
@@ -227,6 +238,28 @@
     private async Task FitPageToImage()
     {
         await JS.InvokeVoidAsync("mangaHubReader.fitPage", pageFrame, pageImage);
+        await MarkCurrentChapterReadIfNeededAsync();
+    }
+
+    private async Task MarkCurrentChapterReadIfNeededAsync()
+    {
+        if (EntryId is null || page != PageCount - 1 || markedReadChapterId == ChapterId)
+        {
+            return;
+        }
+
+        markedReadChapterId = ChapterId;
+        try
+        {
+            if (!await MangaApi.MarkCurrentChapterReadAsync(EntryId.Value, ChapterId))
+            {
+                markedReadChapterId = Guid.Empty;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            markedReadChapterId = Guid.Empty;
+        }
     }
 
     public async ValueTask DisposeAsync()

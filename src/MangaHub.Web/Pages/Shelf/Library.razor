@@ -251,6 +251,12 @@
                 var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
                 if (completedPreparation?.Launch is null)
                 {
+                    if (IsNoLaterChapter(completedPreparation))
+                    {
+                        Messages.Warning("You've read all available chapters.", "All caught up");
+                        return;
+                    }
+
                     ShowWarning(completedPreparation?.Error ?? "Could not prepare a MangaDex chapter for the local reader.");
                     return;
                 }
@@ -305,6 +311,9 @@
     }
 
     private void ShowWarning(string text) => Messages.Warning(text);
+
+    private static bool IsNoLaterChapter(ReaderPreparationStatus? preparation) =>
+        string.Equals(preparation?.Error, "No later readable MangaDex chapter is available.", StringComparison.Ordinal);
 
     private List<MangaEntryResponse> FilteredEntries => entries
         .Where(MatchesSearch)
@@ -399,7 +408,7 @@
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
 
-    private static bool TryGetCurrentChapterNumber(string currentChapter, out int chapter)
+    private static bool TryGetCurrentChapterNumber(string currentChapter, out decimal chapter)
     {
         chapter = 0;
         if (string.IsNullOrWhiteSpace(currentChapter))
@@ -407,11 +416,12 @@
             return false;
         }
 
-        var digits = new string(currentChapter
+        var chapterText = new string(currentChapter
             .SkipWhile(value => !char.IsDigit(value))
-            .TakeWhile(char.IsDigit)
-            .ToArray());
-        return int.TryParse(digits, out chapter);
+            .TakeWhile(value => char.IsDigit(value) || value is '.' or ',')
+            .ToArray())
+            .Replace(',', '.');
+        return decimal.TryParse(chapterText, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out chapter);
     }
 
     private static string GetSourceLabel(string metadataSource, string myAnimeListId, string openLibraryKey)

@@ -1,13 +1,13 @@
-<MudBadge Content="@($"+{NewChapterCount}")"
-          Visible="@HasNewChapters"
-          Color="Color.Error"
-          Origin="Origin.TopRight"
-          Overlap="true"
-          Bordered="true"
-          Elevation="8"
-          Class="mh-entry-card-badge"
-          BadgeClass="mh-new-chapter-badge"
-          BadgeAriaLabel="@($"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")} available")">
+<MudBadge Content="@NewChapterBadgeLabel"
+           Visible="@HasNewChapters"
+           Color="Color.Error"
+           Origin="Origin.TopLeft"
+           Overlap="true"
+           Bordered="false"
+           Elevation="8"
+           Class="mh-entry-card-badge"
+           BadgeClass="mh-new-chapter-badge"
+           BadgeAriaLabel="@NewChapterBadgeLabel">
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <div class="mh-cover-frame">
         @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))

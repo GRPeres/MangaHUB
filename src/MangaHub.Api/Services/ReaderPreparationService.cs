@@ -111,6 +111,16 @@ public sealed class ReaderPreparationService(
                 Launch = launch
             });
         }
+        catch (ReaderService.NoNextMangaDexChapterException)
+        {
+            Update(jobId, status => status with
+            {
+                Stage = "No later readable MangaDex chapter was found",
+                IsComplete = true,
+                IsFailed = true,
+                Error = "No later readable MangaDex chapter is available."
+            });
+        }
         catch (Exception)
         {
             Update(jobId, status => status with

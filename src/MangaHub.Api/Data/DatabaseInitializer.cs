@@ -78,6 +78,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "MangaEntryId" uuid NOT NULL,
                 "ReadingStatus" character varying(40) NOT NULL,
                 "CurrentChapter" character varying(40) NOT NULL DEFAULT '',
+                "IsRead" boolean NOT NULL DEFAULT false,
                 "Score" integer NULL,
                 "Category" character varying(120) NOT NULL DEFAULT '',
                 "Summary" text NOT NULL DEFAULT '',
@@ -92,6 +93,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             );
 
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "CurrentChapter" character varying(40) NOT NULL DEFAULT '';
+            ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "IsRead" boolean NOT NULL DEFAULT false;
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Score" integer NULL;
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Category" character varying(120) NOT NULL DEFAULT '';
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Summary" text NOT NULL DEFAULT '';

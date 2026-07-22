@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using MangaHub.Web.API.DTOs;
 using MudBlazor;
+using System.Globalization;
 
 namespace MangaHub.Web.Components.Shelf;
 
@@ -32,9 +33,10 @@ public partial class ShelfEntryCard
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
     private string LatestChapterValue => Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
     private int NewChapterCount => HasMangaDexLink && Entry.ChapterCount is not null && TryGetCurrentChapterNumber(out var currentChapter)
-        ? Math.Max(0, Entry.ChapterCount.Value - currentChapter)
+        ? Math.Max(0, (int)Math.Ceiling(Entry.ChapterCount.Value - currentChapter))
         : 0;
     private bool HasNewChapters => NewChapterCount > 0;
+    private string NewChapterBadgeLabel => NewChapterCount == 1 ? "1 new chapter" : $"{NewChapterCount} new chapters";
     private string ProgressHint => !HasMangaDexLink
         ? "MangaDex sync unavailable"
         : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
@@ -115,7 +117,7 @@ public partial class ShelfEntryCard
         Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
-    private bool TryGetCurrentChapterNumber(out int chapter)
+    private bool TryGetCurrentChapterNumber(out decimal chapter)
     {
         chapter = 0;
         if (string.IsNullOrWhiteSpace(Entry.CurrentChapter))
@@ -123,10 +125,11 @@ public partial class ShelfEntryCard
             return false;
         }
 
-        var digits = new string(Entry.CurrentChapter
+        var chapterText = new string(Entry.CurrentChapter
             .SkipWhile(value => !char.IsDigit(value))
-            .TakeWhile(char.IsDigit)
-            .ToArray());
-        return int.TryParse(digits, out chapter);
+            .TakeWhile(value => char.IsDigit(value) || value is '.' or ',')
+            .ToArray())
+            .Replace(',', '.');
+        return decimal.TryParse(chapterText, NumberStyles.Number, CultureInfo.InvariantCulture, out chapter);
     }
 }
