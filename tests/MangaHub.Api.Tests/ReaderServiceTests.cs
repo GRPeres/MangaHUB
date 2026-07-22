@@ -83,7 +83,7 @@ public sealed class ReaderServiceTests
         var userId = Guid.NewGuid();
         var entry = new MangaEntry { Title = "Berserk", MangaDexId = "berserk-id" };
         db.MangaEntries.Add(entry);
-        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "1", ReadingStatus = "planned" });
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "Ch. 1", ReadingStatus = "planned" });
         await db.SaveChangesAsync();
 
         var mangaDex = new FakeMangaDexSource();

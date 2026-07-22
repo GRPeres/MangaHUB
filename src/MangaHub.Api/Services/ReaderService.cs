@@ -335,10 +335,36 @@ public sealed class ReaderService(
         await shelf.SaveChangesAsync(cancellationToken);
     }
 
-    private static MangaSourceChapter? SelectCurrentMangaDexChapter(IReadOnlyList<MangaSourceChapter> chapters, string currentChapter) =>
-        !string.IsNullOrWhiteSpace(currentChapter)
-            ? chapters.FirstOrDefault(chapter => string.Equals(chapter.Number, currentChapter, StringComparison.OrdinalIgnoreCase)) ?? chapters.FirstOrDefault()
-            : chapters.FirstOrDefault();
+    private static MangaSourceChapter? SelectCurrentMangaDexChapter(IReadOnlyList<MangaSourceChapter> chapters, string currentChapter)
+    {
+        if (string.IsNullOrWhiteSpace(currentChapter))
+        {
+            return chapters.FirstOrDefault();
+        }
+
+        var exact = chapters.FirstOrDefault(chapter => string.Equals(chapter.Number, currentChapter, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null)
+        {
+            return exact;
+        }
+
+        var normalized = new string(currentChapter.Where(character => char.IsDigit(character) || character is '.' or ',').ToArray()).Replace(',', '.');
+        if (!decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var currentNumber))
+        {
+            return null;
+        }
+
+        var numberedChapters = chapters
+            .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
+            .Where(item => item.Number is not null)
+            .ToList();
+        return numberedChapters.FirstOrDefault(item => item.Number == currentNumber)?.Chapter
+            ?? numberedChapters.Where(item => item.Number >= currentNumber).OrderBy(item => item.Number).FirstOrDefault()?.Chapter
+            ?? numberedChapters.OrderByDescending(item => item.Number).FirstOrDefault()?.Chapter;
+    }
+
+    private static decimal? ParseChapterNumber(string value) =>
+        decimal.TryParse(value.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
 
     private MangaSeries CreateCachedSeries(MangaEntry entry, string mangaDexId) => new()
     {
