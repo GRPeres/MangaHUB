@@ -84,6 +84,7 @@
     [SupplyParameterFromQuery] public Guid? EntryId { get; set; }
     [SupplyParameterFromQuery(Name = "chapter")] public string? CurrentChapter { get; set; }
     [SupplyParameterFromQuery(Name = "source")] public string? ReaderSource { get; set; }
+    [SupplyParameterFromQuery(Name = "language")] public string? ReaderLanguage { get; set; }
     private int page;
     private Guid loadedChapterId;
     private Guid prefetchedChapterId;
@@ -130,7 +131,7 @@
         prefetchedChapterId = ChapterId;
         try
         {
-            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId);
+            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId, ReaderLanguage ?? "en");
         }
         catch (HttpRequestException)
         {
@@ -177,7 +178,8 @@
             readerPreparation = await MangaApi.StartMangaDexPreparationAsync(
                 EntryId.Value,
                 afterCachedChapterId: next ? ChapterId : null,
-                beforeCachedChapterId: next ? null : ChapterId);
+                beforeCachedChapterId: next ? null : ChapterId,
+                language: ReaderLanguage ?? "en");
             if (readerPreparation is null)
             {
                 readerMessage = "Could not start MangaDex chapter preparation.";

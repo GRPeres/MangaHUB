@@ -39,14 +39,15 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
     public Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken) =>
         Task.FromResult<MangaSourceSeries?>(null);
 
-    public async Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken)
     {
         if (!options.Value.MangaDexEnabled || string.IsNullOrWhiteSpace(seriesId))
         {
             return [];
         }
 
-        var cacheKey = $"mangadex:reader:chapters:{seriesId}";
+        var normalizedLanguage = string.IsNullOrWhiteSpace(language) ? "all" : language.Trim().ToLowerInvariant();
+        var cacheKey = $"mangadex:reader:chapters:{seriesId}:{normalizedLanguage}";
         if (cache.TryGetValue(cacheKey, out IReadOnlyList<MangaSourceChapter>? cached) && cached is not null)
         {
             return cached;
@@ -60,8 +61,9 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
         while (offset < total && offset < maximum)
         {
             var limit = Math.Min(100, maximum - offset);
+            var languageFilter = normalizedLanguage == "all" ? "" : $"&translatedLanguage[]={Uri.EscapeDataString(normalizedLanguage)}";
             var response = await httpClient.GetAsync(
-                $"/manga/{Uri.EscapeDataString(seriesId)}/feed?limit={limit}&offset={offset}&translatedLanguage[]=en&includeExternalUrl=0&order[chapter]=asc",
+                $"/manga/{Uri.EscapeDataString(seriesId)}/feed?limit={limit}&offset={offset}{languageFilter}&includeExternalUrl=0&order[chapter]=asc",
                 cancellationToken);
             response.EnsureSuccessStatusCode();
 
@@ -87,7 +89,8 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
                     id,
                     string.IsNullOrWhiteSpace(number) ? "Extra" : number,
                     ReadString(attributes, "title"),
-                    ReadInt(attributes, "pages") ?? 0));
+                    ReadInt(attributes, "pages") ?? 0,
+                    ReadString(attributes, "translatedLanguage")));
             }
 
             offset += data.GetArrayLength();
@@ -97,7 +100,7 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
             .GroupBy(
                 chapter => string.Equals(chapter.Number, "Extra", StringComparison.OrdinalIgnoreCase)
                     ? $"{chapter.Number}:{chapter.Title}:{chapter.Id}"
-                    : chapter.Number,
+                    : $"{chapter.Number}:{chapter.Language}",
                 StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .OrderBy(chapter => ChapterSortKey(chapter.Number))

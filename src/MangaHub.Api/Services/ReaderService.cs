@@ -21,6 +21,9 @@ public sealed class ReaderService(
 {
     private const string MangaDexCacheSource = "mangadex-cache";
 
+    public Task<ReaderLaunchResponse?> PrepareMangaDexChapterAsync(Guid userId, Guid entryId, Guid? afterCachedChapterId, Guid? beforeCachedChapterId, CancellationToken cancellationToken, IProgress<ReaderPreparationProgress>? progress = null, bool updateReadingProgress = true) =>
+        PrepareMangaDexChapterAsync(userId, entryId, afterCachedChapterId, beforeCachedChapterId, "en", false, cancellationToken, progress, updateReadingProgress);
+
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid userId, Guid entryId, CancellationToken cancellationToken)
     {
         var shelfEntry = await shelf.GetReadShelfAsync(userId, entryId, cancellationToken);
@@ -51,6 +54,8 @@ public sealed class ReaderService(
         Guid entryId,
         Guid? afterCachedChapterId,
         Guid? beforeCachedChapterId,
+        string language,
+        bool allowLanguageFallback,
         CancellationToken cancellationToken,
         IProgress<ReaderPreparationProgress>? progress = null,
         bool updateReadingProgress = true)
@@ -71,6 +76,7 @@ public sealed class ReaderService(
         {
             return null;
         }
+        var preferredLanguage = NormalizeLanguage(language);
 
         var cachedSeries = await series.GetBySourceAndExternalIdAsync(MangaDexCacheSource, mangaDexId, cancellationToken);
         var isNewCachedSeries = cachedSeries is null;
@@ -89,8 +95,8 @@ public sealed class ReaderService(
             }
 
             sourceChapter = afterCachedChapterId is not null
-                ? await FindNextMangaDexChapterAsync(mangaDexId, current.SourceId, cancellationToken)
-                : await FindPreviousMangaDexChapterAsync(mangaDexId, current.SourceId, cancellationToken);
+                ? await FindNextMangaDexChapterAsync(mangaDexId, current.SourceId, preferredLanguage, cancellationToken)
+                : await FindPreviousMangaDexChapterAsync(mangaDexId, current.SourceId, preferredLanguage, cancellationToken);
             if (sourceChapter is null)
             {
                 return null;
@@ -100,9 +106,14 @@ public sealed class ReaderService(
         }
         else if (shelfEntry.IsRead && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
         {
-            sourceChapter = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, cancellationToken);
+            sourceChapter = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguage, cancellationToken);
             if (sourceChapter is null)
             {
+                var availableLanguages = await FindAvailableLanguagesAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguage, cancellationToken);
+                if (!allowLanguageFallback && availableLanguages.Count > 0)
+                {
+                    throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
+                }
                 await RecordCompletedMangaDexChapterAsync(entry, shelfEntry.CurrentChapter, cancellationToken);
                 throw new NoNextMangaDexChapterException();
             }
@@ -128,7 +139,7 @@ public sealed class ReaderService(
             var mangaDex = sources.Get("mangadex");
             progress?.Report(new ReaderPreparationProgress("Loading MangaDex chapter list", 8));
             sourceChapter ??= SelectCurrentMangaDexChapter(
-                await mangaDex.GetChaptersAsync(mangaDexId, cancellationToken),
+                await mangaDex.GetChaptersAsync(mangaDexId, preferredLanguage, cancellationToken),
                 shelfEntry.CurrentChapter);
             if (sourceChapter is null)
             {
@@ -190,7 +201,7 @@ public sealed class ReaderService(
         progress?.Report(new ReaderPreparationProgress(
             shouldAdvanceReadingProgress ? "Opening the local reader" : "The chapter is ready", 100));
         return new ReaderLaunchResponse(
-            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex",
+            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex&language={Uri.EscapeDataString(preferredLanguage)}",
             cachedChapter.ChapterNumber,
             cachedChapter.PageCount);
     }
@@ -199,14 +210,20 @@ public sealed class ReaderService(
         Guid userId,
         Guid entryId,
         Guid afterCachedChapterId,
+        string language,
         CancellationToken cancellationToken) =>
         await PrepareMangaDexChapterAsync(
             userId,
             entryId,
             afterCachedChapterId,
             null,
+            language,
+            allowLanguageFallback: false,
             cancellationToken,
             updateReadingProgress: false);
+
+    public Task PrefetchNextMangaDexChapterAsync(Guid userId, Guid entryId, Guid afterCachedChapterId, CancellationToken cancellationToken) =>
+        PrefetchNextMangaDexChapterAsync(userId, entryId, afterCachedChapterId, "en", cancellationToken);
 
     public async Task<bool> MarkCurrentChapterReadAsync(
         Guid userId,
@@ -256,25 +273,25 @@ public sealed class ReaderService(
         return await archives.ReadPageAsync(archivePath, pageIndex, cancellationToken);
     }
 
-    private async Task<MangaSourceChapter?> FindNextMangaDexChapterAsync(string mangaDexId, string currentChapterId, CancellationToken cancellationToken)
+    private async Task<MangaSourceChapter?> FindNextMangaDexChapterAsync(string mangaDexId, string currentChapterId, string language, CancellationToken cancellationToken)
     {
-        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, cancellationToken);
+        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken);
         var currentIndex = chapters.Select((chapter, index) => new { chapter, index })
             .FirstOrDefault(item => string.Equals(item.chapter.Id, currentChapterId, StringComparison.Ordinal))?.index;
         return currentIndex is null || currentIndex.Value + 1 >= chapters.Count ? null : chapters[currentIndex.Value + 1];
     }
 
-    private async Task<MangaSourceChapter?> FindPreviousMangaDexChapterAsync(string mangaDexId, string currentChapterId, CancellationToken cancellationToken)
+    private async Task<MangaSourceChapter?> FindPreviousMangaDexChapterAsync(string mangaDexId, string currentChapterId, string language, CancellationToken cancellationToken)
     {
-        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, cancellationToken);
+        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken);
         var currentIndex = chapters.Select((chapter, index) => new { chapter, index })
             .FirstOrDefault(item => string.Equals(item.chapter.Id, currentChapterId, StringComparison.Ordinal))?.index;
         return currentIndex is null || currentIndex.Value == 0 ? null : chapters[currentIndex.Value - 1];
     }
 
-    private async Task<MangaSourceChapter?> FindNextMangaDexChapterAfterNumberAsync(string mangaDexId, string currentChapterNumber, CancellationToken cancellationToken)
+    private async Task<MangaSourceChapter?> FindNextMangaDexChapterAfterNumberAsync(string mangaDexId, string currentChapterNumber, string language, CancellationToken cancellationToken)
     {
-        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, cancellationToken);
+        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken);
         var exactIndex = chapters.Select((chapter, index) => new { chapter, index })
             .FirstOrDefault(item => string.Equals(item.chapter.Number, currentChapterNumber, StringComparison.OrdinalIgnoreCase))?.index;
         if (exactIndex is not null)
@@ -285,6 +302,22 @@ public sealed class ReaderService(
         return decimal.TryParse(currentChapterNumber, NumberStyles.Number, CultureInfo.InvariantCulture, out var currentNumber)
             ? chapters.FirstOrDefault(chapter => decimal.TryParse(chapter.Number, NumberStyles.Number, CultureInfo.InvariantCulture, out var chapterNumber) && chapterNumber > currentNumber)
             : null;
+    }
+
+    private async Task<List<string>> FindAvailableLanguagesAfterNumberAsync(string mangaDexId, string currentChapterNumber, string preferredLanguage, CancellationToken cancellationToken)
+    {
+        if (!decimal.TryParse(currentChapterNumber.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out var currentNumber))
+        {
+            return [];
+        }
+
+        return (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
+            .Where(chapter => !string.Equals(chapter.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase))
+            .Where(chapter => decimal.TryParse(chapter.Number, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) && number > currentNumber)
+            .Select(chapter => NormalizeLanguage(chapter.Language))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private async Task RecordCompletedMangaDexChapterAsync(MangaEntry entry, string currentChapterNumber, CancellationToken cancellationToken)
@@ -351,6 +384,9 @@ public sealed class ReaderService(
     private static string GetMangaDexId(MangaEntry entry) =>
         string.IsNullOrWhiteSpace(entry.MangaDexId) ? TextRules.ExtractMangaDexId(entry.MangaDexUrl) : entry.MangaDexId;
 
+    private static string NormalizeLanguage(string? language) =>
+        string.IsNullOrWhiteSpace(language) ? "en" : language.Trim().ToLowerInvariant();
+
     private static bool IsChapterForEntry(MangaChapter chapter, MangaEntry entry) =>
         (entry.LocalSeriesId is not null && chapter.SeriesId == entry.LocalSeriesId)
         || (chapter.Series is { Source: MangaDexCacheSource } series
@@ -358,6 +394,11 @@ public sealed class ReaderService(
 
     public sealed class NoNextMangaDexChapterException : Exception
     {
+    }
+
+    public sealed class MangaDexLanguageFallbackRequiredException(List<string> languages) : Exception
+    {
+        public List<string> Languages { get; } = languages;
     }
 }
 

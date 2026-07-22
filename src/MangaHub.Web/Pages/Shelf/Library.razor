@@ -23,6 +23,15 @@
             </MudStack>
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
+            @if (IsAdmin)
+            {
+                <MudSelect T="string" @bind-Value="readerLanguage" Label="Reader language" Dense="true" Variant="Variant.Outlined" Class="mh-reader-language-select">
+                    @foreach (var language in ReaderLanguages)
+                    {
+                        <MudSelectItem T="string" Value="@language.Code">@language.Label</MudSelectItem>
+                    }
+                </MudSelect>
+            }
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
                 <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">Add manga</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportShelf">Import CSV</MudMenuItem>
@@ -40,7 +49,7 @@
         <MudStack Spacing="2">
             @foreach (var item in FilteredEntries)
             {
-                <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="Read" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" />
+                <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" />
             }
         </MudStack>
     }
@@ -56,6 +65,28 @@
                          Progress="@(readerPreparation?.Progress ?? 0)"
                          CompletedPages="@(readerPreparation?.CompletedPages ?? 0)"
                          TotalPages="@(readerPreparation?.TotalPages ?? 0)" />
+
+@if (languageFallbackEntryId is not null && fallbackLanguages.Count > 0)
+{
+    <div class="mh-modal-backdrop">
+        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="language-fallback-title">
+            <MudStack Spacing="3">
+                <MudText id="language-fallback-title" Typo="Typo.h2">New chapter, different language</MudText>
+                <MudText Typo="Typo.body1">There is no newer chapter in @LanguageLabel(readerLanguage), but MangaDex has one in another language.</MudText>
+                <MudSelect T="string" @bind-Value="fallbackLanguage" Label="Continue in" Variant="Variant.Outlined">
+                    @foreach (var language in fallbackLanguages)
+                    {
+                        <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="CancelLanguageFallback">Stay in current language</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ContinueInFallbackLanguage">Continue reading</MudButton>
+                </MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
 
 @if (filtersOpen)
 {
@@ -159,6 +190,10 @@
     private bool filtersOpen;
     private bool isPreparingReader;
     private ReaderPreparationStatus? readerPreparation;
+    private string readerLanguage = "en";
+    private Guid? languageFallbackEntryId;
+    private List<string> fallbackLanguages = [];
+    private string fallbackLanguage = "";
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private MangaEntryResponse? editingEntry;
 
@@ -214,7 +249,7 @@
         CloseEdit();
     }
 
-    private async Task Read(Guid entryId)
+    private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false)
     {
         if (!IsAdmin)
         {
@@ -241,7 +276,7 @@
 
             if (options.HasMangaDex)
             {
-                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId);
+                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? readerLanguage, allowLanguageFallback: allowLanguageFallback);
                 if (readerPreparation is null)
                 {
                     ShowWarning("Could not start MangaDex chapter preparation.");
@@ -251,6 +286,13 @@
                 var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
                 if (completedPreparation?.Launch is null)
                 {
+                    if (completedPreparation?.AvailableLanguages is { Count: > 0 })
+                    {
+                        languageFallbackEntryId = entryId;
+                        fallbackLanguages = completedPreparation.AvailableLanguages;
+                        fallbackLanguage = fallbackLanguages[0];
+                        return;
+                    }
                     if (IsNoLaterChapter(completedPreparation))
                     {
                         Messages.Warning("You've read all available chapters.", "All caught up");
@@ -311,6 +353,31 @@
     }
 
     private void ShowWarning(string text) => Messages.Warning(text);
+
+    private void CancelLanguageFallback()
+    {
+        languageFallbackEntryId = null;
+        fallbackLanguages = [];
+    }
+
+    private async Task ContinueInFallbackLanguage()
+    {
+        if (languageFallbackEntryId is not { } entryId || string.IsNullOrWhiteSpace(fallbackLanguage))
+        {
+            return;
+        }
+
+        CancelLanguageFallback();
+        await Read(entryId, fallbackLanguage, allowLanguageFallback: true);
+    }
+
+    private static readonly (string Code, string Label)[] ReaderLanguages =
+    [
+        ("en", "English"), ("pt-br", "Portuguese (Brazil)"), ("pt", "Portuguese"), ("es", "Spanish"),
+        ("fr", "French"), ("de", "German"), ("it", "Italian"), ("ja", "Japanese"), ("ko", "Korean")
+    ];
+
+    private static string LanguageLabel(string code) => ReaderLanguages.FirstOrDefault(language => string.Equals(language.Code, code, StringComparison.OrdinalIgnoreCase)).Label ?? code;
 
     private static bool IsNoLaterChapter(ReaderPreparationStatus? preparation) =>
         string.Equals(preparation?.Error, "No later readable MangaDex chapter is available.", StringComparison.Ordinal);

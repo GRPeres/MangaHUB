@@ -5,7 +5,7 @@ public interface IMangaSource
     string Name { get; }
     Task<IReadOnlyList<MangaSearchResult>> SearchAsync(string query, CancellationToken cancellationToken);
     Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken);
-    Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken);
     Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken);
 }
 
@@ -29,7 +29,7 @@ public sealed record MangaSourceChapter(
     string Id,
     string Number,
     string Title,
-    int PageCount);
+    int PageCount,
+    string Language = "en");
 
 public sealed record MangaPage(int Index, string Url);
-

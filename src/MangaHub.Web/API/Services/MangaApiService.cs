@@ -24,7 +24,9 @@ public sealed class MangaApiService(ApiHttpClient api)
     public async Task<ReaderPreparationStatus?> StartMangaDexPreparationAsync(
         Guid entryId,
         Guid? afterCachedChapterId = null,
-        Guid? beforeCachedChapterId = null)
+        Guid? beforeCachedChapterId = null,
+        string language = "en",
+        bool allowLanguageFallback = false)
     {
         var queryValues = new List<string>();
         if (afterCachedChapterId is not null)
@@ -35,6 +37,11 @@ public sealed class MangaApiService(ApiHttpClient api)
         {
             queryValues.Add($"beforeCachedChapterId={beforeCachedChapterId}");
         }
+        queryValues.Add($"language={Uri.EscapeDataString(language)}");
+        if (allowLanguageFallback)
+        {
+            queryValues.Add("allowLanguageFallback=true");
+        }
 
         var query = queryValues.Count == 0 ? "" : $"?{string.Join("&", queryValues)}";
         return await api.SendAsync<object, ReaderPreparationStatus>(
@@ -43,10 +50,10 @@ public sealed class MangaApiService(ApiHttpClient api)
             new { });
     }
 
-    public async Task PrefetchNextMangaDexChapterAsync(Guid entryId, Guid currentCachedChapterId) =>
+    public async Task PrefetchNextMangaDexChapterAsync(Guid entryId, Guid currentCachedChapterId, string language = "en") =>
         await api.SendAsync<object, object>(
             HttpMethod.Post,
-            $"/api/manga/{entryId}/mangadex-reader/prefetch-next?afterCachedChapterId={currentCachedChapterId}",
+            $"/api/manga/{entryId}/mangadex-reader/prefetch-next?afterCachedChapterId={currentCachedChapterId}&language={Uri.EscapeDataString(language)}",
             new { });
 
     public async Task<bool> MarkCurrentChapterReadAsync(Guid entryId, Guid chapterId) =>

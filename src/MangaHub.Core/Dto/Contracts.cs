@@ -110,7 +110,8 @@ public sealed record ReaderPreparationStatus(
     bool IsComplete,
     bool IsFailed,
     string Error,
-    ReaderLaunchResponse? Launch);
+    ReaderLaunchResponse? Launch,
+    List<string>? AvailableLanguages = null);
 public sealed record CachedMangaDexChapterResponse(Guid Id, string ChapterNumber, string Title, int PageCount, DateTimeOffset CachedAt, bool IsManual);
 public sealed record MangaDexCacheResponse(string MangaDexId, List<CachedMangaDexChapterResponse> Chapters);
 public sealed record CacheMangaDexChapterRequest(string ChapterNumber);

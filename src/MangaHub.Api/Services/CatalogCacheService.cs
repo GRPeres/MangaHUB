@@ -52,7 +52,7 @@ public sealed class CatalogCacheService(
 
         var source = sources.Get("mangadex");
         var requestedNumber = request.ChapterNumber.Trim();
-        var chapters = await source.GetChaptersAsync(mangaDexId, cancellationToken);
+        var chapters = await source.GetChaptersAsync(mangaDexId, "en", cancellationToken);
         var chapter = chapters
             .FirstOrDefault(item => string.Equals(item.Number, requestedNumber, StringComparison.OrdinalIgnoreCase))
             ?? FindNumericChapter(chapters, requestedNumber);

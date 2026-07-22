@@ -12,10 +12,9 @@ public sealed class LocalMangaSource : IMangaSource
     public Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken) =>
         Task.FromResult<MangaSourceSeries?>(null);
 
-    public Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, CancellationToken cancellationToken) =>
+    public Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MangaSourceChapter>>([]);
 
     public Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MangaPage>>([]);
 }
-

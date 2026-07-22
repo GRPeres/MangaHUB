@@ -15,7 +15,9 @@ public sealed class ReaderPreparationService(
         Guid userId,
         Guid entryId,
         Guid? afterCachedChapterId,
-        Guid? beforeCachedChapterId)
+        Guid? beforeCachedChapterId,
+        string language,
+        bool allowLanguageFallback)
     {
         RemoveExpiredJobs();
 
@@ -23,14 +25,14 @@ public sealed class ReaderPreparationService(
         var status = new ReaderPreparationStatus(jobId, "Waiting to prepare the chapter", 0, 0, 0, false, false, "", null);
         jobs[jobId] = new ReaderPreparationJob(userId, DateTimeOffset.UtcNow, status);
 
-        _ = Task.Run(() => PrepareAsync(jobId, userId, entryId, afterCachedChapterId, beforeCachedChapterId));
+        _ = Task.Run(() => PrepareAsync(jobId, userId, entryId, afterCachedChapterId, beforeCachedChapterId, language, allowLanguageFallback));
         return status;
     }
 
     public ReaderPreparationStatus? Get(Guid jobId, Guid userId) =>
         jobs.TryGetValue(jobId, out var job) && job.UserId == userId ? job.Status : null;
 
-    public void PrefetchNext(Guid userId, Guid entryId, Guid afterCachedChapterId)
+    public void PrefetchNext(Guid userId, Guid entryId, Guid afterCachedChapterId, string language)
     {
         var key = new ReaderPrefetchKey(userId, entryId, afterCachedChapterId);
         if (!activePrefetches.TryAdd(key, 0))
@@ -44,7 +46,7 @@ public sealed class ReaderPreparationService(
             {
                 using var scope = scopeFactory.CreateScope();
                 var reader = scope.ServiceProvider.GetRequiredService<ReaderService>();
-                await reader.PrefetchNextMangaDexChapterAsync(userId, entryId, afterCachedChapterId, CancellationToken.None);
+                await reader.PrefetchNextMangaDexChapterAsync(userId, entryId, afterCachedChapterId, language, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -62,7 +64,9 @@ public sealed class ReaderPreparationService(
         Guid userId,
         Guid entryId,
         Guid? afterCachedChapterId,
-        Guid? beforeCachedChapterId)
+        Guid? beforeCachedChapterId,
+        string language,
+        bool allowLanguageFallback)
     {
         try
         {
@@ -83,6 +87,8 @@ public sealed class ReaderPreparationService(
                 entryId,
                 afterCachedChapterId,
                 beforeCachedChapterId,
+                language,
+                allowLanguageFallback,
                 CancellationToken.None,
                 progress);
 
@@ -119,6 +125,17 @@ public sealed class ReaderPreparationService(
                 IsComplete = true,
                 IsFailed = true,
                 Error = "No later readable MangaDex chapter is available."
+            });
+        }
+        catch (ReaderService.MangaDexLanguageFallbackRequiredException ex)
+        {
+            Update(jobId, status => status with
+            {
+                Stage = "A newer chapter is available in another language",
+                IsComplete = true,
+                IsFailed = true,
+                Error = "No newer chapter is available in the selected language.",
+                AvailableLanguages = ex.Languages
             });
         }
         catch (Exception)

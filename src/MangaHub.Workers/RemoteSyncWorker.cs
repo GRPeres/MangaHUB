@@ -169,7 +169,7 @@ public sealed class RemoteSyncWorker(
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var chapters = await mangaDex.GetChaptersAsync(entry.MangaDexId, cancellationToken);
+                var chapters = await mangaDex.GetChaptersAsync(entry.MangaDexId, "en", cancellationToken);
                 var numberedChapters = chapters
                     .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
                     .Where(item => item.Number is not null)
@@ -282,7 +282,7 @@ public sealed class RemoteSyncWorker(
 
                 var cacheSeries = await GetOrCreateCachedSeriesAsync(db, entry, cancellationToken);
                 var cachedSourceIds = cacheSeries.Chapters.Select(chapter => chapter.SourceId).ToHashSet(StringComparer.Ordinal);
-                var pending = (await mangaDex.GetChaptersAsync(entry.MangaDexId, cancellationToken))
+                var pending = (await mangaDex.GetChaptersAsync(entry.MangaDexId, "en", cancellationToken))
                     .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
                     .Where(item => item.Number is not null
                         && item.Number.Value <= highestReadChapter

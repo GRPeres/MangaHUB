@@ -9,4 +9,5 @@ public sealed record ReaderPreparationStatus(
     bool IsComplete,
     bool IsFailed,
     string Error,
-    ReaderLaunchResponse? Launch);
+    ReaderLaunchResponse? Launch,
+    List<string>? AvailableLanguages = null);
