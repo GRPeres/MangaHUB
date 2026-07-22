@@ -272,6 +272,33 @@ public sealed class ReaderServiceTests
             () => service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenCurrentChapterCannotBeMatched_DoesNotResetProgress()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Berserk", MangaDexId = "berserk-id" };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = userId,
+            MangaEntry = entry,
+            CurrentChapter = "special chapter",
+            ReadingStatus = "reading"
+        });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-1", "1", "Beginning", 20));
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var launch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None);
+
+        Assert.Null(launch);
+        var shelf = await new ShelfRepository(db).GetAsync(userId, entry.Id, CancellationToken.None);
+        Assert.Equal("special chapter", shelf!.CurrentChapter);
+    }
+
     private static ReaderService CreateReaderService(
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         FakeArchiveReader archive,
