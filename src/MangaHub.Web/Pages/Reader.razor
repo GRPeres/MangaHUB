@@ -64,7 +64,17 @@
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Secondary" OnClick="BackToShelf" aria-label="Back to shelf" />
             </MudTooltip>
         </div>
-        <div aria-hidden="true"></div>
+        <div>
+            @if (availableLanguages.Count > 1)
+            {
+                <MudSelect T="string" Value="@(ReaderLanguage ?? "en")" ValueChanged="SwitchLanguage" Dense="true" Label="Language" Variant="Variant.Text">
+                    @foreach (var language in availableLanguages)
+                    {
+                        <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+        </div>
         <div class="reader-toolbar-next">
             <MudText Typo="Typo.body2">@ChapterLabel</MudText>
         </div>
@@ -94,6 +104,8 @@
     private ElementReference pageImage;
     private string pageImageVersion = Guid.NewGuid().ToString("N");
     private ReaderPreparationStatus? readerPreparation;
+    private Guid? loadedLanguageEntryId;
+    private List<string> availableLanguages = [];
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private string readerMessage = "";
     private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
@@ -123,6 +135,13 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (IsMangaDexReader && EntryId is not null && loadedLanguageEntryId != EntryId)
+        {
+            loadedLanguageEntryId = EntryId;
+            availableLanguages = (await MangaApi.GetMangaDexLanguagesAsync(EntryId.Value))?.Languages ?? [];
+            await InvokeAsync(StateHasChanged);
+        }
+
         if (!CanPrepareAdjacentChapter || EntryId is null || prefetchedChapterId == ChapterId)
         {
             return;
@@ -151,6 +170,40 @@
     }
 
     private void BackToShelf() => Navigation.NavigateTo("/library");
+
+    private async Task SwitchLanguage(string language)
+    {
+        if (!CanPrepareAdjacentChapter || EntryId is null || string.Equals(language, ReaderLanguage ?? "en", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        isPreparingChapter = true;
+        try
+        {
+            readerPreparation = await MangaApi.StartMangaDexPreparationAsync(EntryId.Value, language: language, allowLanguageFallback: true);
+            var completed = readerPreparation is null ? null : await WaitForReaderPreparationAsync(readerPreparation.JobId);
+            if (completed?.Launch is not null)
+            {
+                Navigation.NavigateTo(completed.Launch.ReaderUrl);
+                return;
+            }
+
+            Messages.Error(completed?.Error ?? "That language does not have a readable version of this chapter.", "Chapter unavailable");
+        }
+        finally
+        {
+            isPreparingChapter = false;
+            readerPreparation = null;
+        }
+    }
+
+    private static string LanguageLabel(string code) => code.ToLowerInvariant() switch
+    {
+        "en" => "English", "pt-br" => "Portuguese (Brazil)", "pt" => "Portuguese", "es" => "Spanish",
+        "fr" => "French", "de" => "German", "it" => "Italian", "ja" => "Japanese", "ko" => "Korean",
+        _ => code
+    };
 
     private async Task Next()
     {

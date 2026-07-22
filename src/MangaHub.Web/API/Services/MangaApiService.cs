@@ -21,6 +21,9 @@ public sealed class MangaApiService(ApiHttpClient api)
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>
         await api.GetAsync<ReadOptions>($"/api/manga/{entryId}/read-options");
 
+    public async Task<MangaDexLanguagesResponse?> GetMangaDexLanguagesAsync(Guid entryId) =>
+        await api.GetAsync<MangaDexLanguagesResponse>($"/api/manga/{entryId}/mangadex-reader/languages");
+
     public async Task<ReaderPreparationStatus?> StartMangaDexPreparationAsync(
         Guid entryId,
         Guid? afterCachedChapterId = null,

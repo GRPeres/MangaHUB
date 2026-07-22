@@ -206,6 +206,24 @@ public sealed class ReaderService(
             cachedChapter.PageCount);
     }
 
+    public async Task<MangaDexLanguagesResponse?> GetMangaDexLanguagesAsync(Guid userId, Guid entryId, CancellationToken cancellationToken)
+    {
+        var shelfEntry = await shelf.GetWithMangaAsync(userId, entryId, cancellationToken);
+        var mangaDexId = shelfEntry?.MangaEntry is null ? "" : GetMangaDexId(shelfEntry.MangaEntry);
+        if (string.IsNullOrWhiteSpace(mangaDexId))
+        {
+            return null;
+        }
+
+        var languages = (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
+            .Select(chapter => NormalizeLanguage(chapter.Language))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(language => string.Equals(language, "en", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(language => language, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return new MangaDexLanguagesResponse(mangaDexId, languages);
+    }
+
     public async Task PrefetchNextMangaDexChapterAsync(
         Guid userId,
         Guid entryId,

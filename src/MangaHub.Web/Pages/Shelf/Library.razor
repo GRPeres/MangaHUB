@@ -23,15 +23,6 @@
             </MudStack>
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
-            @if (IsAdmin)
-            {
-                <MudSelect T="string" @bind-Value="readerLanguage" Label="Reader language" Dense="true" Variant="Variant.Outlined" Class="mh-reader-language-select">
-                    @foreach (var language in ReaderLanguages)
-                    {
-                        <MudSelectItem T="string" Value="@language.Code">@language.Label</MudSelectItem>
-                    }
-                </MudSelect>
-            }
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
                 <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">Add manga</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportShelf">Import CSV</MudMenuItem>
@@ -72,7 +63,7 @@
         <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="language-fallback-title">
             <MudStack Spacing="3">
                 <MudText id="language-fallback-title" Typo="Typo.h2">New chapter, different language</MudText>
-                <MudText Typo="Typo.body1">There is no newer chapter in @LanguageLabel(readerLanguage), but MangaDex has one in another language.</MudText>
+                <MudText Typo="Typo.body1">There is no newer chapter in English, but MangaDex has one in another language.</MudText>
                 <MudSelect T="string" @bind-Value="fallbackLanguage" Label="Continue in" Variant="Variant.Outlined">
                     @foreach (var language in fallbackLanguages)
                     {
@@ -190,7 +181,6 @@
     private bool filtersOpen;
     private bool isPreparingReader;
     private ReaderPreparationStatus? readerPreparation;
-    private string readerLanguage = "en";
     private Guid? languageFallbackEntryId;
     private List<string> fallbackLanguages = [];
     private string fallbackLanguage = "";
@@ -249,7 +239,7 @@
         CloseEdit();
     }
 
-    private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false)
+    private async Task Read(Guid entryId, string language = "en", bool allowLanguageFallback = false)
     {
         if (!IsAdmin)
         {
@@ -276,7 +266,7 @@
 
             if (options.HasMangaDex)
             {
-                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? readerLanguage, allowLanguageFallback: allowLanguageFallback);
+                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language, allowLanguageFallback: allowLanguageFallback);
                 if (readerPreparation is null)
                 {
                     ShowWarning("Could not start MangaDex chapter preparation.");

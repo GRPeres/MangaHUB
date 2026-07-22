@@ -114,4 +114,5 @@ public sealed record ReaderPreparationStatus(
     List<string>? AvailableLanguages = null);
 public sealed record CachedMangaDexChapterResponse(Guid Id, string ChapterNumber, string Title, int PageCount, DateTimeOffset CachedAt, bool IsManual);
 public sealed record MangaDexCacheResponse(string MangaDexId, List<CachedMangaDexChapterResponse> Chapters);
+public sealed record MangaDexLanguagesResponse(string MangaDexId, List<string> Languages);
 public sealed record CacheMangaDexChapterRequest(string ChapterNumber);

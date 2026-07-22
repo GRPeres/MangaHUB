@@ -64,6 +64,23 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
         return Accepted(preparations.Start(user.Id, entryId, afterCachedChapterId, beforeCachedChapterId, language, allowLanguageFallback));
     }
 
+    [HttpGet("{entryId:guid}/mangadex-reader/languages")]
+    public async Task<IActionResult> MangaDexLanguages(Guid entryId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+        if (!CurrentUserService.IsAdmin(user))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var languages = await reader.GetMangaDexLanguagesAsync(user.Id, entryId, cancellationToken);
+        return languages is null ? NotFound() : Ok(languages);
+    }
+
     [HttpPost("{entryId:guid}/mangadex-reader/prefetch-next")]
     public async Task<IActionResult> PrefetchNextMangaDexChapter(
         Guid entryId,
