@@ -37,7 +37,7 @@ public partial class ShelfEntryCard
     private int NewChapterCount => HasMangaDexLink && Entry.MangaDexLatestChapter is not null && TryGetCurrentChapterNumber(out var currentChapter)
         ? Math.Max(0, (int)Math.Ceiling(Math.Floor(Entry.MangaDexLatestChapter.Value) - currentChapter))
         : 0;
-    private bool HasNewChapters => NewChapterCount > 0;
+    private bool HasNewChapters => !StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) && NewChapterCount > 0;
     private string CardClass => HasNewChapters ? "mh-row-card mh-row-card-has-release" : "mh-row-card";
     private string ProgressTileClass => HasNewChapters ? "mh-entry-stat-tile mh-entry-release-tile" : "mh-entry-stat-tile";
     private string ProgressHint => !HasMangaDexLink
