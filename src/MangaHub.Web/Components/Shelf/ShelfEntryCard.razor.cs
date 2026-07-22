@@ -38,11 +38,12 @@ public partial class ShelfEntryCard
         ? Math.Max(0, (int)Math.Ceiling(Math.Floor(Entry.MangaDexLatestChapter.Value) - currentChapter))
         : 0;
     private bool HasNewChapters => NewChapterCount > 0;
-    private string NewChapterBadgeLabel => NewChapterCount == 1 ? "1 new chapter" : $"{NewChapterCount} new chapters";
+    private string CardClass => HasNewChapters ? "mh-row-card mh-row-card-has-release" : "mh-row-card";
+    private string ProgressTileClass => HasNewChapters ? "mh-entry-stat-tile mh-entry-release-tile" : "mh-entry-stat-tile";
     private string ProgressHint => !HasMangaDexLink
         ? "MangaDex sync unavailable"
         : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
-    private string ProgressScheme => HasNewChapters ? "warm" : "secondary";
+    private string ProgressScheme => HasNewChapters ? "release" : "secondary";
     private string MangaDexSyncLabel => !HasMangaDexLink
         ? "Not linked"
         : Entry.MangaDexLastSyncedAt is null

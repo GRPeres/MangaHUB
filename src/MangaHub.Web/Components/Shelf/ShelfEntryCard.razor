@@ -1,14 +1,4 @@
-<MudBadge Content="@NewChapterBadgeLabel"
-           Visible="@HasNewChapters"
-           Color="Color.Error"
-           Origin="Origin.TopRight"
-           Overlap="true"
-           Bordered="false"
-           Elevation="8"
-           Class="mh-entry-card-badge"
-           BadgeClass="mh-new-chapter-badge"
-           BadgeAriaLabel="@NewChapterBadgeLabel">
-<MudCard Elevation="0" Outlined="true" Class="mh-row-card">
+<MudCard Elevation="0" Outlined="true" Class="@CardClass">
     <div class="mh-cover-frame">
         @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
         {
@@ -93,11 +83,11 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="@ProgressScheme" Class="mh-entry-stat-tile">
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="@ProgressScheme" Class="@ProgressTileClass">
                 <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Progress</MudText>
-                    <MudText Typo="Typo.h3">@CurrentChapterValue</MudText>
-                    <MudText Typo="Typo.caption" Class="mh-mobile-hide">@ProgressHint</MudText>
+                    <MudText Typo="Typo.overline">@(HasNewChapters ? "New" : "Progress")</MudText>
+                    <MudText Typo="Typo.h3">@(HasNewChapters ? $"+{NewChapterCount}" : CurrentChapterValue)</MudText>
+                    <MudText Typo="Typo.caption" Class="@(HasNewChapters ? "" : "mh-mobile-hide")">@(HasNewChapters ? $"Latest {LatestChapterValue}" : ProgressHint)</MudText>
                 </div>
             </MangaBentoTile>
 
@@ -149,7 +139,6 @@
         </MudCardActions>
     </MudCardContent>
 </MudCard>
-</MudBadge>
 
 @if (metadataOpen)
 {

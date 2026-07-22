@@ -12,17 +12,24 @@
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mh-page-title">
         <MudStack Spacing="1" Class="mh-page-heading">
             <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mh-page-kicker">Personal tracker</MudText>
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mh-shelf-title-row">
-                <MudText Typo="Typo.h1">Shelf</MudText>
-                @if (NewChapterEntryCount > 0)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled" Class="mh-new-chapter-bubble">
-                        @NewChapterEntryCount new
-                    </MudChip>
-                }
-            </MudStack>
+            <MudText Typo="Typo.h1">Shelf</MudText>
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
+            <MudTooltip Text="@(newReleaseOnly ? "Show all manga" : "Show manga with new chapters")">
+                <MudBadge Content="@NewChapterEntryCount"
+                          Visible="@(NewChapterEntryCount > 0)"
+                          Color="Color.Error"
+                          Origin="Origin.TopRight"
+                          Overlap="true"
+                          Bordered="false"
+                          BadgeAriaLabel="@($"{NewChapterEntryCount} manga with new chapters")">
+                    <MudIconButton Icon="@Icons.Material.Filled.NewReleases"
+                                   Color="@(newReleaseOnly ? Color.Error : Color.Secondary)"
+                                   Variant="@(newReleaseOnly ? Variant.Filled : Variant.Outlined)"
+                                   OnClick="ToggleNewReleaseFilter"
+                                   aria-label="@(newReleaseOnly ? "Show all manga" : "Show manga with new chapters")" />
+                </MudBadge>
+            </MudTooltip>
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
                 <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">Add manga</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportShelf">Import CSV</MudMenuItem>
@@ -176,6 +183,7 @@
     private string categoryFilter = "";
     private string availabilityFilter = "";
     private string scoreFilter = "";
+    private bool newReleaseOnly;
     private bool isAddShelfOpen;
     private bool isImportShelfOpen;
     private bool filtersOpen;
@@ -225,6 +233,7 @@
         categoryFilter = "";
         availabilityFilter = "";
         scoreFilter = "";
+        newReleaseOnly = false;
         if (IsAdmin)
         {
             selectedUserId = currentUser?.Id;
@@ -237,6 +246,12 @@
     {
         entries = await MangaApi.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null);
         CloseEdit();
+    }
+
+    private Task ToggleNewReleaseFilter()
+    {
+        newReleaseOnly = !newReleaseOnly;
+        return Task.CompletedTask;
     }
 
     private async Task Read(Guid entryId, string language = "en", bool allowLanguageFallback = false)
@@ -378,6 +393,7 @@
         .Where(MatchesCategory)
         .Where(MatchesAvailability)
         .Where(MatchesScore)
+        .Where(MatchesNewRelease)
         .OrderByDescending(HasNewChapters)
         .ThenBy(StatusSortRank)
         .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
@@ -394,7 +410,7 @@
     private int NewChapterEntryCount => entries.Count(HasNewChapters);
 
     private int ActiveFilterCount =>
-        Count(status) + Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
+        Count(status) + Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + Count(newReleaseOnly) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
 
     private bool MatchesSearch(MangaEntryResponse entry)
     {
@@ -434,6 +450,8 @@
         _ => true
     };
 
+    private bool MatchesNewRelease(MangaEntryResponse entry) => !newReleaseOnly || HasNewChapters(entry);
+
     private static int StatusSortRank(MangaEntryResponse entry) =>
         (entry.ReadingStatus ?? "").ToLowerInvariant() switch
         {
@@ -446,6 +464,7 @@
         };
 
     private static int Count(string value) => string.IsNullOrWhiteSpace(value) ? 0 : 1;
+    private static int Count(bool value) => value ? 1 : 0;
 
     private static bool HasNewChapters(MangaEntryResponse entry) =>
         HasMangaDexLink(entry)

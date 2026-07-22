@@ -7,25 +7,21 @@
     overflow: hidden;
 }
 
-::deep .mh-entry-card-badge {
-    display: block;
-    width: 100%;
+.mh-row-card-has-release {
+    box-shadow: inset -4px 0 0 var(--mud-palette-error);
 }
 
-::deep .mh-entry-card-badge .mud-badge {
-    font-weight: 800;
-    min-width: 2rem;
-    pointer-events: none;
+::deep .mh-entry-release-tile.mh-bento-scheme-release {
+    --mh-bento-accent: var(--mud-palette-error);
+    --mh-bento-bg: color-mix(in srgb, var(--mud-palette-error) 12%, var(--mud-palette-surface));
 }
 
-::deep .mh-entry-card-badge .mh-new-chapter-badge {
-    background: var(--mud-palette-error) !important;
-    color: var(--mud-palette-error-text) !important;
-    font-size: .72rem;
-    letter-spacing: 0;
-    line-height: 1.1;
-    padding: .35rem .55rem;
-    white-space: nowrap;
+::deep .mh-entry-release-tile {
+    border-color: color-mix(in srgb, var(--mud-palette-error) 52%, var(--mud-palette-divider));
+}
+
+::deep .mh-entry-release-tile .mud-typography-h3 {
+    color: var(--mud-palette-error);
 }
 
 .mh-cover-frame {
