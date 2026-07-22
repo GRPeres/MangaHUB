@@ -17,6 +17,10 @@
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
 }
 
+.mh-nav-button-host ::deep .mh-nav-button-label {
+    margin-left: .5rem;
+}
+
     .mh-nav-button-host ::deep .mh-nav-button .mud-button-label .mud-button-icon-start {
         margin-left: 0;
         margin-right: 0;
