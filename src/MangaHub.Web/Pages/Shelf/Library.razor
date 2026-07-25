@@ -4,6 +4,7 @@
 @inject NavigationManager Navigation
 @inject AdminApiService AdminApi
 @inject MangaApiService MangaApi
+@inject ShelfApiService ShelfApi
 @inject MessageService Messages
 
 <PageTitle>Shelf</PageTitle>
@@ -47,7 +48,7 @@
         <MudStack Spacing="2">
             @foreach (var item in FilteredEntries)
             {
-                <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" />
+                <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
             }
         </MudStack>
     }
@@ -361,6 +362,30 @@
     {
         Messages.Success(text);
         await Load();
+    }
+
+    private async Task UpdateScore(MangaEntryResponse entry, int? score)
+    {
+        var request = new AddToShelfRequest(
+            entry.Id,
+            entry.ReadingStatus,
+            entry.CurrentChapter,
+            score,
+            entry.Category,
+            entry.Summary,
+            entry.Notes);
+        var updated = await ShelfApi.UpdateShelfAsync(entry.Id, request, IsAdmin ? selectedUserId : null);
+        if (updated is null)
+        {
+            Messages.Error("Could not save your rating.", "Rating unavailable");
+            return;
+        }
+
+        var index = entries.FindIndex(item => item.Id == entry.Id);
+        if (index >= 0)
+        {
+            entries[index] = updated;
+        }
     }
 
     private void ShowWarning(string text) => Messages.Warning(text);

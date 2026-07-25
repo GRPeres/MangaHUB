@@ -117,6 +117,21 @@
         </MangaBento>
 
         <MudCardActions Class="mh-bento-card-actions">
+            <div class="mh-entry-score" role="group" aria-label="@($"Rate {Entry.Title}")">
+                @for (var value = 1; value <= 5; value++)
+                {
+                    var score = value;
+                    var selected = IsStarSelected(score);
+                    <MudTooltip Text="@(selectedScore == score ? $"Clear {score}-star rating" : $"Rate {score} of 5")">
+                        <MudIconButton Icon="@(selected ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                                       Color="@(selected ? Color.Secondary : Color.Default)"
+                                       Size="Size.Small"
+                                       Disabled="@isSavingScore"
+                                       OnClick="() => SetScore(score)"
+                                       aria-label="@(selectedScore == score ? $"Clear {score}-star rating" : $"Rate {score} of 5")" />
+                    </MudTooltip>
+                }
+            </div>
             @if (CanRead)
             {
                 @if (OpensExternalReader)

@@ -13,8 +13,11 @@ public partial class ShelfEntryCard
     [Parameter] public EventCallback<MangaEntryResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<Guid> OnRead { get; set; }
     [Parameter] public EventCallback<string> OnStatusFilter { get; set; }
+    [Parameter] public EventCallback<int?> OnScoreChanged { get; set; }
 
     private bool metadataOpen;
+    private bool isSavingScore;
+    private int? selectedScore;
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
     private string GenreLabel => FirstNonEmpty(Entry.Category, Entry.CatalogCategory);
     private List<string> GenreLabels => SplitLabels(GenreLabel);
@@ -91,6 +94,36 @@ public partial class ShelfEntryCard
     private Task Edit() => OnEdit.InvokeAsync(Entry);
     private Task Read() => OnRead.InvokeAsync(Entry.Id);
     private Task FilterByStatus() => OnStatusFilter.InvokeAsync(StatusLabel);
+
+    protected override void OnParametersSet() => selectedScore = Entry.Score;
+
+    private bool IsStarSelected(int score) => selectedScore is not null && score <= selectedScore;
+
+    private async Task SetScore(int score)
+    {
+        if (isSavingScore)
+        {
+            return;
+        }
+
+        var previousScore = selectedScore;
+        selectedScore = selectedScore == score ? null : score;
+        isSavingScore = true;
+        try
+        {
+            await OnScoreChanged.InvokeAsync(selectedScore);
+        }
+        catch
+        {
+            selectedScore = previousScore;
+            throw;
+        }
+        finally
+        {
+            isSavingScore = false;
+        }
+    }
+
     private string MetadataTitleId => $"shelf-metadata-{Entry.Id:N}";
     private void OpenMetadata() => metadataOpen = true;
     private void CloseMetadata() => metadataOpen = false;

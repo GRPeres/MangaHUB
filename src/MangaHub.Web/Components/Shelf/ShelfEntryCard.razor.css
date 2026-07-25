@@ -251,6 +251,16 @@
     padding: .7rem 0 0;
 }
 
+.mh-entry-score {
+    align-items: center;
+    display: flex;
+    gap: .05rem;
+}
+
+::deep .mh-entry-score .mud-icon-button {
+    margin: 0;
+}
+
 ::deep .mh-entry-stat-tile .mh-bento-tile {
     padding: .55rem;
 }
@@ -349,9 +359,16 @@
 
     ::deep .mh-bento-card-actions {
         justify-content: stretch;
+        flex-wrap: wrap;
     }
 
     ::deep .mh-bento-card-actions .mud-button-root {
         flex: 1 1 0;
+    }
+
+    .mh-entry-score {
+        flex: 0 0 100%;
+        justify-content: center;
+        padding-bottom: .15rem;
     }
 }
