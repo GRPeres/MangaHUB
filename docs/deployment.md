@@ -152,20 +152,23 @@ While the authenticated site has been idle for 30 minutes, the worker also perfo
 
 Keep it as reference. Current production should prefer Cloudflare Tunnel with `mangahub.app`.
 
-## Future Auto-Updates
+## Automated App Updates
 
-Current compose builds directly from GitHub:
+MangaHub can update itself without rebuilding from GitHub on TrueNAS. The flow is:
 
-```yaml
-build:
-  context: https://github.com/GRPeres/MangaHUB.git#main
-```
+1. A push to `main` builds API, Web, and Workers images through GitHub Actions.
+2. GitHub Actions publishes them to GitHub Container Registry (GHCR).
+3. Watchtower in the existing MangaHub Custom App checks every six hours.
+4. When a changed image exists, Watchtower pulls it, restarts that one MangaHub container, and removes its previous image.
 
-This does not work well with Watchtower because Watchtower updates pulled images, not local rebuilds.
+The public template is [deploy.truenas.autoupdate.example.yml](../deploy.truenas.autoupdate.example.yml). Copy its image, labels, and `watchtower` service into the existing MangaHub TrueNAS app; do not create a second application, because that would create a different PostgreSQL volume.
 
-Future recommended release flow:
+Only `mangahub-api`, `mangahub-web`, and `mangahub-workers` have the Watchtower opt-in label. PostgreSQL, Cloudflare Tunnel, and backups are deliberately untouched. `--cleanup` removes replaced images only; it does not remove named volumes, database data, the local library, or the MangaDex cache. Watchtower needs Docker's socket to restart containers, so treat the custom Compose configuration as administrator-level access.
 
-1. GitHub Actions builds Docker images.
-2. Push images to GHCR.
-3. Compose uses `image: ghcr.io/grperes/...`.
-4. Watchtower or TrueNAS update flow pulls new images.
+After the first workflow finishes, open GitHub Packages and set these packages to **Public**:
+
+- `mangahub-api`
+- `mangahub-web`
+- `mangahub-workers`
+
+Alternatively, authenticate the TrueNAS Docker host to `ghcr.io` with a GitHub token that has `read:packages`. Public packages are simpler for this self-hosted, public repository.

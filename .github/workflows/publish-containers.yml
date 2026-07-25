@@ -1,0 +1,65 @@
+name: Publish MangaHub containers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-containers.yml"
+      - "src/**"
+      - "docker-compose.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: publish-mangahub-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/grperes
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: src/MangaHub.Api/Dockerfile
+          - name: web
+            dockerfile: src/MangaHub.Web/Dockerfile
+          - name: workers
+            dockerfile: src/MangaHub.Workers/Dockerfile
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/mangahub-${{ matrix.name }}:latest
+            ${{ env.IMAGE_PREFIX }}/mangahub-${{ matrix.name }}:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/GRPeres/MangaHUB
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

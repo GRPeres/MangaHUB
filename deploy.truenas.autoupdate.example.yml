@@ -1,0 +1,136 @@
+# Paste this into the existing MangaHub Custom App YAML in TrueNAS.
+# Replace every value marked CHANGE-ME. Do not create a second MangaHub app.
+#
+# After the first GitHub Actions run, set each ghcr.io/grperes/mangahub-* package
+# to Public in GitHub Packages, or log the TrueNAS Docker host into GHCR with a
+# read:packages token before deploying this file.
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token
+      - ${CLOUDFLARE_TUNNEL_TOKEN:?Set_CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - mangahub-web
+    restart: unless-stopped
+
+  mangahub-api:
+    image: ghcr.io/grperes/mangahub-api:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__MangaHub: Host=postgres;Database=mangahub;Username=mangahub;Password=${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD}
+      FrontendOrigin: https://mangahub.app
+      MangaHub__JwtSecret: ${JWT_SECRET:?Set_JWT_SECRET}
+      MangaHub__LibraryPath: /library
+      MangaHub__MangaDexCachePath: /mangadex-cache
+      MangaHub__MangaDexEnabled: "true"
+      MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:?Set_MYANIMELIST_CLIENT_ID}
+      MangaHub__SessionCookieSameSite: Lax
+      MangaHub__SessionCookieSecure: "true"
+    volumes:
+      - /mnt/storage/manga:/library:ro
+      - /mnt/Shared/NAS/MangaHUBMangaDexCache:/mangadex-cache
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    restart: unless-stopped
+
+  mangahub-web:
+    image: ghcr.io/grperes/mangahub-web:latest
+    depends_on:
+      - mangahub-api
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    restart: unless-stopped
+
+  mangahub-workers:
+    image: ghcr.io/grperes/mangahub-workers:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__MangaHub: Host=postgres;Database=mangahub;Username=mangahub;Password=${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD}
+      MangaHub__JwtSecret: ${JWT_SECRET:?Set_JWT_SECRET}
+      MangaHub__LibraryPath: /library
+      MangaHub__MangaDexCachePath: /mangadex-cache
+      MangaHub__MangaDexEnabled: "true"
+      MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:?Set_MYANIMELIST_CLIENT_ID}
+      MangaHub__MangaDexMaintenanceHour: "4"
+      MangaHub__MangaDexMaintenanceTimeZone: America/Sao_Paulo
+      MangaHub__MangaDexPrefetchBatchSize: "6"
+      MangaHub__MangaDexPrefetchMaxChaptersPerManga: "3"
+      MangaHub__MangaDexPrefetchDelayMilliseconds: "5000"
+      MangaHub__MangaDexIdleBackfillEnabled: "true"
+      MangaHub__MangaDexIdleMinutes: "30"
+      MangaHub__MangaDexIdleBackfillCheckMinutes: "60"
+      MangaHub__MangaDexIdleBackfillBatchSize: "1"
+      MangaHub__MangaDexIdleBackfillMaxChaptersPerManga: "2"
+      MangaHub__MangaDexIdleBackfillDelayMilliseconds: "10000"
+    volumes:
+      - /mnt/storage/manga:/library:ro
+      - /mnt/Shared/NAS/MangaHUBMangaDexCache:/mangadex-cache
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mangahub
+      POSTGRES_USER: mangahub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD}
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U mangahub -d mangahub]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  postgres-backup:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mkdir -p /backups
+        while true; do
+          file="/backups/mangahub-$$(date +%Y%m%d-%H%M%S).dump"
+          pg_dump -h postgres -U mangahub -d mangahub -Fc -f "$$file"
+          find /backups -type f -name 'mangahub-*.dump' -mtime +30 -delete
+          sleep 86400
+        done
+    volumes:
+      - /mnt/Shared/NAS/MangaHUBBackups:/backups
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    command:
+      - --label-enable
+      - --cleanup
+      - --rolling-restart
+      - --interval
+      - "21600"
+      - --stop-timeout
+      - 30s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

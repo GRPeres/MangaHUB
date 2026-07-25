@@ -137,6 +137,10 @@ The TrueNAS deployment includes a `postgres-backup` sidecar that writes `pg_dump
 
 Backups are database-only. Manga files live separately in the NAS library mount.
 
+## Automated Updates
+
+Pushes to `main` can publish versioned API, web, and worker images to GHCR. The [TrueNAS auto-update template](deploy.truenas.autoupdate.example.yml) adds a Watchtower sidecar that checks every six hours and restarts only changed MangaHub containers. PostgreSQL, backups, the library mount, and the MangaDex cache are not recreated or deleted.
+
 ## Verification
 
 Web build:
