@@ -15,19 +15,19 @@
             <MudText Typo="Typo.h1">Shelf</MudText>
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
-            <MudTooltip Text="@(newReleaseOnly ? "Show all manga" : "Show manga with new chapters")">
+            <MudTooltip Text="@(newReleaseOnly ? "Show full shelf" : "Show planned manga and reading manga with new chapters")">
                 <MudBadge Content="@NewChapterEntryCount"
                           Visible="@(NewChapterEntryCount > 0)"
                           Color="Color.Error"
                           Origin="Origin.TopRight"
                           Overlap="true"
                           Bordered="false"
-                          BadgeAriaLabel="@($"{NewChapterEntryCount} manga with new chapters")">
+                          BadgeAriaLabel="@($"{NewChapterEntryCount} reading manga with new chapters")">
                     <MudIconButton Icon="@Icons.Material.Filled.NewReleases"
                                    Color="@(newReleaseOnly ? Color.Error : Color.Secondary)"
                                    Variant="@(newReleaseOnly ? Variant.Filled : Variant.Outlined)"
                                    OnClick="ToggleNewReleaseFilter"
-                                   aria-label="@(newReleaseOnly ? "Show all manga" : "Show manga with new chapters")" />
+                                   aria-label="@(newReleaseOnly ? "Show full shelf" : "Show planned manga and reading manga with new chapters")" />
                 </MudBadge>
             </MudTooltip>
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
@@ -183,7 +183,7 @@
     private string categoryFilter = "";
     private string availabilityFilter = "";
     private string scoreFilter = "";
-    private bool newReleaseOnly;
+    private bool newReleaseOnly = true;
     private bool isAddShelfOpen;
     private bool isImportShelfOpen;
     private bool filtersOpen;
@@ -233,7 +233,7 @@
         categoryFilter = "";
         availabilityFilter = "";
         scoreFilter = "";
-        newReleaseOnly = false;
+        newReleaseOnly = true;
         if (IsAdmin)
         {
             selectedUserId = currentUser?.Id;
@@ -400,8 +400,7 @@
         .Where(MatchesAvailability)
         .Where(MatchesScore)
         .Where(MatchesNewRelease)
-        .OrderByDescending(HasNewChapters)
-        .ThenBy(StatusSortRank)
+        .OrderBy(ShelfSortRank)
         .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
@@ -413,10 +412,10 @@
         .ToList();
 
     private string FilterButtonLabel => ActiveFilterCount == 0 ? "Filters" : $"Filters ({ActiveFilterCount})";
-    private int NewChapterEntryCount => entries.Count(HasNewChapters);
+    private int NewChapterEntryCount => entries.Count(IsReadingWithNewChapters);
 
     private int ActiveFilterCount =>
-        Count(status) + Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + Count(newReleaseOnly) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
+        Count(status) + Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
 
     private bool MatchesSearch(MangaEntryResponse entry)
     {
@@ -456,18 +455,26 @@
         _ => true
     };
 
-    private bool MatchesNewRelease(MangaEntryResponse entry) => !newReleaseOnly || HasNewChapters(entry);
+    private bool MatchesNewRelease(MangaEntryResponse entry) =>
+        !newReleaseOnly || IsPlanned(entry) || IsReadingWithNewChapters(entry);
 
-    private static int StatusSortRank(MangaEntryResponse entry) =>
-        (entry.ReadingStatus ?? "").ToLowerInvariant() switch
+    private static int ShelfSortRank(MangaEntryResponse entry)
+    {
+        if (IsReadingWithNewChapters(entry))
         {
-            "reading" => 0,
-            "paused" => 1,
-            "planned" => 2,
-            "done" => 3,
+            return 0;
+        }
+
+        return (entry.ReadingStatus ?? "").ToLowerInvariant() switch
+        {
+            "planned" => 1,
+            "reading" => 2,
+            "paused" => 3,
             "dropped" => 4,
-            _ => 5
+            "done" => 5,
+            _ => 4
         };
+    }
 
     private static int Count(string value) => string.IsNullOrWhiteSpace(value) ? 0 : 1;
     private static int Count(bool value) => value ? 1 : 0;
@@ -478,6 +485,13 @@
         && entry.MangaDexLatestChapter is not null
         && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
         && Math.Floor(entry.MangaDexLatestChapter.Value) > currentChapter;
+
+    private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
+        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        && HasNewChapters(entry);
+
+    private static bool IsPlanned(MangaEntryResponse entry) =>
+        string.Equals(entry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase);
 
     private static bool HasMangaDexLink(MangaEntryResponse entry) => !string.IsNullOrWhiteSpace(entry.MangaDexId);
 
