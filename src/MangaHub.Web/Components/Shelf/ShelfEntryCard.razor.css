@@ -13,7 +13,10 @@
 
 ::deep .mh-entry-release-tile.mh-bento-scheme-release {
     --mh-bento-accent: var(--mud-palette-error);
-    --mh-bento-bg: color-mix(in srgb, var(--mud-palette-error) 12%, var(--mud-palette-surface));
+    --mh-bento-bg: var(--mud-palette-error);
+    --mh-bento-fg: #fffaff;
+    --mh-bento-muted: color-mix(in srgb, #fffaff 84%, transparent);
+    --mh-bento-border: color-mix(in srgb, var(--mud-palette-error) 72%, #fffaff);
 }
 
 ::deep .mh-entry-release-tile {
@@ -21,7 +24,7 @@
 }
 
 ::deep .mh-entry-release-tile .mud-typography-h3 {
-    color: var(--mud-palette-error);
+    color: inherit;
 }
 
 .mh-cover-frame {
