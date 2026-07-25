@@ -36,17 +36,21 @@ internal sealed class FakeArchiveReader : IArchiveReader
     }
 }
 
-internal sealed class FakeMangaDexSource : IMangaSource
+internal sealed class FakeMangaDexSource : IMangaSource, IMangaDexCatalogLookup
 {
     public string Name => "mangadex";
     public List<MangaSourceChapter> Chapters { get; } = [];
     public Dictionary<string, IReadOnlyList<MangaPage>> Pages { get; } = [];
+    public List<MangaDexCatalogMatch> CatalogMatches { get; } = [];
 
     public Task<IReadOnlyList<MangaSearchResult>> SearchAsync(string query, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MangaSearchResult>>([]);
 
     public Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken) =>
         Task.FromResult<MangaSourceSeries?>(null);
+
+    public Task<MangaDexCatalogMatch?> FindByMyAnimeListIdAsync(string myAnimeListId, string title, CancellationToken cancellationToken) =>
+        Task.FromResult(CatalogMatches.FirstOrDefault());
 
     public Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MangaSourceChapter>>(Chapters);

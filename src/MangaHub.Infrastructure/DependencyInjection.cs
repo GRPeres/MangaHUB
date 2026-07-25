@@ -35,6 +35,7 @@ public static class DependencyInjection
             client.BaseAddress = new Uri("https://api.mangadex.org");
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MangaHub/0.1 self-hosted reader");
         });
+        services.AddScoped<IMangaDexCatalogLookup>(serviceProvider => serviceProvider.GetRequiredService<MangaDexSource>());
         services.AddHttpClient("mangadex-sync", client =>
         {
             client.BaseAddress = new Uri("https://api.mangadex.org");

@@ -1,11 +1,12 @@
 using System.Text.Json;
+using MangaHub.Core.Services;
 using MangaHub.Core.Sources;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace MangaHub.Infrastructure.Sources;
 
-public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptions> options, IMemoryCache cache) : IMangaSource
+public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptions> options, IMemoryCache cache) : IMangaSource, IMangaDexCatalogLookup
 {
     public string Name => "mangadex";
 
@@ -38,6 +39,44 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
 
     public Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken) =>
         Task.FromResult<MangaSourceSeries?>(null);
+
+    public async Task<MangaDexCatalogMatch?> FindByMyAnimeListIdAsync(string myAnimeListId, string title, CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaDexEnabled
+            || string.IsNullOrWhiteSpace(myAnimeListId)
+            || string.IsNullOrWhiteSpace(title))
+        {
+            return null;
+        }
+
+        var response = await httpClient.GetAsync($"/manga?limit=20&title={Uri.EscapeDataString(title)}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        if (!document.RootElement.TryGetProperty("data", out var data))
+        {
+            return null;
+        }
+
+        foreach (var item in data.EnumerateArray())
+        {
+            if (!item.TryGetProperty("id", out var idElement)
+                || !item.TryGetProperty("attributes", out var attributes)
+                || !attributes.TryGetProperty("links", out var links)
+                || !links.TryGetProperty("mal", out var malId)
+                || !string.Equals(malId.GetString(), myAnimeListId.Trim(), StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var id = idElement.GetString() ?? "";
+            var matchedTitle = attributes.TryGetProperty("title", out var titles) ? ReadLocalized(titles) : title.Trim();
+            return string.IsNullOrWhiteSpace(id) ? null : new MangaDexCatalogMatch(id, matchedTitle);
+        }
+
+        return null;
+    }
 
     public async Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken)
     {
