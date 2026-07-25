@@ -99,6 +99,11 @@ public sealed class ReaderService(
                 : await FindPreviousMangaDexChapterAsync(mangaDexId, current.SourceId, preferredLanguage, cancellationToken);
             if (sourceChapter is null)
             {
+                if (afterCachedChapterId is not null && IsPublishingComplete(entry.PublishingStatus))
+                {
+                    await MarkShelfEntryDoneAsync(shelfEntry, cancellationToken);
+                    throw new MangaCompletedException();
+                }
                 return null;
             }
 
@@ -115,6 +120,11 @@ public sealed class ReaderService(
                     throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
                 }
                 await RecordCompletedMangaDexChapterAsync(entry, shelfEntry.CurrentChapter, cancellationToken);
+                if (IsPublishingComplete(entry.PublishingStatus))
+                {
+                    await MarkShelfEntryDoneAsync(shelfEntry, cancellationToken);
+                    throw new MangaCompletedException();
+                }
                 throw new NoNextMangaDexChapterException();
             }
 
@@ -353,6 +363,16 @@ public sealed class ReaderService(
         await shelf.SaveChangesAsync(cancellationToken);
     }
 
+    private async Task MarkShelfEntryDoneAsync(UserMangaEntry shelfEntry, CancellationToken cancellationToken)
+    {
+        shelfEntry.ReadingStatus = "done";
+        shelfEntry.IsRead = true;
+        shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
+        await shelf.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool IsPublishingComplete(string status) => status.Trim().ToLowerInvariant() is "finished" or "complete" or "completed" or "done" or "ended";
+
     private static MangaSourceChapter? SelectCurrentMangaDexChapter(IReadOnlyList<MangaSourceChapter> chapters, string currentChapter)
     {
         if (string.IsNullOrWhiteSpace(currentChapter))
@@ -437,6 +457,10 @@ public sealed class ReaderService(
             && string.Equals(series.ExternalId, GetMangaDexId(entry), StringComparison.Ordinal));
 
     public sealed class NoNextMangaDexChapterException : Exception
+    {
+    }
+
+    public sealed class MangaCompletedException : Exception
     {
     }
 

@@ -117,6 +117,17 @@ public sealed class ReaderPreparationService(
                 Launch = launch
             });
         }
+        catch (ReaderService.MangaCompletedException)
+        {
+            Update(jobId, status => status with
+            {
+                Stage = "You have finished the manga",
+                Progress = 100,
+                IsComplete = true,
+                Error = "You have read every chapter in this completed series.",
+                IsSeriesComplete = true
+            });
+        }
         catch (ReaderService.NoNextMangaDexChapterException)
         {
             Update(jobId, status => status with

@@ -81,12 +81,15 @@
     </MudPaper>
 </section>
 
-<ReaderPreparingOverlay Open="@isPreparingChapter"
-                         Title="Preparing chapter"
-                         Stage="@PreparingStage"
+<ReaderPreparingOverlay Open="@(isPreparingChapter || isSeriesComplete)"
+                         Title="@(isSeriesComplete ? "You're done reading" : "Preparing chapter")"
+                         Stage="@(isSeriesComplete ? "You've read every available chapter in this completed manga. It is now marked done on your shelf." : PreparingStage)"
                          Progress="@(readerPreparation?.Progress ?? 0)"
                          CompletedPages="@(readerPreparation?.CompletedPages ?? 0)"
-                         TotalPages="@(readerPreparation?.TotalPages ?? 0)" />
+                         TotalPages="@(readerPreparation?.TotalPages ?? 0)"
+                         IsTerminal="@isSeriesComplete"
+                         TerminalActionLabel="Back to shelf"
+                         OnTerminalAction="BackToShelf" />
 
 @code {
     [Parameter] public Guid ChapterId { get; set; }
@@ -100,6 +103,7 @@
     private Guid prefetchedChapterId;
     private Guid markedReadChapterId;
     private bool isPreparingChapter;
+    private bool isSeriesComplete;
     private ElementReference pageFrame;
     private ElementReference pageImage;
     private string pageImageVersion = Guid.NewGuid().ToString("N");
@@ -127,6 +131,7 @@
             page = 0;
             readerMessage = "";
             isPreparingChapter = false;
+            isSeriesComplete = false;
             readerPreparation = null;
             pageImageVersion = Guid.NewGuid().ToString("N");
             markedReadChapterId = Guid.Empty;
@@ -242,6 +247,12 @@
             var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
             if (completedPreparation?.Launch is null)
             {
+                if (next && completedPreparation?.IsSeriesComplete == true)
+                {
+                    isSeriesComplete = true;
+                    return;
+                }
+
                 if (next && IsNoLaterChapter(completedPreparation))
                 {
                     Messages.Warning("You've read all available chapters.", "All caught up");

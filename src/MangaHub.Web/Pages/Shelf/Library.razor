@@ -298,6 +298,12 @@
                         fallbackLanguage = fallbackLanguages[0];
                         return;
                     }
+                    if (completedPreparation?.IsSeriesComplete == true)
+                    {
+                        await Load();
+                        Messages.Success("You've read every available chapter in this completed manga. It is now marked done on your shelf.", "You're done reading");
+                        return;
+                    }
                     if (IsNoLaterChapter(completedPreparation))
                     {
                         Messages.Warning("You've read all available chapters.", "All caught up");

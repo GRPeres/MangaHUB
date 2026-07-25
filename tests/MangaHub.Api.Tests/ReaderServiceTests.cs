@@ -273,6 +273,44 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenFinishedMangaHasNoNextChapter_MarksShelfEntryDone()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry
+        {
+            Title = "Finished Berserk",
+            MangaDexId = "berserk-id",
+            PublishingStatus = "finished"
+        };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = userId,
+            MangaEntry = entry,
+            CurrentChapter = "2",
+            IsRead = true,
+            ReadingStatus = "reading"
+        });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.AddRange([
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-1", "1", "Beginning", 20),
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-2", "2", "The end", 18)
+        ]);
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        await Assert.ThrowsAsync<ReaderService.MangaCompletedException>(
+            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None));
+
+        var shelf = await new ShelfRepository(db).GetAsync(userId, entry.Id, CancellationToken.None);
+        Assert.NotNull(shelf);
+        Assert.Equal("done", shelf!.ReadingStatus);
+        Assert.True(shelf.IsRead);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_WhenCurrentChapterCannotBeMatched_DoesNotResetProgress()
     {
         await using var db = TestDb.Create();
