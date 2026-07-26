@@ -103,6 +103,7 @@ public sealed record ShelfImportRequest(string CsvText, bool CreateMissingCatalo
 public sealed record ShelfImportResponse(int Imported, int CreatedCatalogEntries, int UpdatedShelfEntries, int Skipped, List<string> Messages);
 public sealed record ReaderLaunchResponse(string ReaderUrl, string CurrentChapter, int PageCount);
 public sealed record ReaderChapterMatch(string RequestedChapter, string MatchedChapter, string Language);
+public sealed record ReaderChapterJump(string CurrentChapter, string NextChapter, string Language, List<string> AlternativeLanguages);
 public sealed record ReaderPreparationStatus(
     Guid JobId,
     string Stage,
@@ -115,7 +116,8 @@ public sealed record ReaderPreparationStatus(
     ReaderLaunchResponse? Launch,
     List<string>? AvailableLanguages = null,
     bool IsSeriesComplete = false,
-    ReaderChapterMatch? ChapterMatch = null);
+    ReaderChapterMatch? ChapterMatch = null,
+    ReaderChapterJump? ChapterJump = null);
 public sealed record CachedMangaDexChapterResponse(Guid Id, string ChapterNumber, string Language, string Title, int PageCount, DateTimeOffset CachedAt, bool IsManual);
 public sealed record MangaDexCacheResponse(string MangaDexId, List<CachedMangaDexChapterResponse> Chapters);
 public sealed record MangaDexLanguagesResponse(string MangaDexId, List<string> Languages);

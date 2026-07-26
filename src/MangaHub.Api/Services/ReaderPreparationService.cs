@@ -160,6 +160,17 @@ public sealed class ReaderPreparationService(
                 ChapterMatch = ex.ChapterMatch
             });
         }
+        catch (ReaderService.MangaDexChapterJumpConfirmationRequiredException ex)
+        {
+            Update(jobId, status => status with
+            {
+                Stage = "The next MangaDex chapter has a gap",
+                IsComplete = true,
+                IsFailed = true,
+                Error = "The next available chapter skips part of your reading progress.",
+                ChapterJump = ex.ChapterJump
+            });
+        }
         catch (Exception)
         {
             Update(jobId, status => status with

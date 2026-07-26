@@ -395,6 +395,35 @@ public sealed class ReaderServiceTests
         Assert.Equal("en", exception.ChapterMatch.Language);
     }
 
+    [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenNextChapterJumps_RequiresConfirmationAndOffersCloserLanguage()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Berserk", MangaDexId = "berserk-id" };
+        var series = new MangaSeries { Title = "Berserk", Source = "mangadex-cache", ExternalId = "berserk-id" };
+        var cachedChapter = new MangaChapter { Series = series, SourceId = "chapter-1-en", ChapterNumber = "1", Language = "en", PageCount = 20 };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(series);
+        db.Chapters.Add(cachedChapter);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "1", ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.AddRange([
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-3-en", "3", "", 20, "en"),
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-2-pt", "2", "", 20, "pt-br")
+        ]);
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var exception = await Assert.ThrowsAsync<ReaderService.MangaDexChapterJumpConfirmationRequiredException>(
+            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, cachedChapter.Id, null, CancellationToken.None));
+
+        Assert.Equal("1", exception.ChapterJump.CurrentChapter);
+        Assert.Equal("3", exception.ChapterJump.NextChapter);
+        Assert.Equal(["pt-br"], exception.ChapterJump.AlternativeLanguages);
+    }
+
     private static ReaderService CreateReaderService(
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         FakeArchiveReader archive,

@@ -72,6 +72,15 @@
                               OnCancel="CancelChapterMatch"
                               OnConfirm="ConfirmChapterMatch" />
 
+<ChapterJumpWarningModal Open="@(chapterJumpEntryId is not null && chapterJump is not null)"
+                         CurrentChapter="@(chapterJump?.CurrentChapter ?? "")"
+                         NextChapter="@(chapterJump?.NextChapter ?? "")"
+                         Language="@LanguageLabel(chapterJump?.Language ?? "")"
+                         AlternativeLanguages="@(chapterJump?.AlternativeLanguages ?? [])"
+                         OnCancel="CancelChapterJump"
+                         OnConfirm="ConfirmChapterJump"
+                         OnReadAlternative="ReadChapterJumpAlternative" />
+
 @if (languageFallbackEntryId is not null && fallbackLanguages.Count > 0)
 {
     <div class="mh-modal-backdrop">
@@ -201,6 +210,8 @@
     private string fallbackLanguage = "";
     private Guid? chapterMatchEntryId;
     private ReaderChapterMatch? chapterMatch;
+    private Guid? chapterJumpEntryId;
+    private ReaderChapterJump? chapterJump;
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private MangaEntryResponse? editingEntry;
 
@@ -295,6 +306,12 @@
                 var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
                 if (completedPreparation?.Launch is null)
                 {
+                    if (completedPreparation?.ChapterJump is not null)
+                    {
+                        chapterJumpEntryId = entryId;
+                        chapterJump = completedPreparation.ChapterJump;
+                        return;
+                    }
                     if (completedPreparation?.ChapterMatch is not null)
                     {
                         chapterMatchEntryId = entryId;
@@ -432,6 +449,35 @@
         var language = chapterMatch.Language;
         CancelChapterMatch();
         await Read(entryId, language, allowLanguageFallback: true);
+    }
+
+    private void CancelChapterJump()
+    {
+        chapterJumpEntryId = null;
+        chapterJump = null;
+    }
+
+    private async Task ConfirmChapterJump()
+    {
+        if (chapterJumpEntryId is not { } entryId || chapterJump is null)
+        {
+            return;
+        }
+
+        var language = chapterJump.Language;
+        CancelChapterJump();
+        await Read(entryId, language, allowLanguageFallback: true);
+    }
+
+    private async Task ReadChapterJumpAlternative(string language)
+    {
+        if (chapterJumpEntryId is not { } entryId || string.IsNullOrWhiteSpace(language))
+        {
+            return;
+        }
+
+        CancelChapterJump();
+        await Read(entryId, language);
     }
 
     private static readonly (string Code, string Label)[] ReaderLanguages =

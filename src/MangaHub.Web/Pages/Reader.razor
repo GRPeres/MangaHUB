@@ -92,6 +92,15 @@
                          TerminalActionLabel="Back to shelf"
                          OnTerminalAction="BackToShelf" />
 
+<ChapterJumpWarningModal Open="@(chapterJumpNext is not null && chapterJump is not null)"
+                         CurrentChapter="@(chapterJump?.CurrentChapter ?? "")"
+                         NextChapter="@(chapterJump?.NextChapter ?? "")"
+                         Language="@LanguageLabel(chapterJump?.Language ?? "")"
+                         AlternativeLanguages="@(chapterJump?.AlternativeLanguages ?? [])"
+                         OnCancel="CancelChapterJump"
+                         OnConfirm="ConfirmChapterJump"
+                         OnReadAlternative="ReadChapterJumpAlternative" />
+
 @if (languageFallbackNext is not null && fallbackLanguages.Count > 0)
 {
     <div class="mh-modal-backdrop">
@@ -137,6 +146,8 @@
     private List<string> fallbackLanguages = [];
     private string fallbackLanguage = "";
     private string preferredLanguage = "en";
+    private bool? chapterJumpNext;
+    private ReaderChapterJump? chapterJump;
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private string readerMessage = "";
     private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
@@ -281,6 +292,12 @@
             var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
             if (completedPreparation?.Launch is null)
             {
+                if (completedPreparation?.ChapterJump is not null)
+                {
+                    chapterJumpNext = next;
+                    chapterJump = completedPreparation.ChapterJump;
+                    return;
+                }
                 if (completedPreparation?.AvailableLanguages is { Count: > 0 })
                 {
                     languageFallbackNext = next;
@@ -336,6 +353,35 @@
         var language = fallbackLanguage;
         CancelLanguageFallback();
         await PrepareAdjacentChapterAsync(next, language, allowLanguageFallback: true);
+    }
+
+    private void CancelChapterJump()
+    {
+        chapterJumpNext = null;
+        chapterJump = null;
+    }
+
+    private async Task ConfirmChapterJump()
+    {
+        if (chapterJumpNext is not { } next || chapterJump is null)
+        {
+            return;
+        }
+
+        var language = chapterJump.Language;
+        CancelChapterJump();
+        await PrepareAdjacentChapterAsync(next, language, allowLanguageFallback: true);
+    }
+
+    private async Task ReadChapterJumpAlternative(string language)
+    {
+        if (chapterJumpNext is not { } next || string.IsNullOrWhiteSpace(language))
+        {
+            return;
+        }
+
+        CancelChapterJump();
+        await PrepareAdjacentChapterAsync(next, language);
     }
 
     private async Task<ReaderPreparationStatus?> WaitForReaderPreparationAsync(Guid jobId)

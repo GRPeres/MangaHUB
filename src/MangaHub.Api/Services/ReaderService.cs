@@ -114,6 +114,17 @@ public sealed class ReaderService(
                 return null;
             }
 
+            if (afterCachedChapterId is not null
+                && !allowLanguageFallback
+                && IsChapterJump(current.ChapterNumber, sourceChapter.Number))
+            {
+                throw new MangaDexChapterJumpConfirmationRequiredException(
+                    current.ChapterNumber,
+                    sourceChapter.Number,
+                    NormalizeLanguage(sourceChapter.Language),
+                    await FindCloserNextChapterLanguagesAsync(mangaDexId, current.ChapterNumber, sourceChapter.Number, preferredLanguage, cancellationToken));
+            }
+
             cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
         }
         else if (shelfEntry.IsRead && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
@@ -133,6 +144,15 @@ public sealed class ReaderService(
                     throw new MangaCompletedException();
                 }
                 throw new NoNextMangaDexChapterException();
+            }
+
+            if (!allowLanguageFallback && IsChapterJump(shelfEntry.CurrentChapter, sourceChapter.Number))
+            {
+                throw new MangaDexChapterJumpConfirmationRequiredException(
+                    shelfEntry.CurrentChapter,
+                    sourceChapter.Number,
+                    NormalizeLanguage(sourceChapter.Language),
+                    await FindCloserNextChapterLanguagesAsync(mangaDexId, shelfEntry.CurrentChapter, sourceChapter.Number, preferredLanguage, cancellationToken));
             }
 
             cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
@@ -414,6 +434,30 @@ public sealed class ReaderService(
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+    private async Task<List<string>> FindCloserNextChapterLanguagesAsync(
+        string mangaDexId,
+        string currentChapterNumber,
+        string proposedChapterNumber,
+        string preferredLanguage,
+        CancellationToken cancellationToken)
+    {
+        var currentNumber = ParseChapterNumber(currentChapterNumber);
+        var proposedNumber = ParseChapterNumber(proposedChapterNumber);
+        if (currentNumber is null || proposedNumber is null)
+        {
+            return [];
+        }
+
+        return (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
+            .Where(chapter => !string.Equals(chapter.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase))
+            .Select(chapter => new { Language = NormalizeLanguage(chapter.Language), Number = ParseChapterNumber(chapter.Number) })
+            .Where(item => item.Number is not null && item.Number > currentNumber && item.Number < proposedNumber)
+            .Select(item => item.Language)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private async Task RecordCompletedMangaDexChapterAsync(MangaEntry entry, string currentChapterNumber, CancellationToken cancellationToken)
     {
         var chapterNumber = ParseChapterNumber(currentChapterNumber);
@@ -475,6 +519,11 @@ public sealed class ReaderService(
         || (ParseChapterNumber(chapterNumber) is { } parsedChapter
             && ParseChapterNumber(currentChapter) is { } parsedCurrent
             && parsedChapter == parsedCurrent);
+
+    private static bool IsChapterJump(string currentChapter, string nextChapter) =>
+        ParseChapterNumber(currentChapter) is { } current
+        && ParseChapterNumber(nextChapter) is { } next
+        && next - current > 1m;
 
     private static decimal? ParseChapterNumber(string value)
     {
@@ -557,6 +606,15 @@ public sealed class ReaderService(
         string language) : Exception
     {
         public ReaderChapterMatch ChapterMatch { get; } = new(requestedChapter, matchedChapter, language);
+    }
+
+    public sealed class MangaDexChapterJumpConfirmationRequiredException(
+        string currentChapter,
+        string nextChapter,
+        string language,
+        List<string> alternativeLanguages) : Exception
+    {
+        public ReaderChapterJump ChapterJump { get; } = new(currentChapter, nextChapter, language, alternativeLanguages);
     }
 }
 

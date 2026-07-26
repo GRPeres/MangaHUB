@@ -1,0 +1,54 @@
+@if (Open)
+{
+    <div class="mh-modal-backdrop">
+        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="chapter-jump-title">
+            <MudStack Spacing="3">
+                <MudText id="chapter-jump-title" Typo="Typo.h2">Chapter jump detected</MudText>
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">MangaDex jumps from chapter @CurrentChapter to chapter @NextChapter in @Language.</MudAlert>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Continuing marks chapter @NextChapter as your current progress.</MudText>
+
+                @if (AlternativeLanguages.Count > 0)
+                {
+                    <MudSelect T="string" @bind-Value="selectedLanguage" Label="A closer chapter may be available in" Variant="Variant.Outlined">
+                        @foreach (var language in AlternativeLanguages)
+                        {
+                            <MudSelectItem T="string" Value="@language">@language</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="flex-wrap">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="OnCancel">Stay on chapter @CurrentChapter</MudButton>
+                    @if (!string.IsNullOrWhiteSpace(selectedLanguage))
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ReadAlternative">Try @selectedLanguage</MudButton>
+                    }
+                    <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="OnConfirm">Continue to chapter @NextChapter</MudButton>
+                </MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public string CurrentChapter { get; set; } = "";
+    [Parameter] public string NextChapter { get; set; } = "";
+    [Parameter] public string Language { get; set; } = "";
+    [Parameter] public List<string> AlternativeLanguages { get; set; } = [];
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback<string> OnReadAlternative { get; set; }
+
+    private string selectedLanguage = "";
+
+    protected override void OnParametersSet()
+    {
+        if (!AlternativeLanguages.Contains(selectedLanguage, StringComparer.OrdinalIgnoreCase))
+        {
+            selectedLanguage = AlternativeLanguages.FirstOrDefault() ?? "";
+        }
+    }
+
+    private Task ReadAlternative() => OnReadAlternative.InvokeAsync(selectedLanguage);
+}
