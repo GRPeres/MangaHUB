@@ -71,7 +71,7 @@
         <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="language-fallback-title">
             <MudStack Spacing="3">
                 <MudText id="language-fallback-title" Typo="Typo.h2">Chapter available in another language</MudText>
-                <MudText Typo="Typo.body1">MangaDex does not have an exact English match for this chapter, but it is available in another language.</MudText>
+                <MudText Typo="Typo.body1">MangaDex does not have an exact @LanguageLabel(PreferredLanguage) match for this chapter, but it is available in another language.</MudText>
                 <MudSelect T="string" @bind-Value="fallbackLanguage" Label="Continue in" Variant="Variant.Outlined">
                     @foreach (var language in fallbackLanguages)
                     {
@@ -79,7 +79,7 @@
                     }
                 </MudSelect>
                 <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="CancelLanguageFallback">Stay in English</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="CancelLanguageFallback">Stay in @LanguageLabel(PreferredLanguage)</MudButton>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ContinueInFallbackLanguage">Continue reading</MudButton>
                 </MudStack>
             </MudStack>
@@ -247,7 +247,9 @@
         CloseEdit();
     }
 
-    private async Task Read(Guid entryId, string language = "en", bool allowLanguageFallback = false)
+    private string PreferredLanguage => string.IsNullOrWhiteSpace(currentUser?.PreferredLanguage) ? "en" : currentUser.PreferredLanguage;
+
+    private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false)
     {
         if (!IsAdmin)
         {
@@ -274,7 +276,7 @@
 
             if (options.HasMangaDex)
             {
-                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language, allowLanguageFallback: allowLanguageFallback);
+                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguage, allowLanguageFallback: allowLanguageFallback);
                 if (readerPreparation is null)
                 {
                     ShowWarning("Could not start MangaDex chapter preparation.");

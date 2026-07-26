@@ -1,3 +1,4 @@
+using MangaHub.Api.Common;
 using MangaHub.Api.Services;
 using MangaHub.Core.Dto;
 using MangaHub.Infrastructure;
@@ -55,6 +56,15 @@ public sealed class AuthController(
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         return user is null
             ? Unauthorized()
-            : Ok(new UserResponse(user.Id, user.Username, user.Role, ""));
+            : Ok(ApiMapping.ToUserResponse(user));
+    }
+
+    [HttpPut("preferences")]
+    public async Task<IActionResult> UpdatePreferences([FromBody] UpdatePreferredLanguageRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        return user is null
+            ? Unauthorized()
+            : Ok(await auth.UpdatePreferredLanguageAsync(user, request, cancellationToken));
     }
 }

@@ -42,7 +42,7 @@ public sealed class CatalogCacheService(
         return new MangaDexCacheResponse(mangaDexId, chapters);
     }
 
-    public async Task<MangaDexCacheResponse?> DownloadAsync(Guid entryId, CacheMangaDexChapterRequest request, CancellationToken cancellationToken)
+    public async Task<MangaDexCacheResponse?> DownloadAsync(Guid entryId, CacheMangaDexChapterRequest request, string preferredLanguage, CancellationToken cancellationToken)
     {
         var entry = await catalog.GetByIdAsync(entryId, cancellationToken);
         var mangaDexId = entry is null ? "" : GetMangaDexId(entry);
@@ -56,12 +56,12 @@ public sealed class CatalogCacheService(
         var chapters = await source.GetChaptersAsync(mangaDexId, null, cancellationToken);
         var chapter = chapters
             .Where(item => string.Equals(item.Number, requestedNumber, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(item => string.Equals(item.Language, "en", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .OrderBy(item => string.Equals(item.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(item => item.Language, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault()
             ?? chapters
                 .Where(item => FindNumericChapter([item], requestedNumber) is not null)
-                .OrderBy(item => string.Equals(item.Language, "en", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .OrderBy(item => string.Equals(item.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
                 .ThenBy(item => item.Language, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();
         if (chapter is null)

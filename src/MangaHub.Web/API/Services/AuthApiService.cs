@@ -13,5 +13,11 @@ public sealed class AuthApiService(ApiHttpClient api)
 
     public async Task<UserResponse?> MeAsync() =>
         await api.GetAsync<UserResponse>("/auth/me");
+
+    public async Task<UserResponse?> UpdatePreferredLanguageAsync(string language) =>
+        await api.SendAsync<UpdatePreferredLanguageRequest, UserResponse>(
+            HttpMethod.Put,
+            "/auth/preferences",
+            new(language));
 }
 

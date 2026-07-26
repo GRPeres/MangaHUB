@@ -41,4 +41,17 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
         var token = tokens.CreateToken(user.Id, user.Username);
         return ApiMapping.ToUserResponse(user, token);
     }
+
+    public async Task<UserResponse> UpdatePreferredLanguageAsync(MangaUser user, UpdatePreferredLanguageRequest request, CancellationToken cancellationToken)
+    {
+        user.PreferredLanguage = NormalizeLanguage(request.PreferredLanguage);
+        await users.SaveChangesAsync(cancellationToken);
+        return ApiMapping.ToUserResponse(user);
+    }
+
+    private static string NormalizeLanguage(string? language)
+    {
+        var normalized = (language ?? "").Trim().ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(normalized) ? "en" : normalized[..Math.Min(normalized.Length, 16)];
+    }
 }

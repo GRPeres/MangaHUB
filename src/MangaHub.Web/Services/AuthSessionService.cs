@@ -53,6 +53,19 @@ public sealed class AuthSessionService(AuthApiService authApi, SessionTokenStore
         Changed?.Invoke();
     }
 
+    public async Task<UserResponse?> UpdatePreferredLanguageAsync(string language)
+    {
+        var updated = await authApi.UpdatePreferredLanguageAsync(language);
+        if (updated is not null)
+        {
+            currentUser = updated with { SessionToken = currentUser?.SessionToken ?? "" };
+            loaded = true;
+            Changed?.Invoke();
+        }
+
+        return currentUser;
+    }
+
     public void RequestLogin(string message = "Please log in to continue.", string? returnUrl = null)
     {
         LoginRequested?.Invoke(new LoginPrompt(message, returnUrl));

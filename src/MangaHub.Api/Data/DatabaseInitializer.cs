@@ -15,6 +15,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
     {
         await db.Database.ExecuteSqlRawAsync("""
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "Role" character varying(40) NOT NULL DEFAULT 'user';
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS "PreferredLanguage" character varying(16) NOT NULL DEFAULT 'en';
 
             UPDATE users
             SET "Role" = 'admin'

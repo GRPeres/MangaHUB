@@ -2,6 +2,7 @@
 @using MangaHub.Web.API.Services
 @inject AuthSessionService Auth
 @inject AdminApiService AdminApi
+@inject MessageService Messages
 
 <PageTitle>Account</PageTitle>
 
@@ -24,6 +25,17 @@
                     <MudChip T="string" Color="@(IsAdmin ? Color.Secondary : Color.Primary)" Variant="Variant.Filled">@currentUser.Role</MudChip>
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshAccount">Refresh</MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h2">Reading language</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Used whenever MangaHub opens or downloads MangaDex chapters. Any MangaDex language code works, such as <code>en</code>, <code>pt-br</code>, <code>es</code>, or <code>fr</code>.</MudText>
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
+                    <MudTextField T="string" @bind-Value="preferredLanguage" Label="Preferred language" Variant="Variant.Outlined" Immediate="true" Class="mh-account-language-input" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@isSavingLanguage" OnClick="SavePreferredLanguage">Save language</MudButton>
                 </MudStack>
             </MudStack>
         </MudPaper>
@@ -83,6 +95,8 @@
     private List<UserAdminResponse> users = [];
     private string message = "";
     private Severity messageSeverity = Severity.Info;
+    private string preferredLanguage = "en";
+    private bool isSavingLanguage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -94,6 +108,7 @@
     private async Task RefreshAccount()
     {
         currentUser = await Auth.GetCurrentUserAsync(forceRefresh: true);
+        preferredLanguage = currentUser?.PreferredLanguage ?? "en";
         if (IsAdmin)
         {
             await LoadUsers();
@@ -122,5 +137,27 @@
         await Auth.LogoutAsync();
         currentUser = null;
         users = [];
+    }
+
+    private async Task SavePreferredLanguage()
+    {
+        isSavingLanguage = true;
+        try
+        {
+            var updated = await Auth.UpdatePreferredLanguageAsync(preferredLanguage);
+            if (updated is null)
+            {
+                Messages.Error("Could not save your preferred language.");
+                return;
+            }
+
+            Messages.Success("Preferred reading language saved.");
+            currentUser = updated;
+            preferredLanguage = updated.PreferredLanguage;
+        }
+        finally
+        {
+            isSavingLanguage = false;
+        }
     }
 }

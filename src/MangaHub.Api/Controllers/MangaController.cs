@@ -48,7 +48,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
         [FromQuery] Guid? afterCachedChapterId,
         [FromQuery] Guid? beforeCachedChapterId,
         CancellationToken cancellationToken,
-        [FromQuery] string language = "en",
+        [FromQuery] string? language = null,
         [FromQuery] bool allowLanguageFallback = false)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
@@ -61,7 +61,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        return Accepted(preparations.Start(user.Id, entryId, afterCachedChapterId, beforeCachedChapterId, language, allowLanguageFallback));
+        return Accepted(preparations.Start(user.Id, entryId, afterCachedChapterId, beforeCachedChapterId, language ?? user.PreferredLanguage, allowLanguageFallback));
     }
 
     [HttpGet("{entryId:guid}/mangadex-reader/languages")]
@@ -86,7 +86,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
         Guid entryId,
         [FromQuery] Guid afterCachedChapterId,
         CancellationToken cancellationToken,
-        [FromQuery] string language = "en")
+        [FromQuery] string? language = null)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null)
@@ -98,7 +98,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        preparations.PrefetchNext(user.Id, entryId, afterCachedChapterId, language);
+        preparations.PrefetchNext(user.Id, entryId, afterCachedChapterId, language ?? user.PreferredLanguage);
         return Accepted();
     }
 

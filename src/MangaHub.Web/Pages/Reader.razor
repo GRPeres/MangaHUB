@@ -2,6 +2,7 @@
 @using MangaHub.Web.API.Services
 @inject ReadApiService ReadApi
 @inject MangaApiService MangaApi
+@inject AuthSessionService Auth
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject MessageService Messages
@@ -67,7 +68,7 @@
         <div>
             @if (availableLanguages.Count > 1)
             {
-                <MudSelect T="string" Value="@(ReaderLanguage ?? "en")" ValueChanged="SwitchLanguage" Dense="true" Label="Language" Variant="Variant.Text">
+                <MudSelect T="string" Value="@ActiveLanguage" ValueChanged="SwitchLanguage" Dense="true" Label="Language" Variant="Variant.Text">
                     @foreach (var language in availableLanguages)
                     {
                         <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>
@@ -97,7 +98,7 @@
         <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="reader-language-fallback-title">
             <MudStack Spacing="3">
                 <MudText id="reader-language-fallback-title" Typo="Typo.h2">Chapter available in another language</MudText>
-                <MudText Typo="Typo.body1">There is no matching English chapter in this direction, but MangaDex has one in another language.</MudText>
+                <MudText Typo="Typo.body1">There is no matching @LanguageLabel(ActiveLanguage) chapter in this direction, but MangaDex has one in another language.</MudText>
                 <MudSelect T="string" @bind-Value="fallbackLanguage" Label="Continue in" Variant="Variant.Outlined">
                     @foreach (var language in fallbackLanguages)
                     {
@@ -135,6 +136,7 @@
     private bool? languageFallbackNext;
     private List<string> fallbackLanguages = [];
     private string fallbackLanguage = "";
+    private string preferredLanguage = "en";
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private string readerMessage = "";
     private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
@@ -144,6 +146,7 @@
     private bool IsMangaDexReader => string.Equals(ReaderSource, "mangadex", StringComparison.OrdinalIgnoreCase)
         || (string.IsNullOrWhiteSpace(ReaderSource) && EntryId is not null);
     private bool CanPrepareAdjacentChapter => IsMangaDexReader && EntryId is not null;
+    private string ActiveLanguage => string.IsNullOrWhiteSpace(ReaderLanguage) ? preferredLanguage : ReaderLanguage;
     private bool PreviousDisabled => isPreparingChapter || (page <= 0 && !CanPrepareAdjacentChapter);
     private bool NextDisabled => isPreparingChapter || (page >= PageCount - 1 && !CanPrepareAdjacentChapter);
     private string ChapterLabel => string.IsNullOrWhiteSpace(CurrentChapter) ? "Chapter" : $"Chapter {CurrentChapter}";
@@ -163,6 +166,11 @@
         }
     }
 
+    protected override async Task OnInitializedAsync()
+    {
+        preferredLanguage = (await Auth.GetCurrentUserAsync())?.PreferredLanguage ?? "en";
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (IsMangaDexReader && EntryId is not null && loadedLanguageEntryId != EntryId)
@@ -180,7 +188,7 @@
         prefetchedChapterId = ChapterId;
         try
         {
-            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId, ReaderLanguage ?? "en");
+            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId, ActiveLanguage);
         }
         catch (HttpRequestException)
         {
@@ -203,7 +211,7 @@
 
     private async Task SwitchLanguage(string language)
     {
-        if (!CanPrepareAdjacentChapter || EntryId is null || string.Equals(language, ReaderLanguage ?? "en", StringComparison.OrdinalIgnoreCase))
+        if (!CanPrepareAdjacentChapter || EntryId is null || string.Equals(language, ActiveLanguage, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
@@ -262,7 +270,7 @@
                 EntryId.Value,
                 afterCachedChapterId: next ? ChapterId : null,
                 beforeCachedChapterId: next ? null : ChapterId,
-                language: language ?? ReaderLanguage ?? "en",
+                language: language ?? ActiveLanguage,
                 allowLanguageFallback: allowLanguageFallback);
             if (readerPreparation is null)
             {
