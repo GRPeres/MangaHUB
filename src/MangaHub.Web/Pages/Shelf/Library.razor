@@ -16,21 +16,6 @@
             <MudText Typo="Typo.h1">Shelf</MudText>
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
-            <MudTooltip Text="@(newReleaseOnly ? "Show full shelf" : "Show planned manga, new releases, and manual checks")">
-                <MudBadge Content="@NewChapterEntryCount"
-                          Visible="@(NewChapterEntryCount > 0)"
-                          Color="Color.Error"
-                          Origin="Origin.TopRight"
-                          Overlap="true"
-                          Bordered="false"
-                          BadgeAriaLabel="@($"{NewChapterEntryCount} reading manga with new chapters")">
-                    <MudIconButton Icon="@Icons.Material.Filled.NewReleases"
-                                   Color="@(newReleaseOnly ? Color.Error : Color.Secondary)"
-                                   Variant="@(newReleaseOnly ? Variant.Filled : Variant.Outlined)"
-                                   OnClick="ToggleNewReleaseFilter"
-                                   aria-label="@(newReleaseOnly ? "Show full shelf" : "Show planned manga, new releases, and manual checks")" />
-                </MudBadge>
-            </MudTooltip>
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
                 <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">Add manga</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportShelf">Import CSV</MudMenuItem>
@@ -39,14 +24,29 @@
         </MudStack>
     </MudStack>
 
-    @if (FilteredEntries.Count == 0)
+    @if (AllFilteredEntries.Count == 0)
     {
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Your shelf is empty for this filter.</MudAlert>
     }
     else
     {
         <MudStack Spacing="2">
-            @foreach (var item in FilteredEntries)
+            @if (ReleaseAndUntrackedEntries.Count > 0)
+            {
+                <MudText Typo="Typo.subtitle1" Color="Color.Error">New releases and untracked manga</MudText>
+                @foreach (var item in ReleaseAndUntrackedEntries)
+                {
+                    <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                }
+
+                @if (OtherFilteredEntries.Count > 0)
+                {
+                    <MudDivider />
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">Others</MudText>
+                }
+            }
+
+            @foreach (var item in OtherFilteredEntries)
             {
                 <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
             }
@@ -184,7 +184,6 @@
     private string categoryFilter = "";
     private string availabilityFilter = "";
     private string scoreFilter = "";
-    private bool newReleaseOnly;
     private bool isAddShelfOpen;
     private bool isImportShelfOpen;
     private bool filtersOpen;
@@ -234,7 +233,6 @@
         categoryFilter = "";
         availabilityFilter = "";
         scoreFilter = "";
-        newReleaseOnly = false;
         if (IsAdmin)
         {
             selectedUserId = currentUser?.Id;
@@ -247,12 +245,6 @@
     {
         entries = await MangaApi.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null);
         CloseEdit();
-    }
-
-    private Task ToggleNewReleaseFilter()
-    {
-        newReleaseOnly = !newReleaseOnly;
-        return Task.CompletedTask;
     }
 
     private async Task Read(Guid entryId, string language = "en", bool allowLanguageFallback = false)
@@ -418,15 +410,22 @@
     private static bool IsNoLaterChapter(ReaderPreparationStatus? preparation) =>
         string.Equals(preparation?.Error, "No later readable MangaDex chapter is available.", StringComparison.Ordinal);
 
-    private List<MangaEntryResponse> FilteredEntries => entries
+    private List<MangaEntryResponse> AllFilteredEntries => entries
         .Where(MatchesSearch)
         .Where(MatchesSource)
         .Where(MatchesCategory)
         .Where(MatchesAvailability)
         .Where(MatchesScore)
-        .Where(MatchesNewRelease)
         .OrderBy(ShelfSortRank)
         .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private List<MangaEntryResponse> ReleaseAndUntrackedEntries => AllFilteredEntries
+        .Where(entry => IsReadingWithNewChapters(entry) || NeedsManualReleaseCheck(entry))
+        .ToList();
+
+    private List<MangaEntryResponse> OtherFilteredEntries => AllFilteredEntries
+        .Where(entry => !IsReadingWithNewChapters(entry) && !NeedsManualReleaseCheck(entry))
         .ToList();
 
     private List<string> CategoryOptions => entries
@@ -437,8 +436,6 @@
         .ToList();
 
     private string FilterButtonLabel => ActiveFilterCount == 0 ? "Filters" : $"Filters ({ActiveFilterCount})";
-    private int NewChapterEntryCount => entries.Count(IsReadingWithNewChapters);
-
     private int ActiveFilterCount =>
         Count(status) + Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
 
@@ -479,9 +476,6 @@
         "5" => entry.Score == 5,
         _ => true
     };
-
-    private bool MatchesNewRelease(MangaEntryResponse entry) =>
-        !newReleaseOnly || IsPlanned(entry) || IsReadingWithNewChapters(entry) || NeedsManualReleaseCheck(entry);
 
     private static int ShelfSortRank(MangaEntryResponse entry)
     {
