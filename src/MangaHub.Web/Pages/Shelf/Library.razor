@@ -509,7 +509,7 @@
         && HasMangaDexLink(entry)
         && entry.MangaDexLatestChapter is not null
         && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
-        && Math.Floor(entry.MangaDexLatestChapter.Value) > currentChapter;
+        && entry.MangaDexLatestChapter.Value > currentChapter;
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
