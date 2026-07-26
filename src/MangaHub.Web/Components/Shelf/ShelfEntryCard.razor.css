@@ -255,6 +255,7 @@
     align-items: center;
     display: flex;
     gap: .05rem;
+    margin-right: auto;
 }
 
 ::deep .mh-entry-score .mud-icon-button {
@@ -369,6 +370,7 @@
     .mh-entry-score {
         flex: 0 0 100%;
         justify-content: center;
+        margin-right: 0;
         padding-bottom: .15rem;
     }
 }
