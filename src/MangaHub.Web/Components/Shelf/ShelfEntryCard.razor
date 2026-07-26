@@ -58,18 +58,13 @@
                 }
 
                     <div class="mh-entry-context mh-mobile-hide">
-                        <div>
-                            <span>Format</span>
-                            <strong>@FormatLabel</strong>
-                        </div>
-                        <div>
-                            <span>Published</span>
-                            <strong>@FirstYearLabel</strong>
-                        </div>
-                        <div>
-                            <span>Volumes</span>
-                            <strong>@VolumeCountLabel</strong>
-                        </div>
+                        @foreach (var fact in ContextFacts)
+                        {
+                            <div>
+                                <span>@fact.Label</span>
+                                <strong>@fact.Value</strong>
+                            </div>
+                        }
                     </div>
 
                 </div>

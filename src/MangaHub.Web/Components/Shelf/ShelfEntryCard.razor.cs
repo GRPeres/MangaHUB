@@ -53,8 +53,27 @@ public partial class ShelfEntryCard
         ? "Not checked yet"
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
     private string FormatLabel => FirstNonEmpty(Entry.MediaType, GenreLabel, "Unknown");
-    private string FirstYearLabel => Entry.FirstPublishYear is null ? "Unknown" : Entry.FirstPublishYear.Value.ToString();
-    private string VolumeCountLabel => Entry.VolumeCount is null ? "Unknown" : Entry.VolumeCount.Value.ToString();
+    private List<(string Label, string Value)> ContextFacts
+    {
+        get
+        {
+            var facts = new List<(string Label, string Value)> { ("Format", FormatLabel) };
+            if (Entry.FirstPublishYear is > 0)
+            {
+                facts.Add(("Published", Entry.FirstPublishYear.Value.ToString()));
+            }
+            if (Entry.VolumeCount is > 0)
+            {
+                facts.Add(("Volumes", Entry.VolumeCount.Value.ToString()));
+            }
+            if (Entry.ChapterCount is > 0)
+            {
+                facts.Add(("Chapters", Entry.ChapterCount.Value.ToString()));
+            }
+
+            return facts.Take(3).ToList();
+        }
+    }
     private string NextChapterValue => TryGetCurrentChapterNumber(out var currentChapter)
         ? $"Ch. {currentChapter + 1}"
         : StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) ? "Complete" : "Start";
