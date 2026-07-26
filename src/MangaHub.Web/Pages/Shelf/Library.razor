@@ -31,19 +31,33 @@
     else
     {
         <MudStack Spacing="2">
-            @if (ReleaseAndUntrackedEntries.Count > 0)
+            @if (NewReleaseEntries.Count > 0)
             {
-                <MudText Typo="Typo.h6" Color="Color.Error">New releases and untracked manga</MudText>
-                @foreach (var item in ReleaseAndUntrackedEntries)
+                <MudText Typo="Typo.h6" Color="Color.Error">New releases</MudText>
+                @foreach (var item in NewReleaseEntries)
                 {
                     <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
                 }
+            }
 
-                @if (OtherFilteredEntries.Count > 0)
+            @if (UntrackedEntries.Count > 0)
+            {
+                @if (NewReleaseEntries.Count > 0)
                 {
                     <MudDivider />
-                    <MudText Typo="Typo.h6" Color="Color.Error">Others</MudText>
                 }
+
+                <MudText Typo="Typo.h6" Color="Color.Error">Untracked manga</MudText>
+                @foreach (var item in UntrackedEntries)
+                {
+                    <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                }
+            }
+
+            @if (OtherFilteredEntries.Count > 0 && (NewReleaseEntries.Count > 0 || UntrackedEntries.Count > 0))
+            {
+                <MudDivider />
+                <MudText Typo="Typo.h6" Color="Color.Error">Others</MudText>
             }
 
             @foreach (var item in OtherFilteredEntries)
@@ -501,8 +515,12 @@
         .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
-    private List<MangaEntryResponse> ReleaseAndUntrackedEntries => AllFilteredEntries
-        .Where(entry => IsReadingWithNewChapters(entry) || NeedsManualReleaseCheck(entry))
+    private List<MangaEntryResponse> NewReleaseEntries => AllFilteredEntries
+        .Where(IsReadingWithNewChapters)
+        .ToList();
+
+    private List<MangaEntryResponse> UntrackedEntries => AllFilteredEntries
+        .Where(NeedsManualReleaseCheck)
         .ToList();
 
     private List<MangaEntryResponse> OtherFilteredEntries => AllFilteredEntries
