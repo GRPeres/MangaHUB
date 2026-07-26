@@ -16,7 +16,7 @@
             <MudText Typo="Typo.h1">Shelf</MudText>
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
-            <MudTooltip Text="@(newReleaseOnly ? "Show full shelf" : "Show planned manga and reading manga with new chapters")">
+            <MudTooltip Text="@(newReleaseOnly ? "Show full shelf" : "Show planned manga, new releases, and manual checks")">
                 <MudBadge Content="@NewChapterEntryCount"
                           Visible="@(NewChapterEntryCount > 0)"
                           Color="Color.Error"
@@ -28,7 +28,7 @@
                                    Color="@(newReleaseOnly ? Color.Error : Color.Secondary)"
                                    Variant="@(newReleaseOnly ? Variant.Filled : Variant.Outlined)"
                                    OnClick="ToggleNewReleaseFilter"
-                                   aria-label="@(newReleaseOnly ? "Show full shelf" : "Show planned manga and reading manga with new chapters")" />
+                                   aria-label="@(newReleaseOnly ? "Show full shelf" : "Show planned manga, new releases, and manual checks")" />
                 </MudBadge>
             </MudTooltip>
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
@@ -481,7 +481,7 @@
     };
 
     private bool MatchesNewRelease(MangaEntryResponse entry) =>
-        !newReleaseOnly || IsPlanned(entry) || IsReadingWithNewChapters(entry);
+        !newReleaseOnly || IsPlanned(entry) || IsReadingWithNewChapters(entry) || NeedsManualReleaseCheck(entry);
 
     private static int ShelfSortRank(MangaEntryResponse entry)
     {
@@ -490,14 +490,19 @@
             return 0;
         }
 
+        if (NeedsManualReleaseCheck(entry))
+        {
+            return 1;
+        }
+
         return (entry.ReadingStatus ?? "").ToLowerInvariant() switch
         {
-            "planned" => 1,
-            "reading" => 2,
-            "paused" => 3,
-            "dropped" => 4,
-            "done" => 5,
-            _ => 4
+            "planned" => 2,
+            "reading" => 3,
+            "paused" => 4,
+            "dropped" => 5,
+            "done" => 6,
+            _ => 5
         };
     }
 
@@ -514,6 +519,10 @@
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
         && HasNewChapters(entry);
+
+    private static bool NeedsManualReleaseCheck(MangaEntryResponse entry) =>
+        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        && !HasMangaDexLink(entry);
 
     private static bool IsPlanned(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase);
