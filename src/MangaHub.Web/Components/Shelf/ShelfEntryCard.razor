@@ -132,25 +132,27 @@
                     </MudTooltip>
                 }
             </div>
-            @if (CanRead)
-            {
-                @if (OpensExternalReader)
+            <div class="mh-entry-action-buttons">
+                @if (CanRead)
                 {
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.OpenInNew"
-                               Href="@Entry.MangaDexUrl"
-                               Target="_blank"
-                               Rel="noopener noreferrer">
-                        Read
-                    </MudButton>
+                    @if (OpensExternalReader)
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.OpenInNew"
+                                   Href="@Entry.MangaDexUrl"
+                                   Target="_blank"
+                                   Rel="noopener noreferrer">
+                            Read
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
+                    }
                 }
-                else
-                {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
-                }
-            }
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
+            </div>
         </MudCardActions>
     </MudCardContent>
 </MudCard>

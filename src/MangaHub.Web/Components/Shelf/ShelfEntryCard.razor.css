@@ -258,6 +258,11 @@
     margin-right: auto;
 }
 
+.mh-entry-action-buttons {
+    display: flex;
+    gap: .5rem;
+}
+
 ::deep .mh-entry-score .mud-icon-button {
     margin: 0;
 }
@@ -359,18 +364,34 @@
     }
 
     ::deep .mh-bento-card-actions {
+        box-sizing: border-box;
+        display: grid;
+        gap: .65rem;
+        grid-template-columns: minmax(0, 1fr);
         justify-content: stretch;
-        flex-wrap: wrap;
+        width: 100%;
     }
 
-    ::deep .mh-bento-card-actions .mud-button-root {
-        flex: 1 1 0;
+    .mh-entry-action-buttons {
+        border-top: 1px solid var(--mud-palette-divider);
+        display: grid;
+        gap: .5rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding-top: .65rem;
+        width: 100%;
+    }
+
+    ::deep .mh-entry-action-buttons .mud-button-root {
+        min-width: 0;
+        padding-inline: .5rem;
+        width: 100%;
     }
 
     .mh-entry-score {
         flex: 0 0 100%;
         justify-content: center;
         margin-right: 0;
-        padding-bottom: .15rem;
+        min-width: 0;
+        padding-bottom: 0;
     }
 }
