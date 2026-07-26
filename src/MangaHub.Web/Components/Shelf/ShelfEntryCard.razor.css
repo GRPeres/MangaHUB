@@ -373,11 +373,11 @@
     }
 
     .mh-entry-action-buttons {
-        border-top: 1px solid var(--mud-palette-divider);
+        border-top: 0;
         display: grid !important;
         gap: .5rem;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        padding-top: .65rem;
+        padding-top: 0;
         width: 100%;
     }
 
@@ -388,11 +388,6 @@
     }
 
     .mh-entry-score {
-        flex: 0 0 100%;
-        justify-content: center;
-        margin-right: 0 !important;
-        min-width: 0;
-        padding-bottom: 0;
-        width: 100%;
+        display: none;
     }
 }
