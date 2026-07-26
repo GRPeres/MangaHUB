@@ -296,7 +296,7 @@
         await PrepareAdjacentChapterAsync(next: true);
     }
 
-    private async Task PrepareAdjacentChapterAsync(bool next, string? language = null, bool allowLanguageFallback = false)
+    private async Task PrepareAdjacentChapterAsync(bool next, string? language = null, bool allowLanguageFallback = false, bool allowChapterJump = false)
     {
         if (!CanPrepareAdjacentChapter || EntryId is null)
         {
@@ -313,7 +313,8 @@
                 afterCachedChapterId: next ? ChapterId : null,
                 beforeCachedChapterId: next ? null : ChapterId,
                 language: language ?? ActiveLanguage,
-                allowLanguageFallback: allowLanguageFallback);
+                allowLanguageFallback: allowLanguageFallback,
+                allowChapterJump: allowChapterJump);
             if (readerPreparation is null)
             {
                 readerMessage = "Could not start MangaDex chapter preparation.";
@@ -401,7 +402,7 @@
 
         var language = chapterJump.Language;
         CancelChapterJump();
-        await PrepareAdjacentChapterAsync(next, language, allowLanguageFallback: true);
+        await PrepareAdjacentChapterAsync(next, language, allowLanguageFallback: true, allowChapterJump: true);
     }
 
     private async Task ReadChapterJumpAlternative(string language)

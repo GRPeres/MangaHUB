@@ -22,7 +22,7 @@ public sealed class ReaderService(
     private const string MangaDexCacheSource = "mangadex-cache";
 
     public Task<ReaderLaunchResponse?> PrepareMangaDexChapterAsync(Guid userId, Guid entryId, Guid? afterCachedChapterId, Guid? beforeCachedChapterId, CancellationToken cancellationToken, IProgress<ReaderPreparationProgress>? progress = null, bool updateReadingProgress = true) =>
-        PrepareMangaDexChapterAsync(userId, entryId, afterCachedChapterId, beforeCachedChapterId, "en", false, cancellationToken, progress, updateReadingProgress);
+        PrepareMangaDexChapterAsync(userId, entryId, afterCachedChapterId, beforeCachedChapterId, "en", false, false, cancellationToken, progress, updateReadingProgress);
 
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid userId, Guid entryId, CancellationToken cancellationToken)
     {
@@ -56,6 +56,7 @@ public sealed class ReaderService(
         Guid? beforeCachedChapterId,
         string language,
         bool allowLanguageFallback,
+        bool allowChapterJump,
         CancellationToken cancellationToken,
         IProgress<ReaderPreparationProgress>? progress = null,
         bool updateReadingProgress = true)
@@ -115,7 +116,7 @@ public sealed class ReaderService(
             }
 
             if (afterCachedChapterId is not null
-                && !allowLanguageFallback
+                && !allowChapterJump
                 && IsChapterJump(current.ChapterNumber, sourceChapter.Number))
             {
                 throw new MangaDexChapterJumpConfirmationRequiredException(
@@ -146,7 +147,7 @@ public sealed class ReaderService(
                 throw new NoNextMangaDexChapterException();
             }
 
-            if (!allowLanguageFallback && IsChapterJump(shelfEntry.CurrentChapter, sourceChapter.Number))
+            if (!allowChapterJump && IsChapterJump(shelfEntry.CurrentChapter, sourceChapter.Number))
             {
                 throw new MangaDexChapterJumpConfirmationRequiredException(
                     shelfEntry.CurrentChapter,
@@ -307,6 +308,7 @@ public sealed class ReaderService(
             null,
             language,
             allowLanguageFallback: false,
+            allowChapterJump: false,
             cancellationToken,
             updateReadingProgress: false);
 

@@ -445,6 +445,53 @@ public sealed class ReaderServiceTests
         Assert.Equal(["pt-br"], exception.ChapterJump.AlternativeLanguages);
     }
 
+    [Fact]
+    public async Task PrepareMangaDexChapterAsync_AcceptingLanguageFallbackStillRequiresChapterJumpConfirmation()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Gap Test", MangaDexId = "gap-test-id" };
+        var series = new MangaSeries { Title = "Gap Test", Source = "mangadex-cache", ExternalId = "gap-test-id" };
+        var currentChapter = new MangaChapter { Series = series, SourceId = "chapter-63-en", ChapterNumber = "63", Language = "en", PageCount = 20 };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(series);
+        db.Chapters.Add(currentChapter);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "63", ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-91-pt", "91", "", 20, "pt-br"));
+        mangaDex.Pages["chapter-91-pt"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/091.jpg")];
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var exception = await Assert.ThrowsAsync<ReaderService.MangaDexChapterJumpConfirmationRequiredException>(
+            () => service.PrepareMangaDexChapterAsync(
+                userId,
+                entry.Id,
+                currentChapter.Id,
+                null,
+                "pt-br",
+                allowLanguageFallback: true,
+                allowChapterJump: false,
+                CancellationToken.None));
+
+        Assert.Equal("63", exception.ChapterJump.CurrentChapter);
+        Assert.Equal("91", exception.ChapterJump.NextChapter);
+
+        var launch = await service.PrepareMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            currentChapter.Id,
+            null,
+            "pt-br",
+            allowLanguageFallback: true,
+            allowChapterJump: true,
+            CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Equal("91", launch.CurrentChapter);
+    }
+
     private static ReaderService CreateReaderService(
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         FakeArchiveReader archive,

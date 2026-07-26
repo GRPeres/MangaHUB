@@ -17,7 +17,8 @@ public sealed class ReaderPreparationService(
         Guid? afterCachedChapterId,
         Guid? beforeCachedChapterId,
         string language,
-        bool allowLanguageFallback)
+        bool allowLanguageFallback,
+        bool allowChapterJump)
     {
         RemoveExpiredJobs();
 
@@ -25,7 +26,7 @@ public sealed class ReaderPreparationService(
         var status = new ReaderPreparationStatus(jobId, "Waiting to prepare the chapter", 0, 0, 0, false, false, "", null);
         jobs[jobId] = new ReaderPreparationJob(userId, DateTimeOffset.UtcNow, status);
 
-        _ = Task.Run(() => PrepareAsync(jobId, userId, entryId, afterCachedChapterId, beforeCachedChapterId, language, allowLanguageFallback));
+        _ = Task.Run(() => PrepareAsync(jobId, userId, entryId, afterCachedChapterId, beforeCachedChapterId, language, allowLanguageFallback, allowChapterJump));
         return status;
     }
 
@@ -66,7 +67,8 @@ public sealed class ReaderPreparationService(
         Guid? afterCachedChapterId,
         Guid? beforeCachedChapterId,
         string language,
-        bool allowLanguageFallback)
+        bool allowLanguageFallback,
+        bool allowChapterJump)
     {
         try
         {
@@ -89,6 +91,7 @@ public sealed class ReaderPreparationService(
                 beforeCachedChapterId,
                 language,
                 allowLanguageFallback,
+                allowChapterJump,
                 CancellationToken.None,
                 progress);
 

@@ -29,7 +29,8 @@ public sealed class MangaApiService(ApiHttpClient api)
         Guid? afterCachedChapterId = null,
         Guid? beforeCachedChapterId = null,
         string language = "en",
-        bool allowLanguageFallback = false)
+        bool allowLanguageFallback = false,
+        bool allowChapterJump = false)
     {
         var queryValues = new List<string>();
         if (afterCachedChapterId is not null)
@@ -44,6 +45,10 @@ public sealed class MangaApiService(ApiHttpClient api)
         if (allowLanguageFallback)
         {
             queryValues.Add("allowLanguageFallback=true");
+        }
+        if (allowChapterJump)
+        {
+            queryValues.Add("allowChapterJump=true");
         }
 
         var query = queryValues.Count == 0 ? "" : $"?{string.Join("&", queryValues)}";
