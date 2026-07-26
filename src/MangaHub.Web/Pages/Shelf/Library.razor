@@ -184,7 +184,7 @@
     private string categoryFilter = "";
     private string availabilityFilter = "";
     private string scoreFilter = "";
-    private bool newReleaseOnly = true;
+    private bool newReleaseOnly;
     private bool isAddShelfOpen;
     private bool isImportShelfOpen;
     private bool filtersOpen;
@@ -234,7 +234,7 @@
         categoryFilter = "";
         availabilityFilter = "";
         scoreFilter = "";
-        newReleaseOnly = true;
+        newReleaseOnly = false;
         if (IsAdmin)
         {
             selectedUserId = currentUser?.Id;
