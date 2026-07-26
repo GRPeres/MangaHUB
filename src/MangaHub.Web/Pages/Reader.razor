@@ -18,7 +18,7 @@
                     <MudIconButton Icon="@PreviousIcon" Color="Color.Primary" OnClick="Previous" Disabled="@PreviousDisabled" aria-label="@PreviousLabel" />
                 </MudTooltip>
             </div>
-            <MudText Typo="Typo.body2" Class="reader-page-count">@(IsVerticalReader ? $"Vertical scroll - {PageCount} pages" : $"Page {page + 1} / {PageCount}")</MudText>
+            <MudText Typo="Typo.body2" Class="reader-page-count">Page @(page + 1) / @PageCount</MudText>
             <div class="reader-toolbar-next">
                 <MudTooltip Text="@NextLabel">
                     <MudIconButton Icon="@NextIcon" Color="Color.Primary" OnClick="Next" Disabled="@NextDisabled" aria-label="@NextLabel" />
@@ -41,6 +41,7 @@
                     var currentPageIndex = pageIndex;
                     <img @key="@($"{pageImageVersion}-{pageIndex}")"
                          class="reader-page-image-vertical"
+                         data-reader-page="@currentPageIndex"
                          src="@ReadApi.GetPageUrl(ChapterId, currentPageIndex, pageImageVersion)"
                          alt="Manhwa page @(currentPageIndex + 1)"
                          @onload="() => ObserveVerticalEnd(currentPageIndex)"
@@ -171,16 +172,16 @@
     private ReaderChapterJump? chapterJump;
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private string readerMessage = "";
-    private string NextLabel => !IsVerticalReader && page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
-    private string NextIcon => !IsVerticalReader && page < PageCount - 1 ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.SkipNext;
-    private string PreviousLabel => !IsVerticalReader && page > 0 ? "Previous" : EntryId is null ? "Previous" : "Previous chapter";
-    private string PreviousIcon => !IsVerticalReader && page > 0 ? Icons.Material.Filled.ChevronLeft : Icons.Material.Filled.SkipPrevious;
+    private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
+    private string NextIcon => page < PageCount - 1 ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.SkipNext;
+    private string PreviousLabel => page > 0 ? "Previous" : EntryId is null ? "Previous" : "Previous chapter";
+    private string PreviousIcon => page > 0 ? Icons.Material.Filled.ChevronLeft : Icons.Material.Filled.SkipPrevious;
     private bool IsMangaDexReader => string.Equals(ReaderSource, "mangadex", StringComparison.OrdinalIgnoreCase)
         || (string.IsNullOrWhiteSpace(ReaderSource) && EntryId is not null);
     private bool CanPrepareAdjacentChapter => IsMangaDexReader && EntryId is not null;
     private string ActiveLanguage => string.IsNullOrWhiteSpace(ReaderLanguage) ? preferredLanguage : ReaderLanguage;
-    private bool PreviousDisabled => isPreparingChapter || (!IsVerticalReader && page <= 0 && !CanPrepareAdjacentChapter);
-    private bool NextDisabled => isPreparingChapter || (!IsVerticalReader && page >= PageCount - 1 && !CanPrepareAdjacentChapter);
+    private bool PreviousDisabled => isPreparingChapter || (page <= 0 && !CanPrepareAdjacentChapter);
+    private bool NextDisabled => isPreparingChapter || (page >= PageCount - 1 && !CanPrepareAdjacentChapter);
     private string ChapterLabel => string.IsNullOrWhiteSpace(CurrentChapter) ? "Chapter" : $"Chapter {CurrentChapter}";
 
     protected override void OnParametersSet()
@@ -231,9 +232,13 @@
 
     private async Task Previous()
     {
-        if (!IsVerticalReader && page > 0)
+        if (page > 0)
         {
             page--;
+            if (IsVerticalReader)
+            {
+                await JS.InvokeVoidAsync("mangaHubReader.scrollVerticalPage", pageFrame, page);
+            }
             return;
         }
 
@@ -278,9 +283,13 @@
 
     private async Task Next()
     {
-        if (!IsVerticalReader && page < PageCount - 1)
+        if (page < PageCount - 1)
         {
             page++;
+            if (IsVerticalReader)
+            {
+                await JS.InvokeVoidAsync("mangaHubReader.scrollVerticalPage", pageFrame, page);
+            }
             return;
         }
 
@@ -454,6 +463,18 @@
         verticalReaderReference?.Dispose();
         verticalReaderReference = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync("mangaHubReader.observeVerticalEnd", pageFrame, verticalEnd, verticalReaderReference);
+    }
+
+    [JSInvokable]
+    public Task SetVerticalPage(int pageIndex)
+    {
+        if (pageIndex < 0 || pageIndex >= PageCount || pageIndex == page)
+        {
+            return Task.CompletedTask;
+        }
+
+        page = pageIndex;
+        return InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]

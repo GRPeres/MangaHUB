@@ -69,6 +69,10 @@
                     frame.mangaHubVerticalObserver.disconnect();
                     delete frame.mangaHubVerticalObserver;
                 }
+                if (frame && frame.mangaHubVerticalPageObserver) {
+                    frame.mangaHubVerticalPageObserver.disconnect();
+                    delete frame.mangaHubVerticalPageObserver;
+                }
             },
             observeVerticalEnd: function (frame, endMarker, dotNetReference) {
                 if (!frame || !endMarker || !frame.parentElement || !dotNetReference) {
@@ -88,6 +92,30 @@
                     threshold: 0.5
                 });
                 frame.mangaHubVerticalObserver.observe(endMarker);
+
+                frame.mangaHubVerticalPageObserver = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            dotNetReference.invokeMethodAsync("SetVerticalPage", Number(entry.target.dataset.readerPage));
+                        }
+                    });
+                }, {
+                    root: frame.parentElement,
+                    threshold: 0.55
+                });
+                frame.querySelectorAll("[data-reader-page]").forEach(function (image) {
+                    frame.mangaHubVerticalPageObserver.observe(image);
+                });
+            },
+            scrollVerticalPage: function (frame, pageIndex) {
+                if (!frame) {
+                    return;
+                }
+
+                var image = frame.querySelector('[data-reader-page="' + pageIndex + '"]');
+                if (image) {
+                    image.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
             }
         };
     </script>
@@ -96,8 +124,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=70" />
-    <link href="MangaHub.Web.styles.css?v=70" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=71" />
+    <link href="MangaHub.Web.styles.css?v=71" rel="stylesheet" />
 </head>
 
 <body>
