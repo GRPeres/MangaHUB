@@ -91,6 +91,28 @@
                          TerminalActionLabel="Back to shelf"
                          OnTerminalAction="BackToShelf" />
 
+@if (languageFallbackNext is not null && fallbackLanguages.Count > 0)
+{
+    <div class="mh-modal-backdrop">
+        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="reader-language-fallback-title">
+            <MudStack Spacing="3">
+                <MudText id="reader-language-fallback-title" Typo="Typo.h2">Chapter available in another language</MudText>
+                <MudText Typo="Typo.body1">There is no matching English chapter in this direction, but MangaDex has one in another language.</MudText>
+                <MudSelect T="string" @bind-Value="fallbackLanguage" Label="Continue in" Variant="Variant.Outlined">
+                    @foreach (var language in fallbackLanguages)
+                    {
+                        <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="CancelLanguageFallback">Stay on this chapter</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ContinueInFallbackLanguage">Continue reading</MudButton>
+                </MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
+
 @code {
     [Parameter] public Guid ChapterId { get; set; }
     [Parameter] public int PageCount { get; set; }
@@ -110,6 +132,9 @@
     private ReaderPreparationStatus? readerPreparation;
     private Guid? loadedLanguageEntryId;
     private List<string> availableLanguages = [];
+    private bool? languageFallbackNext;
+    private List<string> fallbackLanguages = [];
+    private string fallbackLanguage = "";
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private string readerMessage = "";
     private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
@@ -221,7 +246,7 @@
         await PrepareAdjacentChapterAsync(next: true);
     }
 
-    private async Task PrepareAdjacentChapterAsync(bool next)
+    private async Task PrepareAdjacentChapterAsync(bool next, string? language = null, bool allowLanguageFallback = false)
     {
         if (!CanPrepareAdjacentChapter || EntryId is null)
         {
@@ -237,7 +262,8 @@
                 EntryId.Value,
                 afterCachedChapterId: next ? ChapterId : null,
                 beforeCachedChapterId: next ? null : ChapterId,
-                language: ReaderLanguage ?? "en");
+                language: language ?? ReaderLanguage ?? "en",
+                allowLanguageFallback: allowLanguageFallback);
             if (readerPreparation is null)
             {
                 readerMessage = "Could not start MangaDex chapter preparation.";
@@ -247,6 +273,14 @@
             var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
             if (completedPreparation?.Launch is null)
             {
+                if (completedPreparation?.AvailableLanguages is { Count: > 0 })
+                {
+                    languageFallbackNext = next;
+                    fallbackLanguages = completedPreparation.AvailableLanguages;
+                    fallbackLanguage = fallbackLanguages[0];
+                    return;
+                }
+
                 if (next && completedPreparation?.IsSeriesComplete == true)
                 {
                     isSeriesComplete = true;
@@ -275,6 +309,25 @@
             isPreparingChapter = false;
             readerPreparation = null;
         }
+    }
+
+    private void CancelLanguageFallback()
+    {
+        languageFallbackNext = null;
+        fallbackLanguages = [];
+        fallbackLanguage = "";
+    }
+
+    private async Task ContinueInFallbackLanguage()
+    {
+        if (languageFallbackNext is not { } next || string.IsNullOrWhiteSpace(fallbackLanguage))
+        {
+            return;
+        }
+
+        var language = fallbackLanguage;
+        CancelLanguageFallback();
+        await PrepareAdjacentChapterAsync(next, language, allowLanguageFallback: true);
     }
 
     private async Task<ReaderPreparationStatus?> WaitForReaderPreparationAsync(Guid jobId)

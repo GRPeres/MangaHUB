@@ -53,7 +53,10 @@ internal sealed class FakeMangaDexSource : IMangaSource, IMangaDexCatalogLookup
         Task.FromResult(CatalogMatches.FirstOrDefault());
 
     public Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<MangaSourceChapter>>(Chapters);
+        Task.FromResult<IReadOnlyList<MangaSourceChapter>>(
+            string.IsNullOrWhiteSpace(language)
+                ? Chapters
+                : Chapters.Where(chapter => string.Equals(chapter.Language, language, StringComparison.OrdinalIgnoreCase)).ToList());
 
     public Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken) =>
         Task.FromResult(Pages.TryGetValue(chapterId, out var pages) ? pages : (IReadOnlyList<MangaPage>)[]);

@@ -337,6 +337,36 @@ public sealed class ReaderServiceTests
         Assert.Equal("special chapter", shelf!.CurrentChapter);
     }
 
+    [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenExactChapterOnlyExistsInAnotherLanguage_RequiresChoice()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Berserk", MangaDexId = "berserk-id" };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = userId,
+            MangaEntry = entry,
+            CurrentChapter = "32",
+            ReadingStatus = "reading"
+        });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.AddRange([
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-31-en", "31", "", 20, "en"),
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-33-en", "33", "", 20, "en"),
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-32-pt", "32", "", 20, "pt-br")
+        ]);
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var exception = await Assert.ThrowsAsync<ReaderService.MangaDexLanguageFallbackRequiredException>(
+            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None));
+
+        Assert.Equal(["pt-br"], exception.Languages);
+    }
+
     private static ReaderService CreateReaderService(
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         FakeArchiveReader archive,
