@@ -65,6 +65,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
         {
             entity.ToTable("chapters");
             entity.HasIndex(x => new { x.SeriesId, x.SourceId }).IsUnique();
+            entity.Property(x => x.Language).HasMaxLength(16);
             entity.HasOne(x => x.Series).WithMany(x => x.Chapters).HasForeignKey(x => x.SeriesId);
         });
 

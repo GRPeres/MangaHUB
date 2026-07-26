@@ -3,6 +3,7 @@ namespace MangaHub.Web.API.DTOs;
 public sealed record CachedMangaDexChapterResponse(
     Guid Id,
     string ChapterNumber,
+    string Language,
     string Title,
     int PageCount,
     DateTimeOffset CachedAt,

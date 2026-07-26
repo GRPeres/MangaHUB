@@ -33,6 +33,7 @@ public sealed class CatalogCacheService(
             .Select(chapter => new CachedMangaDexChapterResponse(
                 chapter.Id,
                 chapter.ChapterNumber,
+                chapter.Language,
                 chapter.Title,
                 chapter.PageCount,
                 chapter.CreatedAt,
@@ -52,10 +53,17 @@ public sealed class CatalogCacheService(
 
         var source = sources.Get("mangadex");
         var requestedNumber = request.ChapterNumber.Trim();
-        var chapters = await source.GetChaptersAsync(mangaDexId, "en", cancellationToken);
+        var chapters = await source.GetChaptersAsync(mangaDexId, null, cancellationToken);
         var chapter = chapters
-            .FirstOrDefault(item => string.Equals(item.Number, requestedNumber, StringComparison.OrdinalIgnoreCase))
-            ?? FindNumericChapter(chapters, requestedNumber);
+            .Where(item => string.Equals(item.Number, requestedNumber, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(item => string.Equals(item.Language, "en", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(item => item.Language, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault()
+            ?? chapters
+                .Where(item => FindNumericChapter([item], requestedNumber) is not null)
+                .OrderBy(item => string.Equals(item.Language, "en", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .ThenBy(item => item.Language, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
         if (chapter is null)
         {
             return null;
@@ -77,7 +85,7 @@ public sealed class CatalogCacheService(
             return null;
         }
 
-        var manualChapter = new MangaSourceChapter($"manual-{Guid.NewGuid():N}", chapterNumber.Trim(), title?.Trim() ?? "", 0);
+        var manualChapter = new MangaSourceChapter($"manual-{Guid.NewGuid():N}", chapterNumber.Trim(), title?.Trim() ?? "", 0, "manual");
         await using var content = file.OpenReadStream();
         await CacheChapterAsync(entry!, mangaDexId, manualChapter, cancellationToken, content);
         return await ListAsync(entryId, cancellationToken);
@@ -130,6 +138,7 @@ public sealed class CatalogCacheService(
             {
                 Series = cachedSeries,
                 ChapterNumber = chapter.Number,
+                Language = chapter.Language,
                 Title = chapter.Title,
                 SourceId = chapter.Id,
                 PageCount = archive.PageCount,
@@ -141,6 +150,7 @@ public sealed class CatalogCacheService(
         else
         {
             cachedChapter.ChapterNumber = chapter.Number;
+            cachedChapter.Language = chapter.Language;
             cachedChapter.Title = chapter.Title;
             cachedChapter.PageCount = archive.PageCount;
             cachedChapter.FileHash = archive.FileHash;
@@ -169,8 +179,14 @@ public sealed class CatalogCacheService(
         return chapters.FirstOrDefault(chapter => ParseChapterNumber(chapter.Number) == requested);
     }
 
-    private static decimal? ParseChapterNumber(string value) =>
-        decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
+    private static decimal? ParseChapterNumber(string value)
+    {
+        var normalized = new string((value ?? "")
+            .Where(character => char.IsDigit(character) || character is '.' or ',')
+            .ToArray())
+            .Replace(',', '.');
+        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
+    }
 
     private static string GetMangaDexId(MangaEntry entry) =>
         string.IsNullOrWhiteSpace(entry.MangaDexId) ? TextRules.ExtractMangaDexId(entry.MangaDexUrl) : entry.MangaDexId;

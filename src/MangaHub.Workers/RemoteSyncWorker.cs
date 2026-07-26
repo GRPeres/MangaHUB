@@ -169,16 +169,12 @@ public sealed class RemoteSyncWorker(
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var chapters = await mangaDex.GetChaptersAsync(entry.MangaDexId, "en", cancellationToken);
-                var numberedChapters = chapters
-                    .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
-                    .Where(item => item.Number is not null)
-                    .OrderBy(item => item.Number)
-                    .ToList();
+                var numberedChapters = GetPreferredNumberedChapters(
+                    await mangaDex.GetChaptersAsync(entry.MangaDexId, null, cancellationToken));
 
                 if (entry.MangaDexLastPrefetchedChapter is null)
                 {
-                    entry.MangaDexLastPrefetchedChapter = numberedChapters.LastOrDefault()?.Number;
+                    entry.MangaDexLastPrefetchedChapter = numberedChapters.Count == 0 ? null : numberedChapters[^1].Number;
                     entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
                     await db.SaveChangesAsync(cancellationToken);
                     baselined++;
@@ -202,7 +198,7 @@ public sealed class RemoteSyncWorker(
                 {
                     await CacheChapterAsync(db, cache, mangaDex, entry, cacheSeries, item.Chapter, cancellationToken);
 
-                    entry.MangaDexLastPrefetchedChapter = item.Number!.Value;
+                    entry.MangaDexLastPrefetchedChapter = item.Number;
                     entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
                     await db.SaveChangesAsync(cancellationToken);
                     downloaded++;
@@ -282,10 +278,9 @@ public sealed class RemoteSyncWorker(
 
                 var cacheSeries = await GetOrCreateCachedSeriesAsync(db, entry, cancellationToken);
                 var cachedSourceIds = cacheSeries.Chapters.Select(chapter => chapter.SourceId).ToHashSet(StringComparer.Ordinal);
-                var pending = (await mangaDex.GetChaptersAsync(entry.MangaDexId, "en", cancellationToken))
-                    .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
-                    .Where(item => item.Number is not null
-                        && item.Number.Value <= highestReadChapter
+                var pending = GetPreferredNumberedChapters(
+                        await mangaDex.GetChaptersAsync(entry.MangaDexId, null, cancellationToken))
+                    .Where(item => item.Number <= highestReadChapter
                         && !cachedSourceIds.Contains(item.Chapter.Id))
                     .OrderByDescending(item => item.Number)
                     .Take(perMangaLimit)
@@ -370,6 +365,7 @@ public sealed class RemoteSyncWorker(
             {
                 Series = cacheSeries,
                 ChapterNumber = sourceChapter.Number,
+                Language = sourceChapter.Language,
                 Title = sourceChapter.Title,
                 SourceId = sourceChapter.Id,
                 PageCount = archive.PageCount,
@@ -381,6 +377,7 @@ public sealed class RemoteSyncWorker(
         }
 
         cachedChapter.ChapterNumber = sourceChapter.Number;
+        cachedChapter.Language = sourceChapter.Language;
         cachedChapter.Title = sourceChapter.Title;
         cachedChapter.PageCount = archive.PageCount;
         cachedChapter.FileHash = archive.FileHash;
@@ -418,12 +415,33 @@ public sealed class RemoteSyncWorker(
         }
     }
 
-    private static decimal? ParseChapterNumber(string value) =>
-        decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
+    private static List<(MangaSourceChapter Chapter, decimal Number)> GetPreferredNumberedChapters(IReadOnlyList<MangaSourceChapter> chapters) =>
+        chapters
+            .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
+            .Where(item => item.Number is not null)
+            .GroupBy(item => item.Number!.Value)
+            .Select(group => (
+                Chapter: group
+                    .OrderBy(item => string.Equals(item.Chapter.Language, "en", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                    .ThenBy(item => item.Chapter.Language, StringComparer.OrdinalIgnoreCase)
+                    .Select(item => item.Chapter)
+                    .First(),
+                Number: group.Key))
+            .OrderBy(item => item.Number)
+            .ToList();
+
+    private static decimal? ParseChapterNumber(string value)
+    {
+        var normalized = new string((value ?? "")
+            .Where(character => char.IsDigit(character) || character is '.' or ',')
+            .ToArray())
+            .Replace(',', '.');
+        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
+    }
 
     private static async Task<decimal?> GetLatestChapterNumberAsync(HttpClient client, string mangaDexId, CancellationToken cancellationToken)
     {
-        var path = $"/manga/{Uri.EscapeDataString(mangaDexId)}/feed?limit=1&translatedLanguage[]=en&includeExternalUrl=0&order[chapter]=desc";
+        var path = $"/manga/{Uri.EscapeDataString(mangaDexId)}/feed?limit=100&includeExternalUrl=0&order[chapter]=desc";
         using var response = await client.GetAsync(path, cancellationToken);
         response.EnsureSuccessStatusCode();
 
@@ -434,18 +452,14 @@ public sealed class RemoteSyncWorker(
             return null;
         }
 
-        var attributes = data[0].GetProperty("attributes");
-        if (!attributes.TryGetProperty("chapter", out var chapterElement))
-        {
-            return null;
-        }
-
-        var chapter = chapterElement.GetString();
-        if (!decimal.TryParse(chapter, NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
-        {
-            return null;
-        }
-
-        return value;
+        var chapterNumbers = data.EnumerateArray()
+            .Where(item => item.TryGetProperty("attributes", out _))
+            .Select(item => item.GetProperty("attributes"))
+            .Where(attributes => attributes.TryGetProperty("chapter", out _))
+            .Select(attributes => ParseChapterNumber(attributes.GetProperty("chapter").GetString() ?? ""))
+            .Where(number => number is not null)
+            .Select(number => number!.Value)
+            .ToList();
+        return chapterNumbers.Count == 0 ? null : chapterNumbers.Max();
     }
 }

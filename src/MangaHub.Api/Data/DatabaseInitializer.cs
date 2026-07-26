@@ -99,6 +99,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Score" integer NULL;
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Category" character varying(120) NOT NULL DEFAULT '';
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Summary" text NOT NULL DEFAULT '';
+            ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "Language" character varying(16) NOT NULL DEFAULT 'en';
 
             INSERT INTO user_manga_entries ("Id", "UserId", "MangaEntryId", "ReadingStatus", "Notes", "CreatedAt", "UpdatedAt")
             SELECT gen_random_uuid(),

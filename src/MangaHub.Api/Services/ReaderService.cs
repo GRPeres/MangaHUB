@@ -140,8 +140,9 @@ public sealed class ReaderService(
         else if (cachedSeries is not null && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
         {
             cachedChapter = cachedSeries.Chapters
-                .OrderBy(chapter => chapter.CreatedAt)
-                .FirstOrDefault(chapter => string.Equals(chapter.ChapterNumber, shelfEntry.CurrentChapter, StringComparison.OrdinalIgnoreCase));
+                .OrderBy(chapter => string.Equals(chapter.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .ThenBy(chapter => chapter.CreatedAt)
+                .FirstOrDefault(chapter => HasExactChapter(chapter.ChapterNumber, shelfEntry.CurrentChapter));
         }
 
         if (cachedChapter is not null && !HasReadableCachedArchive(cachedChapter, mangaDexId))
@@ -193,6 +194,7 @@ public sealed class ReaderService(
                 {
                     Series = cachedSeries,
                     ChapterNumber = sourceChapter.Number,
+                    Language = sourceChapter.Language,
                     Title = sourceChapter.Title,
                     SourceId = sourceChapter.Id,
                     PageCount = cachedArchive.PageCount,
@@ -204,6 +206,7 @@ public sealed class ReaderService(
             else
             {
                 cachedChapter.ChapterNumber = sourceChapter.Number;
+                cachedChapter.Language = sourceChapter.Language;
                 cachedChapter.Title = sourceChapter.Title;
                 cachedChapter.PageCount = cachedArchive.PageCount;
                 cachedChapter.FileHash = cachedArchive.FileHash;
@@ -231,8 +234,9 @@ public sealed class ReaderService(
 
         progress?.Report(new ReaderPreparationProgress(
             shouldAdvanceReadingProgress ? "Opening the local reader" : "The chapter is ready", 100));
+        var resolvedLanguage = NormalizeLanguage(cachedChapter.Language);
         return new ReaderLaunchResponse(
-            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex&language={Uri.EscapeDataString(preferredLanguage)}",
+            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex&language={Uri.EscapeDataString(resolvedLanguage)}",
             cachedChapter.ChapterNumber,
             cachedChapter.PageCount);
     }
@@ -284,7 +288,7 @@ public sealed class ReaderService(
         var chapter = await series.GetChapterWithSeriesAsync(chapterId, cancellationToken);
         if (shelfEntry?.MangaEntry is null
             || chapter?.Series is null
-            || !string.Equals(chapter.ChapterNumber, shelfEntry.CurrentChapter, StringComparison.OrdinalIgnoreCase)
+            || !HasExactChapter(chapter.ChapterNumber, shelfEntry.CurrentChapter)
             || !IsChapterForEntry(chapter, shelfEntry.MangaEntry))
         {
             return false;
@@ -397,14 +401,14 @@ public sealed class ReaderService(
 
     private async Task RecordCompletedMangaDexChapterAsync(MangaEntry entry, string currentChapterNumber, CancellationToken cancellationToken)
     {
-        var normalizedChapter = currentChapterNumber.Replace(',', '.');
-        if (!decimal.TryParse(normalizedChapter, NumberStyles.Number, CultureInfo.InvariantCulture, out var chapterNumber))
+        var chapterNumber = ParseChapterNumber(currentChapterNumber);
+        if (chapterNumber is null)
         {
             return;
         }
 
-        entry.MangaDexLatestChapter = chapterNumber;
-        entry.ChapterCount = (int)Math.Floor(chapterNumber);
+        entry.MangaDexLatestChapter = chapterNumber.Value;
+        entry.ChapterCount = (int)Math.Floor(chapterNumber.Value);
         entry.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
         entry.UpdatedAt = DateTimeOffset.UtcNow;
         await shelf.SaveChangesAsync(cancellationToken);
@@ -449,10 +453,13 @@ public sealed class ReaderService(
     }
 
     private static bool HasExactChapter(IReadOnlyList<MangaSourceChapter> chapters, string currentChapter) =>
-        chapters.Any(chapter => string.Equals(chapter.Number, currentChapter, StringComparison.OrdinalIgnoreCase)
-            || (ParseChapterNumber(chapter.Number) is { } chapterNumber
-                && ParseChapterNumber(currentChapter) is { } currentNumber
-                && chapterNumber == currentNumber));
+        chapters.Any(chapter => HasExactChapter(chapter.Number, currentChapter));
+
+    private static bool HasExactChapter(string chapterNumber, string currentChapter) =>
+        string.Equals(chapterNumber, currentChapter, StringComparison.OrdinalIgnoreCase)
+        || (ParseChapterNumber(chapterNumber) is { } parsedChapter
+            && ParseChapterNumber(currentChapter) is { } parsedCurrent
+            && parsedChapter == parsedCurrent);
 
     private static decimal? ParseChapterNumber(string value)
     {
