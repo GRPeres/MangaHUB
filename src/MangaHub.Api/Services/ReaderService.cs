@@ -46,7 +46,7 @@ public sealed class ReaderService(
             localFirstChapter is not null,
             localFirstChapter is null
                 ? ""
-                : $"/reader/{localFirstChapter.Value.Id}/{localFirstChapter.Value.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(localFirstChapter.Value.ChapterNumber)}&source=local");
+                : $"/reader/{localFirstChapter.Value.Id}/{localFirstChapter.Value.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(localFirstChapter.Value.ChapterNumber)}&source=local{ReaderModeQuery(entry)}");
     }
 
     public async Task<ReaderLaunchResponse?> PrepareMangaDexChapterAsync(
@@ -271,7 +271,7 @@ public sealed class ReaderService(
             shouldAdvanceReadingProgress ? "Opening the local reader" : "The chapter is ready", 100));
         var resolvedLanguage = NormalizeLanguage(cachedChapter.Language);
         return new ReaderLaunchResponse(
-            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex&language={Uri.EscapeDataString(resolvedLanguage)}",
+            $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex&language={Uri.EscapeDataString(resolvedLanguage)}{ReaderModeQuery(entry)}",
             cachedChapter.ChapterNumber,
             cachedChapter.PageCount);
     }
@@ -482,6 +482,12 @@ public sealed class ReaderService(
     }
 
     private static bool IsPublishingComplete(string status) => status.Trim().ToLowerInvariant() is "finished" or "complete" or "completed" or "done" or "ended";
+
+    private static string ReaderModeQuery(MangaEntry entry) => UsesVerticalReader(entry) ? "&vertical=true" : "";
+
+    private static bool UsesVerticalReader(MangaEntry entry) =>
+        entry.MediaType.Contains("manhwa", StringComparison.OrdinalIgnoreCase)
+        || entry.MediaType.Contains("webtoon", StringComparison.OrdinalIgnoreCase);
 
     private static MangaSourceChapter? SelectCurrentMangaDexChapter(IReadOnlyList<MangaSourceChapter> chapters, string currentChapter)
     {

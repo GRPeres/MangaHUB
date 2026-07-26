@@ -65,6 +65,29 @@
                     frame.mangaHubResizeObserver.disconnect();
                     delete frame.mangaHubResizeObserver;
                 }
+                if (frame && frame.mangaHubVerticalObserver) {
+                    frame.mangaHubVerticalObserver.disconnect();
+                    delete frame.mangaHubVerticalObserver;
+                }
+            },
+            observeVerticalEnd: function (frame, endMarker, dotNetReference) {
+                if (!frame || !endMarker || !frame.parentElement || !dotNetReference) {
+                    return;
+                }
+
+                if (frame.mangaHubVerticalObserver) {
+                    frame.mangaHubVerticalObserver.disconnect();
+                }
+
+                frame.mangaHubVerticalObserver = new IntersectionObserver(function (entries) {
+                    if (entries.some(function (entry) { return entry.isIntersecting; })) {
+                        dotNetReference.invokeMethodAsync("MarkVerticalChapterRead");
+                    }
+                }, {
+                    root: frame.parentElement,
+                    threshold: 0.5
+                });
+                frame.mangaHubVerticalObserver.observe(endMarker);
             }
         };
     </script>
@@ -73,8 +96,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=67" />
-    <link href="MangaHub.Web.styles.css?v=67" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=70" />
+    <link href="MangaHub.Web.styles.css?v=70" rel="stylesheet" />
 </head>
 
 <body>

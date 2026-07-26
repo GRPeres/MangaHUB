@@ -314,6 +314,39 @@ a {
     width: 100%;
 }
 
+.reader-workspace-vertical .reader {
+    align-items: flex-start;
+    justify-content: stretch;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: .5rem 0;
+}
+
+.reader-workspace-vertical .reader-page-frame {
+    aspect-ratio: auto;
+    display: block;
+    height: auto;
+    margin: 0 auto;
+    max-height: none;
+    max-width: min(100%, 1040px);
+    position: relative;
+    width: 100%;
+}
+
+.reader-workspace-vertical .reader-page-frame .reader-page-image-vertical {
+    height: auto;
+    margin: 0;
+    max-height: none;
+    max-width: 100%;
+    object-fit: contain;
+    width: 100%;
+}
+
+.reader-vertical-end {
+    height: 1px;
+    width: 100%;
+}
+
 .reader-page-hit-area {
     align-items: center;
     background: transparent;

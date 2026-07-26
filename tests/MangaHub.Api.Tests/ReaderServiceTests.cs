@@ -111,6 +111,27 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_UsesVerticalReaderForManhwa()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Tower of God", MangaDexId = "tower-of-god-id", MediaType = "manhwa" };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, ReadingStatus = "planned" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-1", "1", "Beginning", 20));
+        mangaDex.Pages["chapter-1"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/001.jpg")];
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var launch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Contains("vertical=true", launch.ReaderUrl);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_NextChapterAdvancesProgress_ButPreviousChapterDoesNotRegressIt()
     {
         await using var db = TestDb.Create();
