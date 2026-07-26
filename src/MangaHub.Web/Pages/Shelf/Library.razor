@@ -65,6 +65,13 @@
                          CompletedPages="@(readerPreparation?.CompletedPages ?? 0)"
                          TotalPages="@(readerPreparation?.TotalPages ?? 0)" />
 
+<ChapterMatchConfirmationModal Open="@(chapterMatchEntryId is not null && chapterMatch is not null)"
+                              RequestedChapter="@(chapterMatch?.RequestedChapter ?? "")"
+                              MatchedChapter="@(chapterMatch?.MatchedChapter ?? "")"
+                              Language="@LanguageLabel(chapterMatch?.Language ?? "")"
+                              OnCancel="CancelChapterMatch"
+                              OnConfirm="ConfirmChapterMatch" />
+
 @if (languageFallbackEntryId is not null && fallbackLanguages.Count > 0)
 {
     <div class="mh-modal-backdrop">
@@ -192,6 +199,8 @@
     private Guid? languageFallbackEntryId;
     private List<string> fallbackLanguages = [];
     private string fallbackLanguage = "";
+    private Guid? chapterMatchEntryId;
+    private ReaderChapterMatch? chapterMatch;
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private MangaEntryResponse? editingEntry;
 
@@ -286,6 +295,12 @@
                 var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
                 if (completedPreparation?.Launch is null)
                 {
+                    if (completedPreparation?.ChapterMatch is not null)
+                    {
+                        chapterMatchEntryId = entryId;
+                        chapterMatch = completedPreparation.ChapterMatch;
+                        return;
+                    }
                     if (completedPreparation?.AvailableLanguages is { Count: > 0 })
                     {
                         languageFallbackEntryId = entryId;
@@ -399,6 +414,24 @@
 
         CancelLanguageFallback();
         await Read(entryId, fallbackLanguage, allowLanguageFallback: true);
+    }
+
+    private void CancelChapterMatch()
+    {
+        chapterMatchEntryId = null;
+        chapterMatch = null;
+    }
+
+    private async Task ConfirmChapterMatch()
+    {
+        if (chapterMatchEntryId is not { } entryId || chapterMatch is null)
+        {
+            return;
+        }
+
+        var language = chapterMatch.Language;
+        CancelChapterMatch();
+        await Read(entryId, language, allowLanguageFallback: true);
     }
 
     private static readonly (string Code, string Label)[] ReaderLanguages =

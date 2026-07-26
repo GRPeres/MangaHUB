@@ -1,5 +1,7 @@
 namespace MangaHub.Web.API.DTOs;
 
+public sealed record ReaderChapterMatch(string RequestedChapter, string MatchedChapter, string Language);
+
 public sealed record ReaderPreparationStatus(
     Guid JobId,
     string Stage,
@@ -11,4 +13,5 @@ public sealed record ReaderPreparationStatus(
     string Error,
     ReaderLaunchResponse? Launch,
     List<string>? AvailableLanguages = null,
-    bool IsSeriesComplete = false);
+    bool IsSeriesComplete = false,
+    ReaderChapterMatch? ChapterMatch = null);

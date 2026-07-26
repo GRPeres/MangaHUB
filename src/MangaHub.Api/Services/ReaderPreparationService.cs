@@ -149,6 +149,17 @@ public sealed class ReaderPreparationService(
                 AvailableLanguages = ex.Languages
             });
         }
+        catch (ReaderService.MangaDexClosestChapterConfirmationRequiredException ex)
+        {
+            Update(jobId, status => status with
+            {
+                Stage = "The closest MangaDex chapter needs confirmation",
+                IsComplete = true,
+                IsFailed = true,
+                Error = "The recorded chapter could not be matched exactly.",
+                ChapterMatch = ex.ChapterMatch
+            });
+        }
         catch (Exception)
         {
             Update(jobId, status => status with

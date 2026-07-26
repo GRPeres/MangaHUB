@@ -154,10 +154,15 @@ public sealed class ReaderService(
 
         if (cachedChapter is null)
         {
+            var isInitialTrackedChapterSelection = sourceChapter is null
+                && afterCachedChapterId is null
+                && beforeCachedChapterId is null
+                && !shelfEntry.IsRead;
             var mangaDex = sources.Get("mangadex");
             progress?.Report(new ReaderPreparationProgress("Loading MangaDex chapter list", 8));
             var preferredChapters = await mangaDex.GetChaptersAsync(mangaDexId, preferredLanguage, cancellationToken);
-            if (!allowLanguageFallback
+            if (isInitialTrackedChapterSelection
+                && !allowLanguageFallback
                 && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter)
                 && !HasExactChapter(preferredChapters, shelfEntry.CurrentChapter))
             {
@@ -176,6 +181,16 @@ public sealed class ReaderService(
             if (sourceChapter is null)
             {
                 return null;
+            }
+            if (isInitialTrackedChapterSelection
+                && !allowLanguageFallback
+                && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter)
+                && !HasExactChapter(sourceChapter.Number, shelfEntry.CurrentChapter))
+            {
+                throw new MangaDexClosestChapterConfirmationRequiredException(
+                    shelfEntry.CurrentChapter,
+                    sourceChapter.Number,
+                    NormalizeLanguage(sourceChapter.Language));
             }
 
             progress?.Report(new ReaderPreparationProgress("Loading the MangaDex page list", 20));
@@ -464,7 +479,8 @@ public sealed class ReaderService(
     private static decimal? ParseChapterNumber(string value)
     {
         var normalized = new string((value ?? "")
-            .Where(character => char.IsDigit(character) || character is '.' or ',')
+            .SkipWhile(character => !char.IsDigit(character))
+            .TakeWhile(character => char.IsDigit(character) || character is '.' or ',')
             .ToArray())
             .Replace(',', '.');
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
@@ -533,6 +549,14 @@ public sealed class ReaderService(
     public sealed class MangaDexLanguageFallbackRequiredException(List<string> languages) : Exception
     {
         public List<string> Languages { get; } = languages;
+    }
+
+    public sealed class MangaDexClosestChapterConfirmationRequiredException(
+        string requestedChapter,
+        string matchedChapter,
+        string language) : Exception
+    {
+        public ReaderChapterMatch ChapterMatch { get; } = new(requestedChapter, matchedChapter, language);
     }
 }
 

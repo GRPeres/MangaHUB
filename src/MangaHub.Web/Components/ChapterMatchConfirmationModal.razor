@@ -1,0 +1,25 @@
+@if (Open)
+{
+    <div class="mh-modal-backdrop">
+        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="chapter-match-title">
+            <MudStack Spacing="3">
+                <MudText id="chapter-match-title" Typo="Typo.h2">Confirm chapter match</MudText>
+                <MudText Typo="Typo.body1">Your tracked chapter is <strong>@RequestedChapter</strong>, but MangaDex found <strong>@MatchedChapter</strong> in <strong>@Language</strong>.</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Continuing updates your reading progress to the proposed chapter.</MudText>
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="OnCancel">Keep current chapter</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnConfirm">Use chapter @MatchedChapter</MudButton>
+                </MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public string RequestedChapter { get; set; } = "";
+    [Parameter] public string MatchedChapter { get; set; } = "";
+    [Parameter] public string Language { get; set; } = "";
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+}
