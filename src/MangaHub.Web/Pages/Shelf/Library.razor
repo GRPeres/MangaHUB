@@ -490,19 +490,14 @@
             return 0;
         }
 
-        if (NeedsManualReleaseCheck(entry))
-        {
-            return 1;
-        }
-
         return (entry.ReadingStatus ?? "").ToLowerInvariant() switch
         {
-            "planned" => 2,
-            "reading" => 3,
-            "paused" => 4,
-            "dropped" => 5,
-            "done" => 6,
-            _ => 5
+            "planned" => 1,
+            "reading" => 2,
+            "paused" => 3,
+            "dropped" => 4,
+            "done" => 5,
+            _ => 4
         };
     }
 
