@@ -42,6 +42,7 @@ builder.Services.AddScoped<SessionCookieService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<OpenLibraryService>();
+builder.Services.AddScoped<MangaDexCatalogMatchService>();
 builder.Services.AddScoped<MetadataService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<ShelfService>();

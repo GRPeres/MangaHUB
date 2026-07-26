@@ -3,11 +3,10 @@ using MangaHub.Api.Repositories;
 using MangaHub.Core.Dto;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
-using System.Text.Json;
 
 namespace MangaHub.Api.Services;
 
-public sealed class CatalogService(CatalogRepository catalog, IOpenLibraryClient openLibrary, IMangaDexCatalogLookup mangaDexCatalog)
+public sealed class CatalogService(CatalogRepository catalog, IOpenLibraryClient openLibrary, MangaDexCatalogMatchService mangaDexMatches)
 {
     public Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? query, CancellationToken cancellationToken) =>
         catalog.SearchAsync(userId, query, cancellationToken);
@@ -85,22 +84,7 @@ public sealed class CatalogService(CatalogRepository catalog, IOpenLibraryClient
             return manualUrl;
         }
 
-        try
-        {
-            var match = await mangaDexCatalog.FindByMyAnimeListIdAsync(entry.MyAnimeListId, entry.Title, cancellationToken);
-            return match is null ? "" : $"https://mangadex.org/title/{match.Id}";
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (HttpRequestException)
-        {
-            return "";
-        }
-        catch (JsonException)
-        {
-            return "";
-        }
+        var match = await mangaDexMatches.FindAsync(entry.MyAnimeListId, entry.Title, cancellationToken);
+        return match is null ? "" : $"https://mangadex.org/title/{match.Id}";
     }
 }

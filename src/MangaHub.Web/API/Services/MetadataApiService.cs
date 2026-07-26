@@ -7,4 +7,10 @@ public sealed class MetadataApiService(ApiHttpClient api)
         var url = $"/api/metadata/search?q={Uri.EscapeDataString(query)}&includeOpenLibrary={includeOpenLibrary.ToString().ToLowerInvariant()}";
         return await api.GetAsync<List<MetadataResult>>(url) ?? [];
     }
+
+    public Task<MangaDexCatalogMatch?> FindMangaDexMatchAsync(string myAnimeListId, string title)
+    {
+        var url = $"/api/metadata/mangadex-match?malId={Uri.EscapeDataString(myAnimeListId)}&title={Uri.EscapeDataString(title)}";
+        return api.GetAsync<MangaDexCatalogMatch>(url);
+    }
 }

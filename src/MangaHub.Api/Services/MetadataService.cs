@@ -3,7 +3,10 @@ using MangaHub.Core.Services;
 
 namespace MangaHub.Api.Services;
 
-public sealed class MetadataService(IMyAnimeListClient myAnimeList, IOpenLibraryClient openLibrary)
+public sealed class MetadataService(
+    IMyAnimeListClient myAnimeList,
+    IOpenLibraryClient openLibrary,
+    MangaDexCatalogMatchService mangaDexMatches)
 {
     public async Task<List<MetadataResult>> SearchAsync(string query, bool includeOpenLibrary, CancellationToken cancellationToken)
     {
@@ -51,6 +54,9 @@ public sealed class MetadataService(IMyAnimeListClient myAnimeList, IOpenLibrary
 
         return combined;
     }
+
+    public Task<MangaDexCatalogMatch?> FindMangaDexMatchAsync(string myAnimeListId, string title, CancellationToken cancellationToken) =>
+        mangaDexMatches.FindAsync(myAnimeListId, title, cancellationToken);
 
     private static string NormalizeTitle(string title)
     {

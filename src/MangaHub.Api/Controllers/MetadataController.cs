@@ -10,4 +10,11 @@ public sealed class MetadataController(MetadataService metadata) : ControllerBas
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] bool includeOpenLibrary, CancellationToken cancellationToken) =>
         Ok(await metadata.SearchAsync(q, includeOpenLibrary, cancellationToken));
+
+    [HttpGet("mangadex-match")]
+    public async Task<IActionResult> FindMangaDexMatch([FromQuery] string malId, [FromQuery] string title, CancellationToken cancellationToken)
+    {
+        var match = await metadata.FindMangaDexMatchAsync(malId, title, cancellationToken);
+        return match is null ? NoContent() : Ok(match);
+    }
 }

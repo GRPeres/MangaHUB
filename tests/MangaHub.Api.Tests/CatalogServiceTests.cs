@@ -74,7 +74,10 @@ public sealed class CatalogServiceTests
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         IOpenLibraryClient openLibrary,
         FakeMangaDexSource? mangaDex = null) =>
-        new(new CatalogRepository(db), openLibrary, mangaDex ?? new FakeMangaDexSource());
+        new(
+            new CatalogRepository(db),
+            openLibrary,
+            new MangaDexCatalogMatchService(mangaDex ?? new FakeMangaDexSource()));
 
     private static MangaEntryRequest Request(
         string title = "Berserk",

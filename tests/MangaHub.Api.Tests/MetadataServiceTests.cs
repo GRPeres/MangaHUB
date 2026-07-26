@@ -16,12 +16,29 @@ public sealed class MetadataServiceTests
             new FakeOpenLibraryClient([
                 new OpenLibrarySearchResult("/works/OL1W", "Berserk", "Kentaro Miura", "", 1989, "Comics", ""),
                 new OpenLibrarySearchResult("/works/OL2W", "Berserk Deluxe", "Kentaro Miura", "", 2019, "Comics", "")
-            ]));
+            ]),
+            new MangaDexCatalogMatchService(new FakeMangaDexSource()));
 
         var results = await service.SearchAsync("berserk", includeOpenLibrary: true, CancellationToken.None);
 
         Assert.Equal(["myanimelist", "openlibrary"], results.Select(x => x.Source));
         Assert.Equal(["Berserk", "Berserk Deluxe"], results.Select(x => x.Title));
+    }
+
+    [Fact]
+    public async Task FindMangaDexMatchAsync_ReturnsTheMangaDexMatchForMalMetadata()
+    {
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.CatalogMatches.Add(new MangaDexCatalogMatch("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Berserk"));
+        var service = new MetadataService(
+            new FakeMyAnimeListClient([]),
+            new FakeOpenLibraryClient([]),
+            new MangaDexCatalogMatchService(mangaDex));
+
+        var match = await service.FindMangaDexMatchAsync("2", "Berserk", CancellationToken.None);
+
+        Assert.NotNull(match);
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", match!.Id);
     }
 
     private sealed class FakeMyAnimeListClient(IReadOnlyList<MetadataResult> results) : IMyAnimeListClient
