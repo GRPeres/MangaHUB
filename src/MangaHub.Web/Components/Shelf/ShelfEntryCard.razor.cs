@@ -41,16 +41,22 @@ public partial class ShelfEntryCard
         ? Math.Max(0, (int)Math.Ceiling(Entry.MangaDexLatestChapter.Value - currentChapter))
         : 0;
     private bool HasNewChapters => !StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) && NewChapterCount > 0;
+    private bool IsMangaDexSyncOverdue => HasMangaDexLink
+        && Entry.MangaDexLastSyncedAt is not null
+        && Entry.MangaDexLastSyncedAt < DateTimeOffset.UtcNow.AddHours(-30);
     private string CardClass => HasNewChapters ? "mh-row-card mh-row-card-has-release" : "mh-row-card";
     private string ProgressTileClass => HasNewChapters ? "mh-entry-stat-tile mh-entry-release-tile" : "mh-entry-stat-tile";
     private string ProgressHint => !HasMangaDexLink
         ? "MangaDex sync unavailable"
+        : IsMangaDexSyncOverdue ? "Sync overdue"
         : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
-    private string ProgressScheme => HasNewChapters ? "release" : "secondary";
+    private string ProgressScheme => HasNewChapters ? "release" : IsMangaDexSyncOverdue ? "warm" : "secondary";
     private string MangaDexSyncLabel => !HasMangaDexLink
         ? "Not linked"
         : Entry.MangaDexLastSyncedAt is null
         ? "Not checked yet"
+        : IsMangaDexSyncOverdue
+        ? "Sync overdue"
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
     private string FormatLabel => FirstNonEmpty(Entry.MediaType, GenreLabel, "Unknown");
     private List<(string Label, string Value)> ContextFacts

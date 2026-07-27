@@ -9,9 +9,11 @@ public sealed class MangaHubOptions
     public bool SessionCookieSecure { get; set; }
     public string SessionCookieSameSite { get; set; } = "Lax";
     public string MyAnimeListClientId { get; set; } = "";
-    public int MangaDexSyncIntervalHours { get; set; } = 24;
+    public int MangaDexSyncIntervalHours { get; set; } = 6;
+    public int MangaDexReleasePollMinutes { get; set; } = 30;
     public int MangaDexSyncDelayMilliseconds { get; set; } = 1500;
     public int MangaDexSyncBatchSize { get; set; } = 50;
+    public int MangaDexSyncMaxBatchSize { get; set; } = 1000;
     public int MangaDexMaintenanceHour { get; set; } = 4;
     public string MangaDexMaintenanceTimeZone { get; set; } = "America/Sao_Paulo";
     public int MangaDexPrefetchBatchSize { get; set; } = 6;

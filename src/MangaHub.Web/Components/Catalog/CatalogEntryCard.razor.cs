@@ -24,8 +24,13 @@ public partial class CatalogEntryCard
     private string FormatLabel => FirstNonEmpty(Entry.MediaType, Entry.Category, "Unknown");
     private string PublishingLabel => FirstNonEmpty(Entry.PublishingStatus, "Unknown");
     private bool HasMangaDexLink => !string.IsNullOrWhiteSpace(Entry.MangaDexId);
+    private bool IsMangaDexSyncOverdue => HasMangaDexLink
+        && Entry.MangaDexLastSyncedAt is not null
+        && Entry.MangaDexLastSyncedAt < DateTimeOffset.UtcNow.AddHours(-30);
     private string MangaDexSyncLabel => Entry.MangaDexLastSyncedAt is null
         ? "Not checked yet"
+        : IsMangaDexSyncOverdue
+        ? "Sync overdue"
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
     private string CachedChapterLabel => Entry.CachedChapterCount == 1 ? "1 chapter" : $"{Entry.CachedChapterCount} chapters";
     private string IdentityLabel => IsMissingMyAnimeListId ? "MAL ID missing" : $"MAL #{Entry.MyAnimeListId}";

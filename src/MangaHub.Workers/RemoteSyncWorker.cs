@@ -18,56 +18,65 @@ public sealed class RemoteSyncWorker(
     ILogger<RemoteSyncWorker> logger) : BackgroundService
 {
     private const string MangaDexCacheSource = "mangadex-cache";
-    private static readonly TimeSpan FailedMaintenanceRetryDelay = TimeSpan.FromMinutes(1);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var nextMaintenanceAt = DateTimeOffset.MinValue;
+        var nextReleaseSyncAt = DateTimeOffset.MinValue;
+        var nextPrefetchAt = DateTimeOffset.MinValue;
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (DateTimeOffset.UtcNow >= nextMaintenanceAt)
+            if (DateTimeOffset.UtcNow >= nextReleaseSyncAt)
             {
-                if (!await RunMaintenanceAsync(stoppingToken))
-                {
-                    logger.LogWarning(
-                        "MangaDex maintenance will retry in {RetryDelay} after an infrastructure failure.",
-                        FailedMaintenanceRetryDelay);
-                    await Task.Delay(FailedMaintenanceRetryDelay, stoppingToken);
-                    continue;
-                }
+                await RunReleaseSyncAsync(stoppingToken);
+                nextReleaseSyncAt = DateTimeOffset.UtcNow.Add(GetReleasePollDelay());
+            }
 
-                nextMaintenanceAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
-                logger.LogInformation("Next MangaDex maintenance run is scheduled for {ScheduledAt}.", nextMaintenanceAt);
-                continue;
+            if (DateTimeOffset.UtcNow >= nextPrefetchAt)
+            {
+                await RunPrefetchAsync(stoppingToken);
+                nextPrefetchAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
+                logger.LogInformation("Next MangaDex pre-download maintenance is scheduled for {ScheduledAt}.", nextPrefetchAt);
             }
 
             var idleCheckDelay = TimeSpan.FromMinutes(Math.Clamp(options.Value.MangaDexIdleBackfillCheckMinutes, 5, 720));
-            var delay = new[] { nextMaintenanceAt - DateTimeOffset.UtcNow, idleCheckDelay }.Min();
+            var delay = new[] { nextReleaseSyncAt - DateTimeOffset.UtcNow, nextPrefetchAt - DateTimeOffset.UtcNow, idleCheckDelay }.Min();
             await Task.Delay(delay, stoppingToken);
 
-            if (DateTimeOffset.UtcNow < nextMaintenanceAt)
+            if (DateTimeOffset.UtcNow < nextReleaseSyncAt && DateTimeOffset.UtcNow < nextPrefetchAt)
             {
                 await RunIdleBackfillAsync(stoppingToken);
             }
         }
     }
 
-    private async Task<bool> RunMaintenanceAsync(CancellationToken cancellationToken)
+    private async Task RunReleaseSyncAsync(CancellationToken cancellationToken)
     {
         try
         {
             await SyncMangaDexCatalogAsync(cancellationToken);
-            await PrefetchNewMangaDexChaptersAsync(cancellationToken);
-            return true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return false;
+            throw;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "MangaDex maintenance run failed.");
-            return false;
+            logger.LogError(ex, "MangaDex release sync run failed. Due entries will retry on the next poll.");
+        }
+    }
+
+    private async Task RunPrefetchAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await PrefetchNewMangaDexChaptersAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "MangaDex chapter pre-download maintenance failed.");
         }
     }
 
@@ -81,10 +90,11 @@ public sealed class RemoteSyncWorker(
 
         var syncInterval = TimeSpan.FromHours(Math.Max(1, options.Value.MangaDexSyncIntervalHours));
         var cutoff = DateTimeOffset.UtcNow.Subtract(syncInterval);
-        var batchSize = Math.Clamp(options.Value.MangaDexSyncBatchSize, 1, 100);
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+        var totalLinkedEntries = await db.MangaEntries.CountAsync(entry => entry.MangaDexId != "", cancellationToken);
+        var batchSize = GetReleaseSyncBatchSize(totalLinkedEntries);
 
         var entries = await db.MangaEntries
             .Where(entry => entry.MangaDexId != "" &&
@@ -129,7 +139,6 @@ public sealed class RemoteSyncWorker(
             catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
             {
                 logger.LogWarning(ex, "MangaDex catalog sync failed for {Title} ({MangaDexId}).", entry.Title, entry.MangaDexId);
-                entry.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
             }
 
             await db.SaveChangesAsync(cancellationToken);
@@ -395,6 +404,29 @@ public sealed class RemoteSyncWorker(
         }
 
         return next - localNow;
+    }
+
+    private TimeSpan GetReleasePollDelay() =>
+        TimeSpan.FromMinutes(Math.Clamp(options.Value.MangaDexReleasePollMinutes, 5, 720));
+
+    private int GetReleaseSyncBatchSize(int totalLinkedEntries)
+    {
+        var refreshHours = Math.Clamp(options.Value.MangaDexSyncIntervalHours, 1, 24);
+        var runsPerDay = Math.Max(1, 24 / refreshHours);
+        var requiredBatchSize = (int)Math.Ceiling(totalLinkedEntries / (decimal)runsPerDay);
+        var maximumBatchSize = Math.Clamp(options.Value.MangaDexSyncMaxBatchSize, 1, 1000);
+        var batchSize = Math.Clamp(Math.Max(options.Value.MangaDexSyncBatchSize, requiredBatchSize), 1, maximumBatchSize);
+        if (requiredBatchSize > maximumBatchSize)
+        {
+            logger.LogWarning(
+                "MangaDex has {EntryCount} linked entries, which requires batches of {RequiredBatchSize} to refresh all entries within {RefreshHours} hours. The configured maximum is {MaximumBatchSize}.",
+                totalLinkedEntries,
+                requiredBatchSize,
+                refreshHours,
+                maximumBatchSize);
+        }
+
+        return batchSize;
     }
 
     private TimeZoneInfo GetMaintenanceTimeZone()
