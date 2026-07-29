@@ -94,18 +94,18 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             UPDATE manga_entries
             SET "MangaDexId" = lower(regexp_replace(
                 "MangaDexUrl",
-                '^.*mangadex[.]org/title/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).*$',
+                '^.*mangadex[.]org/title/([0-9a-f]{{8}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{12}}).*$',
                 '\1',
                 'i'))
             WHERE "MangaDexId" = ''
-              AND "MangaDexUrl" ~* 'mangadex[.]org/title/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+              AND "MangaDexUrl" ~* 'mangadex[.]org/title/[0-9a-f]{{8}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{12}}';
 
             UPDATE manga_entries
             SET "FallbackReaderUrl" = "MangaDexUrl"
             WHERE "FallbackReaderUrl" = ''
               AND "MangaDexId" = ''
               AND "MangaDexUrl" <> ''
-              AND "MangaDexUrl" !~* 'mangadex[.]org/title/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+              AND "MangaDexUrl" !~* 'mangadex[.]org/title/[0-9a-f]{{8}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{12}}';
 
             CREATE TABLE IF NOT EXISTS user_manga_entries (
                 "Id" uuid PRIMARY KEY,
