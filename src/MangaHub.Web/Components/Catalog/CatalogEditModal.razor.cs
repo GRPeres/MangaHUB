@@ -29,7 +29,7 @@ public partial class CatalogEditModal
     private string editPublishingStatus = "";
     private int? editChapterCount;
     private int? editVolumeCount;
-    private string editMangaDexUrl = "";
+    private string editMangaDexId = "";
     private string editFallbackReaderUrl = "";
     private string editMangaUpdatesId = "";
     private string editLocalSeriesIdText = "";
@@ -66,7 +66,7 @@ public partial class CatalogEditModal
         editPublishingStatus = Entry.PublishingStatus;
         editChapterCount = Entry.ChapterCount;
         editVolumeCount = Entry.VolumeCount;
-        editMangaDexUrl = Entry.MangaDexUrl;
+        editMangaDexId = Entry.MangaDexId;
         editFallbackReaderUrl = Entry.FallbackReaderUrl;
         editMangaUpdatesId = Entry.MangaUpdatesId;
         editLocalSeriesIdText = Entry.LocalSeriesId?.ToString() ?? "";
@@ -132,7 +132,7 @@ public partial class CatalogEditModal
         {
             await MatchMangaUpdatesAsync();
         }
-        if (string.IsNullOrWhiteSpace(editMangaDexUrl)
+        if (string.IsNullOrWhiteSpace(editMangaDexId)
             && string.Equals(item.Source, "myanimelist", StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(item.MyAnimeListId))
         {
@@ -184,7 +184,7 @@ public partial class CatalogEditModal
             editOpenLibraryKey,
             editFirstPublishYear,
             "",
-            editMangaDexUrl,
+            editMangaDexId,
             localSeriesId,
             "",
             editMetadataSource,
@@ -234,7 +234,7 @@ public partial class CatalogEditModal
             var match = await MetadataApi.FindMangaDexMatchAsync(editMyAnimeListId, editTitle);
             if (match is not null)
             {
-                editMangaDexUrl = $"https://mangadex.org/title/{match.Id}";
+                editMangaDexId = match.Id;
             }
         }
         catch

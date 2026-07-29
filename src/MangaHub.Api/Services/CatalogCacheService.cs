@@ -188,6 +188,5 @@ public sealed class CatalogCacheService(
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
     }
 
-    private static string GetMangaDexId(MangaEntry entry) =>
-        string.IsNullOrWhiteSpace(entry.MangaDexId) ? TextRules.ExtractMangaDexId(entry.MangaDexUrl) : entry.MangaDexId;
+    private static string GetMangaDexId(MangaEntry entry) => entry.MangaDexId;
 }

@@ -28,7 +28,7 @@ public sealed class CatalogServiceTests
 
         var updated = await service.UpdateAsync(Guid.NewGuid(), created.Id, Request(
             title: "New",
-            mangaDexUrl: "https://mangadex.org/title/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/new"), CancellationToken.None);
+            mangaDexId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), CancellationToken.None);
 
         Assert.NotNull(updated);
         Assert.Equal("New", updated.Title);
@@ -49,24 +49,36 @@ public sealed class CatalogServiceTests
             CancellationToken.None);
 
         Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", created.MangaDexId);
-        Assert.Equal("https://mangadex.org/title/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", created.MangaDexUrl);
     }
 
     [Fact]
-    public async Task CreateAsync_ManualMangaDexUrlTakesPrecedenceOverAutomaticLookup()
+    public async Task CreateAsync_ManualMangaDexIdTakesPrecedenceOverAutomaticLookup()
     {
         await using var db = TestDb.Create();
         var mangaDex = new FakeMangaDexSource();
         mangaDex.CatalogMatches.Add(new MangaDexCatalogMatch("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Berserk"));
         var service = CreateService(db, new FakeOpenLibrary(null), mangaDex);
-        const string manualUrl = "https://mangadex.org/title/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/manual";
+        const string manualId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 
         var created = await service.CreateAsync(
             Guid.NewGuid(),
-            Request(metadataSource: "myanimelist", myAnimeListId: "2", mangaDexUrl: manualUrl),
+            Request(metadataSource: "myanimelist", myAnimeListId: "2", mangaDexId: manualId),
             CancellationToken.None);
 
-        Assert.Equal(manualUrl, created.MangaDexUrl);
+        Assert.Equal(manualId, created.MangaDexId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AcceptsALegacyMangaDexUrlInTheIdField()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+
+        var created = await service.CreateAsync(
+            Guid.NewGuid(),
+            Request(mangaDexId: "https://mangadex.org/title/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/berserk"),
+            CancellationToken.None);
+
         Assert.Equal("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", created.MangaDexId);
     }
 
@@ -84,17 +96,16 @@ public sealed class CatalogServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_StoresNonMangaDexLinkAsFallbackReaderUrl()
+    public async Task CreateAsync_StoresTheDedicatedFallbackReaderUrl()
     {
         await using var db = TestDb.Create();
         var service = CreateService(db, new FakeOpenLibrary(null));
 
         var created = await service.CreateAsync(
             Guid.NewGuid(),
-            Request(mangaDexUrl: "https://reader.example.com/berserk"),
+            Request(fallbackReaderUrl: "https://reader.example.com/berserk"),
             CancellationToken.None);
 
-        Assert.Equal("", created.MangaDexUrl);
         Assert.Equal("", created.MangaDexId);
         Assert.Equal("https://reader.example.com/berserk", created.FallbackReaderUrl);
     }
@@ -113,7 +124,8 @@ public sealed class CatalogServiceTests
     private static MangaEntryRequest Request(
         string title = "Berserk",
         string openLibraryKey = "",
-        string mangaDexUrl = "",
+        string mangaDexId = "",
+        string fallbackReaderUrl = "",
         string metadataSource = "manual",
         string myAnimeListId = "") =>
         new(
@@ -125,7 +137,7 @@ public sealed class CatalogServiceTests
             OpenLibraryKey: openLibraryKey,
             FirstPublishYear: null,
             ReadingStatus: "planned",
-            MangaDexUrl: mangaDexUrl,
+            MangaDexId: mangaDexId,
             LocalSeriesId: null,
             Notes: "",
             MetadataSource: metadataSource,
@@ -133,7 +145,8 @@ public sealed class CatalogServiceTests
             MediaType: "",
             PublishingStatus: "",
             ChapterCount: null,
-            VolumeCount: null);
+            VolumeCount: null,
+            FallbackReaderUrl: fallbackReaderUrl);
 
     private sealed class FakeOpenLibrary(OpenLibraryWorkDetails? details) : IOpenLibraryClient
     {

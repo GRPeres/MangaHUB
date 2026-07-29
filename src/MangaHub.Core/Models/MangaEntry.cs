@@ -17,7 +17,6 @@ public sealed class MangaEntry
     public string PublishingStatus { get; set; } = "";
     public int? ChapterCount { get; set; }
     public int? VolumeCount { get; set; }
-    public string MangaDexUrl { get; set; } = "";
     public string FallbackReaderUrl { get; set; } = "";
     public string MangaDexId { get; set; } = "";
     public decimal? MangaDexLatestChapter { get; set; }

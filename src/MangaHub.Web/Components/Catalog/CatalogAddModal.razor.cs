@@ -28,7 +28,7 @@ public partial class CatalogAddModal
     private string publishingStatus = "";
     private int? chapterCount;
     private int? volumeCount;
-    private string mangaDexUrl = "";
+    private string mangaDexId = "";
     private string fallbackReaderUrl = "";
     private string mangaUpdatesId = "";
     private string localSeriesIdText = "";
@@ -106,7 +106,7 @@ public partial class CatalogAddModal
         }
         if (!string.Equals(item.Source, "myanimelist", StringComparison.OrdinalIgnoreCase)
             || string.IsNullOrWhiteSpace(item.MyAnimeListId)
-            || !string.IsNullOrWhiteSpace(mangaDexUrl))
+            || !string.IsNullOrWhiteSpace(mangaDexId))
         {
             metadataSeverity = Severity.Success;
             metadataMessage = $"Filled the form from {item.Title}.";
@@ -126,7 +126,7 @@ public partial class CatalogAddModal
                 return;
             }
 
-            mangaDexUrl = $"https://mangadex.org/title/{match.Id}";
+            mangaDexId = match.Id;
             metadataSeverity = Severity.Success;
             metadataMessage = $"Filled the form from {item.Title} and linked MangaDex: {match.Title}.";
         }
@@ -192,7 +192,7 @@ public partial class CatalogAddModal
             openLibraryKey,
             firstPublishYear,
             "",
-            mangaDexUrl,
+            mangaDexId,
             localSeriesId,
             "",
             metadataSource,
@@ -231,7 +231,7 @@ public partial class CatalogAddModal
         publishingStatus = "";
         chapterCount = null;
         volumeCount = null;
-        mangaDexUrl = "";
+        mangaDexId = "";
         fallbackReaderUrl = "";
         mangaUpdatesId = "";
         localSeriesIdText = "";

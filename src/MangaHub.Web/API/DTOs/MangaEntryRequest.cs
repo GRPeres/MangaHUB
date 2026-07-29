@@ -9,7 +9,7 @@ public sealed record MangaEntryRequest(
     string OpenLibraryKey,
     int? FirstPublishYear,
     string ReadingStatus,
-    string MangaDexUrl,
+    string MangaDexId,
     Guid? LocalSeriesId,
     string Notes,
     string MetadataSource = "",

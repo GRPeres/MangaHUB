@@ -17,7 +17,7 @@ public sealed class ShelfServiceTests
             Title = "Berserk",
             Category = "Dark fantasy",
             Description = "A grim journey.",
-            MangaDexUrl = "https://mangadex.org/title/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/berserk"
+            MangaDexId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
         };
         db.MangaEntries.Add(manga);
         await db.SaveChangesAsync();

@@ -584,8 +584,7 @@ public sealed class ReaderService(
         }
     }
 
-    private static string GetMangaDexId(MangaEntry entry) =>
-        string.IsNullOrWhiteSpace(entry.MangaDexId) ? TextRules.ExtractMangaDexId(entry.MangaDexUrl) : entry.MangaDexId;
+    private static string GetMangaDexId(MangaEntry entry) => entry.MangaDexId;
 
     private static string NormalizeLanguage(string? language) =>
         string.IsNullOrWhiteSpace(language) ? "en" : language.Trim().ToLowerInvariant();

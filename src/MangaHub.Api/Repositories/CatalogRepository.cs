@@ -17,7 +17,7 @@ public sealed class CatalogRepository(MangaHubDbContext db)
         db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.MangaDexId == mangaDexId, cancellationToken);
 
     public Task<MangaEntry?> FindByReaderUrlAsync(string url, CancellationToken cancellationToken) =>
-        db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.MangaDexUrl == url || x.FallbackReaderUrl == url, cancellationToken);
+        db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.FallbackReaderUrl == url, cancellationToken);
 
     public Task<MangaEntry?> FindByTitleAsync(string title, CancellationToken cancellationToken) =>
         db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => EF.Functions.ILike(x.Title, title), cancellationToken);
@@ -54,7 +54,6 @@ public sealed class CatalogRepository(MangaHubDbContext db)
                 x.PublishingStatus,
                 x.ChapterCount,
                 x.VolumeCount,
-                x.MangaDexUrl,
                 x.MangaDexId,
                 x.MangaDexLatestChapter,
                 x.MangaDexLastSyncedAt,

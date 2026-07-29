@@ -173,16 +173,14 @@ public sealed class ShelfService(
                         Category = TextRules.FirstValue(values, "tipo", "type", "category", "genre").Trim(),
                         Description = TextRules.FirstValue(values, "summary", "description").Trim(),
                         CoverUrl = coverUrl.Trim(),
-                        MangaDexUrl = mangaDexId.Length > 0 ? link.Trim() : "",
                         MangaDexId = mangaDexId,
                         FallbackReaderUrl = mangaDexId.Length > 0 ? "" : link.Trim()
                     };
                     await catalog.AddAsync(manga, cancellationToken);
                     createdThisRow = true;
                 }
-                else if (!string.IsNullOrWhiteSpace(link) && mangaDexId.Length > 0 && string.IsNullOrWhiteSpace(manga.MangaDexUrl))
+                else if (!string.IsNullOrWhiteSpace(link) && mangaDexId.Length > 0 && string.IsNullOrWhiteSpace(manga.MangaDexId))
                 {
-                    manga.MangaDexUrl = link.Trim();
                     manga.MangaDexId = mangaDexId;
                     manga.UpdatedAt = DateTimeOffset.UtcNow;
                 }

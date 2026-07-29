@@ -19,7 +19,7 @@ public sealed class ReaderServiceTests
         var entry = new MangaEntry
         {
             Title = "Berserk",
-            MangaDexUrl = "https://mangadex.org/title/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/berserk",
+            MangaDexId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
             LocalSeriesId = series.Id
         };
         db.Series.Add(series);

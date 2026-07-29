@@ -15,7 +15,6 @@ public sealed record CatalogMangaResponse(
     string PublishingStatus,
     int? ChapterCount,
     int? VolumeCount,
-    string MangaDexUrl,
     string MangaDexId,
     decimal? MangaDexLatestChapter,
     DateTimeOffset? MangaDexLastSyncedAt,

@@ -72,6 +72,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "VolumeCount" integer NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "FallbackReaderUrl" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexUrl" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexId" character varying(80) NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastSyncedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedAt" timestamp with time zone NULL;
@@ -90,12 +92,20 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ALTER COLUMN "Notes" DROP NOT NULL;
 
             UPDATE manga_entries
-            SET "FallbackReaderUrl" = "MangaDexUrl",
-                "MangaDexUrl" = ''
+            SET "MangaDexId" = lower(regexp_replace(
+                "MangaDexUrl",
+                '^.*mangadex[.]org/title/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).*$',
+                '\1',
+                'i'))
+            WHERE "MangaDexId" = ''
+              AND "MangaDexUrl" ~* 'mangadex[.]org/title/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+
+            UPDATE manga_entries
+            SET "FallbackReaderUrl" = "MangaDexUrl"
             WHERE "FallbackReaderUrl" = ''
               AND "MangaDexId" = ''
               AND "MangaDexUrl" <> ''
-              AND "MangaDexUrl" !~* 'mangadex\\.org/title/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+              AND "MangaDexUrl" !~* 'mangadex[.]org/title/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
             CREATE TABLE IF NOT EXISTS user_manga_entries (
                 "Id" uuid PRIMARY KEY,

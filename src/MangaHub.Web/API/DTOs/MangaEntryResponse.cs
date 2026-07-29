@@ -16,7 +16,6 @@ public sealed record MangaEntryResponse(
     int? ChapterCount,
     int? VolumeCount,
     string ReadingStatus,
-    string MangaDexUrl,
     string MangaDexId,
     decimal? MangaDexLatestChapter,
     DateTimeOffset? MangaDexLastSyncedAt,
