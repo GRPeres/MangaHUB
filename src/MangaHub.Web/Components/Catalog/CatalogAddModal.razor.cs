@@ -12,8 +12,9 @@ public partial class CatalogAddModal
 
     [Parameter] public bool Open { get; set; }
     [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public CatalogMangaResponse? Entry { get; set; }
     [Parameter] public List<SeriesResponse> LocalSeries { get; set; } = [];
-    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback<CatalogMangaResponse> OnSaved { get; set; }
 
     private string title = "";
     private string authors = "";
@@ -41,6 +42,29 @@ public partial class CatalogAddModal
     private bool isSaving;
     private int metadataSearchVersion;
     private List<MetadataResult> metadataResults = [];
+    private Guid? loadedEntryId;
+    private bool wasOpen;
+    private bool IsEditMode => Entry is not null;
+
+    protected override void OnParametersSet()
+    {
+        if (!Open)
+        {
+            wasOpen = false;
+            return;
+        }
+
+        if (Entry is { } entry && (!wasOpen || loadedEntryId != entry.Id))
+        {
+            LoadEntry(entry);
+        }
+        else if (Entry is null && (!wasOpen || loadedEntryId is not null))
+        {
+            Reset();
+        }
+
+        wasOpen = true;
+    }
 
     private async Task SearchMetadata(string query)
     {
@@ -174,17 +198,19 @@ public partial class CatalogAddModal
         message = "Adding catalog manga...";
         try
         {
-            var created = await CatalogApi.CreateCatalogMangaAsync(BuildRequest());
-            if (created is null)
+            var saved = IsEditMode
+                ? await CatalogApi.UpdateCatalogMangaAsync(Entry!.Id, BuildRequest())
+                : await CatalogApi.CreateCatalogMangaAsync(BuildRequest());
+            if (saved is null)
             {
                 messageSeverity = Severity.Error;
-                message = "Catalog registration failed. Admin permissions are required.";
+                message = IsEditMode ? "Could not save catalog metadata." : "Catalog registration failed. Admin permissions are required.";
                 return;
             }
 
             messageSeverity = Severity.Success;
-            message = $"Added {created.Title}.";
-            await OnSaved.InvokeAsync();
+            message = IsEditMode ? $"Saved {saved.Title}." : $"Added {saved.Title}.";
+            await OnSaved.InvokeAsync(saved);
             Reset();
             await OpenChanged.InvokeAsync(false);
         }
@@ -255,6 +281,33 @@ public partial class CatalogAddModal
         isMatchingMangaDex = false;
         isSaving = false;
         metadataResults = [];
+        loadedEntryId = null;
+    }
+
+    private void LoadEntry(CatalogMangaResponse entry)
+    {
+        loadedEntryId = entry.Id;
+        title = entry.Title;
+        authors = entry.Authors;
+        category = entry.Category;
+        description = entry.Description;
+        coverUrl = entry.CoverUrl;
+        metadataSource = entry.MetadataSource;
+        myAnimeListId = entry.MyAnimeListId;
+        openLibraryKey = entry.OpenLibraryKey;
+        firstPublishYear = entry.FirstPublishYear;
+        mediaType = entry.MediaType;
+        publishingStatus = entry.PublishingStatus;
+        chapterCount = entry.ChapterCount;
+        volumeCount = entry.VolumeCount;
+        mangaDexId = entry.MangaDexId;
+        fallbackReaderUrl = entry.FallbackReaderUrl;
+        mangaUpdatesId = entry.MangaUpdatesId;
+        localSeriesIdText = entry.LocalSeriesId?.ToString() ?? "";
+        message = "";
+        metadataMessage = "";
+        metadataResults = [];
+        metadataSearchVersion++;
     }
 
     private async Task MatchMangaUpdatesAsync()

@@ -60,9 +60,8 @@
     }
 </MudStack>
 
-<CatalogAddModal Open="@isAddCatalogOpen" OpenChanged="OnAddCatalogOpenChanged" LocalSeries="@localSeries" OnSaved="LoadCatalog" />
+<CatalogAddModal Open="@isCatalogModalOpen" OpenChanged="OnCatalogModalOpenChanged" Entry="@editingEntry" LocalSeries="@localSeries" OnSaved="OnCatalogSaved" />
 <CatalogImportModal Open="@isImportCatalogOpen" OpenChanged="OnImportCatalogOpenChanged" OnImported="LoadCatalog" />
-<CatalogEditModal Entry="@editingEntry" LocalSeries="@localSeries" OnSaved="OnCatalogSaved" OnClosed="CloseEdit" />
 <CatalogCacheModal Entry="@cacheEntry" OnClosed="CloseCache" OnChanged="LoadCatalog" />
 
 @if (filtersOpen)
@@ -158,7 +157,7 @@
     private string linkFilter = "";
     private string shelfFilter = "";
     private Severity messageSeverity = Severity.Info;
-    private bool isAddCatalogOpen;
+    private bool isCatalogModalOpen;
     private bool isImportCatalogOpen;
     private bool filtersOpen;
     private CatalogMangaResponse? editingEntry;
@@ -185,7 +184,7 @@
 
         catalog = await CatalogApi.GetCatalogAsync(query);
         message = "";
-        CloseEdit();
+        CloseCatalogModal();
     }
 
     private async Task SearchCatalog()
@@ -195,11 +194,22 @@
         message = FilteredCatalog.Count == 0 ? "No catalog entries matched your search." : $"Found {FilteredCatalog.Count} catalog entries.";
     }
 
-    private void OpenAddCatalog() => isAddCatalogOpen = true;
+    private void OpenAddCatalog()
+    {
+        editingEntry = null;
+        isCatalogModalOpen = true;
+    }
     private void OpenImportCatalog() => isImportCatalogOpen = true;
     private void OpenFilters() => filtersOpen = true;
     private void CloseFilters() => filtersOpen = false;
-    private void OnAddCatalogOpenChanged(bool open) => isAddCatalogOpen = open;
+    private void OnCatalogModalOpenChanged(bool open)
+    {
+        isCatalogModalOpen = open;
+        if (!open)
+        {
+            editingEntry = null;
+        }
+    }
     private void OnImportCatalogOpenChanged(bool open) => isImportCatalogOpen = open;
 
     private void ToggleSourceFilter(string clickedSource)
@@ -229,10 +239,12 @@
     private void EditCatalog(CatalogMangaResponse entry)
     {
         editingEntry = entry;
+        isCatalogModalOpen = true;
     }
 
-    private void CloseEdit()
+    private void CloseCatalogModal()
     {
+        isCatalogModalOpen = false;
         editingEntry = null;
     }
 

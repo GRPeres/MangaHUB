@@ -5,3 +5,18 @@
     border-radius: 4px;
     object-fit: cover;
 }
+
+.mh-metadata-title-anchor {
+    position: relative;
+}
+
+.mh-metadata-suggestions-popover {
+    width: min(32rem, calc(100vw - 2rem));
+    max-width: 100%;
+    z-index: 1400;
+}
+
+.mh-metadata-suggestions {
+    max-height: min(24rem, 55vh);
+    overflow-y: auto;
+}
