@@ -82,7 +82,7 @@ public partial class CatalogEntryCard
         _ => "mh-source-gap-critical"
     };
     private string IdentityLabel => IsMissingMyAnimeListId ? "MAL ID missing" : $"MAL #{Entry.MyAnimeListId}";
-    private bool HasExternalReaderLink => !HasMangaDexLink && IsHttpUrl(Entry.MangaDexUrl);
+    private bool HasExternalReaderLink => !HasMangaDexLink && IsHttpUrl(Entry.FallbackReaderUrl);
     private string ReaderLinksLabel => (HasMangaDexLink, HasExternalReaderLink, Entry.LocalSeriesId) switch
     {
         (true, _, not null) => "MangaDex + local",

@@ -42,7 +42,7 @@ public sealed class ReaderService(
             entry.Id,
             entry.Title,
             !string.IsNullOrWhiteSpace(mangaDexId),
-            entry.MangaDexUrl,
+            entry.FallbackReaderUrl,
             localFirstChapter is not null,
             localFirstChapter is null
                 ? ""
@@ -630,6 +630,6 @@ public sealed record ReadOptions(
     Guid Id,
     string Title,
     bool HasMangaDex,
-    string MangaDexUrl,
+    string FallbackReaderUrl,
     bool HasLocal,
     string LocalReaderUrl);

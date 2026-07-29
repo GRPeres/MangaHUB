@@ -108,7 +108,8 @@
             5,
             "Supernatural",
             "Occult chaos, fast jokes, and surprisingly earnest character beats.",
-            "Testing notes should hide on mobile."),
+            "Testing notes should hide on mobile.",
+            ""),
         new(
             Guid.Parse("10000000-0000-0000-0000-000000000002"),
             "Berserk",
@@ -139,7 +140,8 @@
             5,
             "Seinen",
             "A dense long-running catalog entry with enough metadata to stress card layout.",
-            "")
+            "",
+            "https://reader.example.com/berserk")
     ];
 
     private static readonly List<CatalogMangaResponse> CatalogEntries =
@@ -170,7 +172,8 @@
             DateTimeOffset.UtcNow.AddHours(-1),
             null,
             12,
-            false),
+            false,
+            ""),
         new(
             Guid.Parse("20000000-0000-0000-0000-000000000002"),
             "One Piece",
@@ -197,7 +200,8 @@
             null,
             Guid.Parse("30000000-0000-0000-0000-000000000001"),
             0,
-            true)
+            true,
+            "https://reader.example.com/one-piece")
     ];
 
     private Task SetStatusFilter(string status)

@@ -18,4 +18,5 @@ public sealed record MangaEntryRequest(
     string PublishingStatus = "",
     int? ChapterCount = null,
     int? VolumeCount = null,
-    string MangaUpdatesId = "");
+    string MangaUpdatesId = "",
+    string FallbackReaderUrl = "");

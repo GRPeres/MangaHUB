@@ -29,6 +29,7 @@ public partial class CatalogAddModal
     private int? chapterCount;
     private int? volumeCount;
     private string mangaDexUrl = "";
+    private string fallbackReaderUrl = "";
     private string mangaUpdatesId = "";
     private string localSeriesIdText = "";
     private string message = "";
@@ -200,7 +201,8 @@ public partial class CatalogAddModal
             publishingStatus,
             chapterCount,
             volumeCount,
-            mangaUpdatesId);
+            mangaUpdatesId,
+            fallbackReaderUrl);
     }
 
     private async Task Close()
@@ -230,6 +232,7 @@ public partial class CatalogAddModal
         chapterCount = null;
         volumeCount = null;
         mangaDexUrl = "";
+        fallbackReaderUrl = "";
         mangaUpdatesId = "";
         localSeriesIdText = "";
         message = "";

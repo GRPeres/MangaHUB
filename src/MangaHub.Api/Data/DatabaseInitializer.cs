@@ -43,6 +43,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "ChapterCount" integer NULL,
                 "VolumeCount" integer NULL,
                 "MangaDexUrl" text NOT NULL,
+                "FallbackReaderUrl" text NOT NULL DEFAULT '',
                 "MangaDexId" character varying(80) NOT NULL,
                 "MangaDexLatestChapter" numeric(10,3) NULL,
                 "MangaDexLastSyncedAt" timestamp with time zone NULL,
@@ -70,6 +71,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ChapterCount" integer NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "VolumeCount" integer NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapter" numeric(10,3) NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "FallbackReaderUrl" text NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastSyncedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedAt" timestamp with time zone NULL;
@@ -86,6 +88,14 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ALTER COLUMN "ReadingStatus" DROP NOT NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "Notes" text NULL;
             ALTER TABLE manga_entries ALTER COLUMN "Notes" DROP NOT NULL;
+
+            UPDATE manga_entries
+            SET "FallbackReaderUrl" = "MangaDexUrl",
+                "MangaDexUrl" = ''
+            WHERE "FallbackReaderUrl" = ''
+              AND "MangaDexId" = ''
+              AND "MangaDexUrl" <> ''
+              AND "MangaDexUrl" !~* 'mangadex\\.org/title/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
             CREATE TABLE IF NOT EXISTS user_manga_entries (
                 "Id" uuid PRIMARY KEY,

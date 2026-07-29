@@ -83,6 +83,22 @@ public sealed class CatalogServiceTests
         Assert.Equal("123", created.MangaUpdatesId);
     }
 
+    [Fact]
+    public async Task CreateAsync_StoresNonMangaDexLinkAsFallbackReaderUrl()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+
+        var created = await service.CreateAsync(
+            Guid.NewGuid(),
+            Request(mangaDexUrl: "https://reader.example.com/berserk"),
+            CancellationToken.None);
+
+        Assert.Equal("", created.MangaDexUrl);
+        Assert.Equal("", created.MangaDexId);
+        Assert.Equal("https://reader.example.com/berserk", created.FallbackReaderUrl);
+    }
+
     private static CatalogService CreateService(
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         IOpenLibraryClient openLibrary,

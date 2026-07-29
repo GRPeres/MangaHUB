@@ -310,8 +310,8 @@
     {
         "mangadex" => !string.IsNullOrWhiteSpace(entry.MangaDexId),
         "local" => entry.LocalSeriesId is not null,
-        "external" => entry.LocalSeriesId is null && string.IsNullOrWhiteSpace(entry.MangaDexId) && IsHttpUrl(entry.MangaDexUrl),
-        "missing" => entry.LocalSeriesId is null && string.IsNullOrWhiteSpace(entry.MangaDexId) && !IsHttpUrl(entry.MangaDexUrl),
+        "external" => entry.LocalSeriesId is null && string.IsNullOrWhiteSpace(entry.MangaDexId) && IsHttpUrl(entry.FallbackReaderUrl),
+        "missing" => entry.LocalSeriesId is null && string.IsNullOrWhiteSpace(entry.MangaDexId) && !IsHttpUrl(entry.FallbackReaderUrl),
         _ => true
     };
 

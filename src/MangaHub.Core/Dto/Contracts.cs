@@ -43,7 +43,8 @@ public sealed record MangaEntryRequest(
     string PublishingStatus = "",
     int? ChapterCount = null,
     int? VolumeCount = null,
-    string MangaUpdatesId = "");
+    string MangaUpdatesId = "",
+    string FallbackReaderUrl = "");
 public sealed record MangaEntryResponse(
     Guid Id,
     string Title,
@@ -74,7 +75,8 @@ public sealed record MangaEntryResponse(
     int? Score,
     string Category,
     string Summary,
-    string Notes);
+    string Notes,
+    string FallbackReaderUrl);
 public sealed record CatalogMangaResponse(
     Guid Id,
     string Title,
@@ -101,7 +103,8 @@ public sealed record CatalogMangaResponse(
     DateTimeOffset? MangaUpdatesLastSyncedAt,
     Guid? LocalSeriesId,
     int CachedChapterCount,
-    bool IsInMyShelf);
+    bool IsInMyShelf,
+    string FallbackReaderUrl);
 public sealed record AddToShelfRequest(
     Guid MangaEntryId,
     string ReadingStatus,

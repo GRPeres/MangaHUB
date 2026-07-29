@@ -20,7 +20,7 @@ public sealed class CatalogService(
         var details = string.IsNullOrWhiteSpace(entry.OpenLibraryKey)
             ? null
             : await openLibrary.GetWorkAsync(entry.OpenLibraryKey.Trim(), cancellationToken);
-        var mangaDexUrl = await ResolveMangaDexUrlAsync(entry, cancellationToken);
+        var readerLinks = await ResolveReaderLinksAsync(entry, cancellationToken);
         var mangaUpdatesId = await ResolveMangaUpdatesIdAsync(entry.MangaUpdatesId, entry.Title, entry.MediaType, entry.FirstPublishYear, cancellationToken);
 
         var manga = new MangaEntry
@@ -39,8 +39,9 @@ public sealed class CatalogService(
             PublishingStatus = entry.PublishingStatus.Trim(),
             ChapterCount = entry.ChapterCount,
             VolumeCount = entry.VolumeCount,
-            MangaDexUrl = mangaDexUrl,
-            MangaDexId = TextRules.ExtractMangaDexId(mangaDexUrl),
+            MangaDexUrl = readerLinks.MangaDexUrl,
+            MangaDexId = TextRules.ExtractMangaDexId(readerLinks.MangaDexUrl),
+            FallbackReaderUrl = readerLinks.FallbackReaderUrl,
             MangaUpdatesId = mangaUpdatesId,
             MangaUpdatesLastMatchAttemptAt = DateTimeOffset.UtcNow,
             LocalSeriesId = entry.LocalSeriesId
@@ -71,8 +72,10 @@ public sealed class CatalogService(
         manga.PublishingStatus = entry.PublishingStatus.Trim();
         manga.ChapterCount = entry.ChapterCount;
         manga.VolumeCount = entry.VolumeCount;
-        manga.MangaDexUrl = entry.MangaDexUrl.Trim();
-        manga.MangaDexId = TextRules.ExtractMangaDexId(entry.MangaDexUrl);
+        var readerLinks = await ResolveReaderLinksAsync(entry, cancellationToken);
+        manga.MangaDexUrl = readerLinks.MangaDexUrl;
+        manga.MangaDexId = TextRules.ExtractMangaDexId(readerLinks.MangaDexUrl);
+        manga.FallbackReaderUrl = readerLinks.FallbackReaderUrl;
         manga.MangaUpdatesId = await ResolveMangaUpdatesIdAsync(
             entry.MangaUpdatesId,
             manga.Title,
@@ -88,18 +91,23 @@ public sealed class CatalogService(
         return ApiMapping.ToCatalogMangaResponse(manga, isInShelf);
     }
 
-    private async Task<string> ResolveMangaDexUrlAsync(MangaEntryRequest entry, CancellationToken cancellationToken)
+    private async Task<ReaderLinks> ResolveReaderLinksAsync(MangaEntryRequest entry, CancellationToken cancellationToken)
     {
-        var manualUrl = entry.MangaDexUrl.Trim();
-        if (!string.IsNullOrWhiteSpace(manualUrl)
+        var submittedUrl = entry.MangaDexUrl.Trim();
+        var mangaDexUrl = TextRules.ExtractMangaDexId(submittedUrl).Length > 0 ? submittedUrl : "";
+        var fallbackReaderUrl = TextRules.FirstNonEmpty(
+            entry.FallbackReaderUrl.Trim(),
+            string.IsNullOrWhiteSpace(mangaDexUrl) ? submittedUrl : "");
+        if (!string.IsNullOrWhiteSpace(mangaDexUrl)
             || !string.Equals(entry.MetadataSource, "myanimelist", StringComparison.OrdinalIgnoreCase)
             || string.IsNullOrWhiteSpace(entry.MyAnimeListId))
         {
-            return manualUrl;
+            return new ReaderLinks(mangaDexUrl, fallbackReaderUrl);
         }
 
         var match = await mangaDexMatches.FindAsync(entry.MyAnimeListId, entry.Title, cancellationToken);
-        return match is null ? "" : $"https://mangadex.org/title/{match.Id}";
+        mangaDexUrl = match is null ? "" : $"https://mangadex.org/title/{match.Id}";
+        return new ReaderLinks(mangaDexUrl, fallbackReaderUrl);
     }
 
     private async Task<string> ResolveMangaUpdatesIdAsync(
@@ -117,4 +125,6 @@ public sealed class CatalogService(
         var match = await mangaUpdatesMatches.FindAsync(title, mediaType, firstPublishYear, cancellationToken);
         return match?.Id ?? "";
     }
+
+    private sealed record ReaderLinks(string MangaDexUrl, string FallbackReaderUrl);
 }

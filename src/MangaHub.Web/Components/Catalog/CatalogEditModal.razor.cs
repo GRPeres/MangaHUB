@@ -30,6 +30,7 @@ public partial class CatalogEditModal
     private int? editChapterCount;
     private int? editVolumeCount;
     private string editMangaDexUrl = "";
+    private string editFallbackReaderUrl = "";
     private string editMangaUpdatesId = "";
     private string editLocalSeriesIdText = "";
     private string message = "";
@@ -39,6 +40,7 @@ public partial class CatalogEditModal
     private string metadataMessage = "";
     private Severity metadataSeverity = Severity.Info;
     private bool isSearchingMetadata;
+    private bool isMatchingMangaDex;
     private bool isSaving;
     private bool includeOpenLibrary;
     private List<MetadataResult> metadataResults = [];
@@ -65,6 +67,7 @@ public partial class CatalogEditModal
         editChapterCount = Entry.ChapterCount;
         editVolumeCount = Entry.VolumeCount;
         editMangaDexUrl = Entry.MangaDexUrl;
+        editFallbackReaderUrl = Entry.FallbackReaderUrl;
         editMangaUpdatesId = Entry.MangaUpdatesId;
         editLocalSeriesIdText = Entry.LocalSeriesId?.ToString() ?? "";
         metadataQuery = Entry.Title;
@@ -129,6 +132,12 @@ public partial class CatalogEditModal
         {
             await MatchMangaUpdatesAsync();
         }
+        if (string.IsNullOrWhiteSpace(editMangaDexUrl)
+            && string.Equals(item.Source, "myanimelist", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(item.MyAnimeListId))
+        {
+            await MatchMangaDexAsync();
+        }
         metadataSeverity = Severity.Success;
         metadataMessage = $"Filled the form from {item.Title}.";
     }
@@ -184,7 +193,8 @@ public partial class CatalogEditModal
             editPublishingStatus,
             editChapterCount,
             editVolumeCount,
-            editMangaUpdatesId);
+            editMangaUpdatesId,
+            editFallbackReaderUrl);
     }
 
     private async Task Close()
@@ -213,6 +223,27 @@ public partial class CatalogEditModal
         catch
         {
             // Saving retries the same automatic lookup on the API.
+        }
+    }
+
+    private async Task MatchMangaDexAsync()
+    {
+        isMatchingMangaDex = true;
+        try
+        {
+            var match = await MetadataApi.FindMangaDexMatchAsync(editMyAnimeListId, editTitle);
+            if (match is not null)
+            {
+                editMangaDexUrl = $"https://mangadex.org/title/{match.Id}";
+            }
+        }
+        catch
+        {
+            // The API retries the lookup when catalog metadata is saved.
+        }
+        finally
+        {
+            isMatchingMangaDex = false;
         }
     }
 }

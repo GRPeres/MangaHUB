@@ -149,7 +149,7 @@ public sealed class ShelfService(
 
                 if (manga is null && !string.IsNullOrWhiteSpace(link))
                 {
-                    manga = await catalog.FindByMangaDexUrlAsync(link, cancellationToken);
+                    manga = await catalog.FindByReaderUrlAsync(link, cancellationToken);
                 }
 
                 if (manga is null && !string.IsNullOrWhiteSpace(title))
@@ -173,16 +173,22 @@ public sealed class ShelfService(
                         Category = TextRules.FirstValue(values, "tipo", "type", "category", "genre").Trim(),
                         Description = TextRules.FirstValue(values, "summary", "description").Trim(),
                         CoverUrl = coverUrl.Trim(),
-                        MangaDexUrl = link.Trim(),
-                        MangaDexId = mangaDexId
+                        MangaDexUrl = mangaDexId.Length > 0 ? link.Trim() : "",
+                        MangaDexId = mangaDexId,
+                        FallbackReaderUrl = mangaDexId.Length > 0 ? "" : link.Trim()
                     };
                     await catalog.AddAsync(manga, cancellationToken);
                     createdThisRow = true;
                 }
-                else if (!string.IsNullOrWhiteSpace(link) && string.IsNullOrWhiteSpace(manga.MangaDexUrl))
+                else if (!string.IsNullOrWhiteSpace(link) && mangaDexId.Length > 0 && string.IsNullOrWhiteSpace(manga.MangaDexUrl))
                 {
                     manga.MangaDexUrl = link.Trim();
                     manga.MangaDexId = mangaDexId;
+                    manga.UpdatedAt = DateTimeOffset.UtcNow;
+                }
+                else if (!string.IsNullOrWhiteSpace(link) && mangaDexId.Length == 0 && string.IsNullOrWhiteSpace(manga.FallbackReaderUrl))
+                {
+                    manga.FallbackReaderUrl = link.Trim();
                     manga.UpdatedAt = DateTimeOffset.UtcNow;
                 }
 

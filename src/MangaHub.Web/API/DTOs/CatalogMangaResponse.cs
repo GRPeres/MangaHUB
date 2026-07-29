@@ -26,4 +26,5 @@ public sealed record CatalogMangaResponse(
     DateTimeOffset? MangaUpdatesLastSyncedAt,
     Guid? LocalSeriesId,
     int CachedChapterCount,
-    bool IsInMyShelf);
+    bool IsInMyShelf,
+    string FallbackReaderUrl);

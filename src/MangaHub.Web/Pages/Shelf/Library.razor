@@ -562,8 +562,8 @@
     {
         "local" => entry.LocalSeriesId is not null,
         "mangadex" => HasMangaDexLink(entry),
-        "external" => entry.LocalSeriesId is null && !HasMangaDexLink(entry) && IsHttpUrl(entry.MangaDexUrl),
-        "missing" => entry.LocalSeriesId is null && !HasMangaDexLink(entry) && !IsHttpUrl(entry.MangaDexUrl),
+        "external" => entry.LocalSeriesId is null && !HasMangaDexLink(entry) && IsHttpUrl(entry.FallbackReaderUrl),
+        "missing" => entry.LocalSeriesId is null && !HasMangaDexLink(entry) && !IsHttpUrl(entry.FallbackReaderUrl),
         _ => true
     };
 

@@ -51,7 +51,8 @@ public sealed class ShelfRepository(MangaHubDbContext db)
                 x.Score,
                 x.Category,
                 x.Summary,
-                x.Notes))
+                x.Notes,
+                x.MangaEntry.FallbackReaderUrl))
             .ToListAsync(cancellationToken);
     }
 

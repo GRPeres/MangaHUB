@@ -30,4 +30,5 @@ public sealed record MangaEntryResponse(
     int? Score,
     string Category,
     string Summary,
-    string Notes);
+    string Notes,
+    string FallbackReaderUrl);

@@ -55,7 +55,10 @@
                         <MudTextField T="string" @bind-Value="editCoverUrl" Label="Cover image URL" Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudTextField T="string" @bind-Value="editMangaDexUrl" Label="Reader URL" Variant="Variant.Outlined" />
+                        <MudTextField T="string" @bind-Value="editMangaDexUrl" Label="MangaDex URL" Variant="Variant.Outlined" Disabled="@isMatchingMangaDex" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="editFallbackReaderUrl" Label="Fallback reader URL" Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="12" md="6">
                         <MudTextField T="string" @bind-Value="editMangaUpdatesId" Label="MangaUpdates ID" Variant="Variant.Outlined" />

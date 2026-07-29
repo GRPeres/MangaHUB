@@ -42,7 +42,8 @@ public static class ApiMapping
             shelf.Score,
             shelf.Category,
             shelf.Summary,
-            shelf.Notes);
+            shelf.Notes,
+            entry.FallbackReaderUrl);
 
     public static CatalogMangaResponse ToCatalogMangaResponse(MangaEntry entry, bool isInMyShelf) =>
         new(
@@ -71,5 +72,6 @@ public static class ApiMapping
             entry.MangaUpdatesLastSyncedAt,
             entry.LocalSeriesId,
             0,
-            isInMyShelf);
+            isInMyShelf,
+            entry.FallbackReaderUrl);
 }

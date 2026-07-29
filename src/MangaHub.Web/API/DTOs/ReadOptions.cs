@@ -4,6 +4,6 @@ public sealed record ReadOptions(
     Guid Id,
     string Title,
     bool HasMangaDex,
-    string MangaDexUrl,
+    string FallbackReaderUrl,
     bool HasLocal,
     string LocalReaderUrl);
