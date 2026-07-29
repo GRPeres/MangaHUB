@@ -84,6 +84,23 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaUpdatesCompleted" boolean NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaUpdatesLastSyncedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaUpdatesLastMatchAttemptAt" timestamp with time zone NULL;
+
+            CREATE TABLE IF NOT EXISTS app_migrations (
+                "Name" text PRIMARY KEY,
+                "AppliedAt" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            WITH first_apply AS (
+                INSERT INTO app_migrations ("Name")
+                VALUES ('mangaupdates-numeric-id-repair-v1')
+                ON CONFLICT ("Name") DO NOTHING
+                RETURNING "Name"
+            )
+            UPDATE manga_entries
+            SET "MangaUpdatesLastMatchAttemptAt" = NULL
+            WHERE "MangaUpdatesId" = ''
+              AND EXISTS (SELECT 1 FROM first_apply);
+
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "UserId" uuid NULL;
             ALTER TABLE manga_entries ALTER COLUMN "UserId" DROP NOT NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReadingStatus" character varying(40) NULL;

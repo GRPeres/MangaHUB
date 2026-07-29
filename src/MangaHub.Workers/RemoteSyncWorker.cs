@@ -114,41 +114,57 @@ public sealed class RemoteSyncWorker(
             var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
             var matcher = scope.ServiceProvider.GetRequiredService<MangaUpdatesCatalogMatchService>();
             var retryCutoff = DateTimeOffset.UtcNow.AddHours(-Math.Clamp(options.Value.MangaUpdatesMatchRetryHours, 6, 24 * 30));
-            var entries = await db.MangaEntries
-                .Where(entry => entry.MangaUpdatesId == "" &&
-                    (entry.MangaUpdatesLastMatchAttemptAt == null || entry.MangaUpdatesLastMatchAttemptAt < retryCutoff))
-                .OrderBy(entry => entry.MangaUpdatesLastMatchAttemptAt ?? DateTimeOffset.MinValue)
-                .ThenBy(entry => entry.Title)
-                .Take(Math.Clamp(options.Value.MangaUpdatesMatchBatchSize, 1, 50))
-                .ToListAsync(cancellationToken);
+            var batchSize = Math.Clamp(options.Value.MangaUpdatesMatchBatchSize, 1, 50);
             var delay = TimeSpan.FromMilliseconds(Math.Max(500, options.Value.MangaUpdatesDelayMilliseconds));
-            var matched = 0;
+            var checkedCount = 0;
+            var matchedCount = 0;
 
-            foreach (var entry in entries)
+            while (true)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                try
+                var entries = await db.MangaEntries
+                    .Where(entry => entry.MangaUpdatesId == "" &&
+                        (entry.MangaUpdatesLastMatchAttemptAt == null || entry.MangaUpdatesLastMatchAttemptAt < retryCutoff))
+                    .OrderBy(entry => entry.MangaUpdatesLastMatchAttemptAt ?? DateTimeOffset.MinValue)
+                    .ThenBy(entry => entry.Title)
+                    .Take(batchSize)
+                    .ToListAsync(cancellationToken);
+                if (entries.Count == 0)
                 {
-                    var match = await matcher.FindAsync(entry.Title, entry.MediaType, entry.FirstPublishYear, cancellationToken);
-                    entry.MangaUpdatesLastMatchAttemptAt = DateTimeOffset.UtcNow;
-                    if (match is not null)
+                    break;
+                }
+
+                foreach (var entry in entries)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    try
                     {
-                        entry.MangaUpdatesId = match.Id;
-                        entry.UpdatedAt = DateTimeOffset.UtcNow;
-                        matched++;
+                        var match = await matcher.FindAsync(entry.Title, entry.MediaType, entry.FirstPublishYear, cancellationToken);
+                        entry.MangaUpdatesLastMatchAttemptAt = DateTimeOffset.UtcNow;
+                        if (match is not null)
+                        {
+                            entry.MangaUpdatesId = match.Id;
+                            entry.UpdatedAt = DateTimeOffset.UtcNow;
+                            matchedCount++;
+                        }
+                    }
+                    catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
+                    {
+                        entry.MangaUpdatesLastMatchAttemptAt = DateTimeOffset.UtcNow;
+                        logger.LogWarning(ex, "MangaUpdates matching failed for {Title}.", entry.Title);
                     }
 
                     await db.SaveChangesAsync(cancellationToken);
-                }
-                catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
-                {
-                    logger.LogWarning(ex, "MangaUpdates matching failed for {Title}.", entry.Title);
+                    checkedCount++;
+                    await Task.Delay(delay, cancellationToken);
                 }
 
-                await Task.Delay(delay, cancellationToken);
+                if (entries.Count < batchSize)
+                {
+                    break;
+                }
             }
 
-            logger.LogInformation("MangaUpdates identity repair checked {CheckedCount} unbound entries and matched {MatchedCount}.", entries.Count, matched);
+            logger.LogInformation("MangaUpdates identity repair checked {CheckedCount} unbound entries and matched {MatchedCount}.", checkedCount, matchedCount);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
