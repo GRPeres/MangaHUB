@@ -34,28 +34,17 @@ public partial class CatalogAddModal
     private string localSeriesIdText = "";
     private string message = "";
     private Severity messageSeverity = Severity.Info;
-    private bool showMetadata;
-    private string metadataQuery = "";
     private string metadataMessage = "";
     private Severity metadataSeverity = Severity.Info;
     private bool isSearchingMetadata;
     private bool isMatchingMangaDex;
     private bool isSaving;
-    private bool includeOpenLibrary;
     private int metadataSearchVersion;
     private List<MetadataResult> metadataResults = [];
 
-    private void ToggleMetadata()
-    {
-        showMetadata = !showMetadata;
-        if (showMetadata && string.IsNullOrWhiteSpace(metadataQuery))
-        {
-            metadataQuery = title;
-        }
-    }
-
     private async Task SearchMetadata(string query)
     {
+        var searchVersion = ++metadataSearchVersion;
         if (string.IsNullOrWhiteSpace(query))
         {
             metadataResults = [];
@@ -64,14 +53,22 @@ public partial class CatalogAddModal
             return;
         }
 
-        var searchVersion = ++metadataSearchVersion;
         isSearchingMetadata = true;
         try
         {
-            var results = await MetadataApi.SearchAsync(query, includeOpenLibrary);
+            var results = await MetadataApi.SearchAsync(query);
             if (searchVersion != metadataSearchVersion)
             {
                 return;
+            }
+
+            if (results.Count == 0)
+            {
+                results = await MetadataApi.SearchAsync(query, includeOpenLibrary: true);
+                if (searchVersion != metadataSearchVersion)
+                {
+                    return;
+                }
             }
 
             metadataResults = results;
@@ -100,12 +97,6 @@ public partial class CatalogAddModal
         }
     }
 
-    private async Task LoadOpenLibraryResults()
-    {
-        includeOpenLibrary = true;
-        await SearchMetadata(metadataQuery);
-    }
-
     private async Task ApplyMetadata(MetadataResult item)
     {
         title = item.Title;
@@ -121,6 +112,8 @@ public partial class CatalogAddModal
         publishingStatus = item.PublishingStatus;
         chapterCount = item.ChapterCount;
         volumeCount = item.VolumeCount;
+        metadataResults = [];
+        metadataMessage = "";
         if (string.IsNullOrWhiteSpace(mangaUpdatesId))
         {
             await MatchMangaUpdatesAsync();
@@ -129,32 +122,32 @@ public partial class CatalogAddModal
             || string.IsNullOrWhiteSpace(item.MyAnimeListId)
             || !string.IsNullOrWhiteSpace(mangaDexId))
         {
-            metadataSeverity = Severity.Success;
-            metadataMessage = $"Filled the form from {item.Title}.";
+            messageSeverity = Severity.Success;
+            message = $"Filled the form from {item.Title}.";
             return;
         }
 
         isMatchingMangaDex = true;
-        metadataSeverity = Severity.Info;
-        metadataMessage = "Looking for the matching MangaDex title...";
+        messageSeverity = Severity.Info;
+        message = "Looking for the matching MangaDex title...";
         try
         {
             var match = await MetadataApi.FindMangaDexMatchAsync(item.MyAnimeListId, item.Title);
             if (match is null)
             {
-                metadataSeverity = Severity.Success;
-                metadataMessage = $"Filled the form from {item.Title}. No MangaDex match was found.";
+                messageSeverity = Severity.Success;
+                message = $"Filled the form from {item.Title}. No MangaDex match was found.";
                 return;
             }
 
             mangaDexId = match.Id;
-            metadataSeverity = Severity.Success;
-            metadataMessage = $"Filled the form from {item.Title} and linked MangaDex: {match.Title}.";
+            messageSeverity = Severity.Success;
+            message = $"Filled the form from {item.Title} and linked MangaDex: {match.Title}.";
         }
         catch
         {
-            metadataSeverity = Severity.Warning;
-            metadataMessage = $"Filled the form from {item.Title}, but MangaDex could not be checked.";
+            messageSeverity = Severity.Warning;
+            message = $"Filled the form from {item.Title}, but MangaDex could not be checked.";
         }
         finally
         {
@@ -257,10 +250,7 @@ public partial class CatalogAddModal
         mangaUpdatesId = "";
         localSeriesIdText = "";
         message = "";
-        showMetadata = false;
-        metadataQuery = "";
         metadataMessage = "";
-        includeOpenLibrary = false;
         metadataSearchVersion++;
         isMatchingMangaDex = false;
         isSaving = false;
@@ -275,8 +265,8 @@ public partial class CatalogAddModal
             if (match is not null)
             {
                 mangaUpdatesId = match.Id;
-                metadataSeverity = Severity.Success;
-                metadataMessage = $"Filled the form from {title} and linked MangaUpdates: {match.Title}.";
+                messageSeverity = Severity.Success;
+                message = $"Filled the form from {title} and linked MangaUpdates: {match.Title}.";
             }
         }
         catch
