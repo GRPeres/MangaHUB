@@ -359,7 +359,7 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
-    public async Task PrepareMangaDexChapterAsync_WhenExactChapterOnlyExistsInAnotherLanguage_RequiresChoice()
+    public async Task PrepareMangaDexChapterAsync_WhenExactChapterOnlyExistsInAnotherLanguage_UsesCanonicalSource()
     {
         await using var db = TestDb.Create();
         var userId = Guid.NewGuid();
@@ -382,10 +382,10 @@ public sealed class ReaderServiceTests
         ]);
         var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
 
-        var exception = await Assert.ThrowsAsync<ReaderService.MangaDexLanguageFallbackRequiredException>(
-            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None));
+        var launch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None);
 
-        Assert.Equal(["pt-br"], exception.Languages);
+        Assert.NotNull(launch);
+        Assert.Equal("32", launch.CurrentChapter);
     }
 
     [Fact]
@@ -417,7 +417,7 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
-    public async Task PrepareMangaDexChapterAsync_WhenNextChapterJumps_RequiresConfirmationAndOffersCloserLanguage()
+    public async Task PrepareMangaDexChapterAsync_WhenNextChapterExistsInAnotherLanguage_UsesCanonicalSource()
     {
         await using var db = TestDb.Create();
         var userId = Guid.NewGuid();
@@ -437,12 +437,10 @@ public sealed class ReaderServiceTests
         ]);
         var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
 
-        var exception = await Assert.ThrowsAsync<ReaderService.MangaDexChapterJumpConfirmationRequiredException>(
-            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, cachedChapter.Id, null, CancellationToken.None));
+        var launch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, cachedChapter.Id, null, CancellationToken.None);
 
-        Assert.Equal("1", exception.ChapterJump.CurrentChapter);
-        Assert.Equal("3", exception.ChapterJump.NextChapter);
-        Assert.Equal(["pt-br"], exception.ChapterJump.AlternativeLanguages);
+        Assert.NotNull(launch);
+        Assert.Equal("2", launch.CurrentChapter);
     }
 
     [Fact]
@@ -501,6 +499,7 @@ public sealed class ReaderServiceTests
         new(
             new ShelfRepository(db),
             new SeriesRepository(db),
+            new ChapterTranslationRepository(db),
             archive,
             cache ?? new FakeMangaDexChapterCache(),
             Options.Create(new MangaHubOptions { LibraryPath = libraryPath, MangaDexCachePath = libraryPath }),

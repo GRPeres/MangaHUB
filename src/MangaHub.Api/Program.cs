@@ -37,6 +37,7 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<CatalogRepository>();
 builder.Services.AddScoped<ShelfRepository>();
 builder.Services.AddScoped<SeriesRepository>();
+builder.Services.AddScoped<ChapterTranslationRepository>();
 builder.Services.AddScoped<ProgressRepository>();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<SessionCookieService>();

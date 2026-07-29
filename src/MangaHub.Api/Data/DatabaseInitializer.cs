@@ -156,6 +156,38 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Category" character varying(120) NOT NULL DEFAULT '';
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Summary" text NOT NULL DEFAULT '';
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "Language" character varying(16) NOT NULL DEFAULT 'en';
+            ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "SourceLanguage" character varying(16) NOT NULL DEFAULT 'en';
+            ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "IsCanonical" boolean NOT NULL DEFAULT true;
+
+            UPDATE chapters
+            SET "SourceLanguage" = "Language"
+            WHERE "SourceLanguage" = '' OR "SourceLanguage" = 'en';
+
+            WITH ranked_chapters AS (
+                SELECT "Id",
+                       row_number() OVER (
+                           PARTITION BY "SeriesId", "ChapterNumber"
+                           ORDER BY "CreatedAt", "Id") AS rank
+                FROM chapters
+                WHERE "SourceId" NOT LIKE 'manual-%'
+            )
+            UPDATE chapters
+            SET "IsCanonical" = ranked_chapters.rank = 1
+            FROM ranked_chapters
+            WHERE chapters."Id" = ranked_chapters."Id";
+
+            CREATE TABLE IF NOT EXISTS chapter_translations (
+                "Id" uuid PRIMARY KEY,
+                "MangaChapterId" uuid NOT NULL REFERENCES chapters("Id") ON DELETE CASCADE,
+                "TargetLanguage" character varying(16) NOT NULL,
+                "Status" character varying(24) NOT NULL DEFAULT 'pending',
+                "RelativePath" text NOT NULL DEFAULT '',
+                "PageCount" integer NOT NULL DEFAULT 0,
+                "FileHash" character varying(128) NOT NULL DEFAULT '',
+                "Error" text NOT NULL DEFAULT '',
+                "CreatedAt" timestamp with time zone NOT NULL,
+                "UpdatedAt" timestamp with time zone NOT NULL
+            );
 
             INSERT INTO user_manga_entries ("Id", "UserId", "MangaEntryId", "ReadingStatus", "Notes", "CreatedAt", "UpdatedAt")
             SELECT gen_random_uuid(),
@@ -186,6 +218,9 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesId" ON manga_entries ("MangaUpdatesId");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesLastSyncedAt" ON manga_entries ("MangaUpdatesLastSyncedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesLastMatchAttemptAt" ON manga_entries ("MangaUpdatesLastMatchAttemptAt");
+            CREATE INDEX IF NOT EXISTS "IX_chapters_SeriesId_ChapterNumber_IsCanonical" ON chapters ("SeriesId", "ChapterNumber", "IsCanonical");
+            CREATE UNIQUE INDEX IF NOT EXISTS "UX_chapters_SeriesId_ChapterNumber_Canonical" ON chapters ("SeriesId", "ChapterNumber") WHERE "IsCanonical";
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_chapter_translations_MangaChapterId_TargetLanguage" ON chapter_translations ("MangaChapterId", "TargetLanguage");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_MangaEntryId" ON user_manga_entries ("UserId", "MangaEntryId");
             """);
     }

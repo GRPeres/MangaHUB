@@ -14,6 +14,7 @@ namespace MangaHub.Api.Services;
 public sealed class ReaderService(
     ShelfRepository shelf,
     SeriesRepository series,
+    ChapterTranslationRepository translations,
     IArchiveReader archives,
     IMangaDexChapterCache mangaDexCache,
     IOptions<MangaHubOptions> options,
@@ -126,7 +127,9 @@ public sealed class ReaderService(
                     await FindCloserNextChapterLanguagesAsync(mangaDexId, current.ChapterNumber, sourceChapter.Number, preferredLanguage, cancellationToken));
             }
 
-            cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
+            cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.IsCanonical
+                && HasExactChapter(chapter.ChapterNumber, sourceChapter.Number))
+                ?? cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
         }
         else if (shelfEntry.IsRead && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
         {
@@ -161,8 +164,8 @@ public sealed class ReaderService(
         else if (cachedSeries is not null && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
         {
             cachedChapter = cachedSeries.Chapters
-                .OrderBy(chapter => string.Equals(chapter.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(chapter => chapter.CreatedAt)
+                .Where(chapter => chapter.IsCanonical)
+                .OrderBy(chapter => chapter.CreatedAt)
                 .FirstOrDefault(chapter => HasExactChapter(chapter.ChapterNumber, shelfEntry.CurrentChapter));
         }
 
@@ -181,7 +184,8 @@ public sealed class ReaderService(
                 && !shelfEntry.IsRead;
             var mangaDex = sources.Get("mangadex");
             progress?.Report(new ReaderPreparationProgress("Loading MangaDex chapter list", 8));
-            var preferredChapters = await mangaDex.GetChaptersAsync(mangaDexId, preferredLanguage, cancellationToken);
+            var preferredChapters = MangaDexCanonicalChapterSelector.SelectOnePerLogicalChapter(
+                await mangaDex.GetChaptersAsync(mangaDexId, null, cancellationToken));
             if (isInitialTrackedChapterSelection
                 && !allowLanguageFallback
                 && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter)
@@ -231,6 +235,8 @@ public sealed class ReaderService(
                     Series = cachedSeries,
                     ChapterNumber = sourceChapter.Number,
                     Language = sourceChapter.Language,
+                    SourceLanguage = sourceChapter.Language,
+                    IsCanonical = true,
                     Title = sourceChapter.Title,
                     SourceId = sourceChapter.Id,
                     PageCount = cachedArchive.PageCount,
@@ -243,6 +249,8 @@ public sealed class ReaderService(
             {
                 cachedChapter.ChapterNumber = sourceChapter.Number;
                 cachedChapter.Language = sourceChapter.Language;
+                cachedChapter.SourceLanguage = sourceChapter.Language;
+                cachedChapter.IsCanonical = true;
                 cachedChapter.Title = sourceChapter.Title;
                 cachedChapter.PageCount = cachedArchive.PageCount;
                 cachedChapter.FileHash = cachedArchive.FileHash;
@@ -250,6 +258,7 @@ public sealed class ReaderService(
         }
 
         var shouldAdvanceReadingProgress = updateReadingProgress && beforeCachedChapterId is null;
+        await translations.EnsurePendingAsync(cachedChapter.Id, preferredLanguage, cancellationToken);
         if (shouldAdvanceReadingProgress)
         {
             shelfEntry.CurrentChapter = cachedChapter.ChapterNumber;
@@ -365,7 +374,8 @@ public sealed class ReaderService(
 
     private async Task<MangaSourceChapter?> FindNextMangaDexChapterAfterNumberAsync(string mangaDexId, string currentChapterNumber, string language, CancellationToken cancellationToken)
     {
-        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken);
+        var chapters = MangaDexCanonicalChapterSelector.SelectOnePerLogicalChapter(
+            await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken));
         var exactIndex = chapters.Select((chapter, index) => new { chapter, index })
             .FirstOrDefault(item => string.Equals(item.chapter.Number, currentChapterNumber, StringComparison.OrdinalIgnoreCase))?.index;
         if (exactIndex is not null)
@@ -398,7 +408,8 @@ public sealed class ReaderService(
 
     private async Task<MangaSourceChapter?> FindPreviousMangaDexChapterBeforeNumberAsync(string mangaDexId, string currentChapterNumber, string language, CancellationToken cancellationToken)
     {
-        var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken);
+        var chapters = MangaDexCanonicalChapterSelector.SelectOnePerLogicalChapter(
+            await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken));
         var currentNumber = ParseChapterNumber(currentChapterNumber);
         return currentNumber is null
             ? null

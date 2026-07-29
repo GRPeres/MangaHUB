@@ -116,6 +116,8 @@ Separately, an API-maintained site activity timestamp lets workers make small hi
 
 Reader endpoints and page delivery are admin-only. Normal users can manage their shelf/list data but cannot prepare or open reader chapters.
 
+Cached MangaDex releases use one canonical source archive per logical chapter, regardless of the release language. The original archive records its `SourceLanguage`; target-language renderings are separate `chapter_translations` artifacts, keyed by cached chapter and target language. Artifacts move through `pending`, `processing`, `ready`, `failed`, or `unsupported` without replacing the original CBZ. Account and reader language settings are therefore translation targets, not MangaDex source filters. Until a local OCR/translation renderer is connected, pending artifacts leave the canonical original pages readable.
+
 MyAnimeList metadata is preferred for catalog search/enrichment. OpenLibrary remains available as fallback or explicit "load more" behavior.
 
 ## Auth Flow

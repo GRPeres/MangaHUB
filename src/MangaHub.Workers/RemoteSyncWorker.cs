@@ -460,11 +460,14 @@ public sealed class RemoteSyncWorker(
                 }
 
                 var cacheSeries = await GetOrCreateCachedSeriesAsync(db, entry, cancellationToken);
-                var cachedSourceIds = cacheSeries.Chapters.Select(chapter => chapter.SourceId).ToHashSet(StringComparer.Ordinal);
+                var cachedChapterNumbers = cacheSeries.Chapters
+                    .Where(chapter => chapter.IsCanonical)
+                    .Select(chapter => chapter.ChapterNumber)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 var pending = GetPreferredNumberedChapters(
                         await mangaDex.GetChaptersAsync(entry.MangaDexId, null, cancellationToken))
                     .Where(item => item.Number <= highestReadChapter
-                        && !cachedSourceIds.Contains(item.Chapter.Id))
+                        && !cachedChapterNumbers.Contains(item.Chapter.Number))
                     .OrderByDescending(item => item.Number)
                     .Take(perMangaLimit)
                     .ToList();
@@ -538,6 +541,12 @@ public sealed class RemoteSyncWorker(
         MangaSourceChapter sourceChapter,
         CancellationToken cancellationToken)
     {
+        if (cacheSeries.Chapters.Any(chapter => chapter.IsCanonical
+            && string.Equals(chapter.ChapterNumber, sourceChapter.Number, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
         var pages = await mangaDex.GetPagesAsync(sourceChapter.Id, cancellationToken);
         var archive = await cache.EnsureCachedAsync(entry.MangaDexId, sourceChapter.Id, pages, cancellationToken);
         var cachedChapter = cacheSeries.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
@@ -548,6 +557,8 @@ public sealed class RemoteSyncWorker(
                 Series = cacheSeries,
                 ChapterNumber = sourceChapter.Number,
                 Language = sourceChapter.Language,
+                SourceLanguage = sourceChapter.Language,
+                IsCanonical = true,
                 Title = sourceChapter.Title,
                 SourceId = sourceChapter.Id,
                 PageCount = archive.PageCount,
@@ -560,6 +571,8 @@ public sealed class RemoteSyncWorker(
 
         cachedChapter.ChapterNumber = sourceChapter.Number;
         cachedChapter.Language = sourceChapter.Language;
+        cachedChapter.SourceLanguage = sourceChapter.Language;
+        cachedChapter.IsCanonical = true;
         cachedChapter.Title = sourceChapter.Title;
         cachedChapter.PageCount = archive.PageCount;
         cachedChapter.FileHash = archive.FileHash;
@@ -621,17 +634,10 @@ public sealed class RemoteSyncWorker(
     }
 
     private static List<(MangaSourceChapter Chapter, decimal Number)> GetPreferredNumberedChapters(IReadOnlyList<MangaSourceChapter> chapters) =>
-        chapters
+        MangaDexCanonicalChapterSelector.SelectOnePerLogicalChapter(chapters)
             .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
             .Where(item => item.Number is not null)
-            .GroupBy(item => item.Number!.Value)
-            .Select(group => (
-                Chapter: group
-                    .OrderBy(item => string.Equals(item.Chapter.Language, "en", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                    .ThenBy(item => item.Chapter.Language, StringComparer.OrdinalIgnoreCase)
-                    .Select(item => item.Chapter)
-                    .First(),
-                Number: group.Key))
+            .Select(item => (item.Chapter, Number: item.Number!.Value))
             .OrderBy(item => item.Number)
             .ToList();
 

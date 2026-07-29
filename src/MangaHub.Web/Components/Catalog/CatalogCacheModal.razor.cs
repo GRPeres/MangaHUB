@@ -25,6 +25,9 @@ public partial class CatalogCacheModal
     private bool isLoading;
     private bool isWorking;
     private string CachedCountLabel => cache is null ? "Cached chapters" : $"Cached chapters ({cache.Chapters.Count})";
+    private static string TranslationSummary(CachedMangaDexChapterResponse chapter) => chapter.Translations is not { Count: > 0 }
+        ? "Not requested"
+        : string.Join(", ", chapter.Translations.Select(translation => $"{translation.TargetLanguage}: {translation.Status}"));
 
     protected override async Task OnParametersSetAsync()
     {

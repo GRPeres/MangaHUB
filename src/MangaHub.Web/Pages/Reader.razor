@@ -86,7 +86,7 @@
         <div>
             @if (availableLanguages.Count > 1)
             {
-                <MudSelect T="string" Value="@ActiveLanguage" ValueChanged="SwitchLanguage" Dense="true" Label="Language" Variant="Variant.Text">
+                <MudSelect T="string" Value="@ActiveLanguage" ValueChanged="SwitchLanguage" Dense="true" Label="Translate to" Variant="Variant.Text">
                     @foreach (var language in availableLanguages)
                     {
                         <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>
@@ -210,7 +210,7 @@
         if (IsMangaDexReader && EntryId is not null && loadedLanguageEntryId != EntryId)
         {
             loadedLanguageEntryId = EntryId;
-            availableLanguages = (await MangaApi.GetMangaDexLanguagesAsync(EntryId.Value))?.Languages ?? [];
+            availableLanguages = TranslationTargetLanguages.Select(language => language.Code).ToList();
             await InvokeAsync(StateHasChanged);
         }
 
@@ -280,6 +280,18 @@
         "fr" => "French", "de" => "German", "it" => "Italian", "ja" => "Japanese", "ko" => "Korean",
         _ => code
     };
+
+    private static readonly (string Code, string Label)[] TranslationTargetLanguages =
+    [
+        ("en", "English"),
+        ("pt-br", "Portuguese (Brazil)"),
+        ("es", "Spanish"),
+        ("fr", "French"),
+        ("de", "German"),
+        ("it", "Italian"),
+        ("ja", "Japanese"),
+        ("ko", "Korean")
+    ];
 
     private async Task Next()
     {

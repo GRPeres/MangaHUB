@@ -133,7 +133,17 @@ public sealed record ReaderPreparationStatus(
     bool IsSeriesComplete = false,
     ReaderChapterMatch? ChapterMatch = null,
     ReaderChapterJump? ChapterJump = null);
-public sealed record CachedMangaDexChapterResponse(Guid Id, string ChapterNumber, string Language, string Title, int PageCount, DateTimeOffset CachedAt, bool IsManual);
+public sealed record ChapterTranslationResponse(string TargetLanguage, string Status, int PageCount, DateTimeOffset UpdatedAt, string Error);
+public sealed record CachedMangaDexChapterResponse(
+    Guid Id,
+    string ChapterNumber,
+    string Language,
+    string Title,
+    int PageCount,
+    DateTimeOffset CachedAt,
+    bool IsManual,
+    string SourceLanguage = "",
+    List<ChapterTranslationResponse>? Translations = null);
 public sealed record MangaDexCacheResponse(string MangaDexId, List<CachedMangaDexChapterResponse> Chapters);
 public sealed record MangaDexLanguagesResponse(string MangaDexId, List<string> Languages);
 public sealed record CacheMangaDexChapterRequest(string ChapterNumber);

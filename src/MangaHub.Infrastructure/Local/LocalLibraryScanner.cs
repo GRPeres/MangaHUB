@@ -52,6 +52,7 @@ public sealed class LocalLibraryScanner(
                     {
                         Series = series,
                         ChapterNumber = ExtractChapterNumber(Path.GetFileNameWithoutExtension(archivePath)),
+                        SourceLanguage = "local",
                         Title = Path.GetFileNameWithoutExtension(archivePath),
                         SourceId = sourceId
                     };
@@ -81,4 +82,3 @@ public sealed class LocalLibraryScanner(
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }
-

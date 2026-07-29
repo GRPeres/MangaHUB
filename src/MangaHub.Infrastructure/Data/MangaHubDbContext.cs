@@ -10,6 +10,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
     public DbSet<UserMangaEntry> UserMangaEntries => Set<UserMangaEntry>();
     public DbSet<MangaSeries> Series => Set<MangaSeries>();
     public DbSet<MangaChapter> Chapters => Set<MangaChapter>();
+    public DbSet<MangaChapterTranslation> ChapterTranslations => Set<MangaChapterTranslation>();
     public DbSet<ReadingProgress> ReadingProgress => Set<ReadingProgress>();
     public DbSet<Follow> Follows => Set<Follow>();
     public DbSet<SiteActivity> SiteActivities => Set<SiteActivity>();
@@ -74,7 +75,21 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.ToTable("chapters");
             entity.HasIndex(x => new { x.SeriesId, x.SourceId }).IsUnique();
             entity.Property(x => x.Language).HasMaxLength(16);
+            entity.Property(x => x.SourceLanguage).HasMaxLength(16);
+            entity.HasIndex(x => new { x.SeriesId, x.ChapterNumber, x.IsCanonical });
             entity.HasOne(x => x.Series).WithMany(x => x.Chapters).HasForeignKey(x => x.SeriesId);
+        });
+
+        modelBuilder.Entity<MangaChapterTranslation>(entity =>
+        {
+            entity.ToTable("chapter_translations");
+            entity.Property(x => x.TargetLanguage).HasMaxLength(16);
+            entity.Property(x => x.Status).HasMaxLength(24);
+            entity.Property(x => x.RelativePath).HasColumnType("text");
+            entity.Property(x => x.FileHash).HasMaxLength(128);
+            entity.Property(x => x.Error).HasColumnType("text");
+            entity.HasIndex(x => new { x.MangaChapterId, x.TargetLanguage }).IsUnique();
+            entity.HasOne(x => x.MangaChapter).WithMany(x => x.Translations).HasForeignKey(x => x.MangaChapterId);
         });
 
         modelBuilder.Entity<ReadingProgress>(entity =>

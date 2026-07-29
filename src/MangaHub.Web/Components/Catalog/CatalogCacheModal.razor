@@ -51,7 +51,8 @@
                     <MudTable Items="cache.Chapters" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
                         <HeaderContent>
                             <MudTh>Chapter</MudTh>
-                            <MudTh>Language</MudTh>
+                            <MudTh>Source</MudTh>
+                            <MudTh>Translations</MudTh>
                             <MudTh>Title</MudTh>
                             <MudTh>Pages</MudTh>
                             <MudTh>Origin</MudTh>
@@ -59,7 +60,8 @@
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="Chapter">@context.ChapterNumber</MudTd>
-                            <MudTd DataLabel="Language">@context.Language</MudTd>
+                            <MudTd DataLabel="Source">@(string.IsNullOrWhiteSpace(context.SourceLanguage) ? context.Language : context.SourceLanguage)</MudTd>
+                            <MudTd DataLabel="Translations">@TranslationSummary(context)</MudTd>
                             <MudTd DataLabel="Title">@context.Title</MudTd>
                             <MudTd DataLabel="Pages">@context.PageCount</MudTd>
                             <MudTd DataLabel="Origin">@(context.IsManual ? "Manual CBZ" : "MangaDex")</MudTd>

@@ -37,7 +37,17 @@ public sealed class CatalogCacheService(
                 chapter.Title,
                 chapter.PageCount,
                 chapter.CreatedAt,
-                chapter.SourceId.StartsWith("manual-", StringComparison.Ordinal)))
+                chapter.SourceId.StartsWith("manual-", StringComparison.Ordinal),
+                chapter.SourceLanguage,
+                chapter.Translations
+                    .OrderBy(translation => translation.TargetLanguage, StringComparer.OrdinalIgnoreCase)
+                    .Select(translation => new ChapterTranslationResponse(
+                        translation.TargetLanguage,
+                        translation.Status,
+                        translation.PageCount,
+                        translation.UpdatedAt,
+                        translation.Error))
+                    .ToList()))
             .ToList() ?? [];
         return new MangaDexCacheResponse(mangaDexId, chapters);
     }
@@ -53,16 +63,13 @@ public sealed class CatalogCacheService(
 
         var source = sources.Get("mangadex");
         var requestedNumber = request.ChapterNumber.Trim();
-        var chapters = await source.GetChaptersAsync(mangaDexId, null, cancellationToken);
+        var chapters = MangaDexCanonicalChapterSelector.SelectOnePerLogicalChapter(
+            await source.GetChaptersAsync(mangaDexId, null, cancellationToken));
         var chapter = chapters
             .Where(item => string.Equals(item.Number, requestedNumber, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(item => string.Equals(item.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(item => item.Language, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault()
             ?? chapters
                 .Where(item => FindNumericChapter([item], requestedNumber) is not null)
-                .OrderBy(item => string.Equals(item.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(item => item.Language, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();
         if (chapter is null)
         {
@@ -128,6 +135,12 @@ public sealed class CatalogCacheService(
             series.AddSeries(cachedSeries);
         }
 
+        if (cachedSeries.Chapters.Any(item => item.IsCanonical
+            && string.Equals(item.ChapterNumber, chapter.Number, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
         var archive = importedContent is null
             ? await cache.EnsureCachedAsync(mangaDexId, chapter.Id, await sources.Get("mangadex").GetPagesAsync(chapter.Id, cancellationToken), cancellationToken)
             : await cache.ImportAsync(mangaDexId, chapter.Id, importedContent, cancellationToken);
@@ -139,6 +152,8 @@ public sealed class CatalogCacheService(
                 Series = cachedSeries,
                 ChapterNumber = chapter.Number,
                 Language = chapter.Language,
+                SourceLanguage = chapter.Language,
+                IsCanonical = true,
                 Title = chapter.Title,
                 SourceId = chapter.Id,
                 PageCount = archive.PageCount,
@@ -151,6 +166,8 @@ public sealed class CatalogCacheService(
         {
             cachedChapter.ChapterNumber = chapter.Number;
             cachedChapter.Language = chapter.Language;
+            cachedChapter.SourceLanguage = chapter.Language;
+            cachedChapter.IsCanonical = true;
             cachedChapter.Title = chapter.Title;
             cachedChapter.PageCount = archive.PageCount;
             cachedChapter.FileHash = archive.FileHash;
