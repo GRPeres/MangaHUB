@@ -1,6 +1,7 @@
 using MangaHub.Api.Data;
 using MangaHub.Api.Repositories;
 using MangaHub.Api.Services;
+using MangaHub.Core.Services;
 using MangaHub.Infrastructure;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
@@ -43,6 +44,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<OpenLibraryService>();
 builder.Services.AddScoped<MangaDexCatalogMatchService>();
+builder.Services.AddScoped<MangaUpdatesCatalogMatchService>();
 builder.Services.AddScoped<MetadataService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<ShelfService>();

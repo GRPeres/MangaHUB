@@ -22,6 +22,8 @@ public sealed class RemoteSyncWorker(
     {
         var nextReleaseSyncAt = DateTimeOffset.MinValue;
         var nextPrefetchAt = DateTimeOffset.MinValue;
+        var nextMangaUpdatesSyncAt = DateTimeOffset.MinValue;
+        var nextMangaUpdatesMatchAt = DateTimeOffset.MinValue;
         while (!stoppingToken.IsCancellationRequested)
         {
             if (DateTimeOffset.UtcNow >= nextReleaseSyncAt)
@@ -37,8 +39,27 @@ public sealed class RemoteSyncWorker(
                 logger.LogInformation("Next MangaDex pre-download maintenance is scheduled for {ScheduledAt}.", nextPrefetchAt);
             }
 
+            if (DateTimeOffset.UtcNow >= nextMangaUpdatesMatchAt)
+            {
+                await RunMangaUpdatesMatchingAsync(stoppingToken);
+                nextMangaUpdatesMatchAt = DateTimeOffset.UtcNow.AddHours(Math.Clamp(options.Value.MangaUpdatesMatchRetryHours, 6, 24 * 30));
+            }
+
+            if (DateTimeOffset.UtcNow >= nextMangaUpdatesSyncAt)
+            {
+                await RunMangaUpdatesSyncAsync(stoppingToken);
+                nextMangaUpdatesSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaUpdatesReleasePollMinutes, 15, 720));
+            }
+
             var idleCheckDelay = TimeSpan.FromMinutes(Math.Clamp(options.Value.MangaDexIdleBackfillCheckMinutes, 5, 720));
-            var delay = new[] { nextReleaseSyncAt - DateTimeOffset.UtcNow, nextPrefetchAt - DateTimeOffset.UtcNow, idleCheckDelay }.Min();
+            var delay = new[]
+            {
+                nextReleaseSyncAt - DateTimeOffset.UtcNow,
+                nextPrefetchAt - DateTimeOffset.UtcNow,
+                nextMangaUpdatesSyncAt - DateTimeOffset.UtcNow,
+                nextMangaUpdatesMatchAt - DateTimeOffset.UtcNow,
+                idleCheckDelay
+            }.Min();
             await Task.Delay(delay, stoppingToken);
 
             if (DateTimeOffset.UtcNow < nextReleaseSyncAt && DateTimeOffset.UtcNow < nextPrefetchAt)
@@ -77,6 +98,134 @@ public sealed class RemoteSyncWorker(
         catch (Exception ex)
         {
             logger.LogError(ex, "MangaDex chapter pre-download maintenance failed.");
+        }
+    }
+
+    private async Task RunMangaUpdatesMatchingAsync(CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaUpdatesEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+            var matcher = scope.ServiceProvider.GetRequiredService<MangaUpdatesCatalogMatchService>();
+            var retryCutoff = DateTimeOffset.UtcNow.AddHours(-Math.Clamp(options.Value.MangaUpdatesMatchRetryHours, 6, 24 * 30));
+            var entries = await db.MangaEntries
+                .Where(entry => entry.MangaUpdatesId == "" &&
+                    (entry.MangaUpdatesLastMatchAttemptAt == null || entry.MangaUpdatesLastMatchAttemptAt < retryCutoff))
+                .OrderBy(entry => entry.MangaUpdatesLastMatchAttemptAt ?? DateTimeOffset.MinValue)
+                .ThenBy(entry => entry.Title)
+                .Take(Math.Clamp(options.Value.MangaUpdatesMatchBatchSize, 1, 50))
+                .ToListAsync(cancellationToken);
+            var delay = TimeSpan.FromMilliseconds(Math.Max(500, options.Value.MangaUpdatesDelayMilliseconds));
+            var matched = 0;
+
+            foreach (var entry in entries)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    var match = await matcher.FindAsync(entry.Title, entry.MediaType, entry.FirstPublishYear, cancellationToken);
+                    entry.MangaUpdatesLastMatchAttemptAt = DateTimeOffset.UtcNow;
+                    if (match is not null)
+                    {
+                        entry.MangaUpdatesId = match.Id;
+                        entry.UpdatedAt = DateTimeOffset.UtcNow;
+                        matched++;
+                    }
+
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+                catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
+                {
+                    logger.LogWarning(ex, "MangaUpdates matching failed for {Title}.", entry.Title);
+                }
+
+                await Task.Delay(delay, cancellationToken);
+            }
+
+            logger.LogInformation("MangaUpdates identity repair checked {CheckedCount} unbound entries and matched {MatchedCount}.", entries.Count, matched);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "MangaUpdates identity repair run failed.");
+        }
+    }
+
+    private async Task RunMangaUpdatesSyncAsync(CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaUpdatesEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+            var client = scope.ServiceProvider.GetRequiredService<IMangaUpdatesClient>();
+            var cutoff = DateTimeOffset.UtcNow.AddHours(-Math.Clamp(options.Value.MangaUpdatesSyncIntervalHours, 1, 24 * 30));
+            var entries = await db.MangaEntries
+                .Where(entry => entry.MangaUpdatesId != "" &&
+                    (entry.MangaUpdatesLastSyncedAt == null || entry.MangaUpdatesLastSyncedAt < cutoff))
+                .OrderBy(entry => entry.MangaUpdatesLastSyncedAt ?? DateTimeOffset.MinValue)
+                .ThenBy(entry => entry.Title)
+                .Take(Math.Clamp(options.Value.MangaUpdatesSyncBatchSize, 1, 100))
+                .ToListAsync(cancellationToken);
+            var delay = TimeSpan.FromMilliseconds(Math.Max(500, options.Value.MangaUpdatesDelayMilliseconds));
+            var updated = 0;
+
+            foreach (var entry in entries)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    var details = await client.GetSeriesAsync(entry.MangaUpdatesId, cancellationToken);
+                    if (details is null)
+                    {
+                        continue;
+                    }
+
+                    var changed = entry.MangaUpdatesLatestChapter != details.LatestChapter
+                        || entry.MangaUpdatesStatus != details.Status
+                        || entry.MangaUpdatesCompleted != details.Completed;
+                    entry.MangaUpdatesLatestChapter = details.LatestChapter;
+                    entry.MangaUpdatesStatus = details.Status;
+                    entry.MangaUpdatesCompleted = details.Completed;
+                    entry.MangaUpdatesLastSyncedAt = DateTimeOffset.UtcNow;
+                    if (changed)
+                    {
+                        entry.UpdatedAt = DateTimeOffset.UtcNow;
+                        updated++;
+                    }
+
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+                catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
+                {
+                    logger.LogWarning(ex, "MangaUpdates sync failed for {Title} ({MangaUpdatesId}).", entry.Title, entry.MangaUpdatesId);
+                }
+
+                await Task.Delay(delay, cancellationToken);
+            }
+
+            logger.LogInformation("MangaUpdates source sync checked {CheckedCount} entries and updated {UpdatedCount}.", entries.Count, updated);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "MangaUpdates source sync run failed.");
         }
     }
 

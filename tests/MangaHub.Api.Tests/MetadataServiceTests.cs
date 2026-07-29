@@ -17,7 +17,8 @@ public sealed class MetadataServiceTests
                 new OpenLibrarySearchResult("/works/OL1W", "Berserk", "Kentaro Miura", "", 1989, "Comics", ""),
                 new OpenLibrarySearchResult("/works/OL2W", "Berserk Deluxe", "Kentaro Miura", "", 2019, "Comics", "")
             ]),
-            new MangaDexCatalogMatchService(new FakeMangaDexSource()));
+            new MangaDexCatalogMatchService(new FakeMangaDexSource()),
+            new MangaUpdatesCatalogMatchService(new FakeMangaUpdatesClient()));
 
         var results = await service.SearchAsync("berserk", includeOpenLibrary: true, CancellationToken.None);
 
@@ -33,7 +34,8 @@ public sealed class MetadataServiceTests
         var service = new MetadataService(
             new FakeMyAnimeListClient([]),
             new FakeOpenLibraryClient([]),
-            new MangaDexCatalogMatchService(mangaDex));
+            new MangaDexCatalogMatchService(mangaDex),
+            new MangaUpdatesCatalogMatchService(new FakeMangaUpdatesClient()));
 
         var match = await service.FindMangaDexMatchAsync("2", "Berserk", CancellationToken.None);
 

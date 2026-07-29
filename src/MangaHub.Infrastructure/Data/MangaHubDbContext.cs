@@ -42,6 +42,11 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.Property(x => x.MangaDexLastPrefetchedChapter).HasPrecision(10, 3);
             entity.HasIndex(x => x.MangaDexLastPrefetchedAt);
             entity.HasIndex(x => x.MangaDexLastBackfilledAt);
+            entity.Property(x => x.MangaUpdatesId).HasMaxLength(32);
+            entity.HasIndex(x => x.MangaUpdatesId);
+            entity.Property(x => x.MangaUpdatesLatestChapter).HasPrecision(10, 3);
+            entity.HasIndex(x => x.MangaUpdatesLastSyncedAt);
+            entity.HasIndex(x => x.MangaUpdatesLastMatchAttemptAt);
         });
 
         modelBuilder.Entity<UserMangaEntry>(entity =>

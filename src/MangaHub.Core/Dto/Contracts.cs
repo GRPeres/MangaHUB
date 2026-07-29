@@ -42,7 +42,8 @@ public sealed record MangaEntryRequest(
     string MediaType = "",
     string PublishingStatus = "",
     int? ChapterCount = null,
-    int? VolumeCount = null);
+    int? VolumeCount = null,
+    string MangaUpdatesId = "");
 public sealed record MangaEntryResponse(
     Guid Id,
     string Title,
@@ -63,6 +64,11 @@ public sealed record MangaEntryResponse(
     string MangaDexId,
     decimal? MangaDexLatestChapter,
     DateTimeOffset? MangaDexLastSyncedAt,
+    string MangaUpdatesId,
+    decimal? MangaUpdatesLatestChapter,
+    string MangaUpdatesStatus,
+    bool? MangaUpdatesCompleted,
+    DateTimeOffset? MangaUpdatesLastSyncedAt,
     Guid? LocalSeriesId,
     string CurrentChapter,
     int? Score,
@@ -88,6 +94,11 @@ public sealed record CatalogMangaResponse(
     string MangaDexId,
     decimal? MangaDexLatestChapter,
     DateTimeOffset? MangaDexLastSyncedAt,
+    string MangaUpdatesId,
+    decimal? MangaUpdatesLatestChapter,
+    string MangaUpdatesStatus,
+    bool? MangaUpdatesCompleted,
+    DateTimeOffset? MangaUpdatesLastSyncedAt,
     Guid? LocalSeriesId,
     int CachedChapterCount,
     bool IsInMyShelf);

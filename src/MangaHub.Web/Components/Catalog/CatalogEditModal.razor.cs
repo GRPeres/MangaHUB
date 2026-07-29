@@ -30,6 +30,7 @@ public partial class CatalogEditModal
     private int? editChapterCount;
     private int? editVolumeCount;
     private string editMangaDexUrl = "";
+    private string editMangaUpdatesId = "";
     private string editLocalSeriesIdText = "";
     private string message = "";
     private Severity messageSeverity = Severity.Info;
@@ -64,6 +65,7 @@ public partial class CatalogEditModal
         editChapterCount = Entry.ChapterCount;
         editVolumeCount = Entry.VolumeCount;
         editMangaDexUrl = Entry.MangaDexUrl;
+        editMangaUpdatesId = Entry.MangaUpdatesId;
         editLocalSeriesIdText = Entry.LocalSeriesId?.ToString() ?? "";
         metadataQuery = Entry.Title;
         metadataResults = [];
@@ -108,7 +110,7 @@ public partial class CatalogEditModal
         }
     }
 
-    private void ApplyMetadata(MetadataResult item)
+    private async Task ApplyMetadata(MetadataResult item)
     {
         editTitle = item.Title;
         editAuthors = item.Authors;
@@ -123,6 +125,10 @@ public partial class CatalogEditModal
         editPublishingStatus = item.PublishingStatus;
         editChapterCount = item.ChapterCount;
         editVolumeCount = item.VolumeCount;
+        if (string.IsNullOrWhiteSpace(editMangaUpdatesId))
+        {
+            await MatchMangaUpdatesAsync();
+        }
         metadataSeverity = Severity.Success;
         metadataMessage = $"Filled the form from {item.Title}.";
     }
@@ -177,7 +183,8 @@ public partial class CatalogEditModal
             editMediaType,
             editPublishingStatus,
             editChapterCount,
-            editVolumeCount);
+            editVolumeCount,
+            editMangaUpdatesId);
     }
 
     private async Task Close()
@@ -189,5 +196,23 @@ public partial class CatalogEditModal
 
         loadedEntryId = null;
         await OnClosed.InvokeAsync();
+    }
+
+    private async Task MatchMangaUpdatesAsync()
+    {
+        try
+        {
+            var match = await MetadataApi.FindMangaUpdatesMatchAsync(editTitle, editMediaType, editFirstPublishYear);
+            if (match is not null)
+            {
+                editMangaUpdatesId = match.Id;
+                metadataSeverity = Severity.Success;
+                metadataMessage = $"Filled the form from {editTitle} and linked MangaUpdates: {match.Title}.";
+            }
+        }
+        catch
+        {
+            // Saving retries the same automatic lookup on the API.
+        }
     }
 }

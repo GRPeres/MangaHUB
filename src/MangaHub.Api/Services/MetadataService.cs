@@ -6,7 +6,8 @@ namespace MangaHub.Api.Services;
 public sealed class MetadataService(
     IMyAnimeListClient myAnimeList,
     IOpenLibraryClient openLibrary,
-    MangaDexCatalogMatchService mangaDexMatches)
+    MangaDexCatalogMatchService mangaDexMatches,
+    MangaUpdatesCatalogMatchService mangaUpdatesMatches)
 {
     public async Task<List<MetadataResult>> SearchAsync(string query, bool includeOpenLibrary, CancellationToken cancellationToken)
     {
@@ -57,6 +58,9 @@ public sealed class MetadataService(
 
     public Task<MangaDexCatalogMatch?> FindMangaDexMatchAsync(string myAnimeListId, string title, CancellationToken cancellationToken) =>
         mangaDexMatches.FindAsync(myAnimeListId, title, cancellationToken);
+
+    public Task<MangaUpdatesSearchResult?> FindMangaUpdatesMatchAsync(string title, string mediaType, int? firstPublishYear, CancellationToken cancellationToken) =>
+        mangaUpdatesMatches.FindAsync(title, mediaType, firstPublishYear, cancellationToken);
 
     private static string NormalizeTitle(string title)
     {

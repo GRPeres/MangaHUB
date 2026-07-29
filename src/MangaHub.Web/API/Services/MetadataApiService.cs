@@ -13,4 +13,11 @@ public sealed class MetadataApiService(ApiHttpClient api)
         var url = $"/api/metadata/mangadex-match?malId={Uri.EscapeDataString(myAnimeListId)}&title={Uri.EscapeDataString(title)}";
         return api.GetAsync<MangaDexCatalogMatch>(url);
     }
+
+    public Task<MangaUpdatesSearchResult?> FindMangaUpdatesMatchAsync(string title, string mediaType, int? firstPublishYear)
+    {
+        var year = firstPublishYear?.ToString() ?? "";
+        var url = $"/api/metadata/mangaupdates-match?title={Uri.EscapeDataString(title)}&mediaType={Uri.EscapeDataString(mediaType)}&firstPublishYear={Uri.EscapeDataString(year)}";
+        return api.GetAsync<MangaUpdatesSearchResult>(url);
+    }
 }

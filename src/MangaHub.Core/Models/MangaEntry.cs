@@ -24,6 +24,12 @@ public sealed class MangaEntry
     public decimal? MangaDexLastPrefetchedChapter { get; set; }
     public DateTimeOffset? MangaDexLastPrefetchedAt { get; set; }
     public DateTimeOffset? MangaDexLastBackfilledAt { get; set; }
+    public string MangaUpdatesId { get; set; } = "";
+    public decimal? MangaUpdatesLatestChapter { get; set; }
+    public string MangaUpdatesStatus { get; set; } = "";
+    public bool? MangaUpdatesCompleted { get; set; }
+    public DateTimeOffset? MangaUpdatesLastSyncedAt { get; set; }
+    public DateTimeOffset? MangaUpdatesLastMatchAttemptAt { get; set; }
     public Guid? LocalSeriesId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

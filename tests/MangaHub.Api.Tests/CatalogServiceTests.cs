@@ -70,14 +70,29 @@ public sealed class CatalogServiceTests
         Assert.Equal("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", created.MangaDexId);
     }
 
+    [Fact]
+    public async Task CreateAsync_AutomaticallyBindsAnExactMangaUpdatesTitleMatch()
+    {
+        await using var db = TestDb.Create();
+        var mangaUpdates = new FakeMangaUpdatesClient();
+        mangaUpdates.SearchResults.Add(new MangaUpdatesSearchResult("123", "Berserk", "Manga", 1989, []));
+        var service = CreateService(db, new FakeOpenLibrary(null), mangaUpdates: mangaUpdates);
+
+        var created = await service.CreateAsync(Guid.NewGuid(), Request(), CancellationToken.None);
+
+        Assert.Equal("123", created.MangaUpdatesId);
+    }
+
     private static CatalogService CreateService(
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         IOpenLibraryClient openLibrary,
-        FakeMangaDexSource? mangaDex = null) =>
+        FakeMangaDexSource? mangaDex = null,
+        FakeMangaUpdatesClient? mangaUpdates = null) =>
         new(
             new CatalogRepository(db),
             openLibrary,
-            new MangaDexCatalogMatchService(mangaDex ?? new FakeMangaDexSource()));
+            new MangaDexCatalogMatchService(mangaDex ?? new FakeMangaDexSource()),
+            new MangaUpdatesCatalogMatchService(mangaUpdates ?? new FakeMangaUpdatesClient()));
 
     private static MangaEntryRequest Request(
         string title = "Berserk",

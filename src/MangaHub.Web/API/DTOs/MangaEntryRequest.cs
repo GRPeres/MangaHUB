@@ -17,4 +17,5 @@ public sealed record MangaEntryRequest(
     string MediaType = "",
     string PublishingStatus = "",
     int? ChapterCount = null,
-    int? VolumeCount = null);
+    int? VolumeCount = null,
+    string MangaUpdatesId = "");

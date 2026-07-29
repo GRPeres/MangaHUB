@@ -190,7 +190,23 @@
 .mh-entry-context {
     display: grid;
     gap: .4rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+::deep .mh-source-gap-good .mh-bento-tile {
+    --mh-bento-accent: var(--mud-palette-success);
+    --mh-bento-bg: color-mix(in srgb, var(--mud-palette-success) 9%, var(--mud-palette-surface));
+}
+
+::deep .mh-source-gap-warning .mh-bento-tile {
+    --mh-bento-accent: var(--mud-palette-warning);
+    --mh-bento-bg: color-mix(in srgb, var(--mud-palette-warning) 11%, var(--mud-palette-surface));
+}
+
+::deep .mh-source-gap-critical .mh-bento-tile {
+    --mh-bento-accent: var(--mud-palette-error);
+    --mh-bento-bg: color-mix(in srgb, var(--mud-palette-error) 12%, var(--mud-palette-surface));
+    --mh-bento-border: color-mix(in srgb, var(--mud-palette-error) 55%, var(--mud-palette-divider));
 }
 
 .mh-entry-context div {
@@ -315,6 +331,10 @@
 
     .mh-row-summary {
         -webkit-line-clamp: 3;
+    }
+
+    .mh-entry-context {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     ::deep .mh-entry-stat-tile .mh-bento-tile {

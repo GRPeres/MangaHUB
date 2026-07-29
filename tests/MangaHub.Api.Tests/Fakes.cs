@@ -99,6 +99,18 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
     }
 }
 
+internal sealed class FakeMangaUpdatesClient : IMangaUpdatesClient
+{
+    public List<MangaUpdatesSearchResult> SearchResults { get; } = [];
+    public Dictionary<string, MangaUpdatesSeriesDetails> Details { get; } = [];
+
+    public Task<IReadOnlyList<MangaUpdatesSearchResult>> SearchSeriesAsync(string query, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<MangaUpdatesSearchResult>>(SearchResults);
+
+    public Task<MangaUpdatesSeriesDetails?> GetSeriesAsync(string seriesId, CancellationToken cancellationToken) =>
+        Task.FromResult(Details.TryGetValue(seriesId, out var details) ? details : null);
+}
+
 internal sealed class FakeHttpClientFactory(HttpClient? client = null) : IHttpClientFactory
 {
     private readonly HttpClient httpClient = client ?? new HttpClient(new FakeImageHandler());

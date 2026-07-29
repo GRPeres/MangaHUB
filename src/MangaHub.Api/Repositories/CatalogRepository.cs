@@ -58,6 +58,11 @@ public sealed class CatalogRepository(MangaHubDbContext db)
                 x.MangaDexId,
                 x.MangaDexLatestChapter,
                 x.MangaDexLastSyncedAt,
+                x.MangaUpdatesId,
+                x.MangaUpdatesLatestChapter,
+                x.MangaUpdatesStatus,
+                x.MangaUpdatesCompleted,
+                x.MangaUpdatesLastSyncedAt,
                 x.LocalSeriesId,
                 db.Series
                     .Where(series => series.Source == "mangadex-cache" && series.ExternalId == x.MangaDexId)

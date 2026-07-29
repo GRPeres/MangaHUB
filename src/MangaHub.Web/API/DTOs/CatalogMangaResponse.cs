@@ -19,6 +19,11 @@ public sealed record CatalogMangaResponse(
     string MangaDexId,
     decimal? MangaDexLatestChapter,
     DateTimeOffset? MangaDexLastSyncedAt,
+    string MangaUpdatesId,
+    decimal? MangaUpdatesLatestChapter,
+    string MangaUpdatesStatus,
+    bool? MangaUpdatesCompleted,
+    DateTimeOffset? MangaUpdatesLastSyncedAt,
     Guid? LocalSeriesId,
     int CachedChapterCount,
     bool IsInMyShelf);

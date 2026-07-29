@@ -33,6 +33,54 @@ public partial class CatalogEntryCard
         ? "Sync overdue"
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
     private string CachedChapterLabel => Entry.CachedChapterCount == 1 ? "1 chapter" : $"{Entry.CachedChapterCount} chapters";
+    private string MangaUpdatesStatusLabel => string.IsNullOrWhiteSpace(Entry.MangaUpdatesId)
+        ? "Unbound"
+        : Entry.MangaUpdatesLatestChapter is null
+            ? "Awaiting sync"
+            : $"Ch. {FormatChapter(Entry.MangaUpdatesLatestChapter.Value)}";
+    private decimal? SourceGap => Entry.MangaUpdatesLatestChapter is not null && Entry.MangaDexLatestChapter is not null
+        ? Entry.MangaUpdatesLatestChapter.Value - Entry.MangaDexLatestChapter.Value
+        : null;
+    private string SourceGapHeading => SourceGap switch
+    {
+        null when string.IsNullOrWhiteSpace(Entry.MangaUpdatesId) => "Source check",
+        null => "Source sync",
+        <= 1m => "MangaDex coverage",
+        _ => "MangaDex behind"
+    };
+    private string SourceGapValue => SourceGap switch
+    {
+        null when string.IsNullOrWhiteSpace(Entry.MangaUpdatesId) => "Unbound",
+        null => "Checking",
+        <= 1m => "In sync",
+        _ => $"+{FormatChapter(SourceGap.Value)}"
+    };
+    private string SourceGapDetail => SourceGap switch
+    {
+        null when string.IsNullOrWhiteSpace(Entry.MangaUpdatesId) => "Auto-match pending",
+        null => "MangaUpdates pending",
+        <= 1m => $"Reference Ch. {FormatChapter(Entry.MangaUpdatesLatestChapter!.Value)}",
+        _ => $"Reference Ch. {FormatChapter(Entry.MangaUpdatesLatestChapter!.Value)}"
+    };
+    private string SourceGapModalDetail => SourceGap is null
+        ? SourceGapDetail
+        : SourceGap <= 1m
+            ? $"MangaDex and MangaUpdates are within one chapter. {SourceGapDetail}."
+            : $"MangaDex is {FormatChapter(SourceGap.Value)} chapters behind MangaUpdates. {SourceGapDetail}.";
+    private string SourceGapScheme => SourceGap switch
+    {
+        null => "secondary",
+        <= 1m => "primary",
+        < 10m => "warm",
+        _ => "ink"
+    };
+    private string SourceGapClass => SourceGap switch
+    {
+        null => "",
+        <= 1m => "mh-source-gap-good",
+        < 10m => "mh-source-gap-warning",
+        _ => "mh-source-gap-critical"
+    };
     private string IdentityLabel => IsMissingMyAnimeListId ? "MAL ID missing" : $"MAL #{Entry.MyAnimeListId}";
     private bool HasExternalReaderLink => !HasMangaDexLink && IsHttpUrl(Entry.MangaDexUrl);
     private string ReaderLinksLabel => (HasMangaDexLink, HasExternalReaderLink, Entry.LocalSeriesId) switch
@@ -81,6 +129,8 @@ public partial class CatalogEntryCard
         var firstWord = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? trimmed;
         return firstWord.Length <= 12 ? $"{firstWord}..." : $"{firstWord[..12]}...";
     }
+
+    private static string FormatChapter(decimal chapter) => chapter.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
     private static string SourceName(string source) => source.ToLowerInvariant() switch
     {

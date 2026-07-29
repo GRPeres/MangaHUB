@@ -58,6 +58,9 @@
                         <MudTextField T="string" @bind-Value="editMangaDexUrl" Label="Reader URL" Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="editMangaUpdatesId" Label="MangaUpdates ID" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
                         <MudSelect T="string" @bind-Value="editLocalSeriesIdText" Label="Local scanned series" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">None</MudSelectItem>
                             @foreach (var series in LocalSeries)

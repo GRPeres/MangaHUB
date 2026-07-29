@@ -76,6 +76,10 @@
                             <span>Cached chapters</span>
                             <strong>@CachedChapterLabel</strong>
                         </div>
+                        <div>
+                            <span>MangaUpdates</span>
+                            <strong>@MangaUpdatesStatusLabel</strong>
+                        </div>
                     </div>
 
                 </div>
@@ -89,11 +93,11 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="secondary" Class="mh-entry-stat-tile">
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="@SourceGapScheme" Class="@($"mh-entry-stat-tile mh-source-gap-tile {SourceGapClass}")">
                 <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Chapters</MudText>
-                    <strong>@ChapterCountLabel</strong>
-                    <span class="mh-mobile-hide">Current count</span>
+                    <MudText Typo="Typo.overline">@SourceGapHeading</MudText>
+                    <strong>@SourceGapValue</strong>
+                    <span class="mh-mobile-hide">@SourceGapDetail</span>
                 </div>
             </MangaBentoTile>
 
@@ -173,6 +177,8 @@
                     <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.body2">@PublishingLabel</MudText></MudItem>
                     <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Reader setup</MudText><MudText Typo="Typo.body2">@ReaderLinksLabel</MudText></MudItem>
                     <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">MangaDex sync</MudText><MudText Typo="Typo.body2">@MangaDexSyncLabel</MudText></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">MangaUpdates</MudText><MudText Typo="Typo.body2">@MangaUpdatesStatusLabel</MudText></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Source coverage</MudText><MudText Typo="Typo.body2">@SourceGapModalDetail</MudText></MudItem>
                 </MudGrid>
             </MudStack>
         </section>

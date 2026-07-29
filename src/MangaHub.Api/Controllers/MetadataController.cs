@@ -17,4 +17,15 @@ public sealed class MetadataController(MetadataService metadata) : ControllerBas
         var match = await metadata.FindMangaDexMatchAsync(malId, title, cancellationToken);
         return match is null ? NoContent() : Ok(match);
     }
+
+    [HttpGet("mangaupdates-match")]
+    public async Task<IActionResult> FindMangaUpdatesMatch(
+        [FromQuery] string title,
+        [FromQuery] string mediaType,
+        [FromQuery] int? firstPublishYear,
+        CancellationToken cancellationToken)
+    {
+        var match = await metadata.FindMangaUpdatesMatchAsync(title, mediaType, firstPublishYear, cancellationToken);
+        return match is null ? NoContent() : Ok(match);
+    }
 }

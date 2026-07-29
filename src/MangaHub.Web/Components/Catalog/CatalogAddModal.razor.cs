@@ -29,6 +29,7 @@ public partial class CatalogAddModal
     private int? chapterCount;
     private int? volumeCount;
     private string mangaDexUrl = "";
+    private string mangaUpdatesId = "";
     private string localSeriesIdText = "";
     private string message = "";
     private Severity messageSeverity = Severity.Info;
@@ -98,6 +99,10 @@ public partial class CatalogAddModal
         publishingStatus = item.PublishingStatus;
         chapterCount = item.ChapterCount;
         volumeCount = item.VolumeCount;
+        if (string.IsNullOrWhiteSpace(mangaUpdatesId))
+        {
+            await MatchMangaUpdatesAsync();
+        }
         if (!string.Equals(item.Source, "myanimelist", StringComparison.OrdinalIgnoreCase)
             || string.IsNullOrWhiteSpace(item.MyAnimeListId)
             || !string.IsNullOrWhiteSpace(mangaDexUrl))
@@ -194,7 +199,8 @@ public partial class CatalogAddModal
             mediaType,
             publishingStatus,
             chapterCount,
-            volumeCount);
+            volumeCount,
+            mangaUpdatesId);
     }
 
     private async Task Close()
@@ -224,6 +230,7 @@ public partial class CatalogAddModal
         chapterCount = null;
         volumeCount = null;
         mangaDexUrl = "";
+        mangaUpdatesId = "";
         localSeriesIdText = "";
         message = "";
         showMetadata = false;
@@ -233,5 +240,23 @@ public partial class CatalogAddModal
         isMatchingMangaDex = false;
         isSaving = false;
         metadataResults = [];
+    }
+
+    private async Task MatchMangaUpdatesAsync()
+    {
+        try
+        {
+            var match = await MetadataApi.FindMangaUpdatesMatchAsync(title, mediaType, firstPublishYear);
+            if (match is not null)
+            {
+                mangaUpdatesId = match.Id;
+                metadataSeverity = Severity.Success;
+                metadataMessage = $"Filled the form from {title} and linked MangaUpdates: {match.Title}.";
+            }
+        }
+        catch
+        {
+            // The server repeats this lookup when saving, so a transient preview failure is harmless.
+        }
     }
 }
