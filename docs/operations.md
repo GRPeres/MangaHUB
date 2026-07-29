@@ -97,6 +97,8 @@ Both `mangahub-api` and `mangahub-workers` must mount the exact same writable `/
 
 When the authenticated site has been idle for 30 minutes, the worker performs a small historical cache backfill every hour. It only downloads chapters at or below a user's recorded current chapter, prioritizing closest missing chapters first. Default workload limits are one manga and two chapters. External request pacing is owned by the shared priority scheduler.
 
+MangaUpdates identity repair checks for newly eligible unbound catalog entries every 15 minutes. A specific entry that could not be matched is deferred for 24 hours using its own `MangaUpdatesLastMatchAttemptAt` timestamp, so one failed title never delays a different newly added manga.
+
 ## Remote Request Scheduler
 
 External requests are queued by provider and priority. Rates are configured under `MangaHub:RemoteRequests` in both API and worker settings:

@@ -53,7 +53,8 @@ public sealed class RemoteSyncWorker(
                 {
                     await RunMangaUpdatesMatchingAsync(stoppingToken);
                 }
-                nextMangaUpdatesMatchAt = DateTimeOffset.UtcNow.AddHours(Math.Clamp(options.Value.MangaUpdatesMatchRetryHours, 6, 24 * 30));
+                nextMangaUpdatesMatchAt = DateTimeOffset.UtcNow.AddMinutes(
+                    Math.Clamp(options.Value.MangaUpdatesMatchPollMinutes, 5, 720));
             }
 
             if (DateTimeOffset.UtcNow >= nextMangaUpdatesSyncAt)

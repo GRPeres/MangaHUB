@@ -95,6 +95,8 @@ MangaHub__MangaDexIdleMinutes=30
 MangaHub__MangaDexIdleBackfillCheckMinutes=60
 MangaHub__MangaDexIdleBackfillBatchSize=1
 MangaHub__MangaDexIdleBackfillMaxChaptersPerManga=2
+MangaHub__MangaUpdatesMatchPollMinutes=15
+MangaHub__MangaUpdatesMatchRetryHours=24
 ```
 
 Provider request pacing is configured separately for both API and worker processes under

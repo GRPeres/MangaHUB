@@ -28,6 +28,7 @@ public sealed class MangaHubOptions
     public bool MangaUpdatesEnabled { get; set; } = true;
     public int MangaUpdatesReleasePollMinutes { get; set; } = 60;
     public int MangaUpdatesSyncIntervalHours { get; set; } = 12;
+    public int MangaUpdatesMatchPollMinutes { get; set; } = 15;
     public int MangaUpdatesMatchRetryHours { get; set; } = 24;
     public int MangaUpdatesSyncBatchSize { get; set; } = 25;
     public int MangaUpdatesMatchBatchSize { get; set; } = 10;
