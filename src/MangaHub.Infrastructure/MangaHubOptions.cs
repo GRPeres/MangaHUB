@@ -11,20 +11,17 @@ public sealed class MangaHubOptions
     public string MyAnimeListClientId { get; set; } = "";
     public int MangaDexSyncIntervalHours { get; set; } = 6;
     public int MangaDexReleasePollMinutes { get; set; } = 30;
-    public int MangaDexSyncDelayMilliseconds { get; set; } = 1500;
     public int MangaDexSyncBatchSize { get; set; } = 50;
     public int MangaDexSyncMaxBatchSize { get; set; } = 1000;
     public int MangaDexMaintenanceHour { get; set; } = 4;
     public string MangaDexMaintenanceTimeZone { get; set; } = "America/Sao_Paulo";
     public int MangaDexPrefetchBatchSize { get; set; } = 6;
     public int MangaDexPrefetchMaxChaptersPerManga { get; set; } = 3;
-    public int MangaDexPrefetchDelayMilliseconds { get; set; } = 5000;
     public bool MangaDexIdleBackfillEnabled { get; set; } = true;
     public int MangaDexIdleMinutes { get; set; } = 30;
     public int MangaDexIdleBackfillCheckMinutes { get; set; } = 60;
     public int MangaDexIdleBackfillBatchSize { get; set; } = 1;
     public int MangaDexIdleBackfillMaxChaptersPerManga { get; set; } = 2;
-    public int MangaDexIdleBackfillDelayMilliseconds { get; set; } = 10000;
     public int MangaDexReaderCacheMinutes { get; set; } = 15;
     public int MangaDexReaderMaxChapters { get; set; } = 1000;
     public string MangaDexCachePath { get; set; } = "/mangadex-cache";
@@ -34,5 +31,5 @@ public sealed class MangaHubOptions
     public int MangaUpdatesMatchRetryHours { get; set; } = 24;
     public int MangaUpdatesSyncBatchSize { get; set; } = 25;
     public int MangaUpdatesMatchBatchSize { get; set; } = 10;
-    public int MangaUpdatesDelayMilliseconds { get; set; } = 1000;
+    public RemoteJobs.RemoteRequestLimitsOptions RemoteRequests { get; set; } = new();
 }

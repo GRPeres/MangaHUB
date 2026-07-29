@@ -95,7 +95,32 @@ Check the worker logs for `MangaDex catalog sync` and `MangaDex pre-download`. T
 
 Both `mangahub-api` and `mangahub-workers` must mount the exact same writable `/mangadex-cache` volume. If one does not, the worker may download a chapter that the reader cannot find.
 
-When the authenticated site has been idle for 30 minutes, the worker performs a small historical cache backfill every hour. It only downloads chapters at or below a user's recorded current chapter, prioritizing closest missing chapters first. Default limits are one manga, two chapters, and a 10-second delay. It stops before each chapter if site activity has resumed.
+When the authenticated site has been idle for 30 minutes, the worker performs a small historical cache backfill every hour. It only downloads chapters at or below a user's recorded current chapter, prioritizing closest missing chapters first. Default workload limits are one manga and two chapters. External request pacing is owned by the shared priority scheduler.
+
+## Remote Request Scheduler
+
+External requests are queued by provider and priority. Rates are configured under `MangaHub:RemoteRequests` in both API and worker settings:
+
+```json
+{
+  "MangaDexApi": { "RequestsPerSecond": 2, "MaxConcurrency": 2 },
+  "MangaDexPages": { "RequestsPerSecond": 1, "MaxConcurrency": 2 },
+  "MangaUpdates": { "RequestsPerSecond": 0.5, "MaxConcurrency": 1 },
+  "MyAnimeList": { "RequestsPerSecond": 1, "MaxConcurrency": 1 },
+  "OpenLibrary": { "RequestsPerSecond": 0.5, "MaxConcurrency": 1 }
+}
+```
+
+These are conservative per-process defaults because API and workers are separate containers behind the same public IP. Environment variable overrides use the normal .NET form, for example:
+
+```text
+MangaHub__RemoteRequests__MangaDexApi__RequestsPerSecond=2
+MangaHub__RemoteRequests__MangaDexPages__MaxConcurrency=2
+```
+
+Priority order is reader open, next-chapter prefetch, interactive metadata, release sync, maintenance, then idle historical backfill. HTTP `429` responses temporarily pause the affected provider.
+
+Open Library officially allows 1 request per second for unidentified clients and 3 requests per second for clients whose User-Agent includes contact information: https://openlibrary.org/developers/api. MangaHub stays below the unidentified allowance by default. MangaDex, MangaUpdates, and MyAnimeList do not publish a stable general-purpose ceiling that MangaHub can safely depend on, so their defaults are deliberately conservative and should be raised only after observing provider responses.
 
 ## Secret Rotation
 

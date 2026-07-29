@@ -90,14 +90,16 @@ MangaHub__MangaDexMaintenanceHour=4
 MangaHub__MangaDexMaintenanceTimeZone=America/Sao_Paulo
 MangaHub__MangaDexPrefetchBatchSize=6
 MangaHub__MangaDexPrefetchMaxChaptersPerManga=3
-MangaHub__MangaDexPrefetchDelayMilliseconds=5000
 MangaHub__MangaDexIdleBackfillEnabled=true
 MangaHub__MangaDexIdleMinutes=30
 MangaHub__MangaDexIdleBackfillCheckMinutes=60
 MangaHub__MangaDexIdleBackfillBatchSize=1
 MangaHub__MangaDexIdleBackfillMaxChaptersPerManga=2
-MangaHub__MangaDexIdleBackfillDelayMilliseconds=10000
 ```
+
+Provider request pacing is configured separately for both API and worker processes under
+`MangaHub__RemoteRequests__<Provider>__RequestsPerSecond` and
+`MangaHub__RemoteRequests__<Provider>__MaxConcurrency`. See `docs/operations.md` for defaults.
 
 ## Library Mount
 

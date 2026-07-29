@@ -5,6 +5,7 @@ using MangaHub.Core.Services;
 using MangaHub.Core.Sources;
 using MangaHub.Infrastructure;
 using MangaHub.Infrastructure.Data;
+using MangaHub.Infrastructure.RemoteJobs;
 using MangaHub.Infrastructure.Sources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -15,6 +16,7 @@ public sealed class RemoteSyncWorker(
     IServiceScopeFactory scopeFactory,
     IHttpClientFactory httpClientFactory,
     IOptions<MangaHubOptions> options,
+    RemoteJobPriorityContext priorityContext,
     ILogger<RemoteSyncWorker> logger) : BackgroundService
 {
     private const string MangaDexCacheSource = "mangadex-cache";
@@ -28,26 +30,38 @@ public sealed class RemoteSyncWorker(
         {
             if (DateTimeOffset.UtcNow >= nextReleaseSyncAt)
             {
-                await RunReleaseSyncAsync(stoppingToken);
+                using (priorityContext.Push(RemoteJobPriority.ReleaseSync))
+                {
+                    await RunReleaseSyncAsync(stoppingToken);
+                }
                 nextReleaseSyncAt = DateTimeOffset.UtcNow.Add(GetReleasePollDelay());
             }
 
             if (DateTimeOffset.UtcNow >= nextPrefetchAt)
             {
-                await RunPrefetchAsync(stoppingToken);
+                using (priorityContext.Push(RemoteJobPriority.Prefetch))
+                {
+                    await RunPrefetchAsync(stoppingToken);
+                }
                 nextPrefetchAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
                 logger.LogInformation("Next MangaDex pre-download maintenance is scheduled for {ScheduledAt}.", nextPrefetchAt);
             }
 
             if (DateTimeOffset.UtcNow >= nextMangaUpdatesMatchAt)
             {
-                await RunMangaUpdatesMatchingAsync(stoppingToken);
+                using (priorityContext.Push(RemoteJobPriority.Maintenance))
+                {
+                    await RunMangaUpdatesMatchingAsync(stoppingToken);
+                }
                 nextMangaUpdatesMatchAt = DateTimeOffset.UtcNow.AddHours(Math.Clamp(options.Value.MangaUpdatesMatchRetryHours, 6, 24 * 30));
             }
 
             if (DateTimeOffset.UtcNow >= nextMangaUpdatesSyncAt)
             {
-                await RunMangaUpdatesSyncAsync(stoppingToken);
+                using (priorityContext.Push(RemoteJobPriority.ReleaseSync))
+                {
+                    await RunMangaUpdatesSyncAsync(stoppingToken);
+                }
                 nextMangaUpdatesSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaUpdatesReleasePollMinutes, 15, 720));
             }
 
@@ -64,7 +78,10 @@ public sealed class RemoteSyncWorker(
 
             if (DateTimeOffset.UtcNow < nextReleaseSyncAt && DateTimeOffset.UtcNow < nextPrefetchAt)
             {
-                await RunIdleBackfillAsync(stoppingToken);
+                using (priorityContext.Push(RemoteJobPriority.Backfill))
+                {
+                    await RunIdleBackfillAsync(stoppingToken);
+                }
             }
         }
     }
@@ -115,7 +132,6 @@ public sealed class RemoteSyncWorker(
             var matcher = scope.ServiceProvider.GetRequiredService<MangaUpdatesCatalogMatchService>();
             var retryCutoff = DateTimeOffset.UtcNow.AddHours(-Math.Clamp(options.Value.MangaUpdatesMatchRetryHours, 6, 24 * 30));
             var batchSize = Math.Clamp(options.Value.MangaUpdatesMatchBatchSize, 1, 50);
-            var delay = TimeSpan.FromMilliseconds(Math.Max(500, options.Value.MangaUpdatesDelayMilliseconds));
             var checkedCount = 0;
             var matchedCount = 0;
 
@@ -155,7 +171,6 @@ public sealed class RemoteSyncWorker(
 
                     await db.SaveChangesAsync(cancellationToken);
                     checkedCount++;
-                    await Task.Delay(delay, cancellationToken);
                 }
 
                 if (entries.Count < batchSize)
@@ -196,7 +211,6 @@ public sealed class RemoteSyncWorker(
                 .ThenBy(entry => entry.Title)
                 .Take(Math.Clamp(options.Value.MangaUpdatesSyncBatchSize, 1, 100))
                 .ToListAsync(cancellationToken);
-            var delay = TimeSpan.FromMilliseconds(Math.Max(500, options.Value.MangaUpdatesDelayMilliseconds));
             var updated = 0;
 
             foreach (var entry in entries)
@@ -230,7 +244,6 @@ public sealed class RemoteSyncWorker(
                     logger.LogWarning(ex, "MangaUpdates sync failed for {Title} ({MangaUpdatesId}).", entry.Title, entry.MangaUpdatesId);
                 }
 
-                await Task.Delay(delay, cancellationToken);
             }
 
             logger.LogInformation("MangaUpdates source sync checked {CheckedCount} entries and updated {UpdatedCount}.", entries.Count, updated);
@@ -277,7 +290,6 @@ public sealed class RemoteSyncWorker(
         }
 
         var client = httpClientFactory.CreateClient("mangadex-sync");
-        var delay = TimeSpan.FromMilliseconds(Math.Max(250, options.Value.MangaDexSyncDelayMilliseconds));
         var updated = 0;
 
         foreach (var entry in entries)
@@ -307,7 +319,6 @@ public sealed class RemoteSyncWorker(
             }
 
             await db.SaveChangesAsync(cancellationToken);
-            await Task.Delay(delay, cancellationToken);
         }
 
         logger.LogInformation("MangaDex catalog sync checked {CheckedCount} entries and updated {UpdatedCount}.", entries.Count, updated);
@@ -326,7 +337,6 @@ public sealed class RemoteSyncWorker(
         var cache = scope.ServiceProvider.GetRequiredService<IMangaDexChapterCache>();
         var batchSize = Math.Clamp(options.Value.MangaDexPrefetchBatchSize, 1, 25);
         var perMangaLimit = Math.Clamp(options.Value.MangaDexPrefetchMaxChaptersPerManga, 1, 10);
-        var delay = TimeSpan.FromMilliseconds(Math.Max(1000, options.Value.MangaDexPrefetchDelayMilliseconds));
 
         var entries = await db.MangaEntries
             .Where(entry => entry.MangaDexId != ""
@@ -376,7 +386,6 @@ public sealed class RemoteSyncWorker(
                     entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
                     await db.SaveChangesAsync(cancellationToken);
                     downloaded++;
-                    await Task.Delay(delay, cancellationToken);
                 }
             }
             catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException or IOException)
@@ -409,7 +418,6 @@ public sealed class RemoteSyncWorker(
 
         var batchSize = Math.Clamp(options.Value.MangaDexIdleBackfillBatchSize, 1, 5);
         var perMangaLimit = Math.Clamp(options.Value.MangaDexIdleBackfillMaxChaptersPerManga, 1, 5);
-        var delay = TimeSpan.FromMilliseconds(Math.Max(3000, options.Value.MangaDexIdleBackfillDelayMilliseconds));
         var entries = await db.MangaEntries
             .Where(entry => entry.MangaDexId != ""
                 && db.UserMangaEntries.Any(shelf => shelf.MangaEntryId == entry.Id
@@ -471,7 +479,6 @@ public sealed class RemoteSyncWorker(
                     await CacheChapterAsync(db, cache, mangaDex, entry, cacheSeries, item.Chapter, cancellationToken);
                     cachedChapters++;
                     await db.SaveChangesAsync(cancellationToken);
-                    await Task.Delay(delay, cancellationToken);
                 }
 
                 entry.MangaDexLastBackfilledAt = DateTimeOffset.UtcNow;

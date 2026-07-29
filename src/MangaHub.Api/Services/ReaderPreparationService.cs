@@ -1,11 +1,13 @@
 using System.Collections.Concurrent;
 using MangaHub.Core.Dto;
 using MangaHub.Core.Services;
+using MangaHub.Infrastructure.RemoteJobs;
 
 namespace MangaHub.Api.Services;
 
 public sealed class ReaderPreparationService(
     IServiceScopeFactory scopeFactory,
+    RemoteJobPriorityContext priorityContext,
     ILogger<ReaderPreparationService> logger)
 {
     private readonly ConcurrentDictionary<Guid, ReaderPreparationJob> jobs = new();
@@ -43,6 +45,7 @@ public sealed class ReaderPreparationService(
 
         _ = Task.Run(async () =>
         {
+            using var priorityScope = priorityContext.Push(RemoteJobPriority.ReaderAhead);
             try
             {
                 using var scope = scopeFactory.CreateScope();
@@ -70,6 +73,7 @@ public sealed class ReaderPreparationService(
         bool allowLanguageFallback,
         bool allowChapterJump)
     {
+        using var priorityScope = priorityContext.Push(RemoteJobPriority.UserBlocking);
         try
         {
             using var scope = scopeFactory.CreateScope();
