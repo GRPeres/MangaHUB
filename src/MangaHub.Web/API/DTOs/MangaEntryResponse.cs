@@ -30,4 +30,5 @@ public sealed record MangaEntryResponse(
     string Category,
     string Summary,
     string Notes,
-    string FallbackReaderUrl);
+    string FallbackReaderUrl,
+    string ReaderPreference = "mangahub");

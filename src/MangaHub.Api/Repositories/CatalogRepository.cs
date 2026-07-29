@@ -68,7 +68,8 @@ public sealed class CatalogRepository(MangaHubDbContext db)
                     .SelectMany(series => series.Chapters)
                     .Count(),
                 shelfIds.Contains(x.Id),
-                x.FallbackReaderUrl))
+                x.FallbackReaderUrl,
+                x.ReaderPreference))
             .ToListAsync(cancellationToken);
     }
 

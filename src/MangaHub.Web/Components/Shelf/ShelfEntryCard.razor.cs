@@ -27,9 +27,18 @@ public partial class ShelfEntryCard
     private string DescriptionText => FirstNonEmpty(Entry.Summary, Entry.Description);
     private string ScoreLabel => Entry.Score is null ? "Not scored" : $"{Entry.Score}/5";
     private bool HasMangaDexLink => !string.IsNullOrWhiteSpace(Entry.MangaDexId);
-    private bool HasExternalReaderLink => !HasMangaDexLink && IsHttpUrl(Entry.FallbackReaderUrl);
-    private bool OpensExternalReader => Entry.LocalSeriesId is null && HasExternalReaderLink;
-    private string ReadSourceLabel => Entry.LocalSeriesId is not null
+    private bool HasExternalReaderLink => IsHttpUrl(Entry.FallbackReaderUrl);
+    private bool HasMangaHubReader => Entry.LocalSeriesId is not null || HasMangaDexLink;
+    private bool OpensExternalReader => HasExternalReaderLink
+        && (Entry.ReaderPreference == "external" || !HasMangaHubReader);
+    private bool ShowsExternalReaderAction => !OpensExternalReader
+        && Entry.ReaderPreference == "hybrid"
+        && HasExternalReaderLink;
+    private string ReadSourceLabel => OpensExternalReader
+        ? "External"
+        : Entry.ReaderPreference == "hybrid" && HasExternalReaderLink
+            ? "Hybrid"
+        : Entry.LocalSeriesId is not null
         ? "Local"
         : HasMangaDexLink ? "MangaDex"
         : HasExternalReaderLink ? "External link" : "Unlinked";

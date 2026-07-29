@@ -38,6 +38,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.Property(x => x.PublishingStatus).HasMaxLength(80);
             entity.Property(x => x.MangaDexId).HasMaxLength(80);
             entity.Property(x => x.FallbackReaderUrl).HasColumnType("text");
+            entity.Property(x => x.ReaderPreference).HasMaxLength(20);
             entity.Property(x => x.MangaDexLatestChapter).HasPrecision(10, 3);
             entity.HasIndex(x => x.MangaDexLastSyncedAt);
             entity.Property(x => x.MangaDexLastPrefetchedChapter).HasPrecision(10, 3);

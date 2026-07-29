@@ -41,6 +41,7 @@ public sealed class CatalogService(
             VolumeCount = entry.VolumeCount,
             MangaDexId = readerLinks.MangaDexId,
             FallbackReaderUrl = readerLinks.FallbackReaderUrl,
+            ReaderPreference = NormalizeReaderPreference(entry.ReaderPreference),
             MangaUpdatesId = mangaUpdatesId,
             MangaUpdatesLastMatchAttemptAt = DateTimeOffset.UtcNow,
             LocalSeriesId = entry.LocalSeriesId
@@ -74,6 +75,7 @@ public sealed class CatalogService(
         var readerLinks = await ResolveReaderLinksAsync(entry, cancellationToken);
         manga.MangaDexId = readerLinks.MangaDexId;
         manga.FallbackReaderUrl = readerLinks.FallbackReaderUrl;
+        manga.ReaderPreference = NormalizeReaderPreference(entry.ReaderPreference);
         manga.MangaUpdatesId = await ResolveMangaUpdatesIdAsync(
             entry.MangaUpdatesId,
             manga.Title,
@@ -131,6 +133,9 @@ public sealed class CatalogService(
 
         return TextRules.ExtractMangaDexId(trimmed);
     }
+
+    private static string NormalizeReaderPreference(string value) =>
+        ReaderPreference.Normalize(value);
 
     private sealed record ReaderLinks(string MangaDexId, string FallbackReaderUrl);
 }

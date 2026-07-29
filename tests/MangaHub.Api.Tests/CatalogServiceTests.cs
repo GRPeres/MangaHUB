@@ -110,6 +110,22 @@ public sealed class CatalogServiceTests
         Assert.Equal("https://reader.example.com/berserk", created.FallbackReaderUrl);
     }
 
+    [Fact]
+    public async Task CreateAsync_StoresTheChosenReaderPreference()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+
+        var created = await service.CreateAsync(
+            Guid.NewGuid(),
+            Request(
+                fallbackReaderUrl: "https://reader.example.com/berserk",
+                readerPreference: "hybrid"),
+            CancellationToken.None);
+
+        Assert.Equal("hybrid", created.ReaderPreference);
+    }
+
     private static CatalogService CreateService(
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         IOpenLibraryClient openLibrary,
@@ -126,6 +142,7 @@ public sealed class CatalogServiceTests
         string openLibraryKey = "",
         string mangaDexId = "",
         string fallbackReaderUrl = "",
+        string readerPreference = "mangahub",
         string metadataSource = "manual",
         string myAnimeListId = "") =>
         new(
@@ -146,7 +163,8 @@ public sealed class CatalogServiceTests
             PublishingStatus: "",
             ChapterCount: null,
             VolumeCount: null,
-            FallbackReaderUrl: fallbackReaderUrl);
+            FallbackReaderUrl: fallbackReaderUrl,
+            ReaderPreference: readerPreference);
 
     private sealed class FakeOpenLibrary(OpenLibraryWorkDetails? details) : IOpenLibraryClient
     {

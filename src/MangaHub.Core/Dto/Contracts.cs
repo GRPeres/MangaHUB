@@ -44,7 +44,8 @@ public sealed record MangaEntryRequest(
     int? ChapterCount = null,
     int? VolumeCount = null,
     string MangaUpdatesId = "",
-    string FallbackReaderUrl = "");
+    string FallbackReaderUrl = "",
+    string ReaderPreference = "mangahub");
 public sealed record MangaEntryResponse(
     Guid Id,
     string Title,
@@ -75,7 +76,8 @@ public sealed record MangaEntryResponse(
     string Category,
     string Summary,
     string Notes,
-    string FallbackReaderUrl);
+    string FallbackReaderUrl,
+    string ReaderPreference = "mangahub");
 public sealed record CatalogMangaResponse(
     Guid Id,
     string Title,
@@ -102,7 +104,8 @@ public sealed record CatalogMangaResponse(
     Guid? LocalSeriesId,
     int CachedChapterCount,
     bool IsInMyShelf,
-    string FallbackReaderUrl);
+    string FallbackReaderUrl,
+    string ReaderPreference = "mangahub");
 public sealed record AddToShelfRequest(
     Guid MangaEntryId,
     string ReadingStatus,

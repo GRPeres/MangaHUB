@@ -26,4 +26,5 @@ public sealed record CatalogMangaResponse(
     Guid? LocalSeriesId,
     int CachedChapterCount,
     bool IsInMyShelf,
-    string FallbackReaderUrl);
+    string FallbackReaderUrl,
+    string ReaderPreference = "mangahub");

@@ -31,6 +31,7 @@ public partial class CatalogAddModal
     private int? volumeCount;
     private string mangaDexId = "";
     private string fallbackReaderUrl = "";
+    private string readerPreference = "mangahub";
     private string mangaUpdatesId = "";
     private string localSeriesIdText = "";
     private string message = "";
@@ -193,6 +194,14 @@ public partial class CatalogAddModal
             return;
         }
 
+        if ((readerPreference == "external" || readerPreference == "hybrid")
+            && !IsHttpUrl(fallbackReaderUrl))
+        {
+            messageSeverity = Severity.Warning;
+            message = "External and hybrid reading modes need a valid fallback reader URL.";
+            return;
+        }
+
         isSaving = true;
         messageSeverity = Severity.Info;
         message = "Adding catalog manga...";
@@ -242,7 +251,8 @@ public partial class CatalogAddModal
             chapterCount,
             volumeCount,
             mangaUpdatesId,
-            fallbackReaderUrl);
+            fallbackReaderUrl,
+            readerPreference);
     }
 
     private async Task Close()
@@ -273,6 +283,7 @@ public partial class CatalogAddModal
         volumeCount = null;
         mangaDexId = "";
         fallbackReaderUrl = "";
+        readerPreference = "mangahub";
         mangaUpdatesId = "";
         localSeriesIdText = "";
         message = "";
@@ -302,6 +313,7 @@ public partial class CatalogAddModal
         volumeCount = entry.VolumeCount;
         mangaDexId = entry.MangaDexId;
         fallbackReaderUrl = entry.FallbackReaderUrl;
+        readerPreference = entry.ReaderPreference;
         mangaUpdatesId = entry.MangaUpdatesId;
         localSeriesIdText = entry.LocalSeriesId?.ToString() ?? "";
         message = "";
@@ -327,4 +339,8 @@ public partial class CatalogAddModal
             // The server repeats this lookup when saving, so a transient preview failure is harmless.
         }
     }
+
+    private static bool IsHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }

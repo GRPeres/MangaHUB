@@ -19,4 +19,5 @@ public sealed record MangaEntryRequest(
     int? ChapterCount = null,
     int? VolumeCount = null,
     string MangaUpdatesId = "",
-    string FallbackReaderUrl = "");
+    string FallbackReaderUrl = "",
+    string ReaderPreference = "mangahub");

@@ -104,6 +104,13 @@
                         <MudTextField T="string" @bind-Value="fallbackReaderUrl" Label="Fallback reader URL" Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="12" md="6">
+                        <MudSelect T="string" @bind-Value="readerPreference" Label="Reading mode" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("mangahub")">MangaHub reader</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("external")">External reader</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("hybrid")">Hybrid: MangaHub + external</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
                         <MudTextField T="string" @bind-Value="mangaUpdatesId" Label="MangaUpdates ID" Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="12" md="6">

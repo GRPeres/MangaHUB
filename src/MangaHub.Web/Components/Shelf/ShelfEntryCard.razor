@@ -145,6 +145,17 @@
                     {
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="Read">Read</MudButton>
                     }
+                    @if (ShowsExternalReaderAction)
+                    {
+                        <MudTooltip Text="Open external reader">
+                            <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                           Color="Color.Primary"
+                                           Href="@Entry.FallbackReaderUrl"
+                                           Target="_blank"
+                                           Rel="noopener noreferrer"
+                                           aria-label="Open external reader" />
+                        </MudTooltip>
+                    }
                 }
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit</MudButton>
             </div>

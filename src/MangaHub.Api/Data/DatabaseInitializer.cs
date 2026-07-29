@@ -44,6 +44,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "VolumeCount" integer NULL,
                 "MangaDexUrl" text NOT NULL,
                 "FallbackReaderUrl" text NOT NULL DEFAULT '',
+                "ReaderPreference" character varying(20) NOT NULL DEFAULT 'mangahub',
                 "MangaDexId" character varying(80) NOT NULL,
                 "MangaDexLatestChapter" numeric(10,3) NULL,
                 "MangaDexLastSyncedAt" timestamp with time zone NULL,
@@ -72,6 +73,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "VolumeCount" integer NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "FallbackReaderUrl" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReaderPreference" character varying(20) NOT NULL DEFAULT 'mangahub';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexUrl" text NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexId" character varying(80) NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastSyncedAt" timestamp with time zone NULL;
@@ -123,6 +125,10 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
               AND "MangaDexId" = ''
               AND "MangaDexUrl" <> ''
               AND "MangaDexUrl" !~* 'mangadex[.]org/title/[0-9a-f]{{8}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{12}}';
+
+            UPDATE manga_entries
+            SET "ReaderPreference" = 'mangahub'
+            WHERE "ReaderPreference" NOT IN ('mangahub', 'external', 'hybrid');
 
             CREATE TABLE IF NOT EXISTS user_manga_entries (
                 "Id" uuid PRIMARY KEY,
