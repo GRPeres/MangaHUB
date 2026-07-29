@@ -1,0 +1,13 @@
+<MudTextField T="string"
+              Value="@Value"
+              ValueChanged="HandleValueChangedAsync"
+              Label="@Label"
+              Variant="@Variant"
+              Immediate="true"
+              DebounceInterval="@DebounceMilliseconds"
+              OnDebounceIntervalElapsed="HandleDebounceAsync"
+              Clearable="@Clearable"
+              Disabled="@Disabled"
+              Adornment="Adornment.End"
+              AdornmentIcon="@(IsLoading ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.Search)"
+              AdornmentAriaLabel="@AriaLabel" />

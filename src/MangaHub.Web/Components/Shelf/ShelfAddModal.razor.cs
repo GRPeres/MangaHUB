@@ -29,6 +29,7 @@ public partial class ShelfAddModal
     private string notes = "";
     private bool isSearchingCatalog;
     private bool isSaving;
+    private int catalogSearchVersion;
     private List<CatalogMangaResponse> AvailableCatalogResults => catalogResults
         .Where(item => !item.IsInMyShelf)
         .ToList();
@@ -41,19 +42,21 @@ public partial class ShelfAddModal
         }
     }
 
-    private async Task SearchCatalog()
+    private async Task SearchCatalog(string query)
     {
-        if (isSearchingCatalog)
-        {
-            return;
-        }
-
+        var searchVersion = ++catalogSearchVersion;
         isSearchingCatalog = true;
         catalogSeverity = Severity.Info;
-        catalogMessage = "Searching catalog...";
+        catalogMessage = string.IsNullOrWhiteSpace(query) ? "Showing all catalog manga..." : "Searching catalog...";
         try
         {
-            catalogResults = await CatalogApi.GetCatalogAsync(catalogQuery);
+            var results = await CatalogApi.GetCatalogAsync(query);
+            if (searchVersion != catalogSearchVersion)
+            {
+                return;
+            }
+
+            catalogResults = results;
             var availableCount = AvailableCatalogResults.Count;
             catalogSeverity = availableCount == 0 ? Severity.Info : Severity.Success;
             catalogMessage = availableCount == 0
@@ -64,7 +67,10 @@ public partial class ShelfAddModal
         }
         finally
         {
-            isSearchingCatalog = false;
+            if (searchVersion == catalogSearchVersion)
+            {
+                isSearchingCatalog = false;
+            }
         }
     }
 
@@ -158,5 +164,6 @@ public partial class ShelfAddModal
         notes = "";
         isSaving = false;
         isSearchingCatalog = false;
+        catalogSearchVersion++;
     }
 }

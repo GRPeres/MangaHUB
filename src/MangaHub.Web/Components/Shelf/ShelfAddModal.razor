@@ -18,20 +18,12 @@
                     <MudChip T="string" Color="@(shelfWizardStep == 2 ? Color.Primary : Color.Default)" Variant="@(shelfWizardStep == 2 ? Variant.Filled : Variant.Outlined)">2. Reading info</MudChip>
                 </MudStack>
 
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" md="9">
-                        <MudTextField T="string" @bind-Value="catalogQuery" Label="Search catalog" Variant="Variant.Outlined" Immediate="true" />
-                    </MudItem>
-                    <MudItem xs="12" md="3" Class="d-flex align-center">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(isSearchingCatalog ? null : Icons.Material.Filled.Search)" FullWidth="true" Disabled="@(isSearchingCatalog || isSaving)" OnClick="SearchCatalog">
-                            @if (isSearchingCatalog)
-                            {
-                                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
-                            }
-                            @(isSearchingCatalog ? "Searching..." : "Search")
-                        </MudButton>
-                    </MudItem>
-                </MudGrid>
+                <MangaDebouncedSearch @bind-Value="catalogQuery"
+                                      Label="Search catalog"
+                                      AriaLabel="Search catalog manga"
+                                      IsLoading="@isSearchingCatalog"
+                                      Disabled="@isSaving"
+                                      OnSearch="SearchCatalog" />
 
                 @if (!string.IsNullOrWhiteSpace(catalogMessage))
                 {

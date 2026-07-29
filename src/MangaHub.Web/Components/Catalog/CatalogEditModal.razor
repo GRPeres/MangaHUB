@@ -96,17 +96,13 @@
                             <MudText Typo="Typo.h3">Metadata match</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Search MyAnimeList first. Load OpenLibrary when you need extra fallback matches.</MudText>
                         </MudStack>
-                        <MudGrid Spacing="2">
-                            <MudItem xs="12" md="9">
-                                <MudTextField T="string" @bind-Value="metadataQuery" Label="Search MyAnimeList" Variant="Variant.Outlined" />
-                            </MudItem>
-                            <MudItem xs="12" md="3" Class="d-flex align-center">
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.ManageSearch" FullWidth="true" Disabled="@isSearchingMetadata" OnClick="() => SearchMetadata(false)">
-                                    @(isSearchingMetadata ? "Searching..." : "Search")
-                                </MudButton>
-                            </MudItem>
-                        </MudGrid>
-                        <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.MoreHoriz" Disabled="@isSearchingMetadata" OnClick="() => SearchMetadata(true)">Load OpenLibrary results</MudButton>
+                        <MangaDebouncedSearch @bind-Value="metadataQuery"
+                                              Label="Search MyAnimeList"
+                                              AriaLabel="Search MyAnimeList metadata"
+                                              IsLoading="@isSearchingMetadata"
+                                              Disabled="@isSaving"
+                                              OnSearch="SearchMetadata" />
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.MoreHoriz" Disabled="@(isSearchingMetadata || string.IsNullOrWhiteSpace(metadataQuery))" OnClick="LoadOpenLibraryResults">Load OpenLibrary results</MudButton>
 
                         @if (!string.IsNullOrWhiteSpace(metadataMessage))
                         {

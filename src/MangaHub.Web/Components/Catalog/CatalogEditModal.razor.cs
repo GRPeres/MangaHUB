@@ -43,6 +43,7 @@ public partial class CatalogEditModal
     private bool isMatchingMangaDex;
     private bool isSaving;
     private bool includeOpenLibrary;
+    private int metadataSearchVersion;
     private List<MetadataResult> metadataResults = [];
 
     protected override void OnParametersSet()
@@ -74,6 +75,7 @@ public partial class CatalogEditModal
         metadataResults = [];
         metadataMessage = "";
         includeOpenLibrary = false;
+        metadataSearchVersion++;
         message = "";
         isSaving = false;
         showMetadata = false;
@@ -81,21 +83,27 @@ public partial class CatalogEditModal
 
     private void ToggleMetadata() => showMetadata = !showMetadata;
 
-    private async Task SearchMetadata(bool loadOpenLibrary = false)
+    private async Task SearchMetadata(string query)
     {
-        if (string.IsNullOrWhiteSpace(metadataQuery))
+        if (string.IsNullOrWhiteSpace(query))
         {
             metadataResults = [];
             metadataSeverity = Severity.Info;
-            metadataMessage = "Type a title before searching metadata.";
+            metadataMessage = "Start typing a title to search metadata.";
             return;
         }
 
-        includeOpenLibrary = includeOpenLibrary || loadOpenLibrary;
+        var searchVersion = ++metadataSearchVersion;
         isSearchingMetadata = true;
         try
         {
-            metadataResults = await MetadataApi.SearchAsync(metadataQuery, includeOpenLibrary);
+            var results = await MetadataApi.SearchAsync(query, includeOpenLibrary);
+            if (searchVersion != metadataSearchVersion)
+            {
+                return;
+            }
+
+            metadataResults = results;
             metadataSeverity = metadataResults.Count == 0 ? Severity.Warning : Severity.Success;
             metadataMessage = metadataResults.Count == 0
                 ? "No metadata matches found."
@@ -103,14 +111,28 @@ public partial class CatalogEditModal
         }
         catch
         {
+            if (searchVersion != metadataSearchVersion)
+            {
+                return;
+            }
+
             metadataResults = [];
             metadataSeverity = Severity.Error;
             metadataMessage = "Metadata search failed.";
         }
         finally
         {
-            isSearchingMetadata = false;
+            if (searchVersion == metadataSearchVersion)
+            {
+                isSearchingMetadata = false;
+            }
         }
+    }
+
+    private async Task LoadOpenLibraryResults()
+    {
+        includeOpenLibrary = true;
+        await SearchMetadata(metadataQuery);
     }
 
     private async Task ApplyMetadata(MetadataResult item)
