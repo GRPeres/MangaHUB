@@ -74,14 +74,48 @@ public sealed class MangaUpdatesClient(HttpClient httpClient) : IMangaUpdatesCli
         return new MangaUpdatesSearchResult(id, title, ReadString(record, "type"), ReadInt(record, "year"), alternativeTitles);
     }
 
-    private static string ReadString(JsonElement element, string property) =>
-        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
+    private static string ReadString(JsonElement element, string property)
+    {
+        if (!element.TryGetProperty(property, out var value))
+        {
+            return "";
+        }
 
-    private static int? ReadInt(JsonElement element, string property) =>
-        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) ? number : null;
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString() ?? "",
+            JsonValueKind.Number => value.GetRawText(),
+            _ => ""
+        };
+    }
 
-    private static decimal? ReadDecimal(JsonElement element, string property) =>
-        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number) ? number : null;
+    private static int? ReadInt(JsonElement element, string property)
+    {
+        if (!element.TryGetProperty(property, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number)
+            ? number
+            : value.ValueKind == JsonValueKind.String && int.TryParse(value.GetString(), out number)
+                ? number
+                : null;
+    }
+
+    private static decimal? ReadDecimal(JsonElement element, string property)
+    {
+        if (!element.TryGetProperty(property, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number)
+            ? number
+            : value.ValueKind == JsonValueKind.String && decimal.TryParse(value.GetString(), out number)
+                ? number
+                : null;
+    }
 
     private static bool ReadBool(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False && value.GetBoolean();
