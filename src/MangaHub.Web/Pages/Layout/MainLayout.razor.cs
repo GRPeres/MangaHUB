@@ -24,6 +24,7 @@ public partial class MainLayout : IDisposable
     private string? _pendingRoute;
     private List<MangaNotificationResponse> _notifications = [];
     private int _unreadNotificationCount;
+    private bool _phoneNotificationsEnabled;
     private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
@@ -162,6 +163,7 @@ public partial class MainLayout : IDisposable
         {
             _notifications = await Notifications.GetAsync() ?? [];
             _unreadNotificationCount = _notifications.Count(notification => notification.ReadAt is null);
+            _phoneNotificationsEnabled = await Notifications.IsPushEnabledAsync();
             await InvokeAsync(StateHasChanged);
         }
         catch (HttpRequestException)
@@ -200,6 +202,7 @@ public partial class MainLayout : IDisposable
             }
 
             var saved = await Notifications.SubscribeToPushAsync(subscription);
+            _phoneNotificationsEnabled = saved;
             Messages.Show(saved ? MessageLevel.Success : MessageLevel.Error,
                 saved ? "This phone will receive new chapter alerts." : "The phone subscription could not be saved.",
                 "Phone notifications");

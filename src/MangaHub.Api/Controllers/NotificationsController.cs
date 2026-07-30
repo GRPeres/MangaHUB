@@ -33,6 +33,12 @@ public sealed class NotificationsController(CurrentUserService currentUsers, Not
         return NoContent();
     }
 
+    [HttpGet("push/subscriptions/status")] public async Task<IActionResult> SubscriptionStatus(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        return user is null ? Unauthorized() : Ok(await db.WebPushSubscriptions.AnyAsync(subscription => subscription.UserId == user.Id, cancellationToken));
+    }
+
     [HttpGet("unread-count")] public async Task<IActionResult> UnreadCount(CancellationToken cancellationToken)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
