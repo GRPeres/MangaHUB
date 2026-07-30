@@ -88,12 +88,16 @@ public sealed class NotificationsController(CurrentUserService currentUsers, Not
             {
                 failed++;
             }
+            catch (Exception)
+            {
+                failed++;
+            }
         }
         db.Notifications.Add(new MangaNotification
         {
             UserId = user.Id,
             MangaEntryId = Guid.Empty,
-            Type = $"test-push-{Guid.NewGuid():N}",
+            Type = $"test-{Guid.NewGuid():N}",
             ChapterNumber = 0,
             Language = user.PreferredLanguage,
             Title = "MangaHub notification test",
