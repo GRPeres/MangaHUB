@@ -132,16 +132,21 @@ public sealed class LocalChapterTranslationEngine(
         CancellationToken cancellationToken)
     {
         await using var sourceStream = sourcePage.Open();
-        using var image = SKBitmap.Decode(sourceStream)
+        using var sourceBuffer = new MemoryStream();
+        await sourceStream.CopyToAsync(sourceBuffer, cancellationToken);
+        var sourceBytes = sourceBuffer.ToArray();
+        using var sourceImage = SKBitmap.Decode(sourceBytes)
             ?? throw new ChapterTranslationUnavailableException($"Page '{sourcePage.Name}' is not a supported image.");
         var inputPath = Path.Combine(temporaryRoot, $"{Guid.NewGuid():N}.png");
         try
         {
-            await SavePngAsync(image, inputPath, cancellationToken);
-            var regions = await RecognizeAsync(inputPath, sourceLanguage, cancellationToken);
+            await SavePngAsync(sourceImage, inputPath, cancellationToken);
+            var regions = (await RecognizeAsync(inputPath, sourceLanguage, cancellationToken))
+                .Where(region => IsPlausibleTextRegion(region, sourceImage.Width, sourceImage.Height))
+                .ToList();
             if (regions.Count == 0)
             {
-                return EncodePng(image);
+                return sourceBytes;
             }
 
             var translated = await TranslateTextsAsync(
@@ -149,8 +154,20 @@ public sealed class LocalChapterTranslationEngine(
                 sourceLanguage,
                 targetLanguage,
                 cancellationToken);
-            RenderTranslations(image, regions, translated);
-            return EncodePng(image);
+
+            var imageInfo = new SKImageInfo(
+                sourceImage.Width,
+                sourceImage.Height,
+                SKColorType.Rgba8888,
+                SKAlphaType.Premul);
+            using var surface = SKSurface.Create(imageInfo)
+                ?? throw new ChapterTranslationUnavailableException("Skia could not create a translated page surface.");
+            surface.Canvas.Clear(SKColors.White);
+            surface.Canvas.DrawBitmap(sourceImage, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest));
+            RenderTranslations(surface.Canvas, sourceImage.Width, sourceImage.Height, regions, translated);
+            using var rendered = surface.Snapshot();
+            using var encoded = rendered.Encode(SKEncodedImageFormat.Png, 100);
+            return encoded.ToArray();
         }
         finally
         {
@@ -321,11 +338,12 @@ public sealed class LocalChapterTranslationEngine(
     }
 
     private void RenderTranslations(
-        SKBitmap image,
+        SKCanvas canvas,
+        int imageWidth,
+        int imageHeight,
         IReadOnlyList<OcrRegion> regions,
         IReadOnlyList<string> translated)
     {
-        using var canvas = new SKCanvas(image);
         using var typeface = SKTypeface.FromFamilyName(settings.FontFamily) ?? SKTypeface.Default;
         using var background = new SKPaint
         {
@@ -345,8 +363,8 @@ public sealed class LocalChapterTranslationEngine(
             var padding = Math.Max(4, Math.Min(region.Width, region.Height) / 10);
             var left = Math.Max(0, region.Left - padding);
             var top = Math.Max(0, region.Top - padding);
-            var width = Math.Min(image.Width - left, region.Width + (padding * 2));
-            var height = Math.Min(image.Height - top, Math.Max(region.Height + (padding * 2), 24));
+            var width = Math.Min(imageWidth - left, region.Width + (padding * 2));
+            var height = Math.Min(imageHeight - top, Math.Max(region.Height + (padding * 2), 24));
             var rectangle = new SKRect(left, top, left + width, top + height);
             canvas.DrawRect(rectangle, background);
 
@@ -373,6 +391,23 @@ public sealed class LocalChapterTranslationEngine(
             }
         }
         canvas.Flush();
+    }
+
+    private static bool IsPlausibleTextRegion(OcrRegion region, int imageWidth, int imageHeight)
+    {
+        if (region.Left < 0
+            || region.Top < 0
+            || region.Width <= 0
+            || region.Height <= 0
+            || region.Left + region.Width > imageWidth
+            || region.Top + region.Height > imageHeight)
+        {
+            return false;
+        }
+
+        var pageArea = (long)imageWidth * imageHeight;
+        var regionArea = (long)region.Width * region.Height;
+        return regionArea <= pageArea * 0.12;
     }
 
     private static List<string> WrapText(string text, SKFont font, float maximumWidth)

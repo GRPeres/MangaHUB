@@ -12,6 +12,7 @@ public sealed class ChapterTranslationService(
     IChapterTranslationEngine engine,
     IOptions<MangaHubOptions> options)
 {
+    private const string TranslationArtifactVersion = "v2";
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> TranslationLocks = new(StringComparer.Ordinal);
 
     public async Task<MangaChapterTranslation> EnsureReadyAsync(
@@ -55,6 +56,7 @@ public sealed class ChapterTranslationService(
                 Path.Combine("mangadex", mangaDexId, $"{chapter.SourceId}.cbz"));
             var relativeOutputPath = Path.Combine(
                 "translations",
+                TranslationArtifactVersion,
                 chapter.Id.ToString("N"),
                 $"{SafeLanguage(normalizedTarget)}.cbz");
             var outputPath = ResolveInside(cacheRoot, relativeOutputPath);
