@@ -1,0 +1,12 @@
+.mh-push-subscriptions-modal {
+    max-width: 600px;
+}
+
+.mh-push-subscription-row {
+    border-radius: 8px;
+    padding: .75rem;
+}
+
+.mh-push-subscription-copy {
+    min-width: 0;
+}

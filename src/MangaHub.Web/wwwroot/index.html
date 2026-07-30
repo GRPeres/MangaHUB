@@ -33,6 +33,21 @@
                     auth: json.keys.auth,
                     deviceLabel: navigator.userAgentData?.platform || navigator.platform || "This device"
                 };
+            },
+            showTestNotification: async function () {
+                if (!("serviceWorker" in navigator) || !("Notification" in window) || Notification.permission !== "granted") {
+                    return false;
+                }
+
+                var registration = await navigator.serviceWorker.ready;
+                await registration.showNotification("MangaHub local notification test", {
+                    body: "This device can display MangaHub notifications.",
+                    icon: "/icon-192.png",
+                    badge: "/icon-192.png",
+                    tag: "mangahub-local-test",
+                    data: { url: "/library" }
+                });
+                return true;
             }
         };
 
@@ -188,8 +203,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=101" />
-    <link href="MangaHub.Web.styles.css?v=101" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=102" />
+    <link href="MangaHub.Web.styles.css?v=102" rel="stylesheet" />
 </head>
 
 <body>

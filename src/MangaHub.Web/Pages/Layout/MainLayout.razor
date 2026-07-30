@@ -17,20 +17,9 @@
             </MudTooltip>
             @if (_currentUser is not null)
             {
-                <MudBadge Content="@_unreadNotificationCount.ToString()" Color="Color.Error" Overlap="true" Visible="@(_unreadNotificationCount > 0)">
+                <MudBadge Content="@_unreadNotificationCount.ToString()" Color="Color.Error" Overlap="true" Origin="Origin.BottomRight" Visible="@(_unreadNotificationCount > 0)">
                     <MudMenu Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
                         <MudMenuItem Disabled="true">Notifications</MudMenuItem>
-                        <MudMenuItem Icon="@(_phoneNotificationsEnabled ? Icons.Material.Filled.NotificationsActive : Icons.Material.Filled.NotificationsNone)"
-                                     OnClick="EnablePhoneNotifications">@(_phoneNotificationsEnabled ? "Refresh phone notification subscription" : "Enable phone notifications")</MudMenuItem>
-                        @if (_pushSubscriptions.Count > 0)
-                        {
-                            <MudMenuItem Disabled="true" Icon="@Icons.Material.Filled.Devices">@($"{_pushSubscriptions.Count} subscribed device{(_pushSubscriptions.Count == 1 ? "" : "s")}")</MudMenuItem>
-                            @foreach (var subscription in _pushSubscriptions)
-                            {
-                                <MudMenuItem Disabled="true" Icon="@Icons.Material.Filled.PhoneIphone">@($"{(string.IsNullOrWhiteSpace(subscription.DeviceLabel) ? "Subscribed device" : subscription.DeviceLabel)} - {subscription.UpdatedAt.ToLocalTime():g}")</MudMenuItem>
-                                <MudMenuItem Icon="@Icons.Material.Filled.NotificationsOff" OnClick="() => UnsubscribeDevice(subscription)">@($"Unsubscribe {(string.IsNullOrWhiteSpace(subscription.DeviceLabel) ? "device" : subscription.DeviceLabel)}")</MudMenuItem>
-                            }
-                        }
                         @if (_notifications.Count == 0)
                         {
                             <MudMenuItem Disabled="true">No new chapter notifications.</MudMenuItem>
@@ -41,6 +30,15 @@
                             {
                                 <MudMenuItem Icon="@(notification.ReadAt is null ? Icons.Material.Filled.FiberNew : Icons.Material.Filled.NotificationsNone)" OnClick="() => OpenNotification(notification)">@notification.Title</MudMenuItem>
                             }
+                        }
+                        <MudDivider />
+                        @if (_pushSubscriptions.Count == 0)
+                        {
+                            <MudMenuItem Icon="@Icons.Material.Filled.NotificationsActive" OnClick="EnablePhoneNotifications">Enable phone notifications</MudMenuItem>
+                        }
+                        else
+                        {
+                            <MudMenuItem Icon="@Icons.Material.Filled.Settings" OnClick="OpenPushSubscriptions">Phone notification settings</MudMenuItem>
                         }
                     </MudMenu>
                 </MudBadge>
@@ -132,4 +130,8 @@
                 Message="@_loginMessage"
                 OnAuthenticated="OnLoginAuthenticated" />
     <AppMessageModal />
+    <PushSubscriptionsModal @bind-Open="_pushSubscriptionsOpen"
+                            Subscriptions="_pushSubscriptions"
+                            OnRefresh="EnablePhoneNotifications"
+                            OnUnsubscribe="UnsubscribeDevice" />
 </div>

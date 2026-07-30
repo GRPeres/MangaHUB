@@ -1,0 +1,43 @@
+@if (Open)
+{
+    <div class="mh-modal-backdrop" @onclick="Close">
+        <section class="mh-modal mh-push-subscriptions-modal" role="dialog" aria-modal="true" aria-labelledby="push-subscriptions-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">Phone notifications</MudText>
+                        <MudText id="push-subscriptions-title" Typo="Typo.h2">Subscribed devices</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Refresh this browser after reinstalling the PWA, or remove devices you no longer use.</MudText>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close phone notification settings" />
+                </MudStack>
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.NotificationsActive" OnClick="OnRefresh">Refresh this device</MudButton>
+
+                @if (Subscriptions.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No devices are subscribed yet.</MudAlert>
+                }
+                else
+                {
+                    @foreach (var subscription in Subscriptions)
+                    {
+                        <MudPaper Outlined="true" Class="mh-push-subscription-row">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.PhoneIphone" Color="Color.Primary" />
+                                <MudStack Spacing="0" Class="mh-push-subscription-copy">
+                                    <MudText Typo="Typo.subtitle2">@(string.IsNullOrWhiteSpace(subscription.DeviceLabel) ? "Subscribed device" : subscription.DeviceLabel)</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Last refreshed @subscription.UpdatedAt.ToLocalTime().ToString("g")</MudText>
+                                </MudStack>
+                                <MudSpacer />
+                                <MudTooltip Text="Unsubscribe this device">
+                                    <MudIconButton Icon="@Icons.Material.Filled.NotificationsOff" Color="Color.Error" OnClick="() => OnUnsubscribe.InvokeAsync(subscription)" aria-label="Unsubscribe device" />
+                                </MudTooltip>
+                            </MudStack>
+                        </MudPaper>
+                    }
+                }
+            </MudStack>
+        </section>
+    </div>
+}

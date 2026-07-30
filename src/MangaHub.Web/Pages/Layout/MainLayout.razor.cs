@@ -26,6 +26,7 @@ public partial class MainLayout : IDisposable
     private int _unreadNotificationCount;
     private bool _phoneNotificationsEnabled;
     private List<WebPushSubscriptionResponse> _pushSubscriptions = [];
+    private bool _pushSubscriptionsOpen;
     private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
@@ -55,6 +56,7 @@ public partial class MainLayout : IDisposable
     private void GoLibrary() => Navigate("library");
     private void GoAccount() => Navigate("account");
     private void GoBentoCardLab() => Navigate("bento-card-lab");
+    private void OpenPushSubscriptions() => _pushSubscriptionsOpen = true;
 
     private void Navigate(string route)
     {
@@ -237,8 +239,24 @@ public partial class MainLayout : IDisposable
     private async Task TestPhoneNotification()
     {
         var result = await Notifications.SendTestPushAsync();
-        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error,
-            result?.Message ?? "The phone notification test did not complete.", "Phone notification test");
+        var localNotificationShown = false;
+        if (result?.Success == true)
+        {
+            try
+            {
+                localNotificationShown = await JS.InvokeAsync<bool>("mangaHubPush.showTestNotification", Array.Empty<object?>());
+            }
+            catch
+            {
+                // The server result remains useful when this browser blocks local notifications.
+            }
+        }
+        var message = result?.Message ?? "The phone notification test did not complete.";
+        if (result?.Success == true && !localNotificationShown)
+        {
+            message += " This browser did not confirm a local notification. Check browser and operating-system notification permissions.";
+        }
+        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error, message, "Phone notification test");
         await LoadNotificationsAsync();
     }
 
