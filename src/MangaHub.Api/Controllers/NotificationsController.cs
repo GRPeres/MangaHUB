@@ -28,10 +28,18 @@ public sealed class NotificationsController(CurrentUserService currentUsers, Not
         if (user is null) return Unauthorized();
         if (string.IsNullOrWhiteSpace(request.Endpoint) || string.IsNullOrWhiteSpace(request.P256dh) || string.IsNullOrWhiteSpace(request.Auth)) return BadRequest();
         var subscription = await db.WebPushSubscriptions.FirstOrDefaultAsync(item => item.Endpoint == request.Endpoint, cancellationToken);
-        if (subscription is null) db.WebPushSubscriptions.Add(new WebPushSubscription { UserId = user.Id, Endpoint = request.Endpoint, P256dh = request.P256dh, Auth = request.Auth });
-        else { subscription.UserId = user.Id; subscription.P256dh = request.P256dh; subscription.Auth = request.Auth; subscription.UpdatedAt = DateTimeOffset.UtcNow; }
+        if (subscription is null) db.WebPushSubscriptions.Add(new WebPushSubscription { UserId = user.Id, Endpoint = request.Endpoint, P256dh = request.P256dh, Auth = request.Auth, DeviceLabel = request.DeviceLabel.Trim() });
+        else { subscription.UserId = user.Id; subscription.P256dh = request.P256dh; subscription.Auth = request.Auth; subscription.DeviceLabel = request.DeviceLabel.Trim(); subscription.UpdatedAt = DateTimeOffset.UtcNow; }
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();
+    }
+
+    [HttpGet("push/subscriptions")] public async Task<IActionResult> Subscriptions(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        return user is null ? Unauthorized() : Ok(await db.WebPushSubscriptions.AsNoTracking().Where(subscription => subscription.UserId == user.Id)
+            .OrderByDescending(subscription => subscription.UpdatedAt)
+            .Select(subscription => new WebPushSubscriptionResponse(subscription.Id, subscription.DeviceLabel, subscription.UpdatedAt)).ToListAsync(cancellationToken));
     }
 
     [HttpGet("push/subscriptions/status")] public async Task<IActionResult> SubscriptionStatus(CancellationToken cancellationToken)

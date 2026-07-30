@@ -22,6 +22,14 @@
                         <MudMenuItem Disabled="true">Notifications</MudMenuItem>
                         <MudMenuItem Icon="@(_phoneNotificationsEnabled ? Icons.Material.Filled.NotificationsActive : Icons.Material.Filled.NotificationsNone)"
                                      OnClick="EnablePhoneNotifications">@(_phoneNotificationsEnabled ? "Refresh phone notification subscription" : "Enable phone notifications")</MudMenuItem>
+                        @if (_pushSubscriptions.Count > 0)
+                        {
+                            <MudMenuItem Disabled="true" Icon="@Icons.Material.Filled.Devices">@($"{_pushSubscriptions.Count} subscribed device{(_pushSubscriptions.Count == 1 ? "" : "s")}")</MudMenuItem>
+                            @foreach (var subscription in _pushSubscriptions)
+                            {
+                                <MudMenuItem Disabled="true" Icon="@Icons.Material.Filled.PhoneIphone">@($"{(string.IsNullOrWhiteSpace(subscription.DeviceLabel) ? "Subscribed device" : subscription.DeviceLabel)} - {subscription.UpdatedAt.ToLocalTime():g}")</MudMenuItem>
+                            }
+                        }
                         @if (_notifications.Count == 0)
                         {
                             <MudMenuItem Disabled="true">No new chapter notifications.</MudMenuItem>

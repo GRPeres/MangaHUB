@@ -6,7 +6,8 @@ public sealed record UserAdminResponse(Guid Id, string Username, string Role, Da
 public sealed record UpdateUserRoleRequest(string Role);
 public sealed record UpdatePreferredLanguageRequest(string PreferredLanguage);
 public sealed record MangaNotificationResponse(Guid Id, Guid MangaEntryId, string Type, decimal ChapterNumber, string Language, string Title, string Body, DateTimeOffset CreatedAt, DateTimeOffset? ReadAt);
-public sealed record WebPushSubscriptionRequest(string Endpoint, string P256dh, string Auth);
+public sealed record WebPushSubscriptionRequest(string Endpoint, string P256dh, string Auth, string DeviceLabel = "");
+public sealed record WebPushSubscriptionResponse(Guid Id, string DeviceLabel, DateTimeOffset UpdatedAt);
 public sealed record DiagnosticResult(bool Success, string Message);
 public sealed record SeriesResponse(Guid Id, string Title, string Description, string CoverUrl, string Status, string Source, string ExternalId);
 public sealed record ChapterResponse(Guid Id, Guid SeriesId, string ChapterNumber, string Title, int PageCount);

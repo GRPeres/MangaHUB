@@ -1,4 +1,3 @@
-using MangaHub.Web.API.DTOs;
 using MangaHub.Web.Services;
 using MangaHub.Web.API.Services;
 using MangaHub.Web.API.DTOs;
@@ -26,6 +25,7 @@ public partial class MainLayout : IDisposable
     private List<MangaNotificationResponse> _notifications = [];
     private int _unreadNotificationCount;
     private bool _phoneNotificationsEnabled;
+    private List<WebPushSubscriptionResponse> _pushSubscriptions = [];
     private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
@@ -157,6 +157,7 @@ public partial class MainLayout : IDisposable
         {
             _notifications = [];
             _unreadNotificationCount = 0;
+            _pushSubscriptions = [];
             return;
         }
 
@@ -165,12 +166,14 @@ public partial class MainLayout : IDisposable
             _notifications = await Notifications.GetAsync() ?? [];
             _unreadNotificationCount = _notifications.Count(notification => notification.ReadAt is null);
             _phoneNotificationsEnabled = await Notifications.IsPushEnabledAsync();
+            _pushSubscriptions = await Notifications.GetPushSubscriptionsAsync() ?? [];
             await InvokeAsync(StateHasChanged);
         }
         catch (HttpRequestException)
         {
             _notifications = [];
             _unreadNotificationCount = 0;
+            _pushSubscriptions = [];
         }
     }
 
@@ -204,6 +207,10 @@ public partial class MainLayout : IDisposable
 
             var saved = await Notifications.SubscribeToPushAsync(subscription);
             _phoneNotificationsEnabled = saved;
+            if (saved)
+            {
+                await LoadNotificationsAsync();
+            }
             Messages.Show(saved ? MessageLevel.Success : MessageLevel.Error,
                 saved ? "This phone's notification subscription is active." : "The phone subscription could not be saved.",
                 "Phone notifications");

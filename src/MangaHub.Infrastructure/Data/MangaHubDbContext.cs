@@ -83,7 +83,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.HasIndex(x => new { x.UserId, x.MangaEntryId, x.Type, x.ChapterNumber, x.Language }).IsUnique();
             entity.HasIndex(x => new { x.UserId, x.ReadAt, x.CreatedAt });
         });
-        modelBuilder.Entity<WebPushSubscription>(entity => { entity.ToTable("web_push_subscriptions"); entity.HasIndex(x => x.Endpoint).IsUnique(); entity.Property(x => x.Endpoint).HasColumnType("text"); entity.Property(x => x.P256dh).HasColumnType("text"); entity.Property(x => x.Auth).HasColumnType("text"); });
+        modelBuilder.Entity<WebPushSubscription>(entity => { entity.ToTable("web_push_subscriptions"); entity.HasIndex(x => x.Endpoint).IsUnique(); entity.Property(x => x.Endpoint).HasColumnType("text"); entity.Property(x => x.P256dh).HasColumnType("text"); entity.Property(x => x.Auth).HasColumnType("text"); entity.Property(x => x.DeviceLabel).HasMaxLength(120); });
 
         modelBuilder.Entity<MangaSeries>(entity =>
         {

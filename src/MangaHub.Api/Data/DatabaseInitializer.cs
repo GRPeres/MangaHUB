@@ -171,6 +171,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "ReadAt" timestamp with time zone NULL
             );
             CREATE TABLE IF NOT EXISTS web_push_subscriptions ("Id" uuid PRIMARY KEY, "UserId" uuid NOT NULL, "Endpoint" text NOT NULL, "P256dh" text NOT NULL, "Auth" text NOT NULL, "UpdatedAt" timestamp with time zone NOT NULL);
+            ALTER TABLE web_push_subscriptions ADD COLUMN IF NOT EXISTS "DeviceLabel" character varying(120) NOT NULL DEFAULT '';
 
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "CurrentChapter" character varying(40) NOT NULL DEFAULT '';
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "IsRead" boolean NOT NULL DEFAULT false;
