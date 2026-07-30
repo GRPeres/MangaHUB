@@ -462,7 +462,20 @@
         }
 
         await JS.InvokeVoidAsync("mangaHubReader.fitPage", pageFrame, pageImage);
+        await PreloadFollowingPagesAsync();
         await MarkCurrentChapterReadIfNeededAsync();
+    }
+
+    private async Task PreloadFollowingPagesAsync()
+    {
+        var followingPages = Enumerable.Range(page + 1, Math.Min(3, PageCount - page - 1))
+            .Select(pageIndex => ReadApi.GetPageUrl(ChapterId, pageIndex, pageImageVersion))
+            .ToArray();
+
+        if (followingPages.Length > 0)
+        {
+            await JS.InvokeVoidAsync("mangaHubReader.preloadPages", followingPages);
+        }
     }
 
     private async Task OnVerticalPageLoaded(int pageIndex)

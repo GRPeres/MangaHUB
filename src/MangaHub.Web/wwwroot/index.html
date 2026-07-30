@@ -60,6 +60,30 @@
                 frame.mangaHubResizeObserver.observe(reader);
                 fit();
             },
+            preloadPages: function (urls) {
+                if (!Array.isArray(urls)) {
+                    return;
+                }
+
+                var preloaded = window.mangaHubReader.preloadedPages || new Map();
+                window.mangaHubReader.preloadedPages = preloaded;
+
+                urls.forEach(function (url) {
+                    if (!url || preloaded.has(url)) {
+                        return;
+                    }
+
+                    var image = new Image();
+                    image.decoding = "async";
+                    image.src = url;
+                    preloaded.set(url, image);
+                });
+
+                // Keep memory use bounded while retaining a short read-ahead window.
+                while (preloaded.size > 12) {
+                    preloaded.delete(preloaded.keys().next().value);
+                }
+            },
             disposePage: function (frame) {
                 if (frame && frame.mangaHubResizeObserver) {
                     frame.mangaHubResizeObserver.disconnect();
@@ -124,8 +148,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=84" />
-    <link href="MangaHub.Web.styles.css?v=84" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=85" />
+    <link href="MangaHub.Web.styles.css?v=85" rel="stylesheet" />
 </head>
 
 <body>
