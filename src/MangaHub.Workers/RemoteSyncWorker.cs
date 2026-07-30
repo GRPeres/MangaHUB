@@ -277,8 +277,12 @@ public sealed class RemoteSyncWorker(
 
         var entries = await db.MangaEntries
             .Where(entry => entry.MangaDexId != "" &&
-                (entry.MangaDexLatestChapter == null || entry.MangaDexLastSyncedAt == null || entry.MangaDexLastSyncedAt < cutoff))
-            .OrderByDescending(entry => entry.MangaDexLatestChapter == null)
+                (entry.MangaDexLatestChapter == null
+                    || !db.MangaDexLanguageLatestChapters.Any(latest => latest.MangaEntryId == entry.Id)
+                    || entry.MangaDexLastSyncedAt == null
+                    || entry.MangaDexLastSyncedAt < cutoff))
+            .OrderByDescending(entry => !db.MangaDexLanguageLatestChapters.Any(latest => latest.MangaEntryId == entry.Id))
+            .ThenByDescending(entry => entry.MangaDexLatestChapter == null)
             .ThenBy(entry => entry.MangaDexLastSyncedAt ?? DateTimeOffset.MinValue)
             .ThenBy(entry => entry.Title)
             .Take(batchSize)

@@ -583,6 +583,20 @@ html.mh-theme-dark .loading-progress circle:last-child {
         justify-self: end;
     }
 
+    .mh-catalog-page-title {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .mh-catalog-actions {
+        justify-content: flex-start !important;
+        justify-self: stretch;
+    }
+
+    .mh-catalog-language {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
     .mh-home-hero {
         grid-template-columns: 1fr;
     }

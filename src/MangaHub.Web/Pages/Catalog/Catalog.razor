@@ -7,13 +7,13 @@
 <PageTitle>Catalog</PageTitle>
 
 <MudStack Spacing="4">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mh-page-title">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mh-page-title mh-catalog-page-title">
         <MudStack Spacing="1" Class="mh-page-heading">
             <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mh-page-kicker">Admin catalog</MudText>
             <MudText Typo="Typo.h1">Catalog</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mh-page-subtitle">Manage shared manga metadata, covers, OpenLibrary matches, MangaDex links, and local series bindings.</MudText>
         </MudStack>
-        <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
+        <MudStack Row="true" Spacing="2" Class="mh-page-actions mh-catalog-actions flex-wrap">
             <MudSelect T="string" Value="@selectedLanguage" ValueChanged="ChangeLanguage" Label="MangaDex language" Dense="true" Variant="Variant.Outlined" Class="mh-catalog-language">
                 @foreach (var language in ReaderLanguages)
                 {
