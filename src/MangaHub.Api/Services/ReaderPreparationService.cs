@@ -11,7 +11,7 @@ public sealed class ReaderPreparationService(
     ILogger<ReaderPreparationService> logger)
 {
     private readonly ConcurrentDictionary<Guid, ReaderPreparationJob> jobs = new();
-    private readonly ConcurrentDictionary<ReaderPrefetchKey, byte> activePrefetches = new();
+    private readonly ConcurrentDictionary<ReaderPrefetchKey, ReaderPrefetchOperation> activePrefetches = new();
 
     public ReaderPreparationStatus Start(
         Guid userId,
@@ -28,7 +28,33 @@ public sealed class ReaderPreparationService(
         var status = new ReaderPreparationStatus(jobId, "Waiting to prepare the chapter", 0, 0, 0, false, false, "", null);
         jobs[jobId] = new ReaderPreparationJob(userId, DateTimeOffset.UtcNow, status);
 
-        _ = Task.Run(() => PrepareAsync(jobId, userId, entryId, afterCachedChapterId, beforeCachedChapterId, language, allowLanguageFallback, allowChapterJump));
+        if (afterCachedChapterId is not null
+            && activePrefetches.TryGetValue(CreatePrefetchKey(userId, entryId, afterCachedChapterId.Value, language), out var prefetch))
+        {
+            _ = Task.Run(() => ContinueFromPrefetchAsync(
+                jobId,
+                userId,
+                entryId,
+                afterCachedChapterId,
+                beforeCachedChapterId,
+                language,
+                allowLanguageFallback,
+                allowChapterJump,
+                prefetch));
+        }
+        else
+        {
+            _ = Task.Run(() => PrepareAsync(
+                jobId,
+                userId,
+                entryId,
+                afterCachedChapterId,
+                beforeCachedChapterId,
+                language,
+                allowLanguageFallback,
+                allowChapterJump,
+                RemoteJobPriority.UserBlocking));
+        }
         return status;
     }
 
@@ -37,8 +63,9 @@ public sealed class ReaderPreparationService(
 
     public void PrefetchNext(Guid userId, Guid entryId, Guid afterCachedChapterId, string language)
     {
-        var key = new ReaderPrefetchKey(userId, entryId, afterCachedChapterId);
-        if (!activePrefetches.TryAdd(key, 0))
+        var key = CreatePrefetchKey(userId, entryId, afterCachedChapterId, language);
+        var prefetch = new ReaderPrefetchOperation();
+        if (!activePrefetches.TryAdd(key, prefetch))
         {
             return;
         }
@@ -50,7 +77,14 @@ public sealed class ReaderPreparationService(
             {
                 using var scope = scopeFactory.CreateScope();
                 var reader = scope.ServiceProvider.GetRequiredService<ReaderService>();
-                await reader.PrefetchNextMangaDexChapterAsync(userId, entryId, afterCachedChapterId, language, CancellationToken.None);
+                var progress = new CallbackProgress(prefetch.Report);
+                await reader.PrefetchNextMangaDexChapterAsync(
+                    userId,
+                    entryId,
+                    afterCachedChapterId,
+                    language,
+                    CancellationToken.None,
+                    progress);
             }
             catch (Exception ex)
             {
@@ -59,8 +93,51 @@ public sealed class ReaderPreparationService(
             finally
             {
                 activePrefetches.TryRemove(key, out _);
+                prefetch.Complete();
             }
         });
+    }
+
+    private async Task ContinueFromPrefetchAsync(
+        Guid jobId,
+        Guid userId,
+        Guid entryId,
+        Guid? afterCachedChapterId,
+        Guid? beforeCachedChapterId,
+        string language,
+        bool allowLanguageFallback,
+        bool allowChapterJump,
+        ReaderPrefetchOperation prefetch)
+    {
+        while (!prefetch.Completion.IsCompleted)
+        {
+            var progress = prefetch.Progress;
+            Update(jobId, status => status with
+            {
+                Stage = $"Preparing next chapter: {progress.Stage}",
+                Progress = progress.Progress,
+                CompletedPages = progress.CompletedPages,
+                TotalPages = progress.TotalPages
+            });
+            await Task.WhenAny(prefetch.Completion, Task.Delay(200));
+        }
+
+        await prefetch.Completion;
+        Update(jobId, status => status with
+        {
+            Stage = "Finalizing the prefetched chapter",
+            Progress = Math.Max(status.Progress, 96)
+        });
+        await PrepareAsync(
+            jobId,
+            userId,
+            entryId,
+            afterCachedChapterId,
+            beforeCachedChapterId,
+            language,
+            allowLanguageFallback,
+            allowChapterJump,
+            RemoteJobPriority.UserBlocking);
     }
 
     private async Task PrepareAsync(
@@ -71,9 +148,10 @@ public sealed class ReaderPreparationService(
         Guid? beforeCachedChapterId,
         string language,
         bool allowLanguageFallback,
-        bool allowChapterJump)
+        bool allowChapterJump,
+        RemoteJobPriority priority)
     {
-        using var priorityScope = priorityContext.Push(RemoteJobPriority.UserBlocking);
+        using var priorityScope = priorityContext.Push(priority);
         try
         {
             using var scope = scopeFactory.CreateScope();
@@ -208,7 +286,25 @@ public sealed class ReaderPreparationService(
     }
 
     private sealed record ReaderPreparationJob(Guid UserId, DateTimeOffset CreatedAt, ReaderPreparationStatus Status);
-    private sealed record ReaderPrefetchKey(Guid UserId, Guid EntryId, Guid ChapterId);
+    private sealed record ReaderPrefetchKey(Guid UserId, Guid EntryId, Guid ChapterId, string Language);
+
+    private sealed class ReaderPrefetchOperation
+    {
+        private ReaderPreparationProgress progress = new("Waiting to prepare the next chapter", 0);
+        private readonly TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task Completion => completion.Task;
+        public ReaderPreparationProgress Progress => Volatile.Read(ref progress);
+
+        public void Report(ReaderPreparationProgress value) => Volatile.Write(ref progress, value);
+        public void Complete() => completion.TrySetResult();
+    }
+
+    private static ReaderPrefetchKey CreatePrefetchKey(Guid userId, Guid entryId, Guid chapterId, string language) =>
+        new(userId, entryId, chapterId, NormalizeLanguage(language));
+
+    private static string NormalizeLanguage(string language) =>
+        string.IsNullOrWhiteSpace(language) ? "en" : language.Trim().ToLowerInvariant();
 
     private sealed class CallbackProgress(Action<ReaderPreparationProgress> report) : IProgress<ReaderPreparationProgress>
     {

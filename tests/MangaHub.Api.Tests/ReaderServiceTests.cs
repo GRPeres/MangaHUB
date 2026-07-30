@@ -198,10 +198,18 @@ public sealed class ReaderServiceTests
         Assert.NotNull(launch);
         var cachedSeries = await new SeriesRepository(db).GetBySourceAndExternalIdAsync("mangadex-cache", "berserk-id", CancellationToken.None);
         var currentChapter = Assert.Single(cachedSeries!.Chapters);
+        var progress = new RecordingProgress();
 
-        await service.PrefetchNextMangaDexChapterAsync(userId, entry.Id, currentChapter.Id, CancellationToken.None);
+        await service.PrefetchNextMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            currentChapter.Id,
+            "en",
+            CancellationToken.None,
+            progress);
 
         Assert.Equal(["chapter-1", "chapter-2"], cache.CachedChapterIds);
+        Assert.Contains(progress.Values, value => value.Stage == "Local chapter is ready");
         var shelf = await new ShelfRepository(db).GetAsync(userId, entry.Id, CancellationToken.None);
         Assert.Equal("1", shelf!.CurrentChapter);
         Assert.Equal("reading", shelf.ReadingStatus);
@@ -505,4 +513,11 @@ public sealed class ReaderServiceTests
             cache ?? new FakeMangaDexChapterCache(),
             Options.Create(new MangaHubOptions { LibraryPath = libraryPath, MangaDexCachePath = libraryPath }),
             new MangaSourceRegistry([mangaDex ?? new FakeMangaDexSource()]));
+
+    private sealed class RecordingProgress : IProgress<MangaHub.Core.Services.ReaderPreparationProgress>
+    {
+        public List<MangaHub.Core.Services.ReaderPreparationProgress> Values { get; } = [];
+
+        public void Report(MangaHub.Core.Services.ReaderPreparationProgress value) => Values.Add(value);
+    }
 }

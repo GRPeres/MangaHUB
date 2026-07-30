@@ -300,7 +300,8 @@ public sealed class ReaderService(
         Guid entryId,
         Guid afterCachedChapterId,
         string language,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        IProgress<ReaderPreparationProgress>? progress = null) =>
         await PrepareMangaDexChapterAsync(
             userId,
             entryId,
@@ -310,6 +311,7 @@ public sealed class ReaderService(
             allowLanguageFallback: false,
             allowChapterJump: false,
             cancellationToken,
+            progress,
             updateReadingProgress: false);
 
     public Task PrefetchNextMangaDexChapterAsync(Guid userId, Guid entryId, Guid afterCachedChapterId, CancellationToken cancellationToken) =>
