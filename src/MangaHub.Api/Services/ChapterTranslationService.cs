@@ -12,7 +12,7 @@ public sealed class ChapterTranslationService(
     IChapterTranslationEngine engine,
     IOptions<MangaHubOptions> options)
 {
-    private const string TranslationArtifactVersion = "v2";
+    private const string TranslationArtifactVersion = "v3";
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> TranslationLocks = new(StringComparer.Ordinal);
 
     public async Task<MangaChapterTranslation> EnsureReadyAsync(
@@ -78,7 +78,7 @@ public sealed class ChapterTranslationService(
                 throw new ChapterTranslationUnavailableException(message);
             }
 
-            progress?.Report(new ReaderPreparationProgress("Starting local OCR and translation", 52, 0, chapter.PageCount));
+            progress?.Report(new ReaderPreparationProgress("Starting manga-aware translation", 52, 0, chapter.PageCount));
             await translations.MarkProcessingAsync(translation, cancellationToken);
             try
             {

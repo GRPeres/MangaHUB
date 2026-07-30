@@ -33,9 +33,9 @@ cloudflared
 postgres-backup
   pg_dump sidecar to NAS share
 
-libretranslate
-  local deterministic machine translation
-  Argos language models persisted in a named volume
+manga-translator
+  manga-aware OCR, inpainting, deterministic translation, and typesetting
+  private CPU sidecar
 ```
 
 ## Project Responsibilities
@@ -80,8 +80,7 @@ Owns implementations for:
 - EF Core DbContext
 - local library scanning
 - archive/CBZ reading
-- Tesseract OCR and SkiaSharp page reconstruction
-- local LibreTranslate integration
+- manga-aware text detection, OCR, inpainting, translation, and typesetting through a private manga-image-translator sidecar
 - password/session/security infrastructure
 - remote clients such as MyAnimeList, OpenLibrary, and MangaDex
 - the priority-aware outbound request scheduler and per-provider rate gates
@@ -124,7 +123,7 @@ Reader endpoints and page delivery are admin-only. Normal users can manage their
 
 Cached MangaDex releases use one canonical source archive per logical chapter, regardless of the release language. The original archive records its `SourceLanguage`; target-language renderings are separate `chapter_translations` artifacts, keyed by cached chapter and target language. Artifacts move through `pending`, `processing`, `ready`, `failed`, or `unsupported` without replacing the original CBZ. Account and reader language settings are therefore translation targets, not MangaDex source filters.
 
-When source and target differ, the API runs Tesseract OCR over each page, sends grouped text to the private `libretranslate` sidecar, reconstructs the page with SkiaSharp, and writes a translated CBZ under `MangaDexCachePath/translations`. Reader preparation does not complete until the requested artifact is ready. The implementation is engine-backed so OCR, translation, or reconstruction can be replaced independently as manga-specific tooling improves.
+When source and target differ, the API sends each page to the private `manga-translator` sidecar. That service owns manga-aware text detection, OCR, inpainting, deterministic NLLB translation, and typesetting, then returns a completed PNG. MangaHUB writes those pages to a versioned translated CBZ under `MangaDexCachePath/translations`; it never paints guessed rectangles over the source itself. Reader preparation does not complete until the requested artifact is ready.
 
 MyAnimeList metadata is preferred for catalog search/enrichment. OpenLibrary remains available as fallback or explicit "load more" behavior.
 

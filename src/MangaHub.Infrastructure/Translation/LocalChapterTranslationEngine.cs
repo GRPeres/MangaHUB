@@ -1,12 +1,10 @@
-using System.Diagnostics;
-using System.Globalization;
 using System.IO.Compression;
-using System.Net.Http.Json;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using MangaHub.Core.Services;
 using Microsoft.Extensions.Options;
-using SkiaSharp;
 
 namespace MangaHub.Infrastructure.Translation;
 
@@ -35,12 +33,10 @@ public sealed class LocalChapterTranslationEngine(
         }
 
         await translationGate.WaitAsync(cancellationToken);
-        var temporaryRoot = Path.Combine(Path.GetTempPath(), "mangahub-translation", Guid.NewGuid().ToString("N"));
         try
         {
-            Directory.CreateDirectory(temporaryRoot);
             Directory.CreateDirectory(Path.GetDirectoryName(request.OutputArchivePath)!);
-            progress?.Report(new ReaderPreparationProgress("Waiting for the local translation engine", 54));
+            progress?.Report(new ReaderPreparationProgress("Waiting for the manga translation engine", 54));
             await WaitForTranslatorAsync(cancellationToken);
 
             using var sourceArchive = ZipFile.OpenRead(request.SourceArchivePath);
@@ -64,26 +60,27 @@ public sealed class LocalChapterTranslationEngine(
                         cancellationToken.ThrowIfCancellationRequested();
                         var pageNumber = index + 1;
                         progress?.Report(new ReaderPreparationProgress(
-                            $"Reading text on page {pageNumber} of {sourcePages.Count}",
-                            ScaleProgress(index, sourcePages.Count, 55, 82),
+                            $"Translating page {pageNumber} of {sourcePages.Count}",
+                            ScaleProgress(index, sourcePages.Count, 55, 94),
                             index,
                             sourcePages.Count));
 
                         var translatedPage = await TranslatePageAsync(
                             sourcePages[index],
-                            request.SourceLanguage,
                             request.TargetLanguage,
-                            temporaryRoot,
                             cancellationToken);
 
-                        progress?.Report(new ReaderPreparationProgress(
-                            $"Rendering translated page {pageNumber} of {sourcePages.Count}",
-                            ScaleProgress(pageNumber, sourcePages.Count, 82, 96),
-                            pageNumber,
-                            sourcePages.Count));
-                        var outputEntry = outputArchive.CreateEntry($"{pageNumber:0000}.png", CompressionLevel.Optimal);
+                        var outputEntry = outputArchive.CreateEntry(
+                            $"{pageNumber:0000}.png",
+                            CompressionLevel.Optimal);
                         await using var entryStream = outputEntry.Open();
                         await entryStream.WriteAsync(translatedPage, cancellationToken);
+
+                        progress?.Report(new ReaderPreparationProgress(
+                            $"Translated page {pageNumber} of {sourcePages.Count}",
+                            ScaleProgress(pageNumber, sourcePages.Count, 55, 96),
+                            pageNumber,
+                            sourcePages.Count));
                     }
                 }
 
@@ -114,202 +111,89 @@ public sealed class LocalChapterTranslationEngine(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             throw new ChapterTranslationUnavailableException(
-                "The local OCR and translation pipeline could not create this chapter.",
+                "The manga translation pipeline could not create this chapter.",
                 ex);
         }
         finally
         {
-            TryDeleteDirectory(temporaryRoot);
             translationGate.Release();
         }
     }
 
     private async Task<byte[]> TranslatePageAsync(
         ZipArchiveEntry sourcePage,
-        string sourceLanguage,
         string targetLanguage,
-        string temporaryRoot,
         CancellationToken cancellationToken)
     {
         await using var sourceStream = sourcePage.Open();
         using var sourceBuffer = new MemoryStream();
         await sourceStream.CopyToAsync(sourceBuffer, cancellationToken);
         var sourceBytes = sourceBuffer.ToArray();
-        using var sourceImage = SKBitmap.Decode(sourceBytes)
-            ?? throw new ChapterTranslationUnavailableException($"Page '{sourcePage.Name}' is not a supported image.");
-        var inputPath = Path.Combine(temporaryRoot, $"{Guid.NewGuid():N}.png");
-        try
+        if (sourceBytes.Length == 0)
         {
-            await SavePngAsync(sourceImage, inputPath, cancellationToken);
-            var regions = (await RecognizeAsync(inputPath, sourceLanguage, cancellationToken))
-                .Where(region => IsPlausibleTextRegion(region, sourceImage.Width, sourceImage.Height))
-                .ToList();
-            if (regions.Count == 0)
-            {
-                return sourceBytes;
-            }
-
-            var translated = await TranslateTextsAsync(
-                regions.Select(region => region.Text).ToList(),
-                sourceLanguage,
-                targetLanguage,
-                cancellationToken);
-
-            var imageInfo = new SKImageInfo(
-                sourceImage.Width,
-                sourceImage.Height,
-                SKColorType.Rgba8888,
-                SKAlphaType.Premul);
-            using var surface = SKSurface.Create(imageInfo)
-                ?? throw new ChapterTranslationUnavailableException("Skia could not create a translated page surface.");
-            surface.Canvas.Clear(SKColors.White);
-            surface.Canvas.DrawBitmap(sourceImage, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest));
-            RenderTranslations(surface.Canvas, sourceImage.Width, sourceImage.Height, regions, translated);
-            using var rendered = surface.Snapshot();
-            using var encoded = rendered.Encode(SKEncodedImageFormat.Png, 100);
-            return encoded.ToArray();
-        }
-        finally
-        {
-            if (File.Exists(inputPath))
-            {
-                File.Delete(inputPath);
-            }
-        }
-    }
-
-    private async Task<List<OcrRegion>> RecognizeAsync(
-        string imagePath,
-        string sourceLanguage,
-        CancellationToken cancellationToken)
-    {
-        var tesseractLanguage = ToTesseractLanguage(sourceLanguage);
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = settings.TesseractCommand,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add(imagePath);
-        startInfo.ArgumentList.Add("stdout");
-        startInfo.ArgumentList.Add("-l");
-        startInfo.ArgumentList.Add(tesseractLanguage);
-        startInfo.ArgumentList.Add("--psm");
-        startInfo.ArgumentList.Add(tesseractLanguage.Contains("_vert", StringComparison.Ordinal) ? "5" : "11");
-        startInfo.ArgumentList.Add("tsv");
-
-        using var process = Process.Start(startInfo)
-            ?? throw new ChapterTranslationUnavailableException("Tesseract could not be started.");
-        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-        var output = await outputTask;
-        var error = await errorTask;
-        if (process.ExitCode != 0)
-        {
-            throw new ChapterTranslationUnavailableException(
-                $"Tesseract OCR failed for language '{sourceLanguage}': {error.Trim()}");
+            throw new ChapterTranslationUnavailableException($"Page '{sourcePage.Name}' is empty.");
         }
 
-        return ParseTsv(output);
-    }
-
-    private List<OcrRegion> ParseTsv(string tsv)
-    {
-        var words = new List<OcrWord>();
-        foreach (var line in tsv.Split('\n', StringSplitOptions.RemoveEmptyEntries).Skip(1))
-        {
-            var columns = line.TrimEnd('\r').Split('\t');
-            if (columns.Length < 12
-                || !int.TryParse(columns[2], out var block)
-                || !int.TryParse(columns[3], out var paragraph)
-                || !int.TryParse(columns[4], out var lineNumber)
-                || !int.TryParse(columns[6], out var left)
-                || !int.TryParse(columns[7], out var top)
-                || !int.TryParse(columns[8], out var width)
-                || !int.TryParse(columns[9], out var height)
-                || !float.TryParse(columns[10], NumberStyles.Float, CultureInfo.InvariantCulture, out var confidence)
-                || confidence < settings.MinimumOcrConfidence
-                || string.IsNullOrWhiteSpace(columns[11]))
-            {
-                continue;
-            }
-
-            words.Add(new OcrWord(block, paragraph, lineNumber, left, top, width, height, columns[11].Trim()));
-        }
-
-        return words
-            .GroupBy(word => new { word.Block, word.Paragraph, word.Line })
-            .Select(group =>
-            {
-                var left = group.Min(word => word.Left);
-                var top = group.Min(word => word.Top);
-                var right = group.Max(word => word.Left + word.Width);
-                var bottom = group.Max(word => word.Top + word.Height);
-                return new OcrRegion(
-                    left,
-                    top,
-                    right - left,
-                    bottom - top,
-                    string.Join(' ', group.OrderBy(word => word.Left).Select(word => word.Text)));
-            })
-            .Where(region => region.Width >= 8 && region.Height >= 8 && region.Text.Length > 1)
-            .ToList();
-    }
-
-    private async Task<IReadOnlyList<string>> TranslateTextsAsync(
-        IReadOnlyList<string> texts,
-        string sourceLanguage,
-        string targetLanguage,
-        CancellationToken cancellationToken)
-    {
-        var source = ToLibreTranslateLanguage(sourceLanguage);
-        var target = ToLibreTranslateLanguage(targetLanguage);
-        if (string.Equals(source, target, StringComparison.OrdinalIgnoreCase))
-        {
-            return texts;
-        }
+        using var form = new MultipartFormDataContent();
+        using var image = new ByteArrayContent(sourceBytes);
+        image.Headers.ContentType = new MediaTypeHeaderValue(ToMediaType(sourcePage.Name));
+        form.Add(image, "image", sourcePage.Name);
+        form.Add(
+            new StringContent(CreateTranslatorConfig(targetLanguage), Encoding.UTF8),
+            "config");
 
         var client = httpClientFactory.CreateClient("chapter-translator");
-        using var response = await client.PostAsJsonAsync("translate", new
-        {
-            q = texts,
-            source,
-            target,
-            format = "text",
-            api_key = string.IsNullOrWhiteSpace(settings.LibreTranslateApiKey) ? null : settings.LibreTranslateApiKey
-        }, cancellationToken);
+        using var response = await client.PostAsync(
+            "translate/with-form/image",
+            form,
+            cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var detail = await response.Content.ReadAsStringAsync(cancellationToken);
             throw new ChapterTranslationUnavailableException(
-                $"LibreTranslate rejected {source} to {target} translation ({(int)response.StatusCode}): {detail}");
+                $"The manga translator rejected page '{sourcePage.Name}' "
+                + $"({(int)response.StatusCode}): {Truncate(detail, 500)}");
         }
 
-        using var document = await JsonDocument.ParseAsync(
-            await response.Content.ReadAsStreamAsync(cancellationToken),
-            cancellationToken: cancellationToken);
-        if (!document.RootElement.TryGetProperty("translatedText", out var translatedText))
+        var mediaType = response.Content.Headers.ContentType?.MediaType;
+        if (mediaType is not null
+            && !mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ChapterTranslationUnavailableException("LibreTranslate returned an invalid response.");
+            var detail = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new ChapterTranslationUnavailableException(
+                $"The manga translator returned '{mediaType}' instead of an image: {Truncate(detail, 500)}");
         }
 
-        if (translatedText.ValueKind == JsonValueKind.Array)
+        var translated = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        if (translated.Length < 128)
         {
-            return translatedText.EnumerateArray().Select(item => item.GetString() ?? "").ToList();
+            throw new ChapterTranslationUnavailableException(
+                $"The manga translator returned an invalid image for page '{sourcePage.Name}'.");
         }
 
-        return texts.Count == 1 && translatedText.ValueKind == JsonValueKind.String
-            ? [translatedText.GetString() ?? ""]
-            : throw new ChapterTranslationUnavailableException("LibreTranslate returned an unexpected translation count.");
+        return translated;
     }
+
+    private string CreateTranslatorConfig(string targetLanguage) =>
+        JsonSerializer.Serialize(new
+        {
+            translator = new
+            {
+                translator = settings.Translator,
+                target_lang = ToMangaTranslatorLanguage(targetLanguage)
+            },
+            ocr = new
+            {
+                ocr = "48px",
+                min_text_length = Math.Max(0, settings.MinimumTextLength),
+                ignore_bubble = Math.Clamp(settings.IgnoreNonBubbleText, 0, 50)
+            }
+        });
 
     private async Task WaitForTranslatorAsync(CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient("chapter-translator");
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(Math.Max(30, settings.RequestTimeoutSeconds));
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(Math.Max(30, settings.ReadinessTimeoutSeconds));
         Exception? lastError = null;
         while (DateTimeOffset.UtcNow < deadline)
         {
@@ -317,14 +201,17 @@ public sealed class LocalChapterTranslationEngine(
             attempt.CancelAfter(TimeSpan.FromSeconds(5));
             try
             {
-                using var response = await client.GetAsync("languages", attempt.Token);
+                using var response = await client.PostAsync("queue-size", content: null, attempt.Token);
                 if (response.IsSuccessStatusCode)
                 {
                     return;
                 }
-                lastError = new HttpRequestException($"LibreTranslate readiness returned {(int)response.StatusCode}.");
+                lastError = new HttpRequestException(
+                    $"Manga translator readiness returned {(int)response.StatusCode}.");
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+            catch (Exception ex) when (
+                ex is HttpRequestException or TaskCanceledException
+                && !cancellationToken.IsCancellationRequested)
             {
                 lastError = ex;
             }
@@ -333,181 +220,70 @@ public sealed class LocalChapterTranslationEngine(
         }
 
         throw new ChapterTranslationUnavailableException(
-            "The local translation service did not become ready in time.",
+            "The manga translation service did not become ready in time.",
             lastError);
     }
 
-    private void RenderTranslations(
-        SKCanvas canvas,
-        int imageWidth,
-        int imageHeight,
-        IReadOnlyList<OcrRegion> regions,
-        IReadOnlyList<string> translated)
-    {
-        using var typeface = SKTypeface.FromFamilyName(settings.FontFamily) ?? SKTypeface.Default;
-        using var background = new SKPaint
+    private static string ToMangaTranslatorLanguage(string language) =>
+        NormalizeLanguage(language) switch
         {
-            Color = SKColors.White,
-            IsAntialias = true,
-            Style = SKPaintStyle.Fill
+            "zh" or "zh-cn" => "CHS",
+            "zh-hk" or "zh-tw" => "CHT",
+            "cs" => "CSY",
+            "nl" => "NLD",
+            "en" => "ENG",
+            "fr" => "FRA",
+            "de" => "DEU",
+            "hu" => "HUN",
+            "it" => "ITA",
+            "ja" => "JPN",
+            "ko" => "KOR",
+            "pl" => "POL",
+            "pt" or "pt-br" => "PTB",
+            "ro" => "ROM",
+            "ru" => "RUS",
+            "es" => "ESP",
+            "tr" => "TRK",
+            "uk" => "UKR",
+            "vi" => "VIN",
+            "ar" => "ARA",
+            "sr" => "SRP",
+            "hr" => "HRV",
+            "th" => "THA",
+            "id" => "IND",
+            "fil" or "tl" => "FIL",
+            var unsupported => throw new ChapterTranslationUnavailableException(
+                $"Translation language '{unsupported}' is not supported by the manga translator.")
         };
-        using var textPaint = new SKPaint
-        {
-            Color = SKColors.Black,
-            IsAntialias = true
-        };
-
-        for (var index = 0; index < Math.Min(regions.Count, translated.Count); index++)
-        {
-            var region = regions[index];
-            var padding = Math.Max(4, Math.Min(region.Width, region.Height) / 10);
-            var left = Math.Max(0, region.Left - padding);
-            var top = Math.Max(0, region.Top - padding);
-            var width = Math.Min(imageWidth - left, region.Width + (padding * 2));
-            var height = Math.Min(imageHeight - top, Math.Max(region.Height + (padding * 2), 24));
-            var rectangle = new SKRect(left, top, left + width, top + height);
-            canvas.DrawRect(rectangle, background);
-
-            using var font = new SKFont(typeface, Math.Clamp(height * 0.48f, 10f, 42f));
-            var lines = WrapText(translated[index], font, Math.Max(8, width - (padding * 2)));
-            var lineHeight = font.Size * 1.12f;
-            while (lines.Count * lineHeight > height - (padding * 2) && font.Size > 8)
-            {
-                font.Size -= 1;
-                lineHeight = font.Size * 1.12f;
-                lines = WrapText(translated[index], font, Math.Max(8, width - (padding * 2)));
-            }
-
-            var firstBaseline = top + ((height - (lines.Count * lineHeight)) / 2) + font.Size;
-            for (var lineIndex = 0; lineIndex < lines.Count; lineIndex++)
-            {
-                canvas.DrawText(
-                    lines[lineIndex],
-                    left + (width / 2f),
-                    firstBaseline + (lineIndex * lineHeight),
-                    SKTextAlign.Center,
-                    font,
-                    textPaint);
-            }
-        }
-        canvas.Flush();
-    }
-
-    private static bool IsPlausibleTextRegion(OcrRegion region, int imageWidth, int imageHeight)
-    {
-        if (region.Left < 0
-            || region.Top < 0
-            || region.Width <= 0
-            || region.Height <= 0
-            || region.Left + region.Width > imageWidth
-            || region.Top + region.Height > imageHeight)
-        {
-            return false;
-        }
-
-        var pageArea = (long)imageWidth * imageHeight;
-        var regionArea = (long)region.Width * region.Height;
-        return regionArea <= pageArea * 0.12;
-    }
-
-    private static List<string> WrapText(string text, SKFont font, float maximumWidth)
-    {
-        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length == 0)
-        {
-            return [""];
-        }
-
-        var lines = new List<string>();
-        var current = words[0];
-        foreach (var word in words.Skip(1))
-        {
-            var candidate = $"{current} {word}";
-            if (font.MeasureText(candidate) <= maximumWidth)
-            {
-                current = candidate;
-                continue;
-            }
-            lines.Add(current);
-            current = word;
-        }
-        lines.Add(current);
-        return lines;
-    }
-
-    private static byte[] EncodePng(SKBitmap bitmap)
-    {
-        using var image = SKImage.FromBitmap(bitmap);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        return data.ToArray();
-    }
-
-    private static async Task SavePngAsync(SKBitmap bitmap, string path, CancellationToken cancellationToken)
-    {
-        await File.WriteAllBytesAsync(path, EncodePng(bitmap), cancellationToken);
-    }
-
-    private static int ScaleProgress(int current, int total, int minimum, int maximum) =>
-        total <= 0 ? minimum : minimum + (int)Math.Round((maximum - minimum) * (current / (double)total));
-
-    private static string ToTesseractLanguage(string language) => NormalizeLanguage(language) switch
-    {
-        "ja" => "jpn_vert+jpn",
-        "ko" => "kor",
-        "pt" or "pt-br" => "por",
-        "es" => "spa",
-        "fr" => "fra",
-        "de" => "deu",
-        "it" => "ita",
-        "zh" or "zh-cn" => "chi_sim",
-        "zh-hk" or "zh-tw" => "chi_tra",
-        _ => "eng"
-    };
-
-    private static string ToLibreTranslateLanguage(string language) => NormalizeLanguage(language) switch
-    {
-        "pt-br" => "pb",
-        "zh-hk" or "zh-tw" => "zt",
-        "zh-cn" => "zh",
-        var normalized => normalized
-    };
 
     private static string NormalizeLanguage(string language) =>
-        string.IsNullOrWhiteSpace(language) ? "en" : language.Trim().ToLowerInvariant();
+        language.Trim().ToLowerInvariant().Replace('_', '-');
 
-    private static async Task<string> ComputeHashAsync(string path, CancellationToken cancellationToken)
+    private static string ToMediaType(string fileName) =>
+        Path.GetExtension(fileName).ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            ".gif" => "image/gif",
+            ".avif" => "image/avif",
+            _ => "application/octet-stream"
+        };
+
+    private static string Truncate(string value, int maximumLength) =>
+        value.Length <= maximumLength ? value : value[..maximumLength];
+
+    private static int ScaleProgress(int current, int total, int minimum, int maximum) =>
+        total <= 0
+            ? minimum
+            : minimum + (int)Math.Round((maximum - minimum) * (current / (double)total));
+
+    private static async Task<string> ComputeHashAsync(
+        string path,
+        CancellationToken cancellationToken)
     {
         await using var stream = File.OpenRead(path);
         var hash = await SHA256.HashDataAsync(stream, cancellationToken);
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
-
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            if (Directory.Exists(path))
-            {
-                Directory.Delete(path, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
-
-    private sealed record OcrWord(
-        int Block,
-        int Paragraph,
-        int Line,
-        int Left,
-        int Top,
-        int Width,
-        int Height,
-        string Text);
-
-    private sealed record OcrRegion(int Left, int Top, int Width, int Height, string Text);
 }

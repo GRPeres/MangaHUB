@@ -24,7 +24,8 @@ services:
       MangaHub__JwtSecret: ${JWT_SECRET:-change-me-before-deploying-to-a-long-random-secret}
       MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
       MangaHub__Translation__Enabled: ${CHAPTER_TRANSLATION_ENABLED:-true}
-      MangaHub__Translation__LibreTranslateUrl: http://libretranslate:5000
+      MangaHub__Translation__MangaTranslatorUrl: http://manga-translator:5003
+      MangaHub__Translation__Translator: ${CHAPTER_TRANSLATOR:-nllb}
       MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:-}
       MangaHub__SessionCookieSameSite: Lax
       MangaHub__SessionCookieSecure: false
@@ -41,18 +42,21 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      libretranslate:
+      manga-translator:
         condition: service_started
 
-  libretranslate:
-    image: libretranslate/libretranslate:v1.9.6
-    environment:
-      LT_DISABLE_WEB_UI: "true"
-      LT_LOAD_ONLY: ${TRANSLATION_LANGUAGES:-en,ja,pt,pb,es,fr,de,it,ko,zh,zt}
+  manga-translator:
+    image: zyddnys/manga-image-translator:main
+    entrypoint: python
+    command:
+      - server/main.py
+      - --verbose
+      - --start-instance
+      - --host=0.0.0.0
+      - --port=5003
     expose:
-      - "5000"
-    volumes:
-      - libretranslate-data:/home/libretranslate/.local
+      - "5003"
+    ipc: host
     restart: unless-stopped
 
   workers:
@@ -94,4 +98,3 @@ services:
 volumes:
   postgres-data:
   mangadex-cache:
-  libretranslate-data:

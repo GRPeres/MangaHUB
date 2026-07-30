@@ -39,10 +39,10 @@ public sealed class MangaHubOptions
 public sealed class ChapterTranslationOptions
 {
     public bool Enabled { get; set; }
-    public string LibreTranslateUrl { get; set; } = "http://libretranslate:5000";
-    public string LibreTranslateApiKey { get; set; } = "";
-    public string TesseractCommand { get; set; } = "tesseract";
-    public string FontFamily { get; set; } = "Noto Sans";
-    public int MinimumOcrConfidence { get; set; } = 35;
-    public int RequestTimeoutSeconds { get; set; } = 300;
+    public string MangaTranslatorUrl { get; set; } = "http://manga-translator:5003";
+    public string Translator { get; set; } = "nllb";
+    public int MinimumTextLength { get; set; } = 2;
+    public int IgnoreNonBubbleText { get; set; } = 5;
+    public int ReadinessTimeoutSeconds { get; set; } = 300;
+    public int RequestTimeoutSeconds { get; set; } = 1800;
 }

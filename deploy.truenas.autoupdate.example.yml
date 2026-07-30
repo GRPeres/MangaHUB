@@ -22,7 +22,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      libretranslate:
+      manga-translator:
         condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -34,7 +34,8 @@ services:
       MangaHub__MangaDexCachePath: /mangadex-cache
       MangaHub__MangaDexEnabled: "true"
       MangaHub__Translation__Enabled: "true"
-      MangaHub__Translation__LibreTranslateUrl: http://libretranslate:5000
+      MangaHub__Translation__MangaTranslatorUrl: http://manga-translator:5003
+      MangaHub__Translation__Translator: nllb
       MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:?Set_MYANIMELIST_CLIENT_ID}
       MangaHub__SessionCookieSameSite: Lax
       MangaHub__SessionCookieSecure: "true"
@@ -45,13 +46,18 @@ services:
       com.centurylinklabs.watchtower.enable: "true"
     restart: unless-stopped
 
-  libretranslate:
-    image: libretranslate/libretranslate:v1.9.6
-    environment:
-      LT_DISABLE_WEB_UI: "true"
-      LT_LOAD_ONLY: en,ja,pt,pb,es,fr,de,it,ko,zh,zt
-    volumes:
-      - libretranslate-data:/home/libretranslate/.local
+  manga-translator:
+    image: zyddnys/manga-image-translator:main
+    entrypoint: python
+    command:
+      - server/main.py
+      - --verbose
+      - --start-instance
+      - --host=0.0.0.0
+      - --port=5003
+    expose:
+      - "5003"
+    ipc: host
     restart: unless-stopped
 
   mangahub-web:
@@ -145,4 +151,3 @@ services:
 
 volumes:
   postgres-data:
-  libretranslate-data:

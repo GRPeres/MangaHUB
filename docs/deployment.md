@@ -54,7 +54,7 @@ Production compose should include:
 - `mangahub-api`
 - `mangahub-workers`
 - `mangahub-web`
-- `libretranslate`
+- `manga-translator`
 - `cloudflared`
 
 `mangahub-web` serves Blazor static files and proxies API calls internally to `mangahub-api`.
@@ -73,7 +73,8 @@ MangaHub__LibraryPath=/library
 MangaHub__MangaDexCachePath=/mangadex-cache
 MangaHub__MangaDexEnabled=true
 MangaHub__Translation__Enabled=true
-MangaHub__Translation__LibreTranslateUrl=http://libretranslate:5000
+MangaHub__Translation__MangaTranslatorUrl=http://manga-translator:5003
+MangaHub__Translation__Translator=nllb
 MangaHub__MyAnimeListClientId=<client id>
 MangaHub__SessionCookieSameSite=Lax
 MangaHub__SessionCookieSecure=true
@@ -145,29 +146,42 @@ For a cache visible in a TrueNAS dataset instead, use a bind mount such as `/mnt
 
 ## Local Chapter Translation
 
-The API image includes Tesseract language packs and Noto fonts. LibreTranslate runs as a private Compose service; it does not need a public port or API key. Its Argos models are persisted separately so container updates do not download them again:
+Manga translation runs in a private
+[`manga-image-translator`](https://github.com/zyddnys/manga-image-translator)
+sidecar. It performs manga-aware text detection, OCR, inpainting, deterministic
+NLLB translation, and typesetting. It does not need a public port or an API key.
+The official CPU image includes its dependencies and models, and is approximately
+15 GB:
 
 ```yaml
-libretranslate:
-  image: libretranslate/libretranslate:v1.9.6
-  environment:
-    LT_DISABLE_WEB_UI: "true"
-    LT_LOAD_ONLY: en,ja,pt,pb,es,fr,de,it,ko,zh,zt
-  volumes:
-    - libretranslate-data:/home/libretranslate/.local
+manga-translator:
+  image: zyddnys/manga-image-translator:main
+  entrypoint: python
+  command:
+    - server/main.py
+    - --verbose
+    - --start-instance
+    - --host=0.0.0.0
+    - --port=5003
+  expose:
+    - "5003"
+  ipc: host
+  restart: unless-stopped
 
 mangahub-api:
   environment:
     MangaHub__Translation__Enabled: "true"
-    MangaHub__Translation__LibreTranslateUrl: http://libretranslate:5000
+    MangaHub__Translation__MangaTranslatorUrl: http://manga-translator:5003
+    MangaHub__Translation__Translator: nllb
   depends_on:
-    - libretranslate
-
-volumes:
-  libretranslate-data:
+    - manga-translator
 ```
 
-`LT_LOAD_ONLY` controls installed source and target models. Add a language code before deploying if MangaDex source chapters use a language outside that list. The first startup is slower while models download. Translated CBZ files live under the existing writable `/mangadex-cache/translations` mount, while canonical source CBZ files remain unchanged.
+The first startup and first translated page can be slow while the service initializes
+its models, particularly without a GPU. Translated CBZ files live under the existing
+writable `/mangadex-cache/translations` mount, while canonical source CBZ files remain
+unchanged. A translation implementation change advances the artifact version so stale
+or malformed translated pages are regenerated automatically.
 
 ## MangaDex Daily Maintenance
 

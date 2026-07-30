@@ -35,7 +35,7 @@ public static class DependencyInjection
         services.AddHttpClient("chapter-translator", (provider, client) =>
         {
             var settings = configuration.GetSection("MangaHub:Translation").Get<ChapterTranslationOptions>() ?? new();
-            client.BaseAddress = new Uri(settings.LibreTranslateUrl.TrimEnd('/') + "/");
+            client.BaseAddress = new Uri(settings.MangaTranslatorUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(Math.Max(30, settings.RequestTimeoutSeconds));
         });
         services.AddSingleton<IChapterTranslationEngine, LocalChapterTranslationEngine>();

@@ -66,7 +66,7 @@ public sealed class ChapterTranslationServiceTests
             Assert.Single(engine.Requests);
             Assert.NotNull(archivePath);
             Assert.True(File.Exists(archivePath));
-            Assert.Contains(Path.Combine("translations", "v2", chapter.Id.ToString("N")), archivePath);
+            Assert.Contains(Path.Combine("translations", "v3", chapter.Id.ToString("N")), archivePath);
         }
         finally
         {
