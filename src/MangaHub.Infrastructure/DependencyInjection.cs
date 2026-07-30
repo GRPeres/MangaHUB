@@ -6,6 +6,7 @@ using MangaHub.Infrastructure.Local;
 using MangaHub.Infrastructure.RemoteJobs;
 using MangaHub.Infrastructure.Security;
 using MangaHub.Infrastructure.Sources;
+using MangaHub.Infrastructure.Translation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,13 @@ public static class DependencyInjection
         services.AddScoped<ILibraryScanner, LocalLibraryScanner>();
         services.AddSingleton<IArchiveReader, CbzArchiveReader>();
         services.AddSingleton<IMangaDexChapterCache, MangaDexChapterCache>();
+        services.AddHttpClient("chapter-translator", (provider, client) =>
+        {
+            var settings = configuration.GetSection("MangaHub:Translation").Get<ChapterTranslationOptions>() ?? new();
+            client.BaseAddress = new Uri(settings.LibreTranslateUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(30, settings.RequestTimeoutSeconds));
+        });
+        services.AddSingleton<IChapterTranslationEngine, LocalChapterTranslationEngine>();
         services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
         services.AddSingleton<ISessionTokenService, JwtSessionTokenService>();
         services.AddHttpClient<IOpenLibraryClient, OpenLibraryClient>(client =>

@@ -52,6 +52,7 @@ builder.Services.AddScoped<ShelfService>();
 builder.Services.AddScoped<LibraryService>();
 builder.Services.AddScoped<SeriesService>();
 builder.Services.AddScoped<ReaderService>();
+builder.Services.AddScoped<ChapterTranslationService>();
 builder.Services.AddSingleton<ReaderPreparationService>();
 builder.Services.AddScoped<ProgressService>();
 builder.Services.AddScoped<CatalogCacheService>();

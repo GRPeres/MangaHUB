@@ -99,6 +99,24 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
     }
 }
 
+internal sealed class FakeChapterTranslationEngine : IChapterTranslationEngine
+{
+    public bool IsEnabled => true;
+    public List<ChapterTranslationRequest> Requests { get; } = [];
+
+    public async Task<ChapterTranslationResult> TranslateAsync(
+        ChapterTranslationRequest request,
+        CancellationToken cancellationToken,
+        IProgress<ReaderPreparationProgress>? progress = null)
+    {
+        Requests.Add(request);
+        Directory.CreateDirectory(Path.GetDirectoryName(request.OutputArchivePath)!);
+        await File.WriteAllBytesAsync(request.OutputArchivePath, [1, 2, 3], cancellationToken);
+        progress?.Report(new ReaderPreparationProgress("Translated chapter ready", 97, 1, 1));
+        return new ChapterTranslationResult(Path.GetFileName(request.OutputArchivePath), 1, "translated-hash");
+    }
+}
+
 internal sealed class FakeMangaUpdatesClient : IMangaUpdatesClient
 {
     public List<MangaUpdatesSearchResult> SearchResults { get; } = [];

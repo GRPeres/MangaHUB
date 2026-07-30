@@ -42,7 +42,7 @@
                     <img @key="@($"{pageImageVersion}-{pageIndex}")"
                          class="reader-page-image-vertical"
                          data-reader-page="@currentPageIndex"
-                         src="@ReadApi.GetPageUrl(ChapterId, currentPageIndex, pageImageVersion)"
+                         src="@ReadApi.GetPageUrl(ChapterId, currentPageIndex, ActiveLanguage, pageImageVersion)"
                          alt="Manhwa page @(currentPageIndex + 1)"
                          @onload="() => ObserveVerticalEnd(currentPageIndex)"
                          @onerror="OnPageLoadFailed" />
@@ -53,7 +53,7 @@
             {
                 <img @key="pageImageVersion"
                      @ref="pageImage"
-                     src="@ReadApi.GetPageUrl(ChapterId, page, pageImageVersion)"
+                     src="@ReadApi.GetPageUrl(ChapterId, page, ActiveLanguage, pageImageVersion)"
                      alt="Manga page @(page + 1)"
                      @onload="OnPageLoaded"
                      @onerror="OnPageLoadFailed" />

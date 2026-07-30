@@ -22,6 +22,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      libretranslate:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
@@ -31,6 +33,8 @@ services:
       MangaHub__LibraryPath: /library
       MangaHub__MangaDexCachePath: /mangadex-cache
       MangaHub__MangaDexEnabled: "true"
+      MangaHub__Translation__Enabled: "true"
+      MangaHub__Translation__LibreTranslateUrl: http://libretranslate:5000
       MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:?Set_MYANIMELIST_CLIENT_ID}
       MangaHub__SessionCookieSameSite: Lax
       MangaHub__SessionCookieSecure: "true"
@@ -39,6 +43,15 @@ services:
       - /mnt/Shared/NAS/MangaHUBMangaDexCache:/mangadex-cache
     labels:
       com.centurylinklabs.watchtower.enable: "true"
+    restart: unless-stopped
+
+  libretranslate:
+    image: libretranslate/libretranslate:v1.9.6
+    environment:
+      LT_DISABLE_WEB_UI: "true"
+      LT_LOAD_ONLY: en,ja,pt,pb,es,fr,de,it,ko,zh,zt
+    volumes:
+      - libretranslate-data:/home/libretranslate/.local
     restart: unless-stopped
 
   mangahub-web:
@@ -132,3 +145,4 @@ services:
 
 volumes:
   postgres-data:
+  libretranslate-data:

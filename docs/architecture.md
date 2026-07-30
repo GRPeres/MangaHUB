@@ -32,6 +32,10 @@ cloudflared
 
 postgres-backup
   pg_dump sidecar to NAS share
+
+libretranslate
+  local deterministic machine translation
+  Argos language models persisted in a named volume
 ```
 
 ## Project Responsibilities
@@ -76,6 +80,8 @@ Owns implementations for:
 - EF Core DbContext
 - local library scanning
 - archive/CBZ reading
+- Tesseract OCR and SkiaSharp page reconstruction
+- local LibreTranslate integration
 - password/session/security infrastructure
 - remote clients such as MyAnimeList, OpenLibrary, and MangaDex
 - the priority-aware outbound request scheduler and per-provider rate gates
@@ -116,7 +122,9 @@ Separately, an API-maintained site activity timestamp lets workers make small hi
 
 Reader endpoints and page delivery are admin-only. Normal users can manage their shelf/list data but cannot prepare or open reader chapters.
 
-Cached MangaDex releases use one canonical source archive per logical chapter, regardless of the release language. The original archive records its `SourceLanguage`; target-language renderings are separate `chapter_translations` artifacts, keyed by cached chapter and target language. Artifacts move through `pending`, `processing`, `ready`, `failed`, or `unsupported` without replacing the original CBZ. Account and reader language settings are therefore translation targets, not MangaDex source filters. Until a local OCR/translation renderer is connected, pending artifacts leave the canonical original pages readable.
+Cached MangaDex releases use one canonical source archive per logical chapter, regardless of the release language. The original archive records its `SourceLanguage`; target-language renderings are separate `chapter_translations` artifacts, keyed by cached chapter and target language. Artifacts move through `pending`, `processing`, `ready`, `failed`, or `unsupported` without replacing the original CBZ. Account and reader language settings are therefore translation targets, not MangaDex source filters.
+
+When source and target differ, the API runs Tesseract OCR over each page, sends grouped text to the private `libretranslate` sidecar, reconstructs the page with SkiaSharp, and writes a translated CBZ under `MangaDexCachePath/translations`. Reader preparation does not complete until the requested artifact is ready. The implementation is engine-backed so OCR, translation, or reconstruction can be replaced independently as manga-specific tooling improves.
 
 MyAnimeList metadata is preferred for catalog search/enrichment. OpenLibrary remains available as fallback or explicit "load more" behavior.
 

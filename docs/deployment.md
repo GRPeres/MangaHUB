@@ -54,6 +54,7 @@ Production compose should include:
 - `mangahub-api`
 - `mangahub-workers`
 - `mangahub-web`
+- `libretranslate`
 - `cloudflared`
 
 `mangahub-web` serves Blazor static files and proxies API calls internally to `mangahub-api`.
@@ -71,6 +72,8 @@ MangaHub__JwtSecret=<long secret>
 MangaHub__LibraryPath=/library
 MangaHub__MangaDexCachePath=/mangadex-cache
 MangaHub__MangaDexEnabled=true
+MangaHub__Translation__Enabled=true
+MangaHub__Translation__LibreTranslateUrl=http://libretranslate:5000
 MangaHub__MyAnimeListClientId=<client id>
 MangaHub__SessionCookieSameSite=Lax
 MangaHub__SessionCookieSecure=true
@@ -139,6 +142,32 @@ volumes:
 ```
 
 For a cache visible in a TrueNAS dataset instead, use a bind mount such as `/mnt/Shared/NAS/MangaHubMangaDexCache:/mangadex-cache`. Keep this cache separate from the original manga library: it is derived reader data, not your owned-library mount.
+
+## Local Chapter Translation
+
+The API image includes Tesseract language packs and Noto fonts. LibreTranslate runs as a private Compose service; it does not need a public port or API key. Its Argos models are persisted separately so container updates do not download them again:
+
+```yaml
+libretranslate:
+  image: libretranslate/libretranslate:v1.9.6
+  environment:
+    LT_DISABLE_WEB_UI: "true"
+    LT_LOAD_ONLY: en,ja,pt,pb,es,fr,de,it,ko,zh,zt
+  volumes:
+    - libretranslate-data:/home/libretranslate/.local
+
+mangahub-api:
+  environment:
+    MangaHub__Translation__Enabled: "true"
+    MangaHub__Translation__LibreTranslateUrl: http://libretranslate:5000
+  depends_on:
+    - libretranslate
+
+volumes:
+  libretranslate-data:
+```
+
+`LT_LOAD_ONLY` controls installed source and target models. Add a language code before deploying if MangaDex source chapters use a language outside that list. The first startup is slower while models download. Translated CBZ files live under the existing writable `/mangadex-cache/translations` mount, while canonical source CBZ files remain unchanged.
 
 ## MangaDex Daily Maintenance
 

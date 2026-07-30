@@ -8,7 +8,11 @@ namespace MangaHub.Api.Controllers;
 public sealed class ReadController(CurrentUserService currentUsers, ReaderService reader) : ControllerBase
 {
     [HttpGet("{chapterId:guid}/pages/{pageIndex:int}")]
-    public async Task<IActionResult> Page(Guid chapterId, int pageIndex, CancellationToken cancellationToken)
+    public async Task<IActionResult> Page(
+        Guid chapterId,
+        int pageIndex,
+        [FromQuery] string? targetLanguage,
+        CancellationToken cancellationToken)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null)
@@ -20,7 +24,7 @@ public sealed class ReadController(CurrentUserService currentUsers, ReaderServic
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        var page = await reader.GetPageAsync(chapterId, pageIndex, cancellationToken);
+        var page = await reader.GetPageAsync(chapterId, pageIndex, targetLanguage ?? "en", cancellationToken);
         if (page is null)
         {
             return NotFound();

@@ -178,6 +178,16 @@ public sealed class ReaderPreparationService(
                 ChapterJump = ex.ChapterJump
             });
         }
+        catch (ChapterTranslationUnavailableException ex)
+        {
+            Update(jobId, status => status with
+            {
+                Stage = "Chapter translation failed",
+                IsComplete = true,
+                IsFailed = true,
+                Error = ex.Message
+            });
+        }
         catch (Exception)
         {
             Update(jobId, status => status with

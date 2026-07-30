@@ -25,6 +25,7 @@ public sealed class MangaHubOptions
     public int MangaDexReaderCacheMinutes { get; set; } = 15;
     public int MangaDexReaderMaxChapters { get; set; } = 1000;
     public string MangaDexCachePath { get; set; } = "/mangadex-cache";
+    public ChapterTranslationOptions Translation { get; set; } = new();
     public bool MangaUpdatesEnabled { get; set; } = true;
     public int MangaUpdatesReleasePollMinutes { get; set; } = 60;
     public int MangaUpdatesSyncIntervalHours { get; set; } = 12;
@@ -33,4 +34,15 @@ public sealed class MangaHubOptions
     public int MangaUpdatesSyncBatchSize { get; set; } = 25;
     public int MangaUpdatesMatchBatchSize { get; set; } = 10;
     public RemoteJobs.RemoteRequestLimitsOptions RemoteRequests { get; set; } = new();
+}
+
+public sealed class ChapterTranslationOptions
+{
+    public bool Enabled { get; set; }
+    public string LibreTranslateUrl { get; set; } = "http://libretranslate:5000";
+    public string LibreTranslateApiKey { get; set; } = "";
+    public string TesseractCommand { get; set; } = "tesseract";
+    public string FontFamily { get; set; } = "Noto Sans";
+    public int MinimumOcrConfidence { get; set; } = 35;
+    public int RequestTimeoutSeconds { get; set; } = 300;
 }

@@ -77,6 +77,50 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task GetPageAsync_WhenTranslationIsReady_ReadsTranslatedArchive()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"mangahub-reader-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            await using var db = TestDb.Create();
+            var chapter = new MangaChapter
+            {
+                Series = new MangaSeries { Title = "Berserk", Source = "mangadex-cache", ExternalId = "manga-id" },
+                SourceId = "chapter-id",
+                ChapterNumber = "1",
+                Language = "ja",
+                SourceLanguage = "ja",
+                PageCount = 1
+            };
+            var relativePath = Path.Combine("translations", chapter.Id.ToString("N"), "en.cbz");
+            var translatedPath = Path.Combine(root, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(translatedPath)!);
+            await File.WriteAllBytesAsync(translatedPath, [1, 2, 3]);
+            chapter.Translations.Add(new MangaChapterTranslation
+            {
+                TargetLanguage = "en",
+                Status = ChapterTranslationStatus.Ready,
+                RelativePath = relativePath,
+                PageCount = 1
+            });
+            db.Chapters.Add(chapter);
+            await db.SaveChangesAsync();
+            var archive = new FakeArchiveReader();
+            var service = CreateReaderService(db, archive, root);
+
+            var page = await service.GetPageAsync(chapter.Id, 0, "en", CancellationToken.None);
+
+            Assert.NotNull(page);
+            Assert.Equal(Path.GetFullPath(translatedPath), Assert.Single(archive.RequestedPaths));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_CachesAndOpensTheCurrentChapter()
     {
         await using var db = TestDb.Create();
@@ -499,7 +543,15 @@ public sealed class ReaderServiceTests
         new(
             new ShelfRepository(db),
             new SeriesRepository(db),
-            new ChapterTranslationRepository(db),
+            new ChapterTranslationService(
+                new ChapterTranslationRepository(db),
+                new FakeChapterTranslationEngine(),
+                Options.Create(new MangaHubOptions
+                {
+                    LibraryPath = libraryPath,
+                    MangaDexCachePath = libraryPath,
+                    Translation = new ChapterTranslationOptions { Enabled = true }
+                })),
             archive,
             cache ?? new FakeMangaDexChapterCache(),
             Options.Create(new MangaHubOptions { LibraryPath = libraryPath, MangaDexCachePath = libraryPath }),
