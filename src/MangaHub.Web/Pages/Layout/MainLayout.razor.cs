@@ -216,10 +216,10 @@ public partial class MainLayout : IDisposable
 
     private async Task TestPhoneNotification()
     {
-        var sent = await Notifications.SendTestPushAsync();
-        Messages.Show(sent ? MessageLevel.Success : MessageLevel.Error,
-            sent ? "A test push was sent to this account's subscribed phone." : "No test push could be sent. Enable phone notifications first and check the VAPID configuration.",
-            "Phone notification test");
+        var result = await Notifications.SendTestPushAsync();
+        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error,
+            result?.Message ?? "The phone notification test did not complete.", "Phone notification test");
+        await LoadNotificationsAsync();
     }
 
     private async Task TestDatabase()

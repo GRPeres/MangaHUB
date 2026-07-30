@@ -46,16 +46,42 @@ public sealed class NotificationsController(CurrentUserService currentUsers, Not
         if (user is null) return Unauthorized();
         if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
         var push = options.Value.WebPush;
-        if (string.IsNullOrWhiteSpace(push.PublicKey) || string.IsNullOrWhiteSpace(push.PrivateKey)) return BadRequest("Web Push is not configured.");
+        if (string.IsNullOrWhiteSpace(push.PublicKey) || string.IsNullOrWhiteSpace(push.PrivateKey)) return Ok(new DiagnosticResult(false, "Web Push is not configured."));
         var subscriptions = await db.WebPushSubscriptions.Where(subscription => subscription.UserId == user.Id).ToListAsync(cancellationToken);
-        if (subscriptions.Count == 0) return NotFound("This account has no phone notification subscription.");
+        if (subscriptions.Count == 0) return Ok(new DiagnosticResult(false, "This account has no phone notification subscription."));
         var client = new WebPushClient();
         var payload = System.Text.Json.JsonSerializer.Serialize(new { title = "MangaHub test", body = "Phone notifications are working.", url = "/library" });
+        var delivered = 0;
+        var failed = 0;
         foreach (var subscription in subscriptions)
         {
-            await client.SendNotificationAsync(new PushSubscription(subscription.Endpoint, subscription.P256dh, subscription.Auth), payload, new VapidDetails(push.Subject, push.PublicKey, push.PrivateKey));
+            try
+            {
+                await client.SendNotificationAsync(new PushSubscription(subscription.Endpoint, subscription.P256dh, subscription.Auth), payload, new VapidDetails(push.Subject, push.PublicKey, push.PrivateKey));
+                delivered++;
+            }
+            catch (WebPushException ex) when (ex.StatusCode is System.Net.HttpStatusCode.Gone or System.Net.HttpStatusCode.NotFound)
+            {
+                db.WebPushSubscriptions.Remove(subscription);
+                failed++;
+            }
+            catch (WebPushException)
+            {
+                failed++;
+            }
         }
-        return NoContent();
+        db.Notifications.Add(new MangaNotification
+        {
+            UserId = user.Id,
+            MangaEntryId = Guid.Empty,
+            Type = $"test-push-{Guid.NewGuid():N}",
+            ChapterNumber = 0,
+            Language = user.PreferredLanguage,
+            Title = "MangaHub notification test",
+            Body = $"Push delivery accepted by {delivered} device(s); {failed} failed."
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(new DiagnosticResult(delivered > 0, $"Saved an in-app test notification. Push delivery: {delivered} accepted, {failed} failed."));
     }
 
     [HttpGet("unread-count")] public async Task<IActionResult> UnreadCount(CancellationToken cancellationToken)
