@@ -27,4 +27,5 @@ public sealed record CatalogMangaResponse(
     int CachedChapterCount,
     bool IsInMyShelf,
     string FallbackReaderUrl,
-    string ReaderPreference = "mangahub");
+    string ReaderPreference = "mangahub",
+    decimal? MangaDexPreferredLanguageLatestChapter = null);

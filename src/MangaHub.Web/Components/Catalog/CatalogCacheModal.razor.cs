@@ -11,10 +11,12 @@ public partial class CatalogCacheModal
     [Inject] private CatalogApiService CatalogApi { get; set; } = default!;
 
     [Parameter] public CatalogMangaResponse? Entry { get; set; }
+    [Parameter] public string Language { get; set; } = "en";
     [Parameter] public EventCallback OnClosed { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
 
     private Guid? loadedEntryId;
+    private string loadedLanguage = "";
     private MangaDexCacheResponse? cache;
     private IBrowserFile? selectedFile;
     private string chapterToDownload = "";
@@ -24,16 +26,21 @@ public partial class CatalogCacheModal
     private Severity messageSeverity = Severity.Info;
     private bool isLoading;
     private bool isWorking;
+    private CachedMangaDexChapterResponse? editingChapter;
+    private string editChapterNumber = "";
+    private string editLanguage = "";
+    private string editTitle = "";
     private string CachedCountLabel => cache is null ? "Cached chapters" : $"Cached chapters ({cache.Chapters.Count})";
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Entry is null || loadedEntryId == Entry.Id)
+        if (Entry is null || (loadedEntryId == Entry.Id && string.Equals(loadedLanguage, Language, StringComparison.OrdinalIgnoreCase)))
         {
             return;
         }
 
         loadedEntryId = Entry.Id;
+        loadedLanguage = Language;
         cache = null;
         selectedFile = null;
         chapterToDownload = "";
@@ -53,7 +60,7 @@ public partial class CatalogCacheModal
         isLoading = true;
         try
         {
-            cache = await CatalogApi.GetMangaDexCacheAsync(Entry.Id);
+            cache = await CatalogApi.GetMangaDexCacheAsync(Entry.Id, Language);
             if (cache is null)
             {
                 messageSeverity = Severity.Warning;
@@ -79,7 +86,7 @@ public partial class CatalogCacheModal
         isWorking = true;
         try
         {
-            cache = await CatalogApi.DownloadMangaDexChapterAsync(Entry.Id, chapterToDownload.Trim());
+            cache = await CatalogApi.DownloadMangaDexChapterAsync(Entry.Id, chapterToDownload.Trim(), Language);
             SetMessage(cache is null ? Severity.Error : Severity.Success, cache is null ? "MangaDex could not provide that chapter." : $"Cached chapter {chapterToDownload}.");
             if (cache is not null)
             {
@@ -103,7 +110,7 @@ public partial class CatalogCacheModal
         isWorking = true;
         try
         {
-            cache = await CatalogApi.ImportMangaDexChapterAsync(Entry.Id, manualChapterNumber.Trim(), manualChapterTitle.Trim(), selectedFile);
+            cache = await CatalogApi.ImportMangaDexChapterAsync(Entry.Id, manualChapterNumber.Trim(), manualChapterTitle.Trim(), Language, selectedFile);
             if (cache is null)
             {
                 SetMessage(Severity.Error, "The CBZ could not be imported. Check that it is a valid non-empty .cbz archive.");
@@ -138,7 +145,7 @@ public partial class CatalogCacheModal
                 return;
             }
 
-            cache = await CatalogApi.GetMangaDexCacheAsync(Entry.Id);
+            cache = await CatalogApi.GetMangaDexCacheAsync(Entry.Id, Language);
             SetMessage(Severity.Success, $"Removed cached chapter {chapter.ChapterNumber}.");
             await OnChanged.InvokeAsync();
         }
@@ -146,6 +153,30 @@ public partial class CatalogCacheModal
         {
             isWorking = false;
         }
+    }
+
+    private void BeginEdit(CachedMangaDexChapterResponse chapter)
+    {
+        editingChapter = chapter;
+        editChapterNumber = chapter.ChapterNumber;
+        editLanguage = chapter.Language;
+        editTitle = chapter.Title;
+    }
+
+    private void CancelEdit() => editingChapter = null;
+
+    private async Task SaveEdit()
+    {
+        if (Entry is null || editingChapter is null || string.IsNullOrWhiteSpace(editChapterNumber)) return;
+        isWorking = true;
+        try
+        {
+            cache = await CatalogApi.UpdateMangaDexChapterAsync(Entry.Id, editingChapter.Id, new UpdateCachedMangaDexChapterRequest(editChapterNumber, editLanguage, editTitle));
+            editingChapter = null;
+            SetMessage(cache is null ? Severity.Error : Severity.Success, cache is null ? "Could not update the cached chapter." : "Cached chapter updated.");
+            await OnChanged.InvokeAsync();
+        }
+        finally { isWorking = false; }
     }
 
     private async Task Close()

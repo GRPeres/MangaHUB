@@ -45,7 +45,8 @@ public sealed record MangaEntryRequest(
     int? VolumeCount = null,
     string MangaUpdatesId = "",
     string FallbackReaderUrl = "",
-    string ReaderPreference = "mangahub");
+    string ReaderPreference = "mangahub",
+    decimal? MangaDexPreferredLanguageLatestChapter = null);
 public sealed record MangaEntryResponse(
     Guid Id,
     string Title,
@@ -106,7 +107,8 @@ public sealed record CatalogMangaResponse(
     int CachedChapterCount,
     bool IsInMyShelf,
     string FallbackReaderUrl,
-    string ReaderPreference = "mangahub");
+    string ReaderPreference = "mangahub",
+    decimal? MangaDexPreferredLanguageLatestChapter = null);
 public sealed record AddToShelfRequest(
     Guid MangaEntryId,
     string ReadingStatus,
@@ -137,4 +139,5 @@ public sealed record ReaderPreparationStatus(
 public sealed record CachedMangaDexChapterResponse(Guid Id, string ChapterNumber, string Language, string Title, int PageCount, DateTimeOffset CachedAt, bool IsManual);
 public sealed record MangaDexCacheResponse(string MangaDexId, List<CachedMangaDexChapterResponse> Chapters);
 public sealed record MangaDexLanguagesResponse(string MangaDexId, List<string> Languages);
-public sealed record CacheMangaDexChapterRequest(string ChapterNumber);
+public sealed record CacheMangaDexChapterRequest(string ChapterNumber, string Language = "en");
+public sealed record UpdateCachedMangaDexChapterRequest(string ChapterNumber, string Language, string Title);

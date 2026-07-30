@@ -10,4 +10,5 @@ public sealed record CachedMangaDexChapterResponse(
     bool IsManual);
 
 public sealed record MangaDexCacheResponse(string MangaDexId, List<CachedMangaDexChapterResponse> Chapters);
-public sealed record CacheMangaDexChapterRequest(string ChapterNumber);
+public sealed record CacheMangaDexChapterRequest(string ChapterNumber, string Language = "en");
+public sealed record UpdateCachedMangaDexChapterRequest(string ChapterNumber, string Language, string Title);

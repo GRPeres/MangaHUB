@@ -6,7 +6,7 @@
                 <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
                     <MudStack Spacing="1">
                         <MudText id="catalog-cache-title" Typo="Typo.h2">Cached chapters</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Title</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Title · @Language</MudText>
                     </MudStack>
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close cached chapter manager" />
                 </MudStack>
@@ -25,7 +25,7 @@
                     <MudItem xs="12" md="6">
                         <MudPaper Class="pa-3" Elevation="0" Outlined="true">
                             <MudStack Spacing="2">
-                                <MudText Typo="Typo.h3">Fetch older chapter</MudText>
+                                <MudText Typo="Typo.h3">Fetch chapter in @Language</MudText>
                                 <MudTextField T="string" @bind-Value="chapterToDownload" Label="MangaDex chapter number" Variant="Variant.Outlined" />
                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudDownload" Disabled="@isWorking" OnClick="DownloadChapter">Download to cache</MudButton>
                             </MudStack>
@@ -34,7 +34,7 @@
                     <MudItem xs="12" md="6">
                         <MudPaper Class="pa-3" Elevation="0" Outlined="true">
                             <MudStack Spacing="2">
-                                <MudText Typo="Typo.h3">Import CBZ</MudText>
+                                <MudText Typo="Typo.h3">Import @Language CBZ</MudText>
                                 <MudTextField T="string" @bind-Value="manualChapterNumber" Label="Chapter number" Variant="Variant.Outlined" />
                                 <MudTextField T="string" @bind-Value="manualChapterTitle" Label="Chapter title (optional)" Variant="Variant.Outlined" />
                                 <InputFile OnChange="SelectFile" accept=".cbz,application/zip" />
@@ -46,6 +46,20 @@
 
                 <MudDivider />
                 <MudText Typo="Typo.h3">@CachedCountLabel</MudText>
+                @if (editingChapter is not null)
+                {
+                    <MudPaper Class="pa-3" Elevation="0" Outlined="true">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.h3">Edit cached chapter</MudText>
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" sm="3"><MudTextField T="string" @bind-Value="editChapterNumber" Label="Chapter" Variant="Variant.Outlined" /></MudItem>
+                                <MudItem xs="12" sm="3"><MudTextField T="string" @bind-Value="editLanguage" Label="Language" Variant="Variant.Outlined" /></MudItem>
+                                <MudItem xs="12" sm="6"><MudTextField T="string" @bind-Value="editTitle" Label="Title" Variant="Variant.Outlined" /></MudItem>
+                            </MudGrid>
+                            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2"><MudButton Variant="Variant.Text" OnClick="CancelEdit">Cancel</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@isWorking" OnClick="SaveEdit">Save chapter</MudButton></MudStack>
+                        </MudStack>
+                    </MudPaper>
+                }
                 @if (cache is not null && cache.Chapters.Count > 0)
                 {
                     <MudTable Items="cache.Chapters" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
@@ -64,6 +78,7 @@
                             <MudTd DataLabel="Pages">@context.PageCount</MudTd>
                             <MudTd DataLabel="Origin">@(context.IsManual ? "Manual CBZ" : "MangaDex")</MudTd>
                             <MudTd>
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Disabled="@isWorking" OnClick="() => BeginEdit(context)" aria-label="Edit cached chapter" />
                                 <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline" Color="Color.Error" Disabled="@isWorking" OnClick="() => DeleteChapter(context)" aria-label="Delete cached chapter" />
                             </MudTd>
                         </RowTemplate>

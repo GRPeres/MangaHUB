@@ -12,8 +12,8 @@ public sealed class CatalogService(
     MangaDexCatalogMatchService mangaDexMatches,
     MangaUpdatesCatalogMatchService mangaUpdatesMatches)
 {
-    public Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? query, CancellationToken cancellationToken) =>
-        catalog.SearchAsync(userId, query, cancellationToken);
+    public Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? query, string preferredLanguage, CancellationToken cancellationToken) =>
+        catalog.SearchAsync(userId, query, preferredLanguage, cancellationToken);
 
     public async Task<CatalogMangaResponse> CreateAsync(Guid currentUserId, MangaEntryRequest entry, CancellationToken cancellationToken)
     {

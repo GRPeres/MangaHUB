@@ -38,8 +38,8 @@ public partial class CatalogEntryCard
         : Entry.MangaUpdatesLatestChapter is null
             ? "Awaiting sync"
             : $"Ch. {FormatChapter(Entry.MangaUpdatesLatestChapter.Value)}";
-    private decimal? SourceGap => Entry.MangaUpdatesLatestChapter is not null && Entry.MangaDexLatestChapter is not null
-        ? Entry.MangaUpdatesLatestChapter.Value - Entry.MangaDexLatestChapter.Value
+    private decimal? SourceGap => Entry.MangaUpdatesLatestChapter is not null && Entry.MangaDexPreferredLanguageLatestChapter is not null
+        ? Entry.MangaUpdatesLatestChapter.Value - Entry.MangaDexPreferredLanguageLatestChapter.Value
         : null;
     private string SourceGapHeading => SourceGap switch
     {

@@ -14,6 +14,12 @@
             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mh-page-subtitle">Manage shared manga metadata, covers, OpenLibrary matches, MangaDex links, and local series bindings.</MudText>
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
+            <MudSelect T="string" Value="@selectedLanguage" ValueChanged="ChangeLanguage" Label="MangaDex language" Dense="true" Variant="Variant.Outlined" Class="mh-catalog-language">
+                @foreach (var language in ReaderLanguages)
+                {
+                    <MudSelectItem T="string" Value="@language.Code">@language.Label</MudSelectItem>
+                }
+            </MudSelect>
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
                 <MudMenuItem Icon="@Icons.Material.Filled.LibraryAdd" OnClick="OpenAddCatalog">Add manga</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportCatalog">Import CSV</MudMenuItem>
@@ -62,7 +68,7 @@
 
 <CatalogAddModal Open="@isCatalogModalOpen" OpenChanged="OnCatalogModalOpenChanged" Entry="@editingEntry" LocalSeries="@localSeries" OnSaved="OnCatalogSaved" />
 <CatalogImportModal Open="@isImportCatalogOpen" OpenChanged="OnImportCatalogOpenChanged" OnImported="LoadCatalog" />
-<CatalogCacheModal Entry="@cacheEntry" OnClosed="CloseCache" OnChanged="LoadCatalog" />
+<CatalogCacheModal Entry="@cacheEntry" Language="@selectedLanguage" OnClosed="CloseCache" OnChanged="LoadCatalog" />
 
 @if (filtersOpen)
 {
@@ -162,10 +168,13 @@
     private bool filtersOpen;
     private CatalogMangaResponse? editingEntry;
     private CatalogMangaResponse? cacheEntry;
+    private string selectedLanguage = "en";
+    private static readonly (string Code, string Label)[] ReaderLanguages = [("en", "English"), ("pt-br", "Portuguese (Brazil)"), ("pt", "Portuguese"), ("es", "Spanish"), ("fr", "French"), ("de", "German"), ("it", "Italian"), ("ja", "Japanese"), ("ko", "Korean")];
 
     protected override async Task OnInitializedAsync()
     {
         currentUser = await Auth.GetCurrentUserAsync();
+        selectedLanguage = currentUser?.PreferredLanguage ?? "en";
         if (!IsAdmin)
         {
             return;
@@ -182,14 +191,20 @@
             return;
         }
 
-        catalog = await CatalogApi.GetCatalogAsync(query);
+        catalog = await CatalogApi.GetCatalogAsync(query, selectedLanguage);
         message = "";
         CloseCatalogModal();
     }
 
+    private async Task ChangeLanguage(string language)
+    {
+        selectedLanguage = language;
+        await LoadCatalog();
+    }
+
     private async Task SearchCatalog()
     {
-        catalog = await CatalogApi.GetCatalogAsync(query);
+        catalog = await CatalogApi.GetCatalogAsync(query, selectedLanguage);
         messageSeverity = FilteredCatalog.Count == 0 ? Severity.Warning : Severity.Success;
         message = FilteredCatalog.Count == 0 ? "No catalog entries matched your search." : $"Found {FilteredCatalog.Count} catalog entries.";
     }
@@ -269,7 +284,7 @@
         }
         else
         {
-            catalog = await CatalogApi.GetCatalogAsync(query);
+            catalog = await CatalogApi.GetCatalogAsync(query, selectedLanguage);
         }
     }
 

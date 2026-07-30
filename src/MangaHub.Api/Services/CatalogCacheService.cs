@@ -17,7 +17,7 @@ public sealed class CatalogCacheService(
 {
     private const string CacheSource = "mangadex-cache";
 
-    public async Task<MangaDexCacheResponse?> ListAsync(Guid entryId, CancellationToken cancellationToken)
+    public async Task<MangaDexCacheResponse?> ListAsync(Guid entryId, string? language, CancellationToken cancellationToken)
     {
         var entry = await catalog.GetByIdAsync(entryId, cancellationToken);
         var mangaDexId = entry is null ? "" : GetMangaDexId(entry);
@@ -28,6 +28,7 @@ public sealed class CatalogCacheService(
 
         var cachedSeries = await series.GetBySourceAndExternalIdAsync(CacheSource, mangaDexId, cancellationToken);
         var chapters = cachedSeries?.Chapters
+            .Where(chapter => string.IsNullOrWhiteSpace(language) || string.Equals(chapter.Language, language, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(chapter => ParseChapterNumber(chapter.ChapterNumber) ?? decimal.MinValue)
             .ThenByDescending(chapter => chapter.CreatedAt)
             .Select(chapter => new CachedMangaDexChapterResponse(
@@ -70,10 +71,10 @@ public sealed class CatalogCacheService(
         }
 
         await CacheChapterAsync(entry!, mangaDexId, chapter, cancellationToken);
-        return await ListAsync(entryId, cancellationToken);
+        return await ListAsync(entryId, preferredLanguage, cancellationToken);
     }
 
-    public async Task<MangaDexCacheResponse?> ImportAsync(Guid entryId, string chapterNumber, string? title, IFormFile file, CancellationToken cancellationToken)
+    public async Task<MangaDexCacheResponse?> ImportAsync(Guid entryId, string chapterNumber, string? title, string? language, IFormFile file, CancellationToken cancellationToken)
     {
         var entry = await catalog.GetByIdAsync(entryId, cancellationToken);
         var mangaDexId = entry is null ? "" : GetMangaDexId(entry);
@@ -85,10 +86,28 @@ public sealed class CatalogCacheService(
             return null;
         }
 
-        var manualChapter = new MangaSourceChapter($"manual-{Guid.NewGuid():N}", chapterNumber.Trim(), title?.Trim() ?? "", 0, "manual");
+        var selectedLanguage = string.IsNullOrWhiteSpace(language) ? "manual" : language.Trim().ToLowerInvariant();
+        var manualChapter = new MangaSourceChapter($"manual-{Guid.NewGuid():N}", chapterNumber.Trim(), title?.Trim() ?? "", 0, selectedLanguage);
         await using var content = file.OpenReadStream();
         await CacheChapterAsync(entry!, mangaDexId, manualChapter, cancellationToken, content);
-        return await ListAsync(entryId, cancellationToken);
+        return await ListAsync(entryId, selectedLanguage, cancellationToken);
+    }
+
+    public async Task<MangaDexCacheResponse?> UpdateAsync(Guid entryId, Guid chapterId, UpdateCachedMangaDexChapterRequest request, CancellationToken cancellationToken)
+    {
+        var entry = await catalog.GetByIdAsync(entryId, cancellationToken);
+        var mangaDexId = entry is null ? "" : GetMangaDexId(entry);
+        var chapter = await series.GetChapterWithSeriesAsync(chapterId, cancellationToken);
+        if (string.IsNullOrWhiteSpace(mangaDexId) || chapter?.Series is null || chapter.Series.Source != CacheSource || chapter.Series.ExternalId != mangaDexId)
+        {
+            return null;
+        }
+
+        chapter.ChapterNumber = request.ChapterNumber.Trim();
+        chapter.Language = string.IsNullOrWhiteSpace(request.Language) ? chapter.Language : request.Language.Trim().ToLowerInvariant();
+        chapter.Title = request.Title?.Trim() ?? "";
+        await series.SaveChangesAsync(cancellationToken);
+        return await ListAsync(entryId, chapter.Language, cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid entryId, Guid chapterId, CancellationToken cancellationToken)
