@@ -276,6 +276,18 @@ a {
     margin-top: .5rem !important;
 }
 
+.reader-chapter-label {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.reader-settings-menu {
+    display: grid;
+    gap: .75rem;
+    min-width: 240px;
+    padding: .75rem;
+}
+
 .reader {
     align-items: center;
     display: flex;

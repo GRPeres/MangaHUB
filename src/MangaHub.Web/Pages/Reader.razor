@@ -6,6 +6,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject MessageService Messages
+@inject ReaderSettingsService ReaderSettings
 @implements IAsyncDisposable
 
 <PageTitle>Reader</PageTitle>
@@ -83,19 +84,36 @@
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Secondary" OnClick="BackToShelf" aria-label="Back to shelf" />
             </MudTooltip>
         </div>
-        <div>
-            @if (availableLanguages.Count > 1)
-            {
-                <MudSelect T="string" Value="@ActiveLanguage" ValueChanged="SwitchLanguage" Dense="true" Label="Language" Variant="Variant.Text">
-                    @foreach (var language in availableLanguages)
-                    {
-                        <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>
-                    }
-                </MudSelect>
-            }
-        </div>
+        <MudText Typo="Typo.body2" Class="reader-chapter-label">@ChapterLabel</MudText>
         <div class="reader-toolbar-next">
-            <MudText Typo="Typo.body2">@ChapterLabel</MudText>
+            <MudMenu Icon="@Icons.Material.Filled.Settings"
+                     Color="Color.Primary"
+                     AnchorOrigin="Origin.TopRight"
+                     TransformOrigin="Origin.BottomRight"
+                     aria-label="Reader settings">
+                <section class="reader-settings-menu">
+                    <MudText Typo="Typo.subtitle2">Reader settings</MudText>
+                    @if (availableLanguages.Count > 1)
+                    {
+                        <MudSelect T="string" Value="@ActiveLanguage" ValueChanged="SwitchLanguage" Dense="true" Label="Chapter language" Variant="Variant.Outlined">
+                            @foreach (var language in availableLanguages)
+                            {
+                                <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">Chapter language: @LanguageLabel(ActiveLanguage)</MudText>
+                    }
+                    <MudSelect T="int" Value="@readerSettings.PreloadPageCount" ValueChanged="SetPreloadPageCountAsync" Dense="true" Label="Page preload" Variant="Variant.Outlined">
+                        <MudSelectItem T="int" Value="0">Off</MudSelectItem>
+                        <MudSelectItem T="int" Value="1">Low (1 page)</MudSelectItem>
+                        <MudSelectItem T="int" Value="3">Balanced (3 pages)</MudSelectItem>
+                        <MudSelectItem T="int" Value="5">High (5 pages)</MudSelectItem>
+                    </MudSelect>
+                </section>
+            </MudMenu>
         </div>
     </MudPaper>
 </section>
@@ -169,6 +187,7 @@
     private List<string> fallbackLanguages = [];
     private string fallbackLanguage = "";
     private string preferredLanguage = "en";
+    private ReaderSettings readerSettings = new();
     private bool? chapterJumpNext;
     private ReaderChapterJump? chapterJump;
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
@@ -183,7 +202,7 @@
     private bool IsMangaDexReader => string.Equals(ReaderSource, "mangadex", StringComparison.OrdinalIgnoreCase)
         || (string.IsNullOrWhiteSpace(ReaderSource) && EntryId is not null);
     private bool CanPrepareAdjacentChapter => IsMangaDexReader && EntryId is not null;
-    private string ActiveLanguage => string.IsNullOrWhiteSpace(ReaderLanguage) ? preferredLanguage : ReaderLanguage;
+    private string ActiveLanguage => string.IsNullOrWhiteSpace(ReaderLanguage) ? readerSettings.PreferredLanguage : ReaderLanguage;
     private bool PreviousDisabled => isPreparingChapter || (page <= 0 && !CanPrepareAdjacentChapter);
     private bool NextDisabled => isPreparingChapter || (page >= PageCount - 1 && !CanPrepareAdjacentChapter);
     private string ChapterLabel => string.IsNullOrWhiteSpace(CurrentChapter) ? "Chapter" : $"Chapter {CurrentChapter}";
@@ -212,6 +231,15 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            var storedSettings = await ReaderSettings.GetAsync();
+            readerSettings = storedSettings is null
+                ? new ReaderSettings(preferredLanguage)
+                : MangaHub.Web.Services.ReaderSettings.Normalize(storedSettings);
+            await InvokeAsync(StateHasChanged);
+        }
+
         if (IsMangaDexReader && EntryId is not null && loadedLanguageEntryId != EntryId)
         {
             loadedLanguageEntryId = EntryId;
@@ -260,6 +288,8 @@
             return;
         }
 
+        readerSettings = readerSettings with { PreferredLanguage = language };
+        await ReaderSettings.SetAsync(readerSettings);
         isPreparingChapter = true;
         try
         {
@@ -468,7 +498,7 @@
 
     private async Task PreloadFollowingPagesAsync()
     {
-        var followingPages = Enumerable.Range(page + 1, Math.Min(3, PageCount - page - 1))
+        var followingPages = Enumerable.Range(page + 1, Math.Min(readerSettings.PreloadPageCount, PageCount - page - 1))
             .Select(pageIndex => ReadApi.GetPageUrl(ChapterId, pageIndex, pageImageVersion))
             .ToArray();
 
@@ -476,6 +506,14 @@
         {
             await JS.InvokeVoidAsync("mangaHubReader.preloadPages", followingPages);
         }
+    }
+
+    private async Task SetPreloadPageCountAsync(int pageCount)
+    {
+        readerSettings = readerSettings with { PreloadPageCount = pageCount };
+        readerSettings = MangaHub.Web.Services.ReaderSettings.Normalize(readerSettings);
+        await ReaderSettings.SetAsync(readerSettings);
+        await PreloadFollowingPagesAsync();
     }
 
     private async Task OnVerticalPageLoaded(int pageIndex)
