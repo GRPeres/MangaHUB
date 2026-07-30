@@ -44,7 +44,7 @@
                          data-reader-page="@currentPageIndex"
                          src="@ReadApi.GetPageUrl(ChapterId, currentPageIndex, pageImageVersion)"
                          alt="Manhwa page @(currentPageIndex + 1)"
-                         @onload="() => ObserveVerticalEnd(currentPageIndex)"
+                         @onload="() => OnVerticalPageLoaded(currentPageIndex)"
                          @onerror="OnPageLoadFailed" />
                 }
                 <div class="reader-vertical-end" @ref="verticalEnd" aria-hidden="true"></div>
@@ -235,6 +235,7 @@
         if (page > 0)
         {
             page--;
+            ClearReaderMessage();
             if (IsVerticalReader)
             {
                 await JS.InvokeVoidAsync("mangaHubReader.scrollVerticalPage", pageFrame, page);
@@ -286,6 +287,7 @@
         if (page < PageCount - 1)
         {
             page++;
+            ClearReaderMessage();
             if (IsVerticalReader)
             {
                 await JS.InvokeVoidAsync("mangaHubReader.scrollVerticalPage", pageFrame, page);
@@ -444,6 +446,7 @@
 
     private async Task OnPageLoaded()
     {
+        ClearReaderMessage();
         if (IsVerticalReader)
         {
             return;
@@ -451,6 +454,15 @@
 
         await JS.InvokeVoidAsync("mangaHubReader.fitPage", pageFrame, pageImage);
         await MarkCurrentChapterReadIfNeededAsync();
+    }
+
+    private async Task OnVerticalPageLoaded(int pageIndex)
+    {
+        if (pageIndex == page)
+        {
+            ClearReaderMessage();
+        }
+        await ObserveVerticalEnd(pageIndex);
     }
 
     private async Task ObserveVerticalEnd(int pageIndex)
@@ -475,8 +487,11 @@
         }
 
         page = pageIndex;
+        ClearReaderMessage();
         return InvokeAsync(StateHasChanged);
     }
+
+    private void ClearReaderMessage() => readerMessage = "";
 
     [JSInvokable]
     public async Task MarkVerticalChapterRead() => await MarkCurrentChapterReadIfNeededAsync();
