@@ -14,6 +14,7 @@ public partial class MainLayout : IDisposable
     [Inject] private ThemePreferenceService ThemePreference { get; set; } = default!;
     [Inject] private NotificationApiService Notifications { get; set; } = default!;
     [Inject] private Microsoft.JSInterop.IJSRuntime JS { get; set; } = default!;
+    [Inject] private MessageService Messages { get; set; } = default!;
 
     private bool _drawerExpanded;
     private bool _darkMode;
@@ -181,10 +182,31 @@ public partial class MainLayout : IDisposable
 
     private async Task EnablePhoneNotifications()
     {
-        var publicKey = await Notifications.GetPushPublicKeyAsync();
-        if (string.IsNullOrWhiteSpace(publicKey)) return;
-        var subscription = await JS.InvokeAsync<WebPushSubscriptionRequest?>("mangaHubPush.subscribe", new object?[] { publicKey });
-        if (subscription is not null) await Notifications.SubscribeToPushAsync(subscription);
+        try
+        {
+            var publicKey = await Notifications.GetPushPublicKeyAsync();
+            if (string.IsNullOrWhiteSpace(publicKey))
+            {
+                Messages.Error("Web Push is not configured on the server yet. Add the VAPID settings and redeploy.", "Phone notifications unavailable");
+                return;
+            }
+
+            var subscription = await JS.InvokeAsync<WebPushSubscriptionRequest?>("mangaHubPush.subscribe", new object?[] { publicKey });
+            if (subscription is null)
+            {
+                Messages.Warning("Notification permission was not granted. Install the PWA first on iPhone, then allow notifications.", "Phone notifications not enabled");
+                return;
+            }
+
+            var saved = await Notifications.SubscribeToPushAsync(subscription);
+            Messages.Show(saved ? MessageLevel.Success : MessageLevel.Error,
+                saved ? "This phone will receive new chapter alerts." : "The phone subscription could not be saved.",
+                "Phone notifications");
+        }
+        catch (Microsoft.JSInterop.JSException ex)
+        {
+            Messages.Error(ex.Message, "Phone notifications unavailable");
+        }
     }
 
     public void Dispose()
