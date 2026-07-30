@@ -8,6 +8,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
     public DbSet<MangaUser> Users => Set<MangaUser>();
     public DbSet<MangaEntry> MangaEntries => Set<MangaEntry>();
     public DbSet<MangaDexLanguageLatestChapter> MangaDexLanguageLatestChapters => Set<MangaDexLanguageLatestChapter>();
+    public DbSet<MangaNotification> Notifications => Set<MangaNotification>();
     public DbSet<UserMangaEntry> UserMangaEntries => Set<UserMangaEntry>();
     public DbSet<MangaSeries> Series => Set<MangaSeries>();
     public DbSet<MangaChapter> Chapters => Set<MangaChapter>();
@@ -68,6 +69,18 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.HasIndex(x => new { x.MangaEntryId, x.Language }).IsUnique();
             entity.Property(x => x.Language).HasMaxLength(16);
             entity.Property(x => x.LatestChapter).HasPrecision(10, 3);
+        });
+
+        modelBuilder.Entity<MangaNotification>(entity =>
+        {
+            entity.ToTable("notifications");
+            entity.Property(x => x.Type).HasMaxLength(40);
+            entity.Property(x => x.Language).HasMaxLength(16);
+            entity.Property(x => x.ChapterNumber).HasPrecision(10, 3);
+            entity.Property(x => x.Title).HasMaxLength(255);
+            entity.Property(x => x.Body).HasColumnType("text");
+            entity.HasIndex(x => new { x.UserId, x.MangaEntryId, x.Type, x.ChapterNumber, x.Language }).IsUnique();
+            entity.HasIndex(x => new { x.UserId, x.ReadAt, x.CreatedAt });
         });
 
         modelBuilder.Entity<MangaSeries>(entity =>

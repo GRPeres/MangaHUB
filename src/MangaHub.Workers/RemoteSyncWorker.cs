@@ -310,10 +310,15 @@ public sealed class RemoteSyncWorker(
                 var cachedLanguages = await db.MangaDexLanguageLatestChapters
                     .Where(latest => latest.MangaEntryId == entry.Id)
                     .ToDictionaryAsync(latest => latest.Language, StringComparer.OrdinalIgnoreCase, cancellationToken);
+                var releasedLanguages = new List<(string Language, decimal Chapter)>();
                 foreach (var (language, latestChapterForLanguage) in latestChapters)
                 {
                     if (cachedLanguages.TryGetValue(language, out var cached))
                     {
+                        if (latestChapterForLanguage > cached.LatestChapter)
+                        {
+                            releasedLanguages.Add((language, latestChapterForLanguage));
+                        }
                         cached.LatestChapter = latestChapterForLanguage;
                         cached.SyncedAt = DateTimeOffset.UtcNow;
                     }
@@ -328,6 +333,8 @@ public sealed class RemoteSyncWorker(
                         });
                     }
                 }
+
+                await CreateReleaseNotificationsAsync(db, entry, releasedLanguages, cancellationToken);
 
                 if (latestChapter is not null)
                 {
@@ -350,6 +357,56 @@ public sealed class RemoteSyncWorker(
         }
 
         logger.LogInformation("MangaDex catalog sync checked {CheckedCount} entries and updated {UpdatedCount}.", entries.Count, updated);
+    }
+
+    private static async Task CreateReleaseNotificationsAsync(
+        MangaHubDbContext db,
+        MangaEntry entry,
+        IReadOnlyList<(string Language, decimal Chapter)> releases,
+        CancellationToken cancellationToken)
+    {
+        foreach (var (language, chapter) in releases)
+        {
+            var recipients = await (
+                from shelf in db.UserMangaEntries
+                join user in db.Users on shelf.UserId equals user.Id
+                where shelf.MangaEntryId == entry.Id
+                    && shelf.ReadingStatus == "reading"
+                    && user.PreferredLanguage == language
+                select new { shelf.UserId, shelf.CurrentChapter })
+                .ToListAsync(cancellationToken);
+
+            foreach (var recipient in recipients)
+            {
+                var currentChapter = ParseChapterNumber(recipient.CurrentChapter);
+                if (currentChapter is null || chapter <= currentChapter.Value)
+                {
+                    continue;
+                }
+
+                var exists = await db.Notifications.AnyAsync(notification =>
+                    notification.UserId == recipient.UserId
+                    && notification.MangaEntryId == entry.Id
+                    && notification.Type == "new-chapter"
+                    && notification.Language == language
+                    && notification.ChapterNumber == chapter, cancellationToken);
+                if (exists)
+                {
+                    continue;
+                }
+
+                db.Notifications.Add(new MangaNotification
+                {
+                    UserId = recipient.UserId,
+                    MangaEntryId = entry.Id,
+                    Type = "new-chapter",
+                    ChapterNumber = chapter,
+                    Language = language,
+                    Title = $"New chapter: {entry.Title}",
+                    Body = $"Chapter {chapter:0.###} is available in {language}."
+                });
+            }
+        }
     }
 
     private async Task PrefetchNewMangaDexChaptersAsync(CancellationToken cancellationToken)

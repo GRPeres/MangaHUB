@@ -1,5 +1,7 @@
 using MangaHub.Web.API.DTOs;
 using MangaHub.Web.Services;
+using MangaHub.Web.API.Services;
+using MangaHub.Web.API.DTOs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 
@@ -10,6 +12,7 @@ public partial class MainLayout : IDisposable
     [Inject] private AuthSessionService Auth { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ThemePreferenceService ThemePreference { get; set; } = default!;
+    [Inject] private NotificationApiService Notifications { get; set; } = default!;
 
     private bool _drawerExpanded;
     private bool _darkMode;
@@ -17,6 +20,8 @@ public partial class MainLayout : IDisposable
     private bool _loginOpen;
     private string _loginMessage = "Please log in to continue.";
     private string? _pendingRoute;
+    private List<MangaNotificationResponse> _notifications = [];
+    private int _unreadNotificationCount;
     private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
@@ -31,6 +36,7 @@ public partial class MainLayout : IDisposable
         Navigation.LocationChanged += OnLocationChanged;
         _darkMode = await ThemePreference.GetDarkModeAsync() ?? false;
         _currentUser = await Auth.GetCurrentUserAsync();
+        await LoadNotificationsAsync();
         GuardCurrentRoute();
     }
 
@@ -137,7 +143,39 @@ public partial class MainLayout : IDisposable
     private void OnAuthChanged()
     {
         _currentUser = Auth.CurrentUser;
+        _ = LoadNotificationsAsync();
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadNotificationsAsync()
+    {
+        if (_currentUser is null)
+        {
+            _notifications = [];
+            _unreadNotificationCount = 0;
+            return;
+        }
+
+        try
+        {
+            _notifications = await Notifications.GetAsync() ?? [];
+            _unreadNotificationCount = _notifications.Count(notification => notification.ReadAt is null);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (HttpRequestException)
+        {
+            _notifications = [];
+            _unreadNotificationCount = 0;
+        }
+    }
+
+    private async Task OpenNotification(MangaNotificationResponse notification)
+    {
+        if (notification.ReadAt is null)
+        {
+            await Notifications.MarkReadAsync(notification.Id);
+        }
+        Navigation.NavigateTo("library");
     }
 
     public void Dispose()

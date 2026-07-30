@@ -34,6 +34,7 @@ builder.Services.AddScoped<LibraryApiService>();
 builder.Services.AddScoped<SeriesApiService>();
 builder.Services.AddScoped<ReadApiService>();
 builder.Services.AddScoped<ProgressApiService>();
+builder.Services.AddScoped<NotificationApiService>();
 builder.Services.AddMudServices();
 
 await builder.Build().RunAsync();

@@ -38,6 +38,7 @@ builder.Services.AddScoped<CatalogRepository>();
 builder.Services.AddScoped<ShelfRepository>();
 builder.Services.AddScoped<SeriesRepository>();
 builder.Services.AddScoped<ProgressRepository>();
+builder.Services.AddScoped<NotificationRepository>();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<SessionCookieService>();
 builder.Services.AddScoped<AuthService>();
@@ -54,6 +55,7 @@ builder.Services.AddScoped<ReaderService>();
 builder.Services.AddSingleton<ReaderPreparationService>();
 builder.Services.AddScoped<ProgressService>();
 builder.Services.AddScoped<CatalogCacheService>();
+builder.Services.AddScoped<NotificationService>();
 
 var app = builder.Build();
 

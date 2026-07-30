@@ -5,6 +5,7 @@ public sealed record UserResponse(Guid Id, string Username, string Role, string 
 public sealed record UserAdminResponse(Guid Id, string Username, string Role, DateTimeOffset CreatedAt);
 public sealed record UpdateUserRoleRequest(string Role);
 public sealed record UpdatePreferredLanguageRequest(string PreferredLanguage);
+public sealed record MangaNotificationResponse(Guid Id, Guid MangaEntryId, string Type, decimal ChapterNumber, string Language, string Title, string Body, DateTimeOffset CreatedAt, DateTimeOffset? ReadAt);
 public sealed record SeriesResponse(Guid Id, string Title, string Description, string CoverUrl, string Status, string Source, string ExternalId);
 public sealed record ChapterResponse(Guid Id, Guid SeriesId, string ChapterNumber, string Title, int PageCount);
 public sealed record ProgressRequest(Guid SeriesId, Guid ChapterId, int Page);
