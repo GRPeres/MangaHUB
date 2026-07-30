@@ -13,6 +13,7 @@ public partial class MainLayout : IDisposable
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ThemePreferenceService ThemePreference { get; set; } = default!;
     [Inject] private NotificationApiService Notifications { get; set; } = default!;
+    [Inject] private AdminApiService AdminApi { get; set; } = default!;
     [Inject] private Microsoft.JSInterop.IJSRuntime JS { get; set; } = default!;
     [Inject] private MessageService Messages { get; set; } = default!;
 
@@ -219,6 +220,18 @@ public partial class MainLayout : IDisposable
         Messages.Show(sent ? MessageLevel.Success : MessageLevel.Error,
             sent ? "A test push was sent to this account's subscribed phone." : "No test push could be sent. Enable phone notifications first and check the VAPID configuration.",
             "Phone notification test");
+    }
+
+    private async Task TestDatabase()
+    {
+        var result = await AdminApi.TestDatabaseAsync();
+        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error, result?.Message ?? "Database test failed.", "Database test");
+    }
+
+    private async Task TestMangaDex()
+    {
+        var result = await AdminApi.TestMangaDexAsync();
+        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error, result?.Message ?? "MangaDex test failed.", "MangaDex test");
     }
 
     public void Dispose()

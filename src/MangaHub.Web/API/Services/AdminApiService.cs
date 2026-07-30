@@ -1,3 +1,5 @@
+using MangaHub.Web.API.DTOs;
+
 namespace MangaHub.Web.API.Services;
 
 public sealed class AdminApiService(ApiHttpClient api)
@@ -7,4 +9,7 @@ public sealed class AdminApiService(ApiHttpClient api)
 
     public async Task<UserAdminResponse?> UpdateUserRoleAsync(Guid userId, string role) =>
         await api.SendAsync<UpdateUserRoleRequest, UserAdminResponse>(HttpMethod.Put, $"/api/admin/users/{userId}/role", new(role));
+
+    public Task<DiagnosticResult?> TestDatabaseAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/database");
+    public Task<DiagnosticResult?> TestMangaDexAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/mangadex");
 }
