@@ -170,6 +170,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "CreatedAt" timestamp with time zone NOT NULL,
                 "ReadAt" timestamp with time zone NULL
             );
+            CREATE TABLE IF NOT EXISTS web_push_subscriptions ("Id" uuid PRIMARY KEY, "UserId" uuid NOT NULL, "Endpoint" text NOT NULL, "P256dh" text NOT NULL, "Auth" text NOT NULL, "UpdatedAt" timestamp with time zone NOT NULL);
 
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "CurrentChapter" character varying(40) NOT NULL DEFAULT '';
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "IsRead" boolean NOT NULL DEFAULT false;
@@ -211,6 +212,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_mangadex_language_latest_chapters_MangaEntryId_Language" ON mangadex_language_latest_chapters ("MangaEntryId", "Language");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_notifications_UserId_MangaEntryId_Type_ChapterNumber_Language" ON notifications ("UserId", "MangaEntryId", "Type", "ChapterNumber", "Language");
             CREATE INDEX IF NOT EXISTS "IX_notifications_UserId_ReadAt_CreatedAt" ON notifications ("UserId", "ReadAt", "CreatedAt");
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_web_push_subscriptions_Endpoint" ON web_push_subscriptions ("Endpoint");
             """);
     }
 }

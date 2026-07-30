@@ -1,11 +1,11 @@
-const CACHE_NAME = "mangahub-app-v79";
+const CACHE_NAME = "mangahub-app-v80";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
   "/icons/book.svg",
-  "/css/app.css?v=90",
-  "/MangaHub.Web.styles.css?v=90"
+  "/css/app.css?v=91",
+  "/MangaHub.Web.styles.css?v=91"
 ];
 
 self.addEventListener("install", event => {
@@ -46,4 +46,16 @@ self.addEventListener("fetch", event => {
       })
       .catch(() => caches.match(request).then(response => response || caches.match("/index.html")))
   );
+});
+
+self.addEventListener("push", event => {
+  const payload = event.data ? event.data.json() : {};
+  event.waitUntil(self.registration.showNotification(payload.title || "MangaHub", {
+    body: payload.body || "A new chapter is available.", icon: "/icon-192.png", badge: "/icon-192.png", data: { url: payload.url || "/library" }
+  }));
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow(event.notification.data.url));
 });

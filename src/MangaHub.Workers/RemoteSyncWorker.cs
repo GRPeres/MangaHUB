@@ -9,6 +9,7 @@ using MangaHub.Infrastructure.RemoteJobs;
 using MangaHub.Infrastructure.Sources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using WebPush;
 
 namespace MangaHub.Workers;
 
@@ -359,7 +360,7 @@ public sealed class RemoteSyncWorker(
         logger.LogInformation("MangaDex catalog sync checked {CheckedCount} entries and updated {UpdatedCount}.", entries.Count, updated);
     }
 
-    private static async Task CreateReleaseNotificationsAsync(
+    private async Task CreateReleaseNotificationsAsync(
         MangaHubDbContext db,
         MangaEntry entry,
         IReadOnlyList<(string Language, decimal Chapter)> releases,
@@ -395,7 +396,7 @@ public sealed class RemoteSyncWorker(
                     continue;
                 }
 
-                db.Notifications.Add(new MangaNotification
+                var notification = new MangaNotification
                 {
                     UserId = recipient.UserId,
                     MangaEntryId = entry.Id,
@@ -404,8 +405,25 @@ public sealed class RemoteSyncWorker(
                     Language = language,
                     Title = $"New chapter: {entry.Title}",
                     Body = $"Chapter {chapter:0.###} is available in {language}."
-                });
+                };
+                db.Notifications.Add(notification);
+                await SendPushAsync(db, notification, cancellationToken);
             }
+        }
+    }
+
+    private async Task SendPushAsync(MangaHubDbContext db, MangaNotification notification, CancellationToken cancellationToken)
+    {
+        var push = options.Value.WebPush;
+        if (string.IsNullOrWhiteSpace(push.PublicKey) || string.IsNullOrWhiteSpace(push.PrivateKey)) return;
+        var subscriptions = await db.WebPushSubscriptions.Where(subscription => subscription.UserId == notification.UserId).ToListAsync(cancellationToken);
+        var payload = JsonSerializer.Serialize(new { title = notification.Title, body = notification.Body, url = "/library" });
+        var client = new WebPushClient();
+        foreach (var subscription in subscriptions)
+        {
+            try { await client.SendNotificationAsync(new PushSubscription(subscription.Endpoint, subscription.P256dh, subscription.Auth), payload, new VapidDetails(push.Subject, push.PublicKey, push.PrivateKey)); }
+            catch (WebPushException ex) when (ex.StatusCode is System.Net.HttpStatusCode.Gone or System.Net.HttpStatusCode.NotFound) { db.WebPushSubscriptions.Remove(subscription); }
+            catch (WebPushException ex) { logger.LogWarning(ex, "Web push failed for notification {NotificationId}.", notification.Id); }
         }
     }
 

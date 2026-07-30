@@ -33,4 +33,7 @@ public sealed class MangaHubOptions
     public int MangaUpdatesSyncBatchSize { get; set; } = 25;
     public int MangaUpdatesMatchBatchSize { get; set; } = 10;
     public RemoteJobs.RemoteRequestLimitsOptions RemoteRequests { get; set; } = new();
+    public WebPushOptions WebPush { get; set; } = new();
 }
+
+public sealed class WebPushOptions { public string PublicKey { get; set; } = ""; public string PrivateKey { get; set; } = ""; public string Subject { get; set; } = "mailto:admin@mangahub.app"; }

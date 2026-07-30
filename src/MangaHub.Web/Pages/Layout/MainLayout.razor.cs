@@ -13,6 +13,7 @@ public partial class MainLayout : IDisposable
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ThemePreferenceService ThemePreference { get; set; } = default!;
     [Inject] private NotificationApiService Notifications { get; set; } = default!;
+    [Inject] private Microsoft.JSInterop.IJSRuntime JS { get; set; } = default!;
 
     private bool _drawerExpanded;
     private bool _darkMode;
@@ -176,6 +177,14 @@ public partial class MainLayout : IDisposable
             await Notifications.MarkReadAsync(notification.Id);
         }
         Navigation.NavigateTo("library");
+    }
+
+    private async Task EnablePhoneNotifications()
+    {
+        var publicKey = await Notifications.GetPushPublicKeyAsync();
+        if (string.IsNullOrWhiteSpace(publicKey)) return;
+        var subscription = await JS.InvokeAsync<WebPushSubscriptionRequest?>("mangaHubPush.subscribe", new object?[] { publicKey });
+        if (subscription is not null) await Notifications.SubscribeToPushAsync(subscription);
     }
 
     public void Dispose()

@@ -20,6 +20,7 @@
                 <MudBadge Content="@_unreadNotificationCount.ToString()" Color="Color.Error" Overlap="true" Visible="@(_unreadNotificationCount > 0)">
                     <MudMenu Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
                         <MudMenuItem Disabled="true">Notifications</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.NotificationsActive" OnClick="EnablePhoneNotifications">Enable phone notifications</MudMenuItem>
                         @if (_notifications.Count == 0)
                         {
                             <MudMenuItem Disabled="true">No new chapter notifications.</MudMenuItem>

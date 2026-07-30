@@ -9,6 +9,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
     public DbSet<MangaEntry> MangaEntries => Set<MangaEntry>();
     public DbSet<MangaDexLanguageLatestChapter> MangaDexLanguageLatestChapters => Set<MangaDexLanguageLatestChapter>();
     public DbSet<MangaNotification> Notifications => Set<MangaNotification>();
+    public DbSet<WebPushSubscription> WebPushSubscriptions => Set<WebPushSubscription>();
     public DbSet<UserMangaEntry> UserMangaEntries => Set<UserMangaEntry>();
     public DbSet<MangaSeries> Series => Set<MangaSeries>();
     public DbSet<MangaChapter> Chapters => Set<MangaChapter>();
@@ -82,6 +83,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.HasIndex(x => new { x.UserId, x.MangaEntryId, x.Type, x.ChapterNumber, x.Language }).IsUnique();
             entity.HasIndex(x => new { x.UserId, x.ReadAt, x.CreatedAt });
         });
+        modelBuilder.Entity<WebPushSubscription>(entity => { entity.ToTable("web_push_subscriptions"); entity.HasIndex(x => x.Endpoint).IsUnique(); entity.Property(x => x.Endpoint).HasColumnType("text"); entity.Property(x => x.P256dh).HasColumnType("text"); entity.Property(x => x.Auth).HasColumnType("text"); });
 
         modelBuilder.Entity<MangaSeries>(entity =>
         {
