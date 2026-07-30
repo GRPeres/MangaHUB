@@ -18,5 +18,13 @@ public sealed class NotificationRepository(MangaHubDbContext db)
     public Task<MangaHub.Core.Models.MangaNotification?> GetAsync(Guid userId, Guid notificationId, CancellationToken cancellationToken) =>
         db.Notifications.FirstOrDefaultAsync(notification => notification.UserId == userId && notification.Id == notificationId, cancellationToken);
 
+    public Task<int> MarkAllReadAsync(Guid userId, CancellationToken cancellationToken) =>
+        db.Notifications.Where(notification => notification.UserId == userId && notification.ReadAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(notification => notification.ReadAt, DateTimeOffset.UtcNow), cancellationToken);
+
+    public Task<int> ClearReadAsync(Guid userId, CancellationToken cancellationToken) =>
+        db.Notifications.Where(notification => notification.UserId == userId && notification.ReadAt != null)
+            .ExecuteDeleteAsync(cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 }

@@ -24,7 +24,7 @@
                     {
                         <MudPaper Outlined="true" Class="mh-push-subscription-row">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.PhoneIphone" Color="Color.Primary" />
+                                <MudIcon Icon="@IconFor(subscription.DeviceLabel)" Color="Color.Primary" />
                                 <MudStack Spacing="0" Class="mh-push-subscription-copy">
                                     <MudText Typo="Typo.subtitle2">@(string.IsNullOrWhiteSpace(subscription.DeviceLabel) ? "Subscribed device" : subscription.DeviceLabel)</MudText>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">Last refreshed @subscription.UpdatedAt.ToLocalTime().ToString("g")</MudText>

@@ -30,6 +30,9 @@
                             {
                                 <MudMenuItem Icon="@(notification.ReadAt is null ? Icons.Material.Filled.FiberNew : Icons.Material.Filled.NotificationsNone)" OnClick="() => OpenNotification(notification)">@notification.Title</MudMenuItem>
                             }
+                            <MudDivider />
+                            <MudMenuItem Icon="@Icons.Material.Filled.DoneAll" OnClick="MarkAllNotificationsRead">Mark all as read</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.DeleteSweep" OnClick="ClearReadNotifications">Clear read notifications</MudMenuItem>
                         }
                         <MudDivider />
                         @if (_pushSubscriptions.Count == 0)

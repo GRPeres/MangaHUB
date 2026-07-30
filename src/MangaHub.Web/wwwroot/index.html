@@ -31,7 +31,15 @@
                     endpoint: json.endpoint,
                     p256dh: json.keys.p256dh,
                     auth: json.keys.auth,
-                    deviceLabel: navigator.userAgentData?.platform || navigator.platform || "This device"
+                    deviceLabel: (function () {
+                        var platform = navigator.userAgentData?.platform || navigator.platform || "";
+                        if (/^win/i.test(platform)) return "Windows";
+                        if (/android/i.test(platform)) return "Android";
+                        if (/iphone|ipad|ipod/i.test(platform)) return "iPhone or iPad";
+                        if (/mac/i.test(platform)) return "macOS";
+                        if (/linux/i.test(platform)) return "Linux";
+                        return platform || "This device";
+                    })()
                 };
             },
             showTestNotification: async function () {
@@ -203,8 +211,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=102" />
-    <link href="MangaHub.Web.styles.css?v=102" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=103" />
+    <link href="MangaHub.Web.styles.css?v=103" rel="stylesheet" />
 </head>
 
 <body>

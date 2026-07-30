@@ -119,4 +119,16 @@ public sealed class NotificationsController(CurrentUserService currentUsers, Not
         if (user is null) return Unauthorized();
         return await notifications.MarkReadAsync(user.Id, notificationId, cancellationToken) ? NoContent() : NotFound();
     }
+
+    [HttpPost("read")] public async Task<IActionResult> MarkAllRead(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        return user is null ? Unauthorized() : Ok(await notifications.MarkAllReadAsync(user.Id, cancellationToken));
+    }
+
+    [HttpDelete("read")] public async Task<IActionResult> ClearRead(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        return user is null ? Unauthorized() : Ok(await notifications.ClearReadAsync(user.Id, cancellationToken));
+    }
 }

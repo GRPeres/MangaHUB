@@ -184,8 +184,23 @@ public partial class MainLayout : IDisposable
         if (notification.ReadAt is null)
         {
             await Notifications.MarkReadAsync(notification.Id);
+            await LoadNotificationsAsync();
         }
         Navigation.NavigateTo("library");
+    }
+
+    private async Task MarkAllNotificationsRead()
+    {
+        await Notifications.MarkAllReadAsync();
+        await LoadNotificationsAsync();
+    }
+
+    private async Task ClearReadNotifications()
+    {
+        if (await Notifications.ClearReadAsync())
+        {
+            await LoadNotificationsAsync();
+        }
     }
 
     private async Task EnablePhoneNotifications()

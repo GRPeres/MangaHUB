@@ -16,4 +16,7 @@ public sealed class NotificationService(NotificationRepository notifications)
         await notifications.SaveChangesAsync(cancellationToken);
         return true;
     }
+
+    public Task<int> MarkAllReadAsync(Guid userId, CancellationToken cancellationToken) => notifications.MarkAllReadAsync(userId, cancellationToken);
+    public Task<int> ClearReadAsync(Guid userId, CancellationToken cancellationToken) => notifications.ClearReadAsync(userId, cancellationToken);
 }
