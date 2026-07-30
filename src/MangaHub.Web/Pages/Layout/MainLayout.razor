@@ -28,6 +28,7 @@
                             @foreach (var subscription in _pushSubscriptions)
                             {
                                 <MudMenuItem Disabled="true" Icon="@Icons.Material.Filled.PhoneIphone">@($"{(string.IsNullOrWhiteSpace(subscription.DeviceLabel) ? "Subscribed device" : subscription.DeviceLabel)} - {subscription.UpdatedAt.ToLocalTime():g}")</MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.NotificationsOff" OnClick="() => UnsubscribeDevice(subscription)">@($"Unsubscribe {(string.IsNullOrWhiteSpace(subscription.DeviceLabel) ? "device" : subscription.DeviceLabel)}")</MudMenuItem>
                             }
                         }
                         @if (_notifications.Count == 0)

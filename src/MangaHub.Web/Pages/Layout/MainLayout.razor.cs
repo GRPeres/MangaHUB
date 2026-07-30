@@ -221,6 +221,19 @@ public partial class MainLayout : IDisposable
         }
     }
 
+    private async Task UnsubscribeDevice(WebPushSubscriptionResponse subscription)
+    {
+        var removed = await Notifications.UnsubscribeFromPushAsync(subscription.Id);
+        if (removed)
+        {
+            await LoadNotificationsAsync();
+        }
+
+        Messages.Show(removed ? MessageLevel.Success : MessageLevel.Error,
+            removed ? $"{(string.IsNullOrWhiteSpace(subscription.DeviceLabel) ? "The device" : subscription.DeviceLabel)} will no longer receive phone notifications." : "The phone subscription could not be removed.",
+            "Phone notifications");
+    }
+
     private async Task TestPhoneNotification()
     {
         var result = await Notifications.SendTestPushAsync();

@@ -11,5 +11,6 @@ public sealed class NotificationApiService(ApiHttpClient api)
     public Task<bool> SubscribeToPushAsync(WebPushSubscriptionRequest request) => api.SendWithoutResponseAsync(HttpMethod.Post, "/api/notifications/push/subscriptions", request);
     public Task<bool> IsPushEnabledAsync() => api.GetAsync<bool>("/api/notifications/push/subscriptions/status");
     public Task<List<WebPushSubscriptionResponse>?> GetPushSubscriptionsAsync() => api.GetAsync<List<WebPushSubscriptionResponse>>("/api/notifications/push/subscriptions");
+    public Task<bool> UnsubscribeFromPushAsync(Guid subscriptionId) => api.SendWithoutResponseAsync(HttpMethod.Delete, $"/api/notifications/push/subscriptions/{subscriptionId}", new { });
     public Task<DiagnosticResult?> SendTestPushAsync() => api.SendAsync<object, DiagnosticResult>(HttpMethod.Post, "/api/notifications/push/test", new { });
 }

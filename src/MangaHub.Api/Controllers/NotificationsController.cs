@@ -48,6 +48,17 @@ public sealed class NotificationsController(CurrentUserService currentUsers, Not
         return user is null ? Unauthorized() : Ok(await db.WebPushSubscriptions.AnyAsync(subscription => subscription.UserId == user.Id, cancellationToken));
     }
 
+    [HttpDelete("push/subscriptions/{subscriptionId:guid}")] public async Task<IActionResult> Unsubscribe(Guid subscriptionId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        var subscription = await db.WebPushSubscriptions.FirstOrDefaultAsync(item => item.Id == subscriptionId && item.UserId == user.Id, cancellationToken);
+        if (subscription is null) return NotFound();
+        db.WebPushSubscriptions.Remove(subscription);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
     [HttpPost("push/test")] public async Task<IActionResult> TestPush(CancellationToken cancellationToken)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
