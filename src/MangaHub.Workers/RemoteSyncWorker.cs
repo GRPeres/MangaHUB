@@ -299,8 +299,31 @@ public sealed class RemoteSyncWorker(
 
             try
             {
-                var latestChapter = await GetLatestChapterNumberAsync(client, entry.MangaDexId, cancellationToken);
+                var latestChapters = await GetLatestChapterNumbersByLanguageAsync(client, entry.MangaDexId, cancellationToken);
+                decimal? latestChapter = latestChapters.Count == 0 ? null : latestChapters.Values.Max();
                 entry.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
+
+                var cachedLanguages = await db.MangaDexLanguageLatestChapters
+                    .Where(latest => latest.MangaEntryId == entry.Id)
+                    .ToDictionaryAsync(latest => latest.Language, StringComparer.OrdinalIgnoreCase, cancellationToken);
+                foreach (var (language, latestChapterForLanguage) in latestChapters)
+                {
+                    if (cachedLanguages.TryGetValue(language, out var cached))
+                    {
+                        cached.LatestChapter = latestChapterForLanguage;
+                        cached.SyncedAt = DateTimeOffset.UtcNow;
+                    }
+                    else
+                    {
+                        db.MangaDexLanguageLatestChapters.Add(new MangaDexLanguageLatestChapter
+                        {
+                            MangaEntryId = entry.Id,
+                            Language = language,
+                            LatestChapter = latestChapterForLanguage,
+                            SyncedAt = DateTimeOffset.UtcNow
+                        });
+                    }
+                }
 
                 if (latestChapter is not null)
                 {
@@ -644,7 +667,7 @@ public sealed class RemoteSyncWorker(
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
     }
 
-    private static async Task<decimal?> GetLatestChapterNumberAsync(HttpClient client, string mangaDexId, CancellationToken cancellationToken)
+    private static async Task<Dictionary<string, decimal>> GetLatestChapterNumbersByLanguageAsync(HttpClient client, string mangaDexId, CancellationToken cancellationToken)
     {
         var path = $"/manga/{Uri.EscapeDataString(mangaDexId)}/feed?limit=100&includeExternalUrl=0&order[chapter]=desc";
         using var response = await client.GetAsync(path, cancellationToken);
@@ -654,17 +677,19 @@ public sealed class RemoteSyncWorker(
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         if (!document.RootElement.TryGetProperty("data", out var data) || data.GetArrayLength() == 0)
         {
-            return null;
+            return [];
         }
 
-        var chapterNumbers = data.EnumerateArray()
+        return data.EnumerateArray()
             .Where(item => item.TryGetProperty("attributes", out _))
             .Select(item => item.GetProperty("attributes"))
-            .Where(attributes => attributes.TryGetProperty("chapter", out _))
-            .Select(attributes => ParseChapterNumber(attributes.GetProperty("chapter").GetString() ?? ""))
-            .Where(number => number is not null)
-            .Select(number => number!.Value)
-            .ToList();
-        return chapterNumbers.Count == 0 ? null : chapterNumbers.Max();
+            .Select(attributes => new
+            {
+                Language = attributes.TryGetProperty("translatedLanguage", out var language) ? language.GetString() ?? "" : "",
+                Number = attributes.TryGetProperty("chapter", out var chapter) ? ParseChapterNumber(chapter.GetString() ?? "") : null
+            })
+            .Where(item => item.Number is not null && !string.IsNullOrWhiteSpace(item.Language))
+            .GroupBy(item => item.Language.Trim().ToLowerInvariant(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Max(item => item.Number!.Value), StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -150,6 +150,14 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "LastActivityAt" timestamp with time zone NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS mangadex_language_latest_chapters (
+                "Id" uuid PRIMARY KEY,
+                "MangaEntryId" uuid NOT NULL,
+                "Language" character varying(16) NOT NULL,
+                "LatestChapter" numeric(10,3) NOT NULL,
+                "SyncedAt" timestamp with time zone NOT NULL
+            );
+
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "CurrentChapter" character varying(40) NOT NULL DEFAULT '';
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "IsRead" boolean NOT NULL DEFAULT false;
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Score" integer NULL;
@@ -187,6 +195,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesLastSyncedAt" ON manga_entries ("MangaUpdatesLastSyncedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesLastMatchAttemptAt" ON manga_entries ("MangaUpdatesLastMatchAttemptAt");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_MangaEntryId" ON user_manga_entries ("UserId", "MangaEntryId");
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_mangadex_language_latest_chapters_MangaEntryId_Language" ON mangadex_language_latest_chapters ("MangaEntryId", "Language");
             """);
     }
 }

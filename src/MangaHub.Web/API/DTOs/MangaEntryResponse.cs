@@ -31,4 +31,5 @@ public sealed record MangaEntryResponse(
     string Summary,
     string Notes,
     string FallbackReaderUrl,
-    string ReaderPreference = "mangahub");
+    string ReaderPreference = "mangahub",
+    decimal? MangaDexPreferredLanguageLatestChapter = null);

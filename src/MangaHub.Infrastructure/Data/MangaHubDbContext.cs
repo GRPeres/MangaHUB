@@ -7,6 +7,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
 {
     public DbSet<MangaUser> Users => Set<MangaUser>();
     public DbSet<MangaEntry> MangaEntries => Set<MangaEntry>();
+    public DbSet<MangaDexLanguageLatestChapter> MangaDexLanguageLatestChapters => Set<MangaDexLanguageLatestChapter>();
     public DbSet<UserMangaEntry> UserMangaEntries => Set<UserMangaEntry>();
     public DbSet<MangaSeries> Series => Set<MangaSeries>();
     public DbSet<MangaChapter> Chapters => Set<MangaChapter>();
@@ -59,6 +60,14 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.Property(x => x.CurrentChapter).HasMaxLength(40);
             entity.Property(x => x.Category).HasMaxLength(120);
             entity.HasOne(x => x.MangaEntry).WithMany().HasForeignKey(x => x.MangaEntryId);
+        });
+
+        modelBuilder.Entity<MangaDexLanguageLatestChapter>(entity =>
+        {
+            entity.ToTable("mangadex_language_latest_chapters");
+            entity.HasIndex(x => new { x.MangaEntryId, x.Language }).IsUnique();
+            entity.Property(x => x.Language).HasMaxLength(16);
+            entity.Property(x => x.LatestChapter).HasPrecision(10, 3);
         });
 
         modelBuilder.Entity<MangaSeries>(entity =>

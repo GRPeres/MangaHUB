@@ -600,9 +600,9 @@
     private static bool HasNewChapters(MangaEntryResponse entry) =>
         !string.Equals(entry.ReadingStatus, "done", StringComparison.OrdinalIgnoreCase)
         && HasMangaDexLink(entry)
-        && entry.MangaDexLatestChapter is not null
+        && entry.MangaDexPreferredLanguageLatestChapter is not null
         && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
-        && entry.MangaDexLatestChapter.Value > currentChapter;
+        && entry.MangaDexPreferredLanguageLatestChapter.Value > currentChapter;
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)

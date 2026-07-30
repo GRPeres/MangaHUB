@@ -43,11 +43,12 @@ public partial class ShelfEntryCard
         : HasMangaDexLink ? "MangaDex"
         : HasExternalReaderLink ? "External link" : "Unlinked";
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
-    private string LatestChapterValue => Entry.MangaDexLatestChapter is not null
-        ? $"Ch. {Entry.MangaDexLatestChapter.Value:0.###}"
+    private decimal? PreferredLatestChapter => Entry.MangaDexPreferredLanguageLatestChapter;
+    private string LatestChapterValue => PreferredLatestChapter is not null
+        ? $"Ch. {PreferredLatestChapter.Value:0.###}"
         : Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
-    private int NewChapterCount => HasMangaDexLink && Entry.MangaDexLatestChapter is not null && TryGetCurrentChapterNumber(out var currentChapter)
-        ? Math.Max(0, (int)Math.Ceiling(Entry.MangaDexLatestChapter.Value - currentChapter))
+    private int NewChapterCount => HasMangaDexLink && PreferredLatestChapter is not null && TryGetCurrentChapterNumber(out var currentChapter)
+        ? Math.Max(0, (int)Math.Ceiling(PreferredLatestChapter.Value - currentChapter))
         : 0;
     private bool HasNewChapters => !StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) && NewChapterCount > 0;
     private bool IsMangaDexSyncOverdue => HasMangaDexLink
