@@ -163,6 +163,8 @@ manga-translator:
     - --start-instance
     - --host=0.0.0.0
     - --port=5003
+    - --nonce
+    - "None"
   expose:
     - "5003"
   ipc: host
