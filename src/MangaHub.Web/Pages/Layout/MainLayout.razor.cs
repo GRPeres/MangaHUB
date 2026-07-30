@@ -205,7 +205,7 @@ public partial class MainLayout : IDisposable
             var saved = await Notifications.SubscribeToPushAsync(subscription);
             _phoneNotificationsEnabled = saved;
             Messages.Show(saved ? MessageLevel.Success : MessageLevel.Error,
-                saved ? "This phone will receive new chapter alerts." : "The phone subscription could not be saved.",
+                saved ? "This phone's notification subscription is active." : "The phone subscription could not be saved.",
                 "Phone notifications");
         }
         catch (Exception ex)
