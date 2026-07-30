@@ -314,6 +314,15 @@ a {
     width: 100%;
 }
 
+.reader-page-frame.is-page-loading {
+    background: var(--mud-palette-background);
+    border-radius: 8px;
+}
+
+.reader-page-frame.is-page-loading > img {
+    opacity: 0;
+}
+
 .reader-workspace-vertical .reader {
     align-items: flex-start;
     justify-content: stretch;

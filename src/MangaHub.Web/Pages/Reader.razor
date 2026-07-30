@@ -33,7 +33,7 @@
     </div>
 
     <main class="@(IsVerticalReader ? "reader reader-vertical" : "reader")">
-        <div class="reader-page-frame" @ref="pageFrame">
+        <div class="@PageFrameClass" @ref="pageFrame">
             @if (IsVerticalReader)
             {
                 @for (var pageIndex = 0; pageIndex < PageCount; pageIndex++)
@@ -155,6 +155,7 @@
     private Guid markedReadChapterId;
     private bool isPreparingChapter;
     private bool isSeriesComplete;
+    private bool isPageLoading;
     private ElementReference pageFrame;
     private ElementReference pageImage;
     private ElementReference verticalEnd;
@@ -176,6 +177,9 @@
     private string NextIcon => page < PageCount - 1 ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.SkipNext;
     private string PreviousLabel => page > 0 ? "Previous" : EntryId is null ? "Previous" : "Previous chapter";
     private string PreviousIcon => page > 0 ? Icons.Material.Filled.ChevronLeft : Icons.Material.Filled.SkipPrevious;
+    private string PageFrameClass => isPageLoading && !IsVerticalReader
+        ? "reader-page-frame is-page-loading"
+        : "reader-page-frame";
     private bool IsMangaDexReader => string.Equals(ReaderSource, "mangadex", StringComparison.OrdinalIgnoreCase)
         || (string.IsNullOrWhiteSpace(ReaderSource) && EntryId is not null);
     private bool CanPrepareAdjacentChapter => IsMangaDexReader && EntryId is not null;
@@ -190,6 +194,7 @@
         {
             loadedChapterId = ChapterId;
             page = 0;
+            isPageLoading = false;
             readerMessage = "";
             isPreparingChapter = false;
             isSeriesComplete = false;
@@ -235,7 +240,7 @@
         if (page > 0)
         {
             page--;
-            ClearReaderMessage();
+            BeginPageTransition();
             if (IsVerticalReader)
             {
                 await JS.InvokeVoidAsync("mangaHubReader.scrollVerticalPage", pageFrame, page);
@@ -287,7 +292,7 @@
         if (page < PageCount - 1)
         {
             page++;
-            ClearReaderMessage();
+            BeginPageTransition();
             if (IsVerticalReader)
             {
                 await JS.InvokeVoidAsync("mangaHubReader.scrollVerticalPage", pageFrame, page);
@@ -441,11 +446,15 @@
     private static bool IsNoLaterChapter(ReaderPreparationStatus? preparation) =>
         string.Equals(preparation?.Error, "No later readable MangaDex chapter is available.", StringComparison.Ordinal);
 
-    private void OnPageLoadFailed() =>
+    private void OnPageLoadFailed()
+    {
+        isPageLoading = true;
         readerMessage = "This reader page could not be loaded. Try opening the chapter again to refresh its local cache.";
+    }
 
     private async Task OnPageLoaded()
     {
+        isPageLoading = false;
         ClearReaderMessage();
         if (IsVerticalReader)
         {
@@ -492,6 +501,15 @@
     }
 
     private void ClearReaderMessage() => readerMessage = "";
+
+    private void BeginPageTransition()
+    {
+        if (!IsVerticalReader)
+        {
+            isPageLoading = true;
+        }
+        ClearReaderMessage();
+    }
 
     [JSInvokable]
     public async Task MarkVerticalChapterRead() => await MarkCurrentChapterReadIfNeededAsync();
