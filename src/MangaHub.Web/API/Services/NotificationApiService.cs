@@ -10,4 +10,5 @@ public sealed class NotificationApiService(ApiHttpClient api)
     public async Task<string?> GetPushPublicKeyAsync() => (await api.GetAsync<WebPushPublicKeyResponse>("/api/notifications/push/public-key"))?.PublicKey;
     public Task<bool> SubscribeToPushAsync(WebPushSubscriptionRequest request) => api.SendWithoutResponseAsync(HttpMethod.Post, "/api/notifications/push/subscriptions", request);
     public Task<bool> IsPushEnabledAsync() => api.GetAsync<bool>("/api/notifications/push/subscriptions/status");
+    public Task<bool> SendTestPushAsync() => api.SendWithoutResponseAsync(HttpMethod.Post, "/api/notifications/push/test", new { });
 }

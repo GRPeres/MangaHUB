@@ -6,6 +6,7 @@ using MangaHub.Infrastructure;
 using MangaHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using WebPush;
 
 namespace MangaHub.Api.Controllers;
 
@@ -37,6 +38,24 @@ public sealed class NotificationsController(CurrentUserService currentUsers, Not
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         return user is null ? Unauthorized() : Ok(await db.WebPushSubscriptions.AnyAsync(subscription => subscription.UserId == user.Id, cancellationToken));
+    }
+
+    [HttpPost("push/test")] public async Task<IActionResult> TestPush(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var push = options.Value.WebPush;
+        if (string.IsNullOrWhiteSpace(push.PublicKey) || string.IsNullOrWhiteSpace(push.PrivateKey)) return BadRequest("Web Push is not configured.");
+        var subscriptions = await db.WebPushSubscriptions.Where(subscription => subscription.UserId == user.Id).ToListAsync(cancellationToken);
+        if (subscriptions.Count == 0) return NotFound("This account has no phone notification subscription.");
+        var client = new WebPushClient();
+        var payload = System.Text.Json.JsonSerializer.Serialize(new { title = "MangaHub test", body = "Phone notifications are working.", url = "/library" });
+        foreach (var subscription in subscriptions)
+        {
+            await client.SendNotificationAsync(new PushSubscription(subscription.Endpoint, subscription.P256dh, subscription.Auth), payload, new VapidDetails(push.Subject, push.PublicKey, push.PrivateKey));
+        }
+        return NoContent();
     }
 
     [HttpGet("unread-count")] public async Task<IActionResult> UnreadCount(CancellationToken cancellationToken)
