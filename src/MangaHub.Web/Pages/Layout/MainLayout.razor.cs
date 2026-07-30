@@ -184,6 +184,7 @@ public partial class MainLayout : IDisposable
     {
         try
         {
+            Messages.Info("Requesting this phone's notification permission.", "Phone notifications");
             var publicKey = await Notifications.GetPushPublicKeyAsync();
             if (string.IsNullOrWhiteSpace(publicKey))
             {
@@ -203,7 +204,7 @@ public partial class MainLayout : IDisposable
                 saved ? "This phone will receive new chapter alerts." : "The phone subscription could not be saved.",
                 "Phone notifications");
         }
-        catch (Microsoft.JSInterop.JSException ex)
+        catch (Exception ex)
         {
             Messages.Error(ex.Message, "Phone notifications unavailable");
         }

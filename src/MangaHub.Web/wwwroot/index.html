@@ -22,7 +22,6 @@
                 var permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
                 if (permission !== "granted") return null;
                 var registration = await navigator.serviceWorker.register("service-worker.js");
-                await navigator.serviceWorker.ready;
                 var padding = "=".repeat((4 - publicKey.length % 4) % 4);
                 var bytes = Uint8Array.from(atob((publicKey + padding).replace(/-/g, "+").replace(/_/g, "/")), function (character) { return character.charCodeAt(0); });
                 var subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
@@ -183,8 +182,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=92" />
-    <link href="MangaHub.Web.styles.css?v=92" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=93" />
+    <link href="MangaHub.Web.styles.css?v=93" rel="stylesheet" />
 </head>
 
 <body>
