@@ -685,3 +685,17 @@ html.mh-theme-dark .loading-progress circle:last-child {
         flex: 1 1 0 !important;
     }
 }
+
+@media (max-width: 640px) {
+    .mh-reader-dialog-backdrop {
+        align-items: center;
+        background: rgba(10, 3, 18, .42);
+        padding: 1rem;
+    }
+
+    .mh-reader-dialog {
+        align-self: center;
+        height: auto;
+        max-height: min(68vh, 34rem);
+    }
+}

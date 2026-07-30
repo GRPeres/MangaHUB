@@ -1,7 +1,7 @@
 @if (Open)
 {
-    <div class="mh-modal-backdrop">
-        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="chapter-jump-title">
+    <div class="mh-modal-backdrop mh-reader-dialog-backdrop">
+        <section class="mh-modal mh-reader-dialog" role="dialog" aria-modal="true" aria-labelledby="chapter-jump-title">
             <MudStack Spacing="3">
                 <MudText id="chapter-jump-title" Typo="Typo.h2">Chapter jump detected</MudText>
                 <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">MangaDex jumps from chapter @CurrentChapter to chapter @NextChapter in @Language.</MudAlert>

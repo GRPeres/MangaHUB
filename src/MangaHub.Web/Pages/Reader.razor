@@ -139,8 +139,8 @@
 
 @if (languageFallbackNext is not null && fallbackLanguages.Count > 0)
 {
-    <div class="mh-modal-backdrop">
-        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="reader-language-fallback-title">
+    <div class="mh-modal-backdrop mh-reader-dialog-backdrop">
+        <section class="mh-modal mh-reader-dialog" role="dialog" aria-modal="true" aria-labelledby="reader-language-fallback-title">
             <MudStack Spacing="3">
                 <MudText id="reader-language-fallback-title" Typo="Typo.h2">Chapter available in another language</MudText>
                 <MudText Typo="Typo.body1">There is no matching @LanguageLabel(ActiveLanguage) chapter in this direction, but MangaDex has one in another language.</MudText>
