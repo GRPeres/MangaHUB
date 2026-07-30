@@ -19,7 +19,7 @@ public sealed class NotificationsController(CurrentUserService currentUsers, Not
         return user is null ? Unauthorized() : Ok(await notifications.ListAsync(user.Id, cancellationToken));
     }
 
-    [HttpGet("push/public-key")] public IActionResult PublicKey() => string.IsNullOrWhiteSpace(options.Value.WebPush.PublicKey) ? NotFound() : Ok(options.Value.WebPush.PublicKey);
+    [HttpGet("push/public-key")] public IActionResult PublicKey() => string.IsNullOrWhiteSpace(options.Value.WebPush.PublicKey) ? NotFound() : Ok(new { publicKey = options.Value.WebPush.PublicKey });
 
     [HttpPost("push/subscriptions")] public async Task<IActionResult> Subscribe([FromBody] WebPushSubscriptionRequest request, CancellationToken cancellationToken)
     {
