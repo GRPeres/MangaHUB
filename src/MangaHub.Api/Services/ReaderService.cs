@@ -204,6 +204,17 @@ public sealed class ReaderService(
                 return null;
             }
             if (isInitialTrackedChapterSelection
+                && string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)
+                && !allowChapterJump
+                && !HasExactChapter(sourceChapter.Number, "1"))
+            {
+                throw new MangaDexChapterJumpConfirmationRequiredException(
+                    "1",
+                    sourceChapter.Number,
+                    NormalizeLanguage(sourceChapter.Language),
+                    await FindCloserNextChapterLanguagesAsync(mangaDexId, "1", sourceChapter.Number, preferredLanguage, cancellationToken));
+            }
+            if (isInitialTrackedChapterSelection
                 && !allowLanguageFallback
                 && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter)
                 && !HasExactChapter(sourceChapter.Number, shelfEntry.CurrentChapter))

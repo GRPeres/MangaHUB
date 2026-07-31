@@ -58,6 +58,11 @@
                     </MudItem>
                 </MudGrid>
 
+                @if (ShouldWarnAboutStartingPastChapterOne)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">This manga is moving from planned to reading at chapter @editChapter. Confirm that you intentionally want to start after chapter 1.</MudAlert>
+                }
+
                 @if (!string.IsNullOrWhiteSpace(message))
                 {
                     <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>

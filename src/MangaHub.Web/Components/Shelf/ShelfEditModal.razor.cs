@@ -26,6 +26,12 @@ public partial class ShelfEditModal
     private bool isSaving;
     private bool isRemoving;
     private bool IsBusy => isSaving || isRemoving;
+    private bool ShouldWarnAboutStartingPastChapterOne =>
+        Entry is not null
+        && string.Equals(Entry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(editStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        && !string.IsNullOrWhiteSpace(editChapter)
+        && !string.Equals(editChapter.Trim(), "1", StringComparison.OrdinalIgnoreCase);
 
     protected override void OnParametersSet()
     {

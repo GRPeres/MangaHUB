@@ -283,7 +283,7 @@
 
     private string PreferredLanguage => string.IsNullOrWhiteSpace(currentUser?.PreferredLanguage) ? "en" : currentUser.PreferredLanguage;
 
-    private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false)
+    private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false, bool allowChapterJump = false)
     {
         if (!IsAdmin)
         {
@@ -310,7 +310,7 @@
 
             if (options.HasMangaDex)
             {
-                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguage, allowLanguageFallback: allowLanguageFallback);
+                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguage, allowLanguageFallback: allowLanguageFallback, allowChapterJump: allowChapterJump);
                 if (readerPreparation is null)
                 {
                     ShowWarning("Could not start MangaDex chapter preparation.");
@@ -462,7 +462,7 @@
 
         var language = chapterMatch.Language;
         CancelChapterMatch();
-        await Read(entryId, language, allowLanguageFallback: true);
+        await Read(entryId, language, allowLanguageFallback: true, allowChapterJump: true);
     }
 
     private void CancelChapterJump()
