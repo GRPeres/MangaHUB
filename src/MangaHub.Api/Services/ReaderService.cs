@@ -173,12 +173,12 @@ public sealed class ReaderService(
             cachedChapter = null;
         }
 
+        var isInitialTrackedChapterSelection = sourceChapter is null
+            && afterCachedChapterId is null
+            && beforeCachedChapterId is null
+            && !shelfEntry.IsRead;
         if (cachedChapter is null)
         {
-            var isInitialTrackedChapterSelection = sourceChapter is null
-                && afterCachedChapterId is null
-                && beforeCachedChapterId is null
-                && !shelfEntry.IsRead;
             var mangaDex = sources.Get("mangadex");
             progress?.Report(new ReaderPreparationProgress("Loading MangaDex chapter list", 8));
             var preferredChapters = await mangaDex.GetChaptersAsync(mangaDexId, preferredLanguage, cancellationToken);
@@ -260,6 +260,20 @@ public sealed class ReaderService(
             }
         }
 
+        var resolvedLanguage = NormalizeLanguage(cachedChapter.Language);
+        if (isInitialTrackedChapterSelection
+            && string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)
+            && !allowLanguageFallback
+            && !string.Equals(resolvedLanguage, preferredLanguage, StringComparison.OrdinalIgnoreCase))
+        {
+            var availableLanguages = await FindAvailableLanguagesForChapterAsync(mangaDexId, cachedChapter.ChapterNumber, preferredLanguage, cancellationToken);
+            if (!availableLanguages.Contains(resolvedLanguage, StringComparer.OrdinalIgnoreCase))
+            {
+                availableLanguages.Add(resolvedLanguage);
+            }
+            throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
+        }
+
         var shouldAdvanceReadingProgress = updateReadingProgress && beforeCachedChapterId is null;
         if (shouldAdvanceReadingProgress)
         {
@@ -281,7 +295,6 @@ public sealed class ReaderService(
 
         progress?.Report(new ReaderPreparationProgress(
             shouldAdvanceReadingProgress ? "Opening the local reader" : "The chapter is ready", 100));
-        var resolvedLanguage = NormalizeLanguage(cachedChapter.Language);
         return new ReaderLaunchResponse(
             $"/reader/{cachedChapter.Id}/{cachedChapter.PageCount}?entryId={entry.Id}&chapter={Uri.EscapeDataString(cachedChapter.ChapterNumber)}&source=mangadex&language={Uri.EscapeDataString(resolvedLanguage)}{ReaderModeQuery(entry)}",
             cachedChapter.ChapterNumber,
