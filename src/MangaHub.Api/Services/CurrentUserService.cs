@@ -10,6 +10,19 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
 
     public async Task<MangaUser?> GetCurrentUserAsync(HttpRequest request, CancellationToken cancellationToken)
     {
+        // Browser requests include both a persistent session cookie and a cached bearer token.
+        // Prefer the cookie so an old token from a previous account cannot override the active session.
+        if (request.Cookies.TryGetValue("mangahub_session", out var cookieToken))
+        {
+            var cookieUserId = tokens.ReadUserId(cookieToken);
+            var cookieUser = cookieUserId is null ? null : await db.Users.FindAsync([cookieUserId.Value], cancellationToken);
+            if (cookieUser is not null)
+            {
+                await RecordActivityAsync(cookieUser, cancellationToken);
+                return cookieUser;
+            }
+        }
+
         var bearerToken = ReadBearerToken(request);
         if (!string.IsNullOrWhiteSpace(bearerToken))
         {
@@ -22,15 +35,7 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
             }
         }
 
-        if (!request.Cookies.TryGetValue("mangahub_session", out var token))
-        {
-            return null;
-        }
-
-        var userId = tokens.ReadUserId(token);
-        var user = userId is null ? null : await db.Users.FindAsync([userId.Value], cancellationToken);
-        await RecordActivityAsync(user, cancellationToken);
-        return user;
+        return null;
     }
 
     public static bool IsAdmin(MangaUser user) =>
