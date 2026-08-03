@@ -26,6 +26,21 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         return response.IsSuccessStatusCode ? await ReadJsonOrDefaultAsync<TResponse>(response) : default;
     }
 
+    public async Task<ApiCallResult<TResponse>> SendWithResultAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest payload)
+    {
+        using var request = new HttpRequestMessage(method, url) { Content = JsonContent.Create(payload) };
+        await AddAuthorizationAsync(request);
+        request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+        using var response = await http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            return new ApiCallResult<TResponse>(await ReadJsonOrDefaultAsync<TResponse>(response), (int)response.StatusCode, "");
+        }
+
+        var body = await response.Content.ReadAsStringAsync();
+        return new ApiCallResult<TResponse>(default, (int)response.StatusCode, ReadErrorMessage(body));
+    }
+
     public async Task<bool> SendWithoutResponseAsync<TRequest>(HttpMethod method, string url, TRequest payload)
     {
         using var request = new HttpRequestMessage(method, url) { Content = JsonContent.Create(payload) };
@@ -75,5 +90,32 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         return string.IsNullOrWhiteSpace(json)
             ? default
             : JsonSerializer.Deserialize<TResponse>(json, JsonSerializerOptions.Web);
+    }
+
+    private static string ReadErrorMessage(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return "The server did not provide a reason.";
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            var root = document.RootElement;
+            foreach (var property in new[] { "detail", "title", "message" })
+            {
+                if (root.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(value.GetString()))
+                {
+                    return value.GetString()!;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Plain-text error responses are still useful to the caller.
+        }
+
+        return body.Length <= 300 ? body : body[..300] + "...";
     }
 }

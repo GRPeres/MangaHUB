@@ -207,13 +207,14 @@ public partial class CatalogAddModal
         message = "Adding catalog manga...";
         try
         {
-            var saved = IsEditMode
+            var result = IsEditMode
                 ? await CatalogApi.UpdateCatalogMangaAsync(Entry!.Id, BuildRequest())
                 : await CatalogApi.CreateCatalogMangaAsync(BuildRequest());
+            var saved = result.Value;
             if (saved is null)
             {
                 messageSeverity = Severity.Error;
-                message = IsEditMode ? "Could not save catalog metadata." : "Catalog registration failed. Admin permissions are required.";
+                message = $"Catalog save failed ({result.StatusCode}): {result.Error}";
                 return;
             }
 

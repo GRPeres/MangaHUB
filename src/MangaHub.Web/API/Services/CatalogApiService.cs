@@ -13,11 +13,11 @@ public sealed class CatalogApiService(ApiHttpClient api)
         return await api.GetAsync<List<CatalogMangaResponse>>($"/api/catalog{query}") ?? [];
     }
 
-    public async Task<CatalogMangaResponse?> CreateCatalogMangaAsync(MangaEntryRequest request) =>
-        await api.SendAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Post, "/api/catalog", request);
+    public Task<ApiCallResult<CatalogMangaResponse>> CreateCatalogMangaAsync(MangaEntryRequest request) =>
+        api.SendWithResultAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Post, "/api/catalog", request);
 
-    public async Task<CatalogMangaResponse?> UpdateCatalogMangaAsync(Guid entryId, MangaEntryRequest request) =>
-        await api.SendAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Put, $"/api/catalog/{entryId}", request);
+    public Task<ApiCallResult<CatalogMangaResponse>> UpdateCatalogMangaAsync(Guid entryId, MangaEntryRequest request) =>
+        api.SendWithResultAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Put, $"/api/catalog/{entryId}", request);
 
     public async Task<MangaDexCacheResponse?> GetMangaDexCacheAsync(Guid entryId, string language) =>
         await api.GetAsync<MangaDexCacheResponse>($"/api/catalog/{entryId}/mangadex-cache?language={Uri.EscapeDataString(language)}");

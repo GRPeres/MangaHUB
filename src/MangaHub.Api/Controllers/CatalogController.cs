@@ -6,7 +6,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/catalog")]
-public sealed class CatalogController(CurrentUserService currentUsers, CatalogService catalog, CatalogCacheService cache) : ControllerBase
+public sealed class CatalogController(CurrentUserService currentUsers, CatalogService catalog, CatalogCacheService cache, ILogger<CatalogController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] string? language, CancellationToken cancellationToken)
@@ -27,7 +27,8 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
         }
         if (!CurrentUserService.IsAdmin(user))
         {
-            return StatusCode(StatusCodes.Status403Forbidden);
+            logger.LogWarning("Catalog create denied for user {Username} ({UserId}) with role {Role}.", user.Username, user.Id, user.Role);
+            return Problem(statusCode: StatusCodes.Status403Forbidden, title: "Catalog admin permission required", detail: $"The active API session belongs to '{user.Username}' with role '{user.Role}'.");
         }
 
         var created = await catalog.CreateAsync(user.Id, request, cancellationToken);
@@ -44,7 +45,8 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
         }
         if (!CurrentUserService.IsAdmin(user))
         {
-            return StatusCode(StatusCodes.Status403Forbidden);
+            logger.LogWarning("Catalog update denied for user {Username} ({UserId}) with role {Role}.", user.Username, user.Id, user.Role);
+            return Problem(statusCode: StatusCodes.Status403Forbidden, title: "Catalog admin permission required", detail: $"The active API session belongs to '{user.Username}' with role '{user.Role}'.");
         }
 
         var updated = await catalog.UpdateAsync(user.Id, entryId, request, cancellationToken);
