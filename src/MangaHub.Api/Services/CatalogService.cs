@@ -3,6 +3,7 @@ using MangaHub.Api.Repositories;
 using MangaHub.Core.Dto;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
+using System.Text.Json;
 
 namespace MangaHub.Api.Services;
 
@@ -17,9 +18,7 @@ public sealed class CatalogService(
 
     public async Task<CatalogMangaResponse> CreateAsync(Guid currentUserId, MangaEntryRequest entry, CancellationToken cancellationToken)
     {
-        var details = string.IsNullOrWhiteSpace(entry.OpenLibraryKey)
-            ? null
-            : await openLibrary.GetWorkAsync(entry.OpenLibraryKey.Trim(), cancellationToken);
+        var details = await TryGetOpenLibraryDetailsAsync(entry.OpenLibraryKey, cancellationToken);
         var readerLinks = await ResolveReaderLinksAsync(entry, cancellationToken);
         var mangaUpdatesId = await ResolveMangaUpdatesIdAsync(entry.MangaUpdatesId, entry.Title, entry.MediaType, entry.FirstPublishYear, cancellationToken);
 
@@ -105,6 +104,28 @@ public sealed class CatalogService(
         var match = await mangaDexMatches.FindAsync(entry.MyAnimeListId, entry.Title, cancellationToken);
         mangaDexId = match?.Id ?? "";
         return new ReaderLinks(mangaDexId, fallbackReaderUrl);
+    }
+
+    private async Task<OpenLibraryWorkDetails?> TryGetOpenLibraryDetailsAsync(string key, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        try
+        {
+            return await openLibrary.GetWorkAsync(key.Trim(), cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
+        {
+            // OpenLibrary enriches a save but must not be allowed to block a manual catalog entry.
+            return null;
+        }
     }
 
     private async Task<string> ResolveMangaUpdatesIdAsync(

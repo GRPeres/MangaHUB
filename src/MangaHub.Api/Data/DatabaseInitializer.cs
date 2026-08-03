@@ -75,6 +75,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "FallbackReaderUrl" text NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReaderPreference" character varying(20) NOT NULL DEFAULT 'mangahub';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexUrl" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ALTER COLUMN "MangaDexUrl" SET DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexId" character varying(80) NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastSyncedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedChapter" numeric(10,3) NULL;

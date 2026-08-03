@@ -1,6 +1,7 @@
 using MangaHub.Api.Services;
 using MangaHub.Core.Dto;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace MangaHub.Api.Controllers;
 
@@ -31,8 +32,16 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
             return Problem(statusCode: StatusCodes.Status403Forbidden, title: "Catalog admin permission required", detail: $"The active API session belongs to '{user.Username}' with role '{user.Role}'.");
         }
 
-        var created = await catalog.CreateAsync(user.Id, request, cancellationToken);
-        return Created($"/api/catalog/{created.Id}", created);
+        try
+        {
+            var created = await catalog.CreateAsync(user.Id, request, cancellationToken);
+            return Created($"/api/catalog/{created.Id}", created);
+        }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Catalog create failed while storing '{Title}' for {Username}.", request.Title, user.Username);
+            return Problem(statusCode: StatusCodes.Status500InternalServerError, title: "Catalog database save failed", detail: "The catalog entry could not be stored. Check the API log for the database error.");
+        }
     }
 
     [HttpPut("{entryId:guid}")]
