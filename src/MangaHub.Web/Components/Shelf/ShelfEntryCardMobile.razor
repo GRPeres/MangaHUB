@@ -42,18 +42,18 @@
             {
                 @if (OpensExternalReader)
                 {
-                    <MudTooltip Text="Read in external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Read in external reader" /></MudTooltip>
+                    <div class="mh-mobile-shelf-action-cell"><MudTooltip Text="Read in external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Read in external reader" /></MudTooltip></div>
                 }
                 else
                 {
-                    <MudTooltip Text="Read"><MudIconButton Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" OnClick="Read" aria-label="Read" /></MudTooltip>
+                    <div class="mh-mobile-shelf-action-cell"><MudTooltip Text="Read"><MudIconButton Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" OnClick="Read" aria-label="Read" /></MudTooltip></div>
                 }
                 @if (ShowsExternalReaderAction)
                 {
-                    <MudTooltip Text="Open external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Open external reader" /></MudTooltip>
+                    <div class="mh-mobile-shelf-action-cell"><MudTooltip Text="Open external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Open external reader" /></MudTooltip></div>
                 }
             }
-            <MudTooltip Text="Edit shelf entry"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" OnClick="Edit" aria-label="Edit shelf entry" /></MudTooltip>
+            <div class="mh-mobile-shelf-action-cell"><MudTooltip Text="Edit shelf entry"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" OnClick="Edit" aria-label="Edit shelf entry" /></MudTooltip></div>
         </div>
 
     </div>
