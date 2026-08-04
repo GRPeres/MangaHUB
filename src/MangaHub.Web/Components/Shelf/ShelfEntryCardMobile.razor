@@ -62,26 +62,29 @@
     {
         <MudCardContent Class="mh-mobile-shelf-details">
             <MangaBento Columns="2" ItemMinHeight="72" RowHeight="72" Class="mh-mobile-shelf-bento">
-                <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="@StatusScheme" OnClick="FilterByStatus">
-                    <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.h6">@StatusLabel</MudText></div>
-                </MangaBentoTile>
-                <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="@ProgressScheme" Class="@(HasNewChapters ? "mh-mobile-shelf-release-tile" : "")">
-                    <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">@(HasNewChapters ? "New" : "Progress")</MudText><MudText Typo="Typo.h6">@(HasNewChapters ? $"+{NewChapterCount}" : CurrentChapterValue)</MudText><MudText Typo="Typo.caption">@(HasNewChapters ? $"Latest {LatestChapterValue}" : ProgressHint)</MudText></div>
-                </MangaBentoTile>
                 @if (!string.IsNullOrWhiteSpace(DescriptionText))
                 {
                     <MangaBentoTile ColSpan="2" RowSpan="1" Scheme="soft" OnClick="OpenMetadata" AriaLabel="@($"Open full metadata for {Entry.Title}")" Class="mh-mobile-shelf-description">
                         <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">Description</MudText><MudText Typo="Typo.body2">@DescriptionText</MudText></div>
                     </MangaBentoTile>
                 }
+                <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="@StatusScheme" OnClick="FilterByStatus">
+                    <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.h6">@StatusLabel</MudText></div>
+                </MangaBentoTile>
+                <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="@ProgressScheme" Class="@(HasNewChapters ? "mh-mobile-shelf-release-tile" : "")">
+                    <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">@(HasNewChapters ? "New" : "Progress")</MudText><MudText Typo="Typo.h6">@(HasNewChapters ? $"+{NewChapterCount}" : CurrentChapterValue)</MudText><MudText Typo="Typo.caption">@(HasNewChapters ? $"Latest {LatestChapterValue}" : ProgressHint)</MudText></div>
+                </MangaBentoTile>
             </MangaBento>
             <MudCardActions Class="mh-mobile-shelf-rating" aria-label="@($"Rate {Entry.Title}")">
-                @for (var value = 1; value <= 5; value++)
-                {
-                    var score = value;
-                    var selected = IsStarSelected(score);
-                    <MudIconButton Icon="@(selected ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)" Color="@(selected ? Color.Secondary : Color.Default)" Size="Size.Small" Disabled="@isSavingScore" OnClick="() => SetScore(score)" aria-label="@(selectedScore == score ? $"Clear {score}-star rating" : $"Rate {score} of 5")" />
-                }
+                <MudText Typo="Typo.overline">Your rating</MudText>
+                <div class="mh-mobile-shelf-stars">
+                    @for (var value = 1; value <= 5; value++)
+                    {
+                        var score = value;
+                        var selected = IsStarSelected(score);
+                        <MudIconButton Icon="@(selected ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)" Color="@(selected ? Color.Secondary : Color.Default)" Size="Size.Medium" Disabled="@isSavingScore" OnClick="() => SetScore(score)" aria-label="@(selectedScore == score ? $"Clear {score}-star rating" : $"Rate {score} of 5")" />
+                    }
+                </div>
             </MudCardActions>
         </MudCardContent>
     }
