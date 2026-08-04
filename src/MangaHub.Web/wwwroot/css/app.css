@@ -996,8 +996,16 @@ html body .mh-mobile-catalog-card {
         gap: 0 !important;
         grid-column: 3 !important;
         grid-row: 1 / span 2 !important;
-        justify-content: center !important;
+        height: 100% !important;
+        justify-content: stretch !important;
         min-width: 3.5rem !important;
+    }
+
+    html body .mh-mobile-shelf-actions > * {
+        align-self: stretch !important;
+        display: flex !important;
+        flex: 1 1 0 !important;
+        width: 100% !important;
     }
 
     html body .mh-mobile-shelf-actions .mud-icon-button {
@@ -1014,11 +1022,12 @@ html body .mh-mobile-catalog-card {
     }
 
     html body .mh-mobile-shelf-release {
-        align-self: center !important;
+        align-self: start !important;
         grid-column: 2 !important;
         grid-row: 1 !important;
         justify-self: end !important;
         margin-right: .1rem !important;
+        margin-top: .15rem !important;
     }
 
 }
