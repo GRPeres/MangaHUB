@@ -15,5 +15,4 @@
     ::deep .mh-mobile-catalog-gap-good .mh-bento-tile { --mh-bento-bg: color-mix(in srgb, var(--mud-palette-success) 9%, var(--mud-palette-surface)); }
     ::deep .mh-mobile-catalog-gap-warning .mh-bento-tile { --mh-bento-bg: color-mix(in srgb, var(--mud-palette-warning) 11%, var(--mud-palette-surface)); }
     ::deep .mh-mobile-catalog-gap-critical .mh-bento-tile { --mh-bento-bg: color-mix(in srgb, var(--mud-palette-error) 12%, var(--mud-palette-surface)); }
-    ::deep .mh-mobile-catalog-actions { border-top: 1px solid var(--mud-palette-divider); display: flex; gap: .5rem; justify-content: flex-end; margin-top: .55rem; padding: .55rem 0 0; }
 }

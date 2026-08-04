@@ -11,8 +11,6 @@
     ::deep .mh-mobile-shelf-summary .mh-mobile-shelf-subtitle { color: var(--mud-palette-secondary) !important; }
     .mh-mobile-shelf-title { display: -webkit-box; font-size: 1.25rem; line-height: 1.15; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
     ::deep .mh-mobile-shelf-chip { background: rgba(255,255,255,.08); color: #fffaff; }
-    .mh-mobile-shelf-actions { align-items: center; display: flex; flex-direction: column; gap: .2rem; grid-column: 2; grid-row: 1 / span 2; justify-content: center; }
-    ::deep .mh-mobile-shelf-actions .mud-icon-button { background: color-mix(in srgb, var(--mud-palette-surface) 82%, transparent); border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 34%, transparent); }
     .mh-mobile-shelf-release { align-items: center; backdrop-filter: blur(10px); background: color-mix(in srgb, var(--mud-palette-error) 88%, #240a22); border: 1px solid color-mix(in srgb, #fffaff 36%, var(--mud-palette-error)); border-radius: 8px; color: #fffaff; display: flex; flex-direction: column; line-height: 1; min-width: 2.45rem; padding: .3rem .35rem; }
     .mh-mobile-shelf-release span { font-size: .58rem; letter-spacing: .04em; text-transform: uppercase; }
     .mh-mobile-shelf-release strong { font-size: .95rem; line-height: 1.05; }

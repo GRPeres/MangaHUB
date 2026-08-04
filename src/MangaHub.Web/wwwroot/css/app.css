@@ -951,11 +951,11 @@ html body .mh-mobile-catalog-card {
 
     html body .mh-mobile-shelf-header,
     html body .mh-mobile-catalog-header {
+        align-self: stretch !important;
         background: rgba(18, 8, 30, .36) !important;
         color: #fffaff !important;
         grid-column: 1 !important;
         grid-row: 1 !important;
-        height: 132px !important;
         min-width: 0 !important;
         z-index: 1 !important;
     }
@@ -964,10 +964,9 @@ html body .mh-mobile-catalog-card {
         align-items: start !important;
         display: grid !important;
         gap: .2rem .5rem !important;
-        grid-template-columns: minmax(0, 1fr) auto 3.5rem !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
         grid-template-rows: minmax(0, 1fr) !important;
         padding: .55rem 0 .35rem .75rem !important;
-        /* Keep the action rail scoped to the shared card header, like Catalog. */
         position: relative !important;
     }
 
@@ -1020,52 +1019,22 @@ html body .mh-mobile-catalog-card {
         color: var(--mud-palette-secondary) !important;
     }
 
-    html body .mh-mobile-shelf-actions {
-        align-items: stretch !important;
-        background: var(--mud-palette-surface) !important;
-        border-left: 1px solid var(--mud-palette-divider) !important;
-        border-radius: 0 8px 8px 0 !important;
-        border-top: 0 !important;
-        bottom: 0 !important;
+    html body .mh-mobile-card-actions {
+        align-items: center !important;
+        border-top: 1px solid var(--mud-palette-divider) !important;
         display: flex !important;
-        flex-direction: column !important;
-        height: 100% !important;
-        margin-top: 0 !important;
-        overflow: hidden !important;
-        padding: 0 !important;
-        position: absolute !important;
-        right: 0 !important;
-        top: 0 !important;
-        width: 3.5rem !important;
-        z-index: 2 !important;
-    }
-
-    html body .mh-mobile-shelf-action-cell,
-    html body .mh-mobile-shelf-action-cell > * {
-        align-self: stretch !important;
-        display: flex !important;
-        flex: 1 1 0 !important;
-        width: 100% !important;
-    }
-
-    html body .mh-mobile-shelf-action-cell .mud-icon-button {
-        border: 0 !important;
-        border-bottom: 1px solid var(--mud-palette-divider) !important;
-        border-radius: 0 !important;
-        height: 100% !important;
-        min-height: 0 !important;
-        width: 100% !important;
-    }
-
-    html body .mh-mobile-shelf-action-cell:last-child .mud-icon-button {
-        border-bottom: 0 !important;
+        gap: .4rem !important;
+        grid-column: 1 !important;
+        justify-content: flex-end !important;
+        margin: .55rem .55rem 0 !important;
+        padding: .5rem 0 0 !important;
     }
 
     html body .mh-mobile-catalog-header {
         align-items: start !important;
         display: grid !important;
         gap: 0 !important;
-        grid-template-columns: minmax(0, 1fr) 3.5rem !important;
+        grid-template-columns: minmax(0, 1fr) !important;
         grid-template-rows: minmax(0, 1fr) !important;
         padding: .55rem 0 .35rem .75rem !important;
         position: relative !important;
@@ -1126,43 +1095,16 @@ html body .mh-mobile-catalog-card {
         color: var(--mud-palette-secondary) !important;
     }
 
-    html body .mh-mobile-catalog-actions {
-        align-items: stretch !important;
-        background: var(--mud-palette-surface) !important;
-        border-left: 1px solid var(--mud-palette-divider) !important;
-        border-radius: 0 8px 8px 0 !important;
-        border-top: 0 !important;
-        bottom: 0 !important;
+    html body .mh-mobile-card-action,
+    html body .mh-mobile-card-action > * {
         display: flex !important;
-        flex-direction: column !important;
-        height: 100% !important;
-        overflow: hidden !important;
-        margin-top: 0 !important;
-        padding: 0 !important;
-        position: absolute !important;
-        right: 0 !important;
-        top: 0 !important;
-        width: 3.5rem !important;
     }
 
-    html body .mh-mobile-catalog-action-cell,
-    html body .mh-mobile-catalog-action-cell > * {
-        align-self: stretch !important;
-        display: flex !important;
-        flex: 1 1 0 !important;
-        width: 100% !important;
-    }
-
-    html body .mh-mobile-catalog-action-cell .mud-icon-button {
-        border: 0 !important;
-        border-bottom: 1px solid var(--mud-palette-divider) !important;
-        border-radius: 0 !important;
-        height: 100% !important;
-        width: 100% !important;
-    }
-
-    html body .mh-mobile-catalog-action-cell:last-child .mud-icon-button {
-        border-bottom: 0 !important;
+    html body .mh-mobile-card-action .mud-icon-button {
+        height: 2.7rem !important;
+        min-height: 2.7rem !important;
+        min-width: 2.7rem !important;
+        width: 2.7rem !important;
     }
 
     html body .mh-mobile-shelf-release {
