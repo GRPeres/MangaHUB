@@ -961,7 +961,7 @@ html body .mh-mobile-catalog-card {
         display: grid !important;
         gap: .2rem .5rem !important;
         grid-template-columns: minmax(0, 1fr) auto !important;
-        grid-template-rows: minmax(0, 1fr) !important;
+        grid-template-rows: minmax(0, 1fr) auto !important;
         padding: .55rem 0 .35rem .75rem !important;
         position: relative !important;
     }
@@ -988,8 +988,7 @@ html body .mh-mobile-catalog-card {
         flex-direction: column !important;
         gap: .45rem !important;
         grid-column: 1 !important;
-        grid-row: 1 !important;
-        height: 100% !important;
+        grid-row: 1 / span 2 !important;
         justify-content: space-between !important;
         min-width: 0 !important;
         padding: 0 !important;
@@ -1017,21 +1016,23 @@ html body .mh-mobile-catalog-card {
 
     html body .mh-mobile-card-actions {
         align-items: center !important;
-        border-top: 1px solid var(--mud-palette-divider) !important;
         display: flex !important;
         gap: .4rem !important;
-        grid-column: 1 !important;
+        grid-column: 2 !important;
+        grid-row: 2 !important;
         justify-content: flex-end !important;
-        margin: .55rem .55rem 0 !important;
-        padding: .5rem 0 0 !important;
+        justify-self: end !important;
+        margin: 0 .35rem .35rem 0 !important;
+        padding: 0 !important;
+        z-index: 2 !important;
     }
 
     html body .mh-mobile-catalog-header {
         align-items: start !important;
         display: grid !important;
         gap: 0 !important;
-        grid-template-columns: minmax(0, 1fr) !important;
-        grid-template-rows: minmax(0, 1fr) !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        grid-template-rows: minmax(0, 1fr) auto !important;
         padding: .55rem 0 .35rem .75rem !important;
         position: relative !important;
     }
@@ -1045,7 +1046,8 @@ html body .mh-mobile-catalog-card {
         display: flex !important;
         flex-direction: column !important;
         gap: .45rem !important;
-        height: 100% !important;
+        grid-column: 1 !important;
+        grid-row: 1 / span 2 !important;
         justify-content: space-between !important;
         min-width: 0 !important;
         padding: 0 !important;
@@ -1097,6 +1099,8 @@ html body .mh-mobile-catalog-card {
     }
 
     html body .mh-mobile-card-action .mud-icon-button {
+        background: color-mix(in srgb, var(--mud-palette-surface) 84%, transparent) !important;
+        border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 32%, var(--mud-palette-divider)) !important;
         height: 2.7rem !important;
         min-height: 2.7rem !important;
         min-width: 2.7rem !important;

@@ -41,6 +41,25 @@
             </div>
         }
 
+        <div class="mh-mobile-card-actions" aria-label="@($"Actions for {Entry.Title}")">
+            @if (CanRead)
+            {
+                @if (OpensExternalReader)
+                {
+                    <div class="mh-mobile-card-action"><MudTooltip Text="Read in external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Read in external reader" /></MudTooltip></div>
+                }
+                else
+                {
+                    <div class="mh-mobile-card-action"><MudTooltip Text="Read"><MudIconButton Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" OnClick="Read" aria-label="Read" /></MudTooltip></div>
+                }
+                @if (ShowsExternalReaderAction)
+                {
+                    <div class="mh-mobile-card-action"><MudTooltip Text="Open external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Open external reader" /></MudTooltip></div>
+                }
+            }
+            <div class="mh-mobile-card-action"><MudTooltip Text="Edit shelf entry"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" OnClick="Edit" aria-label="Edit shelf entry" /></MudTooltip></div>
+        </div>
+
     </div>
 
     @if (detailsOpen)
@@ -74,24 +93,6 @@
         </MudCardContent>
     }
 
-    <MudCardActions Class="mh-mobile-card-actions" aria-label="@($"Actions for {Entry.Title}")">
-        @if (CanRead)
-        {
-            @if (OpensExternalReader)
-            {
-                <div class="mh-mobile-card-action"><MudTooltip Text="Read in external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Read in external reader" /></MudTooltip></div>
-            }
-            else
-            {
-                <div class="mh-mobile-card-action"><MudTooltip Text="Read"><MudIconButton Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" OnClick="Read" aria-label="Read" /></MudTooltip></div>
-            }
-            @if (ShowsExternalReaderAction)
-            {
-                <div class="mh-mobile-card-action"><MudTooltip Text="Open external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Open external reader" /></MudTooltip></div>
-            }
-        }
-        <div class="mh-mobile-card-action"><MudTooltip Text="Edit shelf entry"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" OnClick="Edit" aria-label="Edit shelf entry" /></MudTooltip></div>
-    </MudCardActions>
 </MudCard>
 
 @if (metadataOpen)
