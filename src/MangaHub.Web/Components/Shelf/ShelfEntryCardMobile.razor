@@ -79,8 +79,8 @@
                     <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">@(HasNewChapters ? "New" : "Progress")</MudText><MudText Typo="Typo.h6">@(HasNewChapters ? $"+{NewChapterCount}" : CurrentChapterValue)</MudText><MudText Typo="Typo.caption">@(HasNewChapters ? $"Latest {LatestChapterValue}" : ProgressHint)</MudText></div>
                 </MangaBentoTile>
             </MangaBento>
+            <MudDivider Class="mh-mobile-shelf-rating-divider" />
             <MudCardActions Class="mh-mobile-shelf-rating" aria-label="@($"Rate {Entry.Title}")">
-                <MudText Typo="Typo.overline">Your rating</MudText>
                 <div class="mh-mobile-shelf-stars">
                     @for (var value = 1; value <= 5; value++)
                     {

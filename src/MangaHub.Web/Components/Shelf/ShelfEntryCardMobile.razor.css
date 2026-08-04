@@ -22,7 +22,9 @@
     .mh-mobile-shelf-stat { display: flex; flex-direction: column; gap: .1rem; justify-content: center; min-height: 46px; }
     ::deep .mh-mobile-shelf-description .mud-typography-body2 { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
     ::deep .mh-mobile-shelf-release-tile .mh-bento-tile { --mh-bento-bg: var(--mud-palette-error); --mh-bento-fg: #fffaff; }
-    ::deep .mh-mobile-shelf-rating { align-items: center; border-top: 1px solid var(--mud-palette-divider); display: flex; justify-content: space-between; margin-top: .55rem; padding: .75rem 0 0; width: 100%; }
-    .mh-mobile-shelf-stars { display: flex; gap: .15rem; }
-    ::deep .mh-mobile-shelf-stars .mud-icon-button { min-height: 2.75rem; min-width: 2.75rem; }
+    ::deep .mh-mobile-shelf-rating-divider { margin-top: .7rem; }
+    ::deep .mh-mobile-shelf-rating { align-items: center; display: flex; justify-content: center; margin-top: .35rem; padding: 0; width: 100%; }
+    .mh-mobile-shelf-stars { display: grid; gap: .1rem; grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; }
+    ::deep .mh-mobile-shelf-stars .mud-icon-button { min-height: 3.2rem; min-width: 0; width: 100%; }
+    ::deep .mh-mobile-shelf-stars .mud-icon-root { font-size: 2rem; }
 }
