@@ -11,10 +11,6 @@
     display: none;
 }
 
-::deep .mh-mobile-catalog-stat {
-    display: none;
-}
-
 .mh-cover-frame {
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
     border-right: 1px solid var(--mud-palette-divider);
@@ -271,14 +267,6 @@
 }
 
 @media (max-width: 640px) {
-    ::deep .mh-entry-bento > .bzb-item:nth-child(-n + 3) {
-        display: none !important;
-    }
-
-    ::deep .mh-mobile-catalog-stat {
-        display: block !important;
-    }
-
     .mh-row-card {
         grid-template-columns: 1fr;
     }

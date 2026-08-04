@@ -467,6 +467,10 @@ html body .mh-row-card .mh-bento-host .bzb-item {
     min-height: 0 !important;
 }
 
+html body .mh-row-card .mh-bento-host .bzb-item:has(.mh-mobile-catalog-stat) {
+    display: none !important;
+}
+
 html body .mh-row-card {
     align-items: stretch !important;
     display: grid !important;
@@ -720,6 +724,15 @@ html.mh-theme-dark .loading-progress circle:last-child {
 
     html body .mh-row-card .mh-bento-host.mh-entry-bento .bzb-item:first-child {
         display: none !important;
+    }
+
+    html body .mh-row-card .mh-bento-host.mh-entry-bento .bzb-item:nth-child(2),
+    html body .mh-row-card .mh-bento-host.mh-entry-bento .bzb-item:nth-child(3) {
+        display: none !important;
+    }
+
+    html body .mh-row-card .mh-bento-host .bzb-item:has(.mh-mobile-catalog-stat) {
+        display: block !important;
     }
 
     html body .mh-row-card .mh-bento-card-actions,
