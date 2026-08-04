@@ -123,7 +123,7 @@
                 frame.mangaHubResizeObserver.observe(reader);
                 fit();
             },
-            preloadPages: function (urls) {
+            preloadPages: async function (urls) {
                 if (!Array.isArray(urls)) {
                     return;
                 }
@@ -131,21 +131,32 @@
                 var preloaded = window.mangaHubReader.preloadedPages || new Map();
                 window.mangaHubReader.preloadedPages = preloaded;
 
-                urls.forEach(function (url) {
-                    if (!url || preloaded.has(url)) {
-                        return;
+                var preloadTasks = urls.filter(function (url) { return !!url; }).map(function (url) {
+                    var existing = preloaded.get(url);
+                    if (existing) {
+                        return existing.ready;
                     }
 
                     var image = new Image();
                     image.decoding = "async";
+                    var ready = new Promise(function (resolve) {
+                        image.onload = resolve;
+                        image.onerror = resolve;
+                    }).then(function () {
+                        return image.decode().catch(function () { });
+                    });
+
+                    preloaded.set(url, { image: image, ready: ready });
                     image.src = url;
-                    preloaded.set(url, image);
+                    return ready;
                 });
 
                 // Keep memory use bounded while retaining a short read-ahead window.
                 while (preloaded.size > 12) {
                     preloaded.delete(preloaded.keys().next().value);
                 }
+
+                await Promise.all(preloadTasks);
             },
             disposePage: function (frame) {
                 if (frame && frame.mangaHubResizeObserver) {
@@ -211,8 +222,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=123" />
-    <link href="MangaHub.Web.styles.css?v=123" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=124" />
+    <link href="MangaHub.Web.styles.css?v=124" rel="stylesheet" />
 </head>
 
 <body>

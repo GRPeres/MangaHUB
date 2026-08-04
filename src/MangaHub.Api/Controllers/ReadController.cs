@@ -26,7 +26,10 @@ public sealed class ReadController(CurrentUserService currentUsers, ReaderServic
             return NotFound();
         }
 
-        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        // Reader URLs include a per-session version, so a private browser cache can safely
+        // retain decoded pages without exposing authenticated content to shared caches.
+        Response.Headers.CacheControl = "private, max-age=86400, immutable";
+        Response.Headers.Vary = "Cookie";
         return File(page.Bytes, page.ContentType);
     }
 }
