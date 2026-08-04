@@ -932,12 +932,8 @@ html body .mh-mobile-catalog-card {
     html body .mh-mobile-catalog-cover {
         grid-column: 1 !important;
         grid-row: 1 !important;
-        height: 132px !important;
-        overflow: hidden !important;
-    }
-
-    html body .mh-mobile-shelf-cover {
         height: 148px !important;
+        overflow: hidden !important;
     }
 
     html body .mh-mobile-shelf-cover-image,
