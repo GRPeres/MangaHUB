@@ -486,6 +486,7 @@ html body .mh-row-card .mh-bento-host .bzb-item:has(.mh-mobile-catalog-stat) {
 
 html body .mh-row-card {
     align-items: stretch !important;
+    background: #f4f0fa !important;
     display: grid !important;
     grid-template-columns: 164px minmax(0, 1fr) !important;
     min-height: 176px !important;
@@ -877,6 +878,10 @@ html.mh-theme-dark .loading-progress circle:last-child {
         margin-top: .15rem !important;
         padding-top: .55rem !important;
     }
+}
+
+html.mh-theme-dark body .mh-row-card {
+    background: var(--mud-palette-surface) !important;
 }
 
 @media (max-width: 640px) {
