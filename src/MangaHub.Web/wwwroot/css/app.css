@@ -1076,6 +1076,7 @@ html body .mh-mobile-catalog-card {
         flex-direction: column !important;
         gap: .2rem !important;
         min-width: 0 !important;
+        padding-top: .25rem !important;
     }
 
     html body .mh-mobile-shelf-tags,
