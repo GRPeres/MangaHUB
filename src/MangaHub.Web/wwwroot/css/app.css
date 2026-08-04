@@ -978,7 +978,8 @@ html body .mh-mobile-catalog-card {
         gap: .45rem !important;
         grid-column: 1 !important;
         grid-row: 1 !important;
-        justify-content: flex-start !important;
+        height: 100% !important;
+        justify-content: space-between !important;
         min-width: 0 !important;
         padding: 0 !important;
         text-align: left !important;
@@ -1062,10 +1063,24 @@ html body .mh-mobile-catalog-card {
         display: flex !important;
         flex-direction: column !important;
         gap: .45rem !important;
-        justify-content: flex-start !important;
+        height: 100% !important;
+        justify-content: space-between !important;
         min-width: 0 !important;
         padding: 0 !important;
         text-align: left !important;
+    }
+
+    html body .mh-mobile-shelf-title-block,
+    html body .mh-mobile-catalog-title-block {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: .2rem !important;
+        min-width: 0 !important;
+    }
+
+    html body .mh-mobile-shelf-tags,
+    html body .mh-mobile-catalog-tags {
+        margin-top: auto !important;
     }
 
     html body .mh-mobile-catalog-header .mh-mobile-catalog-subtitle {

@@ -12,21 +12,25 @@
 
     <div class="mh-mobile-shelf-header">
         <button type="button" class="mh-mobile-shelf-summary" @onclick="ToggleDetails" aria-expanded="@detailsOpen" aria-label="@($"Show reading details for {Entry.Title}")">
-            <MudText Typo="Typo.h5" Class="mh-mobile-shelf-title">@Entry.Title</MudText>
-            @if (!string.IsNullOrWhiteSpace(Entry.Authors))
-            {
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mh-mobile-shelf-subtitle">@Entry.Authors</MudText>
-            }
-            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
-                @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
+            <div class="mh-mobile-shelf-title-block">
+                <MudText Typo="Typo.h5" Class="mh-mobile-shelf-title">@Entry.Title</MudText>
+                @if (!string.IsNullOrWhiteSpace(Entry.Authors))
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-shelf-chip">@VisibleGenreLabel</MudChip>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mh-mobile-shelf-subtitle">@Entry.Authors</MudText>
                 }
-                @if (HasHiddenGenres)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-shelf-chip">+@HiddenGenreCount</MudChip>
-                }
-            </MudStack>
+            </div>
+            <div class="mh-mobile-shelf-tags">
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
+                    @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-shelf-chip">@VisibleGenreLabel</MudChip>
+                    }
+                    @if (HasHiddenGenres)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-shelf-chip">+@HiddenGenreCount</MudChip>
+                    }
+                </MudStack>
+            </div>
         </button>
 
         @if (HasNewChapters)
