@@ -126,6 +126,38 @@
                 </div>
             </MangaBentoTile>
 
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="primary" Class="mh-entry-stat-tile mh-mobile-catalog-stat">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">MangaDex</MudText>
+                    <MudText Typo="Typo.h3">@MangaDexPreferredLanguageLabel</MudText>
+                    <MudText Typo="Typo.caption">Preferred language</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="secondary" Class="mh-entry-stat-tile mh-mobile-catalog-stat">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">MangaUpdates</MudText>
+                    <MudText Typo="Typo.h3">@MangaUpdatesStatusLabel</MudText>
+                    <MudText Typo="Typo.caption">Newest reference</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="@SourceGapScheme" Class="@($"mh-entry-stat-tile mh-source-gap-tile mh-mobile-catalog-stat {SourceGapClass}")">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">@SourceGapHeading</MudText>
+                    <MudText Typo="Typo.h3">@SourceGapValue</MudText>
+                    <MudText Typo="Typo.caption">@SourceGapDetail</MudText>
+                </div>
+            </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="soft" Class="mh-entry-stat-tile mh-mobile-catalog-stat">
+                <div class="mh-entry-stat">
+                    <MudText Typo="Typo.overline">Cached</MudText>
+                    <MudText Typo="Typo.h3">@CachedChapterLabel</MudText>
+                    <MudText Typo="Typo.caption">Stored locally</MudText>
+                </div>
+            </MangaBentoTile>
+
          @*    <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="soft" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Volumes</MudText>
