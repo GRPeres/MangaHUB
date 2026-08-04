@@ -1081,6 +1081,27 @@ html body .mh-mobile-catalog-card {
         padding-top: .25rem !important;
     }
 
+    /* The detail grids stay deliberately compact on phones: two stats per row. */
+    html body .mh-mobile-shelf-bento .mh-bento-grid,
+    html body .mh-mobile-shelf-bento .bzb-grid,
+    html body .mh-mobile-catalog-bento .mh-bento-grid,
+    html body .mh-mobile-catalog-bento .bzb-grid {
+        display: grid !important;
+        grid-auto-flow: row !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    html body .mh-mobile-shelf-bento .bzb-item,
+    html body .mh-mobile-catalog-bento .bzb-item {
+        grid-column: span 1 !important;
+        grid-row: span 1 !important;
+    }
+
+    html body .mh-mobile-shelf-bento .bzb-item:has(.mh-mobile-shelf-description),
+    html body .mh-mobile-catalog-bento .bzb-item:has(.mh-mobile-catalog-description) {
+        grid-column: span 2 !important;
+    }
+
     html body .mh-mobile-shelf-tags,
     html body .mh-mobile-catalog-tags {
         margin-top: auto !important;
