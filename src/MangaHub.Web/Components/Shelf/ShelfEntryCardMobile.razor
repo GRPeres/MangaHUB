@@ -29,15 +29,15 @@
             </MudStack>
         </button>
 
-        <div class="mh-mobile-shelf-actions">
-            @if (HasNewChapters)
-            {
-                <div class="mh-mobile-shelf-release" aria-label="@($"{NewChapterCount} new chapters, latest {LatestChapterValue}")">
-                    <span>New</span>
-                    <strong>+@NewChapterCount</strong>
-                </div>
-            }
+        @if (HasNewChapters)
+        {
+            <div class="mh-mobile-shelf-release" aria-label="@($"{NewChapterCount} new chapters, latest {LatestChapterValue}")">
+                <span>New</span>
+                <strong>+@NewChapterCount</strong>
+            </div>
+        }
 
+        <div class="mh-mobile-shelf-actions">
             @if (CanRead)
             {
                 @if (OpensExternalReader)

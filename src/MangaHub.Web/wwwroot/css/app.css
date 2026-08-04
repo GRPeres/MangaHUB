@@ -929,9 +929,9 @@ html body .mh-mobile-catalog-card {
     html body .mh-mobile-shelf-header {
         display: grid !important;
         gap: .2rem .5rem !important;
-        grid-template-columns: minmax(0, 1fr) auto !important;
+        grid-template-columns: minmax(0, 1fr) auto 3.25rem !important;
         grid-template-rows: minmax(0, 1fr) auto !important;
-        padding: .55rem .6rem .35rem .75rem !important;
+        padding: .55rem 0 .35rem .75rem !important;
     }
 
     html body .mh-mobile-catalog-header {
@@ -980,12 +980,23 @@ html body .mh-mobile-catalog-card {
 
     html body .mh-mobile-shelf-actions {
         align-items: center !important;
+        background: var(--mud-palette-surface) !important;
+        border-left: 1px solid var(--mud-palette-divider) !important;
         display: flex !important;
         flex-direction: column !important;
         gap: .2rem !important;
-        grid-column: 2 !important;
+        grid-column: 3 !important;
         grid-row: 1 / span 2 !important;
         justify-content: center !important;
+        min-width: 3.25rem !important;
+    }
+
+    html body .mh-mobile-shelf-release {
+        align-self: center !important;
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        justify-self: end !important;
+        margin-right: .1rem !important;
     }
 
     html body .mh-mobile-shelf-details-toggle {
@@ -998,7 +1009,7 @@ html body .mh-mobile-catalog-card {
         font: inherit !important;
         font-size: .72rem !important;
         gap: .1rem !important;
-        grid-column: 1 !important;
+        grid-column: 1 / span 2 !important;
         grid-row: 2 !important;
         justify-self: start !important;
         padding: .1rem 0 0 !important;
