@@ -10,6 +10,7 @@ public partial class CatalogEntryCardMobile
     [Parameter] public EventCallback<CatalogMangaResponse> OnManageCache { get; set; }
 
     private bool metadataOpen;
+    private bool detailsOpen;
     private bool IsMissingMyAnimeListId => string.IsNullOrWhiteSpace(Entry.MyAnimeListId);
     private List<string> CategoryLabels => SplitLabels(Entry.Category);
     private string VisibleCategoryLabel => CategoryLabels.Count == 0 ? "" : CompactCategoryLabel(CategoryLabels[0]);
@@ -32,6 +33,7 @@ public partial class CatalogEntryCardMobile
     private Task ManageCache() => OnManageCache.InvokeAsync(Entry);
     private void OpenMetadata() => metadataOpen = true;
     private void CloseMetadata() => metadataOpen = false;
+    private void ToggleDetails() => detailsOpen = !detailsOpen;
     private static string FirstNonEmpty(params string[] values) => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
     private static List<string> SplitLabels(string value) => (value ?? "").Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(label => !string.IsNullOrWhiteSpace(label)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     private static string CompactCategoryLabel(string value) { var trimmed = value.Trim(); if (trimmed.Length <= 14 && !trimmed.Any(char.IsWhiteSpace)) return trimmed; var firstWord = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? trimmed; return firstWord.Length <= 12 ? $"{firstWord}..." : $"{firstWord[..12]}..."; }

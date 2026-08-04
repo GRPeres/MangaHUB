@@ -10,28 +10,34 @@
         }
     </div>
 
-    <button type="button" class="mh-mobile-catalog-header" @onclick="OpenMetadata" aria-label="@($"Open metadata for {Entry.Title}")">
-        <MudText Typo="Typo.h5" Class="mh-mobile-catalog-title">@Entry.Title</MudText>
-        @if (!string.IsNullOrWhiteSpace(Entry.Authors)) { <MudText Typo="Typo.body2">@Entry.Authors</MudText> }
-        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
-            @if (IsMissingMyAnimeListId) { <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled" Icon="@Icons.Material.Filled.WarningAmber">MAL ID missing</MudChip> }
-            @if (!string.IsNullOrWhiteSpace(VisibleCategoryLabel)) { <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-catalog-chip">@VisibleCategoryLabel</MudChip> }
-            @if (HasHiddenCategories) { <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-catalog-chip">+@HiddenCategoryCount</MudChip> }
-        </MudStack>
-    </button>
+    <div class="mh-mobile-catalog-header">
+        <button type="button" class="mh-mobile-catalog-summary" @onclick="ToggleDetails" aria-expanded="@detailsOpen" aria-label="@($"Show catalog details for {Entry.Title}")">
+            <MudText Typo="Typo.h5" Class="mh-mobile-catalog-title">@Entry.Title</MudText>
+            @if (!string.IsNullOrWhiteSpace(Entry.Authors)) { <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mh-mobile-catalog-subtitle">@Entry.Authors</MudText> }
+            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
+                @if (IsMissingMyAnimeListId) { <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled" Icon="@Icons.Material.Filled.WarningAmber">MAL ID missing</MudChip> }
+                @if (!string.IsNullOrWhiteSpace(VisibleCategoryLabel)) { <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-catalog-chip">@VisibleCategoryLabel</MudChip> }
+                @if (HasHiddenCategories) { <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-catalog-chip">+@HiddenCategoryCount</MudChip> }
+            </MudStack>
+        </button>
+        <div class="mh-mobile-catalog-actions">
+            @if (HasMangaDexLink) { <div class="mh-mobile-catalog-action-cell"><MudTooltip Text="Manage cached chapters"><MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" OnClick="ManageCache" aria-label="Manage cached chapters" /></MudTooltip></div> }
+            <div class="mh-mobile-catalog-action-cell"><MudTooltip Text="Edit metadata"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="Edit" aria-label="Edit metadata" /></MudTooltip></div>
+        </div>
+    </div>
 
+    @if (detailsOpen)
+    {
     <MudCardContent Class="mh-mobile-catalog-details">
         <MangaBento Columns="2" ItemMinHeight="72" RowHeight="72" Class="mh-mobile-catalog-bento">
+            @if (!string.IsNullOrWhiteSpace(Entry.Description)) { <MangaBentoTile ColSpan="2" RowSpan="1" Scheme="soft" OnClick="OpenMetadata" AriaLabel="@($"Open full metadata for {Entry.Title}")" Class="mh-mobile-catalog-description"><div class="mh-mobile-catalog-stat"><MudText Typo="Typo.overline">Description</MudText><MudText Typo="Typo.body2">@Entry.Description</MudText></div></MangaBentoTile> }
             <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="primary"><div class="mh-mobile-catalog-stat"><MudText Typo="Typo.overline">MangaDex</MudText><MudText Typo="Typo.h6">@MangaDexPreferredLanguageLabel</MudText><MudText Typo="Typo.caption">Preferred language</MudText></div></MangaBentoTile>
             <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="secondary"><div class="mh-mobile-catalog-stat"><MudText Typo="Typo.overline">MangaUpdates</MudText><MudText Typo="Typo.h6">@MangaUpdatesStatusLabel</MudText><MudText Typo="Typo.caption">Newest reference</MudText></div></MangaBentoTile>
             <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="@SourceGapScheme" Class="@SourceGapClass"><div class="mh-mobile-catalog-stat"><MudText Typo="Typo.overline">@SourceGapHeading</MudText><MudText Typo="Typo.h6">@SourceGapValue</MudText><MudText Typo="Typo.caption">@SourceGapDetail</MudText></div></MangaBentoTile>
             <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="soft"><div class="mh-mobile-catalog-stat"><MudText Typo="Typo.overline">Cached</MudText><MudText Typo="Typo.h6">@CachedChapterLabel</MudText><MudText Typo="Typo.caption">Stored locally</MudText></div></MangaBentoTile>
         </MangaBento>
-        <MudCardActions Class="mh-mobile-catalog-actions">
-            @if (HasMangaDexLink) { <MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" OnClick="ManageCache" aria-label="Manage cached chapters" /> }
-            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="Edit" aria-label="Edit metadata" />
-        </MudCardActions>
     </MudCardContent>
+    }
 </MudCard>
 
 @if (metadataOpen)

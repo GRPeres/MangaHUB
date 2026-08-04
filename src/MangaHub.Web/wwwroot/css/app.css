@@ -1026,6 +1026,73 @@ html body .mh-mobile-catalog-card {
         width: 100% !important;
     }
 
+    html body .mh-mobile-catalog-header {
+        align-items: start !important;
+        display: grid !important;
+        gap: 0 !important;
+        grid-template-columns: minmax(0, 1fr) 3.5rem !important;
+        grid-template-rows: minmax(0, 1fr) !important;
+        padding: .55rem 0 .35rem .75rem !important;
+        position: relative !important;
+    }
+
+    html body .mh-mobile-catalog-summary {
+        align-items: flex-start !important;
+        appearance: none !important;
+        background: transparent !important;
+        border: 0 !important;
+        color: inherit !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: .45rem !important;
+        justify-content: flex-start !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        text-align: left !important;
+    }
+
+    html body .mh-mobile-catalog-header .mh-mobile-catalog-subtitle {
+        color: var(--mud-palette-secondary) !important;
+    }
+
+    html body .mh-mobile-catalog-actions {
+        align-items: stretch !important;
+        background: var(--mud-palette-surface) !important;
+        border-left: 1px solid var(--mud-palette-divider) !important;
+        border-radius: 0 8px 8px 0 !important;
+        border-top: 0 !important;
+        bottom: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        margin-top: 0 !important;
+        padding: 0 !important;
+        position: absolute !important;
+        right: 0 !important;
+        top: 0 !important;
+        width: 3.5rem !important;
+    }
+
+    html body .mh-mobile-catalog-action-cell,
+    html body .mh-mobile-catalog-action-cell > * {
+        align-self: stretch !important;
+        display: flex !important;
+        flex: 1 1 0 !important;
+        width: 100% !important;
+    }
+
+    html body .mh-mobile-catalog-action-cell .mud-icon-button {
+        border: 0 !important;
+        border-bottom: 1px solid var(--mud-palette-divider) !important;
+        border-radius: 0 !important;
+        height: 100% !important;
+        width: 100% !important;
+    }
+
+    html body .mh-mobile-catalog-action-cell:last-child .mud-icon-button {
+        border-bottom: 0 !important;
+    }
+
     html body .mh-mobile-shelf-actions .mud-icon-button {
         border: 0 !important;
         border-bottom: 1px solid var(--mud-palette-divider) !important;
