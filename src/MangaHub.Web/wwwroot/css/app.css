@@ -879,3 +879,128 @@ html.mh-theme-dark .loading-progress circle:last-child {
         max-height: min(68vh, 34rem);
     }
 }
+
+/* Responsive card variants are separate components; only one may participate in layout. */
+html body .mh-mobile-shelf-card,
+html body .mh-mobile-catalog-card {
+    display: none !important;
+}
+
+@media (max-width: 600px) {
+    html body .mh-card-desktop-view {
+        display: none !important;
+    }
+
+    html body .mh-mobile-shelf-card,
+    html body .mh-mobile-catalog-card {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        overflow: hidden !important;
+        position: relative !important;
+    }
+
+    html body .mh-mobile-shelf-cover,
+    html body .mh-mobile-catalog-cover {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        height: 132px !important;
+        overflow: hidden !important;
+    }
+
+    html body .mh-mobile-shelf-cover-image,
+    html body .mh-mobile-catalog-cover-image {
+        filter: blur(2px) brightness(.52) !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        transform: scale(1.025) !important;
+        width: 100% !important;
+    }
+
+    html body .mh-mobile-shelf-header,
+    html body .mh-mobile-catalog-header {
+        background: rgba(18, 8, 30, .36) !important;
+        color: #fffaff !important;
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        min-width: 0 !important;
+        z-index: 1 !important;
+    }
+
+    html body .mh-mobile-shelf-header {
+        display: grid !important;
+        gap: .2rem .5rem !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        grid-template-rows: minmax(0, 1fr) auto !important;
+        padding: .55rem .6rem .35rem .75rem !important;
+    }
+
+    html body .mh-mobile-catalog-header {
+        align-items: flex-start !important;
+        appearance: none !important;
+        border: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: .45rem !important;
+        justify-content: center !important;
+        padding: .75rem !important;
+        text-align: left !important;
+    }
+
+    html body .mh-mobile-shelf-summary {
+        align-items: flex-start !important;
+        appearance: none !important;
+        background: transparent !important;
+        border: 0 !important;
+        color: inherit !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: .45rem !important;
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        justify-content: center !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        text-align: left !important;
+    }
+
+    html body .mh-mobile-shelf-title,
+    html body .mh-mobile-catalog-title {
+        display: -webkit-box !important;
+        font-size: 1.25rem !important;
+        line-height: 1.15 !important;
+        overflow: hidden !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 2 !important;
+    }
+
+    html body .mh-mobile-shelf-header .mud-typography,
+    html body .mh-mobile-catalog-header .mud-typography {
+        color: inherit !important;
+    }
+
+    html body .mh-mobile-shelf-actions {
+        align-items: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: .2rem !important;
+        grid-column: 2 !important;
+        grid-row: 1 / span 2 !important;
+        justify-content: center !important;
+    }
+
+    html body .mh-mobile-shelf-details-toggle {
+        align-items: center !important;
+        appearance: none !important;
+        background: transparent !important;
+        border: 0 !important;
+        color: #fffaff !important;
+        display: inline-flex !important;
+        font: inherit !important;
+        font-size: .72rem !important;
+        gap: .1rem !important;
+        grid-column: 1 !important;
+        grid-row: 2 !important;
+        justify-self: start !important;
+        padding: .1rem 0 0 !important;
+    }
+}
