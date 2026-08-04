@@ -11,11 +11,11 @@
     </div>
 
     <div class="mh-mobile-shelf-header">
-        <button type="button" class="mh-mobile-shelf-summary" @onclick="OpenMetadata" aria-label="@($"Open metadata for {Entry.Title}")">
+        <button type="button" class="mh-mobile-shelf-summary" @onclick="ToggleDetails" aria-expanded="@detailsOpen" aria-label="@($"Show reading details for {Entry.Title}")">
             <MudText Typo="Typo.h5" Class="mh-mobile-shelf-title">@Entry.Title</MudText>
             @if (!string.IsNullOrWhiteSpace(Entry.Authors))
             {
-                <MudText Typo="Typo.body2">@Entry.Authors</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mh-mobile-shelf-subtitle">@Entry.Authors</MudText>
             }
             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
                 @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
@@ -56,10 +56,6 @@
             <MudTooltip Text="Edit shelf entry"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" OnClick="Edit" aria-label="Edit shelf entry" /></MudTooltip>
         </div>
 
-        <button type="button" class="mh-mobile-shelf-details-toggle" @onclick="ToggleDetails" aria-expanded="@detailsOpen">
-            <span>@(detailsOpen ? "Hide reading details" : "Reading details")</span>
-            <MudIcon Icon="@(detailsOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
-        </button>
     </div>
 
     @if (detailsOpen)
@@ -72,6 +68,12 @@
                 <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="@ProgressScheme" Class="@(HasNewChapters ? "mh-mobile-shelf-release-tile" : "")">
                     <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">@(HasNewChapters ? "New" : "Progress")</MudText><MudText Typo="Typo.h6">@(HasNewChapters ? $"+{NewChapterCount}" : CurrentChapterValue)</MudText><MudText Typo="Typo.caption">@(HasNewChapters ? $"Latest {LatestChapterValue}" : ProgressHint)</MudText></div>
                 </MangaBentoTile>
+                @if (!string.IsNullOrWhiteSpace(DescriptionText))
+                {
+                    <MangaBentoTile ColSpan="2" RowSpan="1" Scheme="soft" OnClick="OpenMetadata" AriaLabel="@($"Open full metadata for {Entry.Title}")" Class="mh-mobile-shelf-description">
+                        <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">Description</MudText><MudText Typo="Typo.body2">@DescriptionText</MudText></div>
+                    </MangaBentoTile>
+                }
             </MangaBento>
             <MudCardActions Class="mh-mobile-shelf-rating" aria-label="@($"Rate {Entry.Title}")">
                 @for (var value = 1; value <= 5; value++)

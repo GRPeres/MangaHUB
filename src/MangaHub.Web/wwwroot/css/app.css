@@ -978,6 +978,10 @@ html body .mh-mobile-catalog-card {
         color: inherit !important;
     }
 
+    html body .mh-mobile-shelf-header .mh-mobile-shelf-subtitle {
+        color: var(--mud-palette-secondary) !important;
+    }
+
     html body .mh-mobile-shelf-actions {
         align-items: center !important;
         background: var(--mud-palette-surface) !important;
@@ -999,19 +1003,4 @@ html body .mh-mobile-catalog-card {
         margin-right: .1rem !important;
     }
 
-    html body .mh-mobile-shelf-details-toggle {
-        align-items: center !important;
-        appearance: none !important;
-        background: transparent !important;
-        border: 0 !important;
-        color: #fffaff !important;
-        display: inline-flex !important;
-        font: inherit !important;
-        font-size: .72rem !important;
-        gap: .1rem !important;
-        grid-column: 1 / span 2 !important;
-        grid-row: 2 !important;
-        justify-self: start !important;
-        padding: .1rem 0 0 !important;
-    }
 }
