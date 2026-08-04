@@ -7,6 +7,10 @@
     overflow: hidden;
 }
 
+.mh-card-desktop-view {
+    display: block;
+}
+
 .mh-mobile-entry-header {
     display: none;
 }
@@ -266,94 +270,8 @@
     white-space: nowrap;
 }
 
-@media (max-width: 640px) {
-    .mh-row-card {
-        grid-template-columns: 1fr;
-    }
-
-    .mh-cover-frame {
-        border-bottom: 1px solid var(--mud-palette-divider);
-        border-right: 0;
-        max-height: 280px;
-    }
-
-    ::deep .mh-entry-bento {
-        --mh-bento-item-min-height: 92px;
-        --mh-bento-row-height: 92px;
-        display: grid !important;
-        grid-auto-flow: row !important;
-        grid-auto-rows: auto !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-
-    ::deep .mh-entry-bento > .bzb-item {
-        grid-column: span 1 !important;
-        grid-row: span 1 !important;
-        min-height: 92px !important;
-    }
-
-    ::deep .mh-entry-bento > .bzb-item:nth-child(1) {
-        grid-column: 1 / -1 !important;
-        min-height: 190px !important;
-    }
-
-    ::deep .mh-entry-bento > .bzb-item:nth-child(n + 2) {
-        min-height: 104px !important;
-    }
-
-    ::deep .mh-row-cover {
-        height: 280px;
-        max-height: 280px;
-        min-height: 280px;
-        width: 100%;
-    }
-
-    .mh-cover-placeholder {
-        height: 280px;
-        min-height: 280px;
-    }
-
-    .mh-entry-main {
-        gap: .6rem;
-        justify-content: flex-start;
-    }
-
-    .mh-entry-topline {
-        grid-template-columns: 1fr;
-    }
-
-    ::deep .mh-primary-tags {
-        justify-content: flex-start;
-        max-width: none;
-        text-align: left;
-    }
-
-    ::deep .mh-secondary-tags,
-    .mh-mobile-hide {
-        display: none !important;
-    }
-
-    .mh-row-summary {
-        -webkit-line-clamp: 3;
-    }
-
-    .mh-entry-context {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    ::deep .mh-entry-stat-tile .mh-bento-tile {
-        padding: .7rem;
-    }
-
-    .mh-entry-stat {
-        justify-content: space-between;
-    }
-
-    ::deep .mh-bento-card-actions {
-        justify-content: stretch;
-    }
-
-    ::deep .mh-bento-card-actions .mud-button-root {
-        flex: 1 1 0;
+@media (max-width: 600px) {
+    .mh-card-desktop-view {
+        display: none;
     }
 }

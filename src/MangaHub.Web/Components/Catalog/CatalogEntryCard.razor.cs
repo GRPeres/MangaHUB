@@ -33,11 +33,6 @@ public partial class CatalogEntryCard
         ? "Sync overdue"
         : Entry.MangaDexLastSyncedAt.Value.ToLocalTime().ToString("g");
     private string CachedChapterLabel => Entry.CachedChapterCount == 1 ? "1 chapter" : $"{Entry.CachedChapterCount} chapters";
-    private string MangaDexPreferredLanguageLabel => !HasMangaDexLink
-        ? "Unbound"
-        : Entry.MangaDexPreferredLanguageLatestChapter is null
-            ? "Checking"
-            : $"Ch. {FormatChapter(Entry.MangaDexPreferredLanguageLatestChapter.Value)}";
     private string MangaUpdatesStatusLabel => string.IsNullOrWhiteSpace(Entry.MangaUpdatesId)
         ? "Unbound"
         : Entry.MangaUpdatesLatestChapter is null

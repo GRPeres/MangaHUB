@@ -16,7 +16,6 @@ public partial class ShelfEntryCard
     [Parameter] public EventCallback<int?> OnScoreChanged { get; set; }
 
     private bool metadataOpen;
-    private bool mobileDetailsOpen;
     private bool isSavingScore;
     private int? selectedScore;
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
@@ -55,7 +54,7 @@ public partial class ShelfEntryCard
     private bool IsMangaDexSyncOverdue => HasMangaDexLink
         && Entry.MangaDexLastSyncedAt is not null
         && Entry.MangaDexLastSyncedAt < DateTimeOffset.UtcNow.AddHours(-30);
-    private string CardClass => $"mh-row-card mh-shelf-row-card {(HasNewChapters ? "mh-row-card-has-release" : "")} {(mobileDetailsOpen ? "mh-mobile-details-open" : "")}".Trim();
+    private string CardClass => HasNewChapters ? "mh-row-card mh-row-card-has-release" : "mh-row-card";
     private string ProgressTileClass => HasNewChapters ? "mh-entry-stat-tile mh-entry-release-tile" : "mh-entry-stat-tile";
     private string ProgressHint => !HasMangaDexLink
         ? "MangaDex sync unavailable"
@@ -163,7 +162,6 @@ public partial class ShelfEntryCard
     private string MetadataTitleId => $"shelf-metadata-{Entry.Id:N}";
     private void OpenMetadata() => metadataOpen = true;
     private void CloseMetadata() => metadataOpen = false;
-    private void ToggleMobileDetails() => mobileDetailsOpen = !mobileDetailsOpen;
 
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";

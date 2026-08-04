@@ -1,3 +1,4 @@
+<div class="mh-card-desktop-view">
 <MudCard Elevation="0" Outlined="true" Class="mh-row-card">
     <div class="mh-cover-frame">
         @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
@@ -15,31 +16,6 @@
             <strong>@FirstYearLabel</strong>
         </div>
     </div>
-
-    <button type="button" class="mh-mobile-entry-header" @onclick="OpenMetadata" aria-label="@($"Open metadata for {Entry.Title}")">
-        <div class="mh-title-block">
-            <MudText Typo="Typo.h4" Class="mh-row-title">@Entry.Title</MudText>
-            @if (!string.IsNullOrWhiteSpace(Entry.Authors))
-            {
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
-            }
-        </div>
-
-        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
-            @if (IsMissingMyAnimeListId)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled" Icon="@Icons.Material.Filled.WarningAmber" Class="mh-card-chip mh-metadata-warning">MAL ID missing</MudChip>
-            }
-            @if (!string.IsNullOrWhiteSpace(VisibleCategoryLabel))
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleCategoryLabel</MudChip>
-            }
-            @if (HasHiddenCategories)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip mh-count-chip">+@HiddenCategoryCount</MudChip>
-            }
-        </MudStack>
-    </button>
 
     <MudCardContent Class="mh-bento-card-content">
         <MangaBento Columns="5" ItemMinHeight="52" RowHeight="52" Class="mh-entry-bento">
@@ -126,38 +102,6 @@
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="primary" Class="mh-entry-stat-tile mh-mobile-catalog-stat">
-                <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">MangaDex</MudText>
-                    <MudText Typo="Typo.h3">@MangaDexPreferredLanguageLabel</MudText>
-                    <MudText Typo="Typo.caption">Preferred language</MudText>
-                </div>
-            </MangaBentoTile>
-
-            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="secondary" Class="mh-entry-stat-tile mh-mobile-catalog-stat">
-                <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">MangaUpdates</MudText>
-                    <MudText Typo="Typo.h3">@MangaUpdatesStatusLabel</MudText>
-                    <MudText Typo="Typo.caption">Newest reference</MudText>
-                </div>
-            </MangaBentoTile>
-
-            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="@SourceGapScheme" Class="@($"mh-entry-stat-tile mh-source-gap-tile mh-mobile-catalog-stat {SourceGapClass}")">
-                <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">@SourceGapHeading</MudText>
-                    <MudText Typo="Typo.h3">@SourceGapValue</MudText>
-                    <MudText Typo="Typo.caption">@SourceGapDetail</MudText>
-                </div>
-            </MangaBentoTile>
-
-            <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="soft" Class="mh-entry-stat-tile mh-mobile-catalog-stat">
-                <div class="mh-entry-stat">
-                    <MudText Typo="Typo.overline">Cached</MudText>
-                    <MudText Typo="Typo.h3">@CachedChapterLabel</MudText>
-                    <MudText Typo="Typo.caption">Stored locally</MudText>
-                </div>
-            </MangaBentoTile>
-
          @*    <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="soft" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Volumes</MudText>
@@ -193,6 +137,11 @@
         </MudCardActions>
     </MudCardContent>
 </MudCard>
+</div>
+
+<CatalogEntryCardMobile Entry="@Entry"
+                         OnEdit="@OnEdit"
+                         OnManageCache="@OnManageCache" />
 
 @if (metadataOpen)
 {

@@ -1,3 +1,4 @@
+<div class="mh-card-desktop-view">
 <MudCard Elevation="0" Outlined="true" Class="@CardClass">
     <div class="mh-cover-frame">
         @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
@@ -14,81 +15,6 @@
             <span>Read from</span>
             <strong>@ReadSourceLabel</strong>
         </div>
-    </div>
-
-    <div class="mh-mobile-entry-header">
-        <button type="button" class="mh-mobile-entry-summary" @onclick="OpenMetadata" aria-label="@($"Open metadata for {Entry.Title}")">
-            <div class="mh-title-block">
-                <MudText Typo="Typo.h4" Class="mh-row-title">@Entry.Title</MudText>
-                @if (!string.IsNullOrWhiteSpace(Entry.Authors))
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
-                }
-            </div>
-
-            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
-                @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleGenreLabel</MudChip>
-                }
-                @if (HasHiddenGenres)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip mh-count-chip">+@HiddenGenreCount</MudChip>
-                }
-            </MudStack>
-        </button>
-
-        <div class="mh-mobile-action-rail">
-            @if (HasNewChapters)
-            {
-                <div class="mh-mobile-release-card" aria-label="@($"{NewChapterCount} new chapters, latest {LatestChapterValue}")">
-                    <span>New</span>
-                    <strong>+@NewChapterCount</strong>
-                </div>
-            }
-
-            @if (CanRead)
-            {
-                @if (OpensExternalReader)
-                {
-                    <MudTooltip Text="Read in external reader">
-                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
-                                       Color="Color.Primary"
-                                       Href="@Entry.FallbackReaderUrl"
-                                       Target="_blank"
-                                       Rel="noopener noreferrer"
-                                       aria-label="Read in external reader" />
-                    </MudTooltip>
-                }
-                else
-                {
-                    <MudTooltip Text="Read">
-                        <MudIconButton Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" OnClick="Read" aria-label="Read" />
-                    </MudTooltip>
-                }
-
-                @if (ShowsExternalReaderAction)
-                {
-                    <MudTooltip Text="Open external reader">
-                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
-                                       Color="Color.Primary"
-                                       Href="@Entry.FallbackReaderUrl"
-                                       Target="_blank"
-                                       Rel="noopener noreferrer"
-                                       aria-label="Open external reader" />
-                    </MudTooltip>
-                }
-            }
-
-            <MudTooltip Text="Edit shelf entry">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" OnClick="Edit" aria-label="Edit shelf entry" />
-            </MudTooltip>
-        </div>
-
-        <button type="button" class="mh-mobile-details-toggle" @onclick="ToggleMobileDetails" aria-expanded="@mobileDetailsOpen">
-            <span>@(mobileDetailsOpen ? "Hide reading details" : "Reading details")</span>
-            <MudIcon Icon="@(mobileDetailsOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
-        </button>
     </div>
 
     <MudCardContent Class="mh-bento-card-content">
@@ -237,6 +163,15 @@
         </MudCardActions>
     </MudCardContent>
 </MudCard>
+</div>
+
+<ShelfEntryCardMobile Entry="@Entry"
+                       ActiveStatusFilter="@ActiveStatusFilter"
+                       CanRead="@CanRead"
+                       OnRead="@OnRead"
+                       OnEdit="@OnEdit"
+                       OnStatusFilter="@OnStatusFilter"
+                       OnScoreChanged="@OnScoreChanged" />
 
 @if (metadataOpen)
 {

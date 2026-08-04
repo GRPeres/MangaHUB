@@ -1,0 +1,19 @@
+.mh-mobile-catalog-card { display: none; }
+
+@media (max-width: 600px) {
+    .mh-mobile-catalog-card { display: grid; grid-template-columns: 1fr; overflow: hidden; position: relative; }
+    .mh-mobile-catalog-cover { align-items: center; background: #160d22; color: var(--mud-palette-primary); display: flex; grid-column: 1; grid-row: 1; height: 132px; justify-content: center; overflow: hidden; }
+    ::deep .mh-mobile-catalog-cover-image { filter: blur(2px) brightness(.52); height: 100%; object-fit: cover; transform: scale(1.025); width: 100%; }
+    .mh-mobile-catalog-header { align-items: flex-start; appearance: none; background: rgba(18, 8, 30, .36); border: 0; color: #fffaff; display: flex; flex-direction: column; gap: .45rem; grid-column: 1; grid-row: 1; justify-content: center; padding: .75rem; text-align: left; z-index: 1; }
+    ::deep .mh-mobile-catalog-header .mud-typography { color: inherit; }
+    .mh-mobile-catalog-title { display: -webkit-box; font-size: 1.25rem; line-height: 1.15; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    ::deep .mh-mobile-catalog-chip { background: rgba(255,255,255,.08); color: #fffaff; }
+    ::deep .mh-mobile-catalog-details { padding: .55rem; }
+    ::deep .mh-mobile-catalog-bento { --bzb-gap: 4px; }
+    ::deep .mh-mobile-catalog-bento .mh-bento-tile { padding: .65rem; }
+    .mh-mobile-catalog-stat { display: flex; flex-direction: column; gap: .1rem; justify-content: center; min-height: 58px; }
+    ::deep .mh-mobile-catalog-gap-good .mh-bento-tile { --mh-bento-bg: color-mix(in srgb, var(--mud-palette-success) 9%, var(--mud-palette-surface)); }
+    ::deep .mh-mobile-catalog-gap-warning .mh-bento-tile { --mh-bento-bg: color-mix(in srgb, var(--mud-palette-warning) 11%, var(--mud-palette-surface)); }
+    ::deep .mh-mobile-catalog-gap-critical .mh-bento-tile { --mh-bento-bg: color-mix(in srgb, var(--mud-palette-error) 12%, var(--mud-palette-surface)); }
+    ::deep .mh-mobile-catalog-actions { border-top: 1px solid var(--mud-palette-divider); display: flex; gap: .5rem; justify-content: flex-end; margin-top: .55rem; padding: .55rem 0 0; }
+}
