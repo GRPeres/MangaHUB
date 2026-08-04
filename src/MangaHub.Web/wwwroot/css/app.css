@@ -630,17 +630,18 @@ html.mh-theme-dark .loading-progress circle:last-child {
 
 @media (max-width: 600px) {
     html body .mh-row-card {
-        grid-template-columns: minmax(108px, 38%) minmax(0, 1fr) !important;
+        grid-template-columns: minmax(0, 1fr) !important;
     }
 
     html body .mh-row-card > .mh-cover-frame {
-        border-bottom: 0 !important;
-        border-right: 1px solid var(--mud-palette-divider) !important;
-        grid-column: 1 !important;
+        border-bottom: 1px solid var(--mud-palette-divider) !important;
+        border-right: 0 !important;
+        grid-column: 1 / -1 !important;
         grid-row: 1 !important;
         height: 132px !important;
         max-height: 132px !important;
         min-height: 132px !important;
+        position: relative !important;
     }
 
     html body .mh-row-card > .mh-cover-frame .mh-row-cover {
@@ -648,6 +649,8 @@ html.mh-theme-dark .loading-progress circle:last-child {
         max-height: 132px !important;
         min-height: 132px !important;
         width: 100% !important;
+        filter: blur(2px) brightness(.52) !important;
+        transform: scale(1.025) !important;
     }
 
     html body .mh-row-card > .mh-cover-frame .mh-cover-placeholder {
@@ -662,23 +665,30 @@ html.mh-theme-dark .loading-progress circle:last-child {
     html body .mh-row-card > .mh-mobile-entry-header {
         align-items: flex-start !important;
         appearance: none !important;
-        background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface)) !important;
+        background: rgba(18, 8, 30, .36) !important;
         border: 0 !important;
-        color: inherit !important;
+        color: #fffaff !important;
         cursor: pointer !important;
         display: flex !important;
         flex-direction: column !important;
         gap: .55rem !important;
-        grid-column: 2 !important;
+        grid-column: 1 / -1 !important;
         grid-row: 1 !important;
         justify-content: center !important;
         min-width: 0 !important;
         padding: .75rem !important;
         text-align: left !important;
+        z-index: 1 !important;
     }
 
     html body .mh-row-card > .mh-mobile-entry-header .mh-row-title {
+        font-size: 1.25rem !important;
+        line-height: 1.15 !important;
         margin: 0 !important;
+    }
+
+    html body .mh-row-card > .mh-mobile-entry-header .mud-typography {
+        color: inherit !important;
     }
 
     html body .mh-row-card > .mh-mobile-entry-header .mh-primary-tags {
