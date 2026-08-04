@@ -1108,12 +1108,13 @@ html body .mh-mobile-catalog-card {
     }
 
     html body .mh-mobile-card-action .mud-icon-button {
-        background: color-mix(in srgb, var(--mud-palette-surface) 84%, transparent) !important;
-        border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 32%, var(--mud-palette-divider)) !important;
-        height: 2.7rem !important;
-        min-height: 2.7rem !important;
-        min-width: 2.7rem !important;
-        width: 2.7rem !important;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        height: 2.4rem !important;
+        min-height: 2.4rem !important;
+        min-width: 2.4rem !important;
+        width: 2.4rem !important;
     }
 
     html body .mh-mobile-shelf-release {
