@@ -951,8 +951,8 @@ html body .mh-mobile-catalog-card {
         grid-template-columns: minmax(0, 1fr) auto 3.5rem !important;
         grid-template-rows: minmax(0, 1fr) !important;
         padding: .55rem 0 .35rem .75rem !important;
-        /* The card owns the rail's absolute positioning, so it can span expanded details too. */
-        position: static !important;
+        /* Keep the action rail scoped to the shared card header, like Catalog. */
+        position: relative !important;
     }
 
     html body .mh-mobile-catalog-header {
