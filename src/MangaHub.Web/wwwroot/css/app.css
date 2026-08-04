@@ -962,7 +962,7 @@ html body .mh-mobile-catalog-card {
         gap: .2rem .5rem !important;
         grid-template-columns: minmax(0, 1fr) auto !important;
         grid-template-rows: minmax(0, 1fr) auto !important;
-        padding: .55rem .75rem .35rem !important;
+        padding: .55rem 0 .35rem .75rem !important;
         position: relative !important;
     }
 
@@ -1018,13 +1018,9 @@ html body .mh-mobile-catalog-card {
         align-items: center !important;
         display: flex !important;
         gap: .4rem !important;
-        grid-column: 2 !important;
-        grid-row: 2 !important;
         justify-content: flex-end !important;
-        justify-self: end !important;
-        margin: 0 0 .35rem !important;
+        margin: 0 !important;
         padding: 0 !important;
-        z-index: 2 !important;
     }
 
     html body .mh-mobile-catalog-header {
@@ -1033,8 +1029,21 @@ html body .mh-mobile-catalog-card {
         gap: 0 !important;
         grid-template-columns: minmax(0, 1fr) auto !important;
         grid-template-rows: minmax(0, 1fr) auto !important;
-        padding: .55rem .75rem .35rem !important;
+        padding: .55rem 0 .35rem .75rem !important;
         position: relative !important;
+    }
+
+    /* One shared right rail keeps release state and actions aligned with the card inset. */
+    html body .mh-mobile-card-controls {
+        align-items: flex-end !important;
+        display: flex !important;
+        flex-direction: column !important;
+        grid-column: 2 !important;
+        grid-row: 1 / span 2 !important;
+        justify-content: space-between !important;
+        margin: .15rem .75rem .35rem 0 !important;
+        min-height: 0 !important;
+        z-index: 2 !important;
     }
 
     html body .mh-mobile-catalog-summary {
@@ -1108,12 +1117,7 @@ html body .mh-mobile-catalog-card {
     }
 
     html body .mh-mobile-shelf-release {
-        align-self: start !important;
-        grid-column: 2 !important;
-        grid-row: 1 !important;
-        justify-self: end !important;
-        margin-right: 0 !important;
-        margin-top: .15rem !important;
+        margin: 0 !important;
     }
 
 }

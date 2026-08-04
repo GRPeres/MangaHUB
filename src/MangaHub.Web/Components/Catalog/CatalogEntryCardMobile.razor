@@ -24,9 +24,11 @@
                 </MudStack>
             </div>
         </button>
-        <div class="mh-mobile-card-actions" aria-label="@($"Actions for {Entry.Title}")">
-            @if (HasMangaDexLink) { <div class="mh-mobile-card-action"><MudTooltip Text="Manage cached chapters"><MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" OnClick="ManageCache" aria-label="Manage cached chapters" /></MudTooltip></div> }
-            <div class="mh-mobile-card-action"><MudTooltip Text="Edit metadata"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="Edit" aria-label="Edit metadata" /></MudTooltip></div>
+        <div class="mh-mobile-card-controls">
+            <div class="mh-mobile-card-actions" aria-label="@($"Actions for {Entry.Title}")">
+                @if (HasMangaDexLink) { <div class="mh-mobile-card-action"><MudTooltip Text="Manage cached chapters"><MudIconButton Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" OnClick="ManageCache" aria-label="Manage cached chapters" /></MudTooltip></div> }
+                <div class="mh-mobile-card-action"><MudTooltip Text="Edit metadata"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="Edit" aria-label="Edit metadata" /></MudTooltip></div>
+            </div>
         </div>
     </div>
 
