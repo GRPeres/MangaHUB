@@ -992,38 +992,39 @@ html body .mh-mobile-catalog-card {
         align-items: stretch !important;
         background: var(--mud-palette-surface) !important;
         border-left: 1px solid var(--mud-palette-divider) !important;
+        border-radius: 0 8px 8px 0 !important;
+        border-top: 0 !important;
+        bottom: 0 !important;
         display: flex !important;
         flex-direction: column !important;
-        align-self: stretch !important;
-        gap: 0 !important;
-        border-radius: 0 8px 8px 0 !important;
-        bottom: 0 !important;
-        height: 100% !important;
-        justify-content: stretch !important;
-        min-width: 3.5rem !important;
+        margin-top: 0 !important;
         overflow: hidden !important;
+        padding: 0 !important;
         position: absolute !important;
         right: 0 !important;
         top: 0 !important;
         width: 3.5rem !important;
     }
 
-    html body .mh-mobile-shelf-actions > * {
+    html body .mh-mobile-shelf-action-cell,
+    html body .mh-mobile-shelf-action-cell > * {
         align-self: stretch !important;
         display: flex !important;
         flex: 1 1 0 !important;
         width: 100% !important;
     }
 
-    html body .mh-mobile-shelf-action-cell > * {
-        display: flex !important;
-        flex: 1 1 0 !important;
+    html body .mh-mobile-shelf-action-cell .mud-icon-button {
+        border: 0 !important;
+        border-bottom: 1px solid var(--mud-palette-divider) !important;
+        border-radius: 0 !important;
+        height: 100% !important;
+        min-height: 0 !important;
         width: 100% !important;
     }
 
-    html body .mh-mobile-shelf-action-cell .mud-icon-button {
-        height: 100% !important;
-        width: 100% !important;
+    html body .mh-mobile-shelf-action-cell:last-child .mud-icon-button {
+        border-bottom: 0 !important;
     }
 
     html body .mh-mobile-catalog-header {
@@ -1090,19 +1091,6 @@ html body .mh-mobile-catalog-card {
     }
 
     html body .mh-mobile-catalog-action-cell:last-child .mud-icon-button {
-        border-bottom: 0 !important;
-    }
-
-    html body .mh-mobile-shelf-actions .mud-icon-button {
-        border: 0 !important;
-        border-bottom: 1px solid var(--mud-palette-divider) !important;
-        border-radius: 0 !important;
-        flex: 1 1 0 !important;
-        min-height: 0 !important;
-        width: 100% !important;
-    }
-
-    html body .mh-mobile-shelf-actions .mud-icon-button:last-child {
         border-bottom: 0 !important;
     }
 
