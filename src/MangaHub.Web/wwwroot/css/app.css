@@ -906,6 +906,7 @@ html body .mh-mobile-catalog-card {
 
     html body .mh-mobile-shelf-card,
     html body .mh-mobile-catalog-card {
+        border: 0 !important;
         display: grid !important;
         grid-template-columns: minmax(0, 1fr) !important;
         overflow: hidden !important;
