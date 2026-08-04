@@ -107,7 +107,7 @@ public sealed class ReaderService(
                 {
                     throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
                 }
-                if (afterCachedChapterId is not null && IsPublishingComplete(entry.PublishingStatus))
+                if (afterCachedChapterId is not null && IsPublishingComplete(entry))
                 {
                     await MarkShelfEntryDoneAsync(shelfEntry, cancellationToken);
                     throw new MangaCompletedException();
@@ -139,7 +139,7 @@ public sealed class ReaderService(
                     throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
                 }
                 await RecordCompletedMangaDexChapterAsync(entry, shelfEntry.CurrentChapter, cancellationToken);
-                if (IsPublishingComplete(entry.PublishingStatus))
+                if (IsPublishingComplete(entry))
                 {
                     await MarkShelfEntryDoneAsync(shelfEntry, cancellationToken);
                     throw new MangaCompletedException();
@@ -509,7 +509,9 @@ public sealed class ReaderService(
         await shelf.SaveChangesAsync(cancellationToken);
     }
 
-    private static bool IsPublishingComplete(string status) => status.Trim().ToLowerInvariant() is "finished" or "complete" or "completed" or "done" or "ended";
+    private static bool IsPublishingComplete(MangaEntry entry) =>
+        entry.MangaUpdatesCompleted == true
+        || entry.PublishingStatus.Trim().ToLowerInvariant() is "finished" or "complete" or "completed" or "done" or "ended";
 
     private static string ReaderModeQuery(MangaEntry entry) => UsesVerticalReader(entry) ? "&vertical=true" : "";
 
