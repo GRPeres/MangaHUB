@@ -326,12 +326,24 @@ a {
     width: 100%;
 }
 
+.reader-page-loading-preview {
+    filter: blur(12px) brightness(.72);
+    position: absolute;
+    transform: scale(1.035);
+    z-index: 0;
+}
+
+.reader-page-image {
+    position: relative;
+    z-index: 1;
+}
+
 .reader-page-frame.is-page-loading {
     background: var(--mud-palette-background);
     border-radius: 8px;
 }
 
-.reader-page-frame.is-page-loading > img {
+.reader-page-frame.is-page-loading > img.reader-page-image {
     opacity: 0;
 }
 
@@ -379,6 +391,7 @@ a {
     top: 0;
     transition: background-color .16s ease, color .16s ease;
     width: 25%;
+    z-index: 2;
 }
 
 .reader-page-hit-area:focus-visible {

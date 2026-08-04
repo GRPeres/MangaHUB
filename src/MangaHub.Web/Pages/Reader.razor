@@ -52,7 +52,15 @@
             }
             else
             {
+                @if (isPageLoading && !string.IsNullOrWhiteSpace(loadingPreviewUrl))
+                {
+                    <img class="reader-page-loading-preview"
+                         src="@loadingPreviewUrl"
+                         alt=""
+                         aria-hidden="true" />
+                }
                 <img @key="pageImageVersion"
+                     class="reader-page-image"
                      @ref="pageImage"
                      src="@ReadApi.GetPageUrl(ChapterId, page, pageImageVersion)"
                      alt="Manga page @(page + 1)"
@@ -180,6 +188,7 @@
     private DotNetObjectReference<Reader>? verticalReaderReference;
     private Guid verticalObservedChapterId;
     private string pageImageVersion = Guid.NewGuid().ToString("N");
+    private string? loadingPreviewUrl;
     private ReaderPreparationStatus? readerPreparation;
     private Guid? loadedLanguageEntryId;
     private List<string> availableLanguages = [];
@@ -214,6 +223,7 @@
             loadedChapterId = ChapterId;
             page = 0;
             isPageLoading = false;
+            loadingPreviewUrl = null;
             readerMessage = "";
             isPreparingChapter = false;
             isSeriesComplete = false;
@@ -267,8 +277,8 @@
     {
         if (page > 0)
         {
+            BeginPageTransition(page);
             page--;
-            BeginPageTransition();
             if (IsVerticalReader)
             {
                 await JS.InvokeVoidAsync("mangaHubReader.scrollVerticalPage", pageFrame, page);
@@ -321,8 +331,8 @@
     {
         if (page < PageCount - 1)
         {
+            BeginPageTransition(page);
             page++;
-            BeginPageTransition();
             if (IsVerticalReader)
             {
                 await JS.InvokeVoidAsync("mangaHubReader.scrollVerticalPage", pageFrame, page);
@@ -485,6 +495,7 @@
     private async Task OnPageLoaded()
     {
         isPageLoading = false;
+        loadingPreviewUrl = null;
         ClearReaderMessage();
         if (IsVerticalReader)
         {
@@ -553,10 +564,11 @@
 
     private void ClearReaderMessage() => readerMessage = "";
 
-    private void BeginPageTransition()
+    private void BeginPageTransition(int outgoingPage)
     {
         if (!IsVerticalReader)
         {
+            loadingPreviewUrl = ReadApi.GetPageUrl(ChapterId, outgoingPage, pageImageVersion);
             isPageLoading = true;
         }
         ClearReaderMessage();
