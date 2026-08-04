@@ -1,4 +1,4 @@
-const CACHE_NAME = "mangahub-app-v114";
+const CACHE_NAME = "mangahub-app-v115";
 const APP_SHELL = [
   "/",
   "/index.html",
