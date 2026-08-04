@@ -7,6 +7,10 @@
     overflow: hidden;
 }
 
+.mh-mobile-entry-header {
+    display: none;
+}
+
 .mh-cover-frame {
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
     border-right: 1px solid var(--mud-palette-divider);

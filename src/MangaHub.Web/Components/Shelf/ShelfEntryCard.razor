@@ -16,6 +16,27 @@
         </div>
     </div>
 
+    <button type="button" class="mh-mobile-entry-header" @onclick="OpenMetadata" aria-label="@($"Open metadata for {Entry.Title}")">
+        <div class="mh-title-block">
+            <MudText Typo="Typo.h4" Class="mh-row-title">@Entry.Title</MudText>
+            @if (!string.IsNullOrWhiteSpace(Entry.Authors))
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@Entry.Authors</MudText>
+            }
+        </div>
+
+        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
+            @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleGenreLabel</MudChip>
+            }
+            @if (HasHiddenGenres)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip mh-count-chip">+@HiddenGenreCount</MudChip>
+            }
+        </MudStack>
+    </button>
+
     <MudCardContent Class="mh-bento-card-content">
         <MangaBento Columns="5" ItemMinHeight="52" RowHeight="52" Class="mh-entry-bento">
             <MangaBentoTile ColSpan="4" RowSpan="4" Scheme="primary" OnClick="OpenMetadata" AriaLabel="@($"Open metadata for {Entry.Title}")">

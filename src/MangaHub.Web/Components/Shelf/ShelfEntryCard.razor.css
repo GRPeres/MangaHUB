@@ -7,6 +7,10 @@
     overflow: hidden;
 }
 
+.mh-mobile-entry-header {
+    display: none;
+}
+
 .mh-row-card-has-release {
     box-shadow: inset -4px 0 0 var(--mud-palette-error);
 }
