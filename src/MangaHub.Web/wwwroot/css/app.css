@@ -949,9 +949,12 @@ html body .mh-mobile-catalog-card {
     html body .mh-mobile-catalog-header {
         align-self: stretch !important;
         background: rgba(18, 8, 30, .36) !important;
+        box-sizing: border-box !important;
         color: #fffaff !important;
         grid-column: 1 !important;
         grid-row: 1 !important;
+        height: 148px !important;
+        min-height: 148px !important;
         min-width: 0 !important;
         z-index: 1 !important;
     }
@@ -980,6 +983,7 @@ html body .mh-mobile-catalog-card {
 
     html body .mh-mobile-shelf-summary {
         align-items: flex-start !important;
+        align-self: stretch !important;
         appearance: none !important;
         background: transparent !important;
         border: 0 !important;
@@ -989,6 +993,7 @@ html body .mh-mobile-catalog-card {
         gap: .45rem !important;
         grid-column: 1 !important;
         grid-row: 1 / span 2 !important;
+        height: 100% !important;
         justify-content: space-between !important;
         min-width: 0 !important;
         padding: 0 !important;
@@ -1036,11 +1041,13 @@ html body .mh-mobile-catalog-card {
     /* One shared right rail keeps release state and actions aligned with the card inset. */
     html body .mh-mobile-card-controls {
         align-items: flex-end !important;
+        align-self: stretch !important;
         display: flex !important;
         flex-direction: column !important;
         grid-column: 2 !important;
         grid-row: 1 / span 2 !important;
         justify-content: space-between !important;
+        height: 100% !important;
         margin: .15rem .75rem .35rem 0 !important;
         min-height: 0 !important;
         z-index: 2 !important;
@@ -1048,6 +1055,7 @@ html body .mh-mobile-catalog-card {
 
     html body .mh-mobile-catalog-summary {
         align-items: flex-start !important;
+        align-self: stretch !important;
         appearance: none !important;
         background: transparent !important;
         border: 0 !important;
@@ -1057,6 +1065,7 @@ html body .mh-mobile-catalog-card {
         gap: .45rem !important;
         grid-column: 1 !important;
         grid-row: 1 / span 2 !important;
+        height: 100% !important;
         justify-content: space-between !important;
         min-width: 0 !important;
         padding: 0 !important;
