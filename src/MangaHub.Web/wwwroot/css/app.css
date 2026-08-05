@@ -276,6 +276,11 @@ a {
     margin-top: .5rem !important;
 }
 
+.mh-progressive-load-sentinel {
+    height: 1px;
+    width: 100%;
+}
+
 .reader-chapter-label {
     text-align: center;
     white-space: nowrap;

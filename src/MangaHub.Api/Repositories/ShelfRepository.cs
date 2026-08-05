@@ -17,11 +17,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
             query = query.Where(x => x.ReadingStatus == status);
         }
 
-        return await query
-            .OrderBy(x => x.ReadingStatus)
-            .ThenBy(x => x.MangaEntry!.Title)
-            .Skip(offset)
-            .Take(limit)
+        var entries = await query
             .Select(x => new MangaEntryResponse(
                 x.MangaEntry!.Id,
                 x.MangaEntry.Title,
@@ -59,6 +55,55 @@ public sealed class ShelfRepository(MangaHubDbContext db)
                     .Select(latest => (decimal?)latest.LatestChapter)
                     .FirstOrDefault()))
             .ToListAsync(cancellationToken);
+
+        // Shelf ordering depends on the user's language-specific release progress, so sort the
+        // projected records before sending a compact page to the client.
+        return entries
+            .OrderBy(DisplayRank)
+            .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
+            .Skip(offset)
+            .Take(limit)
+            .ToList();
+    }
+
+    private static int DisplayRank(MangaEntryResponse entry)
+    {
+        if (IsReadingWithNewChapters(entry)) return 0;
+        if (NeedsManualReleaseCheck(entry)) return 1;
+
+        return (entry.ReadingStatus ?? "").ToLowerInvariant() switch
+        {
+            "planned" => 2,
+            "reading" => 3,
+            "paused" => 4,
+            "dropped" => 5,
+            "done" => 6,
+            _ => 5
+        };
+    }
+
+    private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
+        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        && !string.IsNullOrWhiteSpace(entry.MangaDexId)
+        && entry.MangaDexPreferredLanguageLatestChapter is not null
+        && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
+        && entry.MangaDexPreferredLanguageLatestChapter.Value > currentChapter;
+
+    private static bool NeedsManualReleaseCheck(MangaEntryResponse entry) =>
+        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        && string.IsNullOrWhiteSpace(entry.MangaDexId);
+
+    private static bool TryGetCurrentChapterNumber(string currentChapter, out decimal chapter)
+    {
+        chapter = 0;
+        if (string.IsNullOrWhiteSpace(currentChapter)) return false;
+
+        var chapterText = new string(currentChapter
+            .SkipWhile(value => !char.IsDigit(value))
+            .TakeWhile(value => char.IsDigit(value) || value is '.' or ',')
+            .ToArray())
+            .Replace(',', '.');
+        return decimal.TryParse(chapterText, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out chapter);
     }
 
     public Task<UserMangaEntry?> GetAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken) =>

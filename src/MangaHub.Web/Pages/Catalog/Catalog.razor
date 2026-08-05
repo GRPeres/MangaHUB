@@ -3,6 +3,8 @@
 @inject AuthSessionService Auth
 @inject CatalogApiService CatalogApi
 @inject SeriesApiService SeriesApi
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>Catalog</PageTitle>
 
@@ -69,6 +71,7 @@
                             @(isLoadingCatalog ? "Loading manga..." : "Load more manga")
                         </MudButton>
                     </MudStack>
+                    <div @ref="loadMoreSentinel" class="mh-progressive-load-sentinel" aria-hidden="true"></div>
                 }
             </MudStack>
         }
@@ -165,6 +168,8 @@
     private const int PageSize = 24;
     private bool hasMoreCatalog;
     private bool isLoadingCatalog;
+    private ElementReference loadMoreSentinel;
+    private DotNetObjectReference<Catalog>? progressiveLoadReference;
     private List<SeriesResponse> localSeries = [];
     private string query = "";
     private string message = "";
@@ -228,6 +233,37 @@
         {
             isLoadingCatalog = false;
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!hasMoreCatalog)
+        {
+            return;
+        }
+
+        progressiveLoadReference ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("mangaHubProgressiveLoad.observe", loadMoreSentinel, progressiveLoadReference, nameof(LoadMoreFromScrollAsync));
+    }
+
+    [JSInvokable]
+    public async Task LoadMoreFromScrollAsync()
+    {
+        await LoadMoreCatalog();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("mangaHubProgressiveLoad.unobserve", loadMoreSentinel);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser is already gone.
+        }
+        progressiveLoadReference?.Dispose();
     }
 
     private async Task ChangeLanguage(string language)
