@@ -59,7 +59,8 @@ public sealed class ReaderService(
         bool allowChapterJump,
         CancellationToken cancellationToken,
         IProgress<ReaderPreparationProgress>? progress = null,
-        bool updateReadingProgress = true)
+        bool updateReadingProgress = true,
+        string? requestedChapter = null)
     {
         var shelfEntry = await shelf.GetWithMangaAsync(userId, entryId, cancellationToken);
         if (shelfEntry?.MangaEntry is null)
@@ -198,11 +199,15 @@ public sealed class ReaderService(
                 }
             }
 
-            sourceChapter ??= SelectCurrentMangaDexChapter(preferredChapters, shelfEntry.CurrentChapter);
+            sourceChapter ??= string.IsNullOrWhiteSpace(requestedChapter)
+                ? SelectCurrentMangaDexChapter(preferredChapters, shelfEntry.CurrentChapter)
+                : preferredChapters.FirstOrDefault(chapter => HasExactChapter(chapter.Number, requestedChapter));
             if (sourceChapter is null)
             {
                 return null;
             }
+
+            cachedChapter ??= cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
             if (isInitialTrackedChapterSelection
                 && string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)
                 && !allowChapterJump
@@ -336,7 +341,8 @@ public sealed class ReaderService(
             allowChapterJump: false,
             cancellationToken,
             progress,
-            updateReadingProgress: false);
+            updateReadingProgress: false,
+            requestedChapter: null);
 
     public Task PrefetchNextMangaDexChapterAsync(Guid userId, Guid entryId, Guid afterCachedChapterId, CancellationToken cancellationToken) =>
         PrefetchNextMangaDexChapterAsync(userId, entryId, afterCachedChapterId, "en", cancellationToken);

@@ -30,7 +30,8 @@ public sealed class MangaApiService(ApiHttpClient api)
         Guid? beforeCachedChapterId = null,
         string language = "en",
         bool allowLanguageFallback = false,
-        bool allowChapterJump = false)
+        bool allowChapterJump = false,
+        string? requestedChapter = null)
     {
         var queryValues = new List<string>();
         if (afterCachedChapterId is not null)
@@ -49,6 +50,10 @@ public sealed class MangaApiService(ApiHttpClient api)
         if (allowChapterJump)
         {
             queryValues.Add("allowChapterJump=true");
+        }
+        if (!string.IsNullOrWhiteSpace(requestedChapter))
+        {
+            queryValues.Add($"requestedChapter={Uri.EscapeDataString(requestedChapter)}");
         }
 
         var query = queryValues.Count == 0 ? "" : $"?{string.Join("&", queryValues)}";

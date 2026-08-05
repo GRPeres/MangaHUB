@@ -186,6 +186,13 @@ public partial class MainLayout : IDisposable
             await Notifications.MarkReadAsync(notification.Id);
             await LoadNotificationsAsync();
         }
+        if (string.Equals(notification.Type, "new-chapter", StringComparison.OrdinalIgnoreCase)
+            && notification.MangaEntryId != Guid.Empty)
+        {
+            Navigation.NavigateTo($"library?readEntryId={notification.MangaEntryId}&chapter={notification.ChapterNumber:0.###}&language={Uri.EscapeDataString(notification.Language)}&notificationId={notification.Id}");
+            return;
+        }
+
         Navigation.NavigateTo("library");
     }
 

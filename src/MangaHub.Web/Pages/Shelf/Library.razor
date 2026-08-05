@@ -5,6 +5,7 @@
 @inject AdminApiService AdminApi
 @inject MangaApiService MangaApi
 @inject ShelfApiService ShelfApi
+@inject NotificationApiService Notifications
 @inject MessageService Messages
 
 <PageTitle>Shelf</PageTitle>
@@ -226,6 +227,10 @@
     private ReaderChapterMatch? chapterMatch;
     private Guid? chapterJumpEntryId;
     private ReaderChapterJump? chapterJump;
+    [SupplyParameterFromQuery(Name = "readEntryId")] public Guid? NotificationEntryId { get; set; }
+    [SupplyParameterFromQuery(Name = "chapter")] public string? NotificationChapter { get; set; }
+    [SupplyParameterFromQuery(Name = "language")] public string? NotificationLanguage { get; set; }
+    [SupplyParameterFromQuery(Name = "notificationId")] public Guid? NotificationId { get; set; }
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private MangaEntryResponse? editingEntry;
 
@@ -238,6 +243,14 @@
             selectedUserId = currentUser?.Id;
         }
         await Load();
+        if (NotificationEntryId is not null && !string.IsNullOrWhiteSpace(NotificationChapter))
+        {
+            if (NotificationId is not null)
+            {
+                await Notifications.MarkReadAsync(NotificationId.Value);
+            }
+            await Read(NotificationEntryId.Value, NotificationLanguage, allowLanguageFallback: true, allowChapterJump: true, requestedChapter: NotificationChapter);
+        }
     }
 
     private void OpenAddShelf() => isAddShelfOpen = true;
@@ -283,7 +296,7 @@
 
     private string PreferredLanguage => string.IsNullOrWhiteSpace(currentUser?.PreferredLanguage) ? "en" : currentUser.PreferredLanguage;
 
-    private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false, bool allowChapterJump = false)
+    private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false, bool allowChapterJump = false, string? requestedChapter = null)
     {
         if (!IsAdmin)
         {
@@ -302,7 +315,7 @@
                 return;
             }
 
-            if (options.HasLocal)
+            if (options.HasLocal && string.IsNullOrWhiteSpace(requestedChapter))
             {
                 Navigation.NavigateTo(options.LocalReaderUrl);
                 return;
@@ -310,7 +323,7 @@
 
             if (options.HasMangaDex)
             {
-                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguage, allowLanguageFallback: allowLanguageFallback, allowChapterJump: allowChapterJump);
+                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguage, allowLanguageFallback: allowLanguageFallback, allowChapterJump: allowChapterJump, requestedChapter: requestedChapter);
                 if (readerPreparation is null)
                 {
                     ShowWarning("Could not start MangaDex chapter preparation.");

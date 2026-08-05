@@ -417,7 +417,12 @@ public sealed class RemoteSyncWorker(
         var push = options.Value.WebPush;
         if (string.IsNullOrWhiteSpace(push.PublicKey) || string.IsNullOrWhiteSpace(push.PrivateKey)) return;
         var subscriptions = await db.WebPushSubscriptions.Where(subscription => subscription.UserId == notification.UserId).ToListAsync(cancellationToken);
-        var payload = JsonSerializer.Serialize(new { title = notification.Title, body = notification.Body, url = "/library" });
+        var payload = JsonSerializer.Serialize(new
+        {
+            title = notification.Title,
+            body = notification.Body,
+            url = $"/library?readEntryId={notification.MangaEntryId}&chapter={notification.ChapterNumber:0.###}&language={Uri.EscapeDataString(notification.Language)}&notificationId={notification.Id}"
+        });
         var client = new WebPushClient();
         foreach (var subscription in subscriptions)
         {

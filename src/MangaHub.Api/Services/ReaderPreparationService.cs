@@ -20,7 +20,8 @@ public sealed class ReaderPreparationService(
         Guid? beforeCachedChapterId,
         string language,
         bool allowLanguageFallback,
-        bool allowChapterJump)
+        bool allowChapterJump,
+        string? requestedChapter = null)
     {
         RemoveExpiredJobs();
 
@@ -40,6 +41,7 @@ public sealed class ReaderPreparationService(
                 language,
                 allowLanguageFallback,
                 allowChapterJump,
+                requestedChapter,
                 prefetch));
         }
         else
@@ -53,6 +55,7 @@ public sealed class ReaderPreparationService(
                 language,
                 allowLanguageFallback,
                 allowChapterJump,
+                requestedChapter,
                 RemoteJobPriority.UserBlocking));
         }
         return status;
@@ -107,6 +110,7 @@ public sealed class ReaderPreparationService(
         string language,
         bool allowLanguageFallback,
         bool allowChapterJump,
+        string? requestedChapter,
         ReaderPrefetchOperation prefetch)
     {
         while (!prefetch.Completion.IsCompleted)
@@ -137,6 +141,7 @@ public sealed class ReaderPreparationService(
             language,
             allowLanguageFallback,
             allowChapterJump,
+            requestedChapter,
             RemoteJobPriority.UserBlocking);
     }
 
@@ -149,6 +154,7 @@ public sealed class ReaderPreparationService(
         string language,
         bool allowLanguageFallback,
         bool allowChapterJump,
+        string? requestedChapter,
         RemoteJobPriority priority)
     {
         using var priorityScope = priorityContext.Push(priority);
@@ -175,7 +181,8 @@ public sealed class ReaderPreparationService(
                 allowLanguageFallback,
                 allowChapterJump,
                 CancellationToken.None,
-                progress);
+                progress,
+                requestedChapter: requestedChapter);
 
             if (launch is null)
             {
