@@ -10,11 +10,11 @@ public sealed class ShelfService(
     CatalogRepository catalog,
     UserRepository users)
 {
-    public async Task<List<MangaEntryResponse>> ListAsync(Guid targetUserId, string? status, CancellationToken cancellationToken)
+    public async Task<List<MangaEntryResponse>> ListAsync(Guid targetUserId, string? status, int offset, int limit, CancellationToken cancellationToken)
     {
         var user = await users.GetByIdAsync(targetUserId, cancellationToken);
         var language = string.IsNullOrWhiteSpace(user?.PreferredLanguage) ? "en" : user.PreferredLanguage.Trim().ToLowerInvariant();
-        return await shelf.ListEntriesAsync(targetUserId, status, language, cancellationToken);
+        return await shelf.ListEntriesAsync(targetUserId, status, language, offset, limit, cancellationToken);
     }
 
     public async Task<MangaEntryResponse?> AddAsync(Guid userId, AddToShelfRequest request, CancellationToken cancellationToken)

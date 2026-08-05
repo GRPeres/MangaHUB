@@ -2,7 +2,7 @@ namespace MangaHub.Web.API.Services;
 
 public sealed class MangaApiService(ApiHttpClient api)
 {
-    public async Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null, Guid? userId = null)
+    public async Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null, Guid? userId = null, int offset = 0, int limit = 500)
     {
         var queryParts = new List<string>();
         if (!string.IsNullOrWhiteSpace(status))
@@ -13,6 +13,8 @@ public sealed class MangaApiService(ApiHttpClient api)
         {
             queryParts.Add($"userId={Uri.EscapeDataString(userId.Value.ToString())}");
         }
+        queryParts.Add($"offset={Math.Max(offset, 0)}");
+        queryParts.Add($"limit={Math.Clamp(limit, 1, 500)}");
 
         var query = queryParts.Count == 0 ? "" : $"?{string.Join("&", queryParts)}";
         return await api.GetAsync<List<MangaEntryResponse>>($"/api/manga{query}") ?? [];

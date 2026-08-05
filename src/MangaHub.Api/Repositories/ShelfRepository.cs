@@ -7,7 +7,7 @@ namespace MangaHub.Api.Repositories;
 
 public sealed class ShelfRepository(MangaHubDbContext db)
 {
-    public async Task<List<MangaEntryResponse>> ListEntriesAsync(Guid userId, string? status, string preferredLanguage, CancellationToken cancellationToken)
+    public async Task<List<MangaEntryResponse>> ListEntriesAsync(Guid userId, string? status, string preferredLanguage, int offset, int limit, CancellationToken cancellationToken)
     {
         var query = db.UserMangaEntries.AsNoTracking()
             .Include(x => x.MangaEntry)
@@ -21,6 +21,8 @@ public sealed class ShelfRepository(MangaHubDbContext db)
         return await query
             .OrderBy(x => x.ReadingStatus)
             .ThenBy(x => x.MangaEntry!.Title)
+            .Skip(offset)
+            .Take(limit)
             .Select(x => new MangaEntryResponse(
                 x.MangaEntry!.Id,
                 x.MangaEntry.Title,

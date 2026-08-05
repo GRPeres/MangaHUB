@@ -8,7 +8,7 @@ namespace MangaHub.Api.Controllers;
 public sealed class MangaController(CurrentUserService currentUsers, ShelfService shelf, ReaderService reader, ReaderPreparationService preparations) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] string? status, [FromQuery] Guid? userId, CancellationToken cancellationToken)
+    public async Task<IActionResult> List([FromQuery] string? status, [FromQuery] Guid? userId, [FromQuery] int offset = 0, [FromQuery] int limit = 500, CancellationToken cancellationToken = default)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null)
@@ -22,7 +22,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
             return userId is null ? NotFound() : StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        return Ok(await shelf.ListAsync(targetUserId.Value, status, cancellationToken));
+        return Ok(await shelf.ListAsync(targetUserId.Value, status, Math.Max(offset, 0), Math.Clamp(limit, 1, 500), cancellationToken));
     }
 
     [HttpGet("{entryId:guid}/read-options")]

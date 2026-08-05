@@ -50,7 +50,7 @@
             </MudAlert>
         }
 
-        @if (FilteredCatalog.Count == 0)
+        @if (FilteredCatalog.Count == 0 && !hasMoreCatalog)
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No catalog entries matched this search.</MudAlert>
         }
@@ -60,6 +60,15 @@
                 @foreach (var item in FilteredCatalog)
                 {
                     <CatalogEntryCard Entry="@item" ActiveSourceFilter="@sourceFilter" OnEdit="EditCatalog" OnManageCache="OpenCache" OnSourceFilter="ToggleSourceFilter" />
+                }
+
+                @if (hasMoreCatalog)
+                {
+                    <MudStack AlignItems="AlignItems.Center" Class="mt-2">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ExpandMore" Disabled="@isLoadingCatalog" OnClick="LoadMoreCatalog">
+                            @(isLoadingCatalog ? "Loading manga..." : "Load more manga")
+                        </MudButton>
+                    </MudStack>
                 }
             </MudStack>
         }
@@ -153,6 +162,9 @@
     private UserResponse? currentUser;
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private List<CatalogMangaResponse> catalog = [];
+    private const int PageSize = 24;
+    private bool hasMoreCatalog;
+    private bool isLoadingCatalog;
     private List<SeriesResponse> localSeries = [];
     private string query = "";
     private string message = "";
@@ -191,9 +203,31 @@
             return;
         }
 
-        catalog = await CatalogApi.GetCatalogAsync(query, selectedLanguage);
+        catalog = [];
+        hasMoreCatalog = true;
+        await LoadMoreCatalog();
         message = "";
         CloseCatalogModal();
+    }
+
+    private async Task LoadMoreCatalog()
+    {
+        if (isLoadingCatalog || !hasMoreCatalog)
+        {
+            return;
+        }
+
+        isLoadingCatalog = true;
+        try
+        {
+            var nextPage = await CatalogApi.GetCatalogAsync(query, selectedLanguage, catalog.Count, PageSize);
+            catalog.AddRange(nextPage);
+            hasMoreCatalog = nextPage.Count == PageSize;
+        }
+        finally
+        {
+            isLoadingCatalog = false;
+        }
     }
 
     private async Task ChangeLanguage(string language)
@@ -204,7 +238,7 @@
 
     private async Task SearchCatalog()
     {
-        catalog = await CatalogApi.GetCatalogAsync(query, selectedLanguage);
+        await LoadCatalog();
         messageSeverity = FilteredCatalog.Count == 0 ? Severity.Warning : Severity.Success;
         message = FilteredCatalog.Count == 0 ? "No catalog entries matched your search." : $"Found {FilteredCatalog.Count} catalog entries.";
     }
@@ -284,7 +318,7 @@
         }
         else
         {
-            catalog = await CatalogApi.GetCatalogAsync(query, selectedLanguage);
+            await LoadCatalog();
         }
     }
 

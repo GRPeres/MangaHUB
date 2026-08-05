@@ -10,12 +10,12 @@ namespace MangaHub.Api.Controllers;
 public sealed class CatalogController(CurrentUserService currentUsers, CatalogService catalog, CatalogCacheService cache, ILogger<CatalogController> logger) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] string? language, CancellationToken cancellationToken)
+    public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] string? language, [FromQuery] int offset = 0, [FromQuery] int limit = 500, CancellationToken cancellationToken = default)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         return user is null
             ? Unauthorized()
-            : Ok(await catalog.SearchAsync(user.Id, q, string.IsNullOrWhiteSpace(language) ? user.PreferredLanguage : language, cancellationToken));
+            : Ok(await catalog.SearchAsync(user.Id, q, string.IsNullOrWhiteSpace(language) ? user.PreferredLanguage : language, Math.Max(offset, 0), Math.Clamp(limit, 1, 500), cancellationToken));
     }
 
     [HttpPost]

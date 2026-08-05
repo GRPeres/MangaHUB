@@ -25,7 +25,7 @@
         </MudStack>
     </MudStack>
 
-    @if (AllFilteredEntries.Count == 0)
+    @if (AllFilteredEntries.Count == 0 && !hasMoreEntries)
     {
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Your shelf is empty for this filter.</MudAlert>
     }
@@ -64,6 +64,15 @@
             @foreach (var item in OtherFilteredEntries)
             {
                 <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+            }
+
+            @if (hasMoreEntries)
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="mt-2">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ExpandMore" Disabled="@isLoadingEntries" OnClick="LoadMoreEntries">
+                        @(isLoadingEntries ? "Loading manga..." : "Load more manga")
+                    </MudButton>
+                </MudStack>
             }
         </MudStack>
     }
@@ -205,6 +214,9 @@
 
 @code {
     private List<MangaEntryResponse> entries = [];
+    private const int PageSize = 24;
+    private bool hasMoreEntries;
+    private bool isLoadingEntries;
     private List<UserAdminResponse> users = [];
     private UserResponse? currentUser;
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
@@ -290,8 +302,30 @@
 
     private async Task Load()
     {
-        entries = await MangaApi.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null);
+        entries = [];
+        hasMoreEntries = true;
+        await LoadMoreEntries();
         CloseEdit();
+    }
+
+    private async Task LoadMoreEntries()
+    {
+        if (isLoadingEntries || !hasMoreEntries)
+        {
+            return;
+        }
+
+        isLoadingEntries = true;
+        try
+        {
+            var nextPage = await MangaApi.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null, entries.Count, PageSize);
+            entries.AddRange(nextPage);
+            hasMoreEntries = nextPage.Count == PageSize;
+        }
+        finally
+        {
+            isLoadingEntries = false;
+        }
     }
 
     private string PreferredLanguage => string.IsNullOrWhiteSpace(currentUser?.PreferredLanguage) ? "en" : currentUser.PreferredLanguage;

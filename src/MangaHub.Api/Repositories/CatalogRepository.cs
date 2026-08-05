@@ -25,7 +25,7 @@ public sealed class CatalogRepository(MangaHubDbContext db)
     public Task<bool> IsInUserShelfAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken) =>
         db.UserMangaEntries.AnyAsync(x => x.UserId == userId && x.MangaEntryId == mangaEntryId, cancellationToken);
 
-    public async Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? queryText, string preferredLanguage, CancellationToken cancellationToken)
+    public async Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? queryText, string preferredLanguage, int offset, int limit, CancellationToken cancellationToken)
     {
         var shelfIds = db.UserMangaEntries
             .Where(x => x.UserId == userId)
@@ -39,6 +39,8 @@ public sealed class CatalogRepository(MangaHubDbContext db)
 
         return await query
             .OrderBy(x => x.Title)
+            .Skip(offset)
+            .Take(limit)
             .Select(x => new CatalogMangaResponse(
                 x.Id,
                 x.Title,
