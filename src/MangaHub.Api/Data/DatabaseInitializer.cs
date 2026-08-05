@@ -204,6 +204,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
 
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_OpenLibraryKey" ON manga_entries ("OpenLibraryKey");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MyAnimeListId" ON manga_entries ("MyAnimeListId");
+            CREATE INDEX IF NOT EXISTS "IX_manga_entries_Title" ON manga_entries ("Title");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastSyncedAt" ON manga_entries ("MangaDexLastSyncedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastPrefetchedAt" ON manga_entries ("MangaDexLastPrefetchedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastBackfilledAt" ON manga_entries ("MangaDexLastBackfilledAt");
@@ -211,6 +212,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesLastSyncedAt" ON manga_entries ("MangaUpdatesLastSyncedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesLastMatchAttemptAt" ON manga_entries ("MangaUpdatesLastMatchAttemptAt");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_MangaEntryId" ON user_manga_entries ("UserId", "MangaEntryId");
+            CREATE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_ReadingStatus" ON user_manga_entries ("UserId", "ReadingStatus");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_mangadex_language_latest_chapters_MangaEntryId_Language" ON mangadex_language_latest_chapters ("MangaEntryId", "Language");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_notifications_UserId_MangaEntryId_Type_ChapterNumber_Language" ON notifications ("UserId", "MangaEntryId", "Type", "ChapterNumber", "Language");
             CREATE INDEX IF NOT EXISTS "IX_notifications_UserId_ReadAt_CreatedAt" ON notifications ("UserId", "ReadAt", "CreatedAt");

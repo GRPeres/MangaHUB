@@ -3,7 +3,7 @@
     <div class="mh-cover-frame">
         @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
         {
-            <MudImage Src="@Entry.CoverUrl" Alt="@($"{Entry.Title} cover")" Class="mh-row-cover" />
+            <img src="@Entry.CoverUrl" alt="@($"{Entry.Title} cover")" class="mh-row-cover" loading="lazy" decoding="async" />
         }
         else
         {

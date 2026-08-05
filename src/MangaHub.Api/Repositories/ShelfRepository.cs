@@ -10,7 +10,6 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     public async Task<List<MangaEntryResponse>> ListEntriesAsync(Guid userId, string? status, string preferredLanguage, int offset, int limit, CancellationToken cancellationToken)
     {
         var query = db.UserMangaEntries.AsNoTracking()
-            .Include(x => x.MangaEntry)
             .Where(x => x.UserId == userId);
 
         if (!string.IsNullOrWhiteSpace(status))

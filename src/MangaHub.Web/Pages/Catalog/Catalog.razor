@@ -59,7 +59,7 @@
             <MudStack Spacing="2">
                 @foreach (var item in FilteredCatalog)
                 {
-                    <CatalogEntryCard Entry="@item" ActiveSourceFilter="@sourceFilter" OnEdit="EditCatalog" OnManageCache="OpenCache" OnSourceFilter="ToggleSourceFilter" />
+                    <CatalogEntryCard @key="item.Id" Entry="@item" ActiveSourceFilter="@sourceFilter" OnEdit="EditCatalog" OnManageCache="OpenCache" OnSourceFilter="ToggleSourceFilter" />
                 }
 
                 @if (hasMoreCatalog)

@@ -37,7 +37,7 @@
                 <MudText Typo="Typo.h6" Color="Color.Error">New releases</MudText>
                 @foreach (var item in NewReleaseEntries)
                 {
-                    <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
                 }
             }
 
@@ -51,7 +51,7 @@
                 <MudText Typo="Typo.h6" Color="Color.Error">Untracked manga</MudText>
                 @foreach (var item in UntrackedEntries)
                 {
-                    <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
                 }
             }
 
@@ -63,7 +63,7 @@
 
             @foreach (var item in OtherFilteredEntries)
             {
-                <ShelfEntryCard Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
             }
 
             @if (hasMoreEntries)

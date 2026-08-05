@@ -2,7 +2,7 @@
     <div class="mh-mobile-catalog-cover" aria-hidden="true">
         @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
         {
-            <MudImage Src="@Entry.CoverUrl" Alt="" Class="mh-mobile-catalog-cover-image" />
+            <img src="@Entry.CoverUrl" alt="" class="mh-mobile-catalog-cover-image" loading="lazy" decoding="async" />
         }
         else
         {
