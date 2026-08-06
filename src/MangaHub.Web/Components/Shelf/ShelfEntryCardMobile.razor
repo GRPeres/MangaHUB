@@ -34,13 +34,15 @@
         </button>
 
         <div class="mh-mobile-card-controls">
-            @if (HasNewChapters)
-            {
-                <div class="mh-mobile-shelf-release" aria-label="@($"{NewChapterCount} new chapters, latest {LatestChapterValue}")">
-                    <span>New</span>
-                    <strong>+@NewChapterCount</strong>
-                </div>
-            }
+            <div class="mh-mobile-shelf-release-slot" aria-hidden="@(!HasNewChapters)">
+                @if (HasNewChapters)
+                {
+                    <div class="mh-mobile-shelf-release" aria-label="@($"{NewChapterCount} new chapters, latest {LatestChapterValue}")">
+                        <span>New</span>
+                        <strong>+@NewChapterCount</strong>
+                    </div>
+                }
+            </div>
 
             <div class="mh-mobile-card-actions" aria-label="@($"Actions for {Entry.Title}")">
                 @if (CanRead)
