@@ -1033,6 +1033,10 @@ html body .mh-mobile-catalog-card {
         padding: 0 !important;
     }
 
+    html body .mh-mobile-card-control-spacer {
+        min-height: 2.85rem !important;
+    }
+
     html body .mh-mobile-catalog-header {
         align-items: start !important;
         display: grid !important;
