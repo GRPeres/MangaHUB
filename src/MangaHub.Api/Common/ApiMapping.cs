@@ -43,7 +43,9 @@ public static class ApiMapping
             shelf.Summary,
             shelf.Notes,
             entry.FallbackReaderUrl,
-            entry.ReaderPreference);
+            entry.ReaderPreference,
+            null,
+            shelf.IsRead);
 
     public static CatalogMangaResponse ToCatalogMangaResponse(MangaEntry entry, bool isInMyShelf) =>
         new(

@@ -685,7 +685,8 @@
         && HasMangaDexLink(entry)
         && entry.MangaDexPreferredLanguageLatestChapter is not null
         && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
-        && entry.MangaDexPreferredLanguageLatestChapter.Value > currentChapter;
+        && (entry.MangaDexPreferredLanguageLatestChapter.Value > currentChapter
+            || (entry.MangaDexPreferredLanguageLatestChapter.Value == currentChapter && !entry.IsRead));
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)

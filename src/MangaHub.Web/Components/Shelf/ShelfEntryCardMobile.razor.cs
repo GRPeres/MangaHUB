@@ -35,7 +35,18 @@ public partial class ShelfEntryCardMobile
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
     private decimal? PreferredLatestChapter => Entry.MangaDexPreferredLanguageLatestChapter;
     private string LatestChapterValue => PreferredLatestChapter is not null ? $"Ch. {PreferredLatestChapter.Value:0.###}" : Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
-    private int NewChapterCount => HasMangaDexLink && PreferredLatestChapter is not null && TryGetCurrentChapterNumber(out var currentChapter) ? Math.Max(0, (int)Math.Ceiling(PreferredLatestChapter.Value - currentChapter)) : 0;
+    private int NewChapterCount
+    {
+        get
+        {
+            if (!HasMangaDexLink || PreferredLatestChapter is null || !TryGetCurrentChapterNumber(out var currentChapter)) return 0;
+
+            var chapterGap = PreferredLatestChapter.Value - currentChapter;
+            if (chapterGap > 0) return (int)Math.Ceiling(chapterGap);
+
+            return chapterGap == 0 && !Entry.IsRead ? 1 : 0;
+        }
+    }
     private bool HasNewChapters => !StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) && NewChapterCount > 0;
     private string CardClass => HasNewChapters ? "mh-mobile-shelf-card mh-mobile-shelf-has-release" : "mh-mobile-shelf-card";
     private string ProgressHint => !HasMangaDexLink ? "MangaDex sync unavailable" : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";

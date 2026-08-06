@@ -53,7 +53,8 @@ public sealed class ShelfRepository(MangaHubDbContext db)
                 db.MangaDexLanguageLatestChapters
                     .Where(latest => latest.MangaEntryId == x.MangaEntryId && latest.Language == preferredLanguage)
                     .Select(latest => (decimal?)latest.LatestChapter)
-                    .FirstOrDefault()))
+                    .FirstOrDefault(),
+                x.IsRead))
             .ToListAsync(cancellationToken);
 
         // Shelf ordering depends on the user's language-specific release progress, so sort the
@@ -87,7 +88,8 @@ public sealed class ShelfRepository(MangaHubDbContext db)
         && !string.IsNullOrWhiteSpace(entry.MangaDexId)
         && entry.MangaDexPreferredLanguageLatestChapter is not null
         && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
-        && entry.MangaDexPreferredLanguageLatestChapter.Value > currentChapter;
+        && (entry.MangaDexPreferredLanguageLatestChapter.Value > currentChapter
+            || (entry.MangaDexPreferredLanguageLatestChapter.Value == currentChapter && !entry.IsRead));
 
     private static bool NeedsManualReleaseCheck(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)

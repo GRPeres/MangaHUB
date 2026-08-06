@@ -83,7 +83,8 @@ public sealed record MangaEntryResponse(
     string Notes,
     string FallbackReaderUrl,
     string ReaderPreference = "mangahub",
-    decimal? MangaDexPreferredLanguageLatestChapter = null);
+    decimal? MangaDexPreferredLanguageLatestChapter = null,
+    bool IsRead = false);
 public sealed record CatalogMangaResponse(
     Guid Id,
     string Title,

@@ -85,9 +85,14 @@ public partial class Home : IDisposable
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
         && entry.MangaDexPreferredLanguageLatestChapter is { } latest
-        && latest > ParseChapter(entry.CurrentChapter);
+        && (latest > ParseChapter(entry.CurrentChapter)
+            || (latest == ParseChapter(entry.CurrentChapter) && !entry.IsRead));
 
-    private static decimal ReleaseGap(MangaEntryResponse entry) => Math.Max(0, (entry.MangaDexPreferredLanguageLatestChapter ?? 0) - ParseChapter(entry.CurrentChapter));
+    private static decimal ReleaseGap(MangaEntryResponse entry)
+    {
+        var gap = Math.Max(0, (entry.MangaDexPreferredLanguageLatestChapter ?? 0) - ParseChapter(entry.CurrentChapter));
+        return gap == 0 && !entry.IsRead && entry.MangaDexPreferredLanguageLatestChapter == ParseChapter(entry.CurrentChapter) ? 1 : gap;
+    }
     private static decimal ParseChapter(string value) => decimal.TryParse(value, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : 0;
     private static string DisplayChapter(string value) => string.IsNullOrWhiteSpace(value) ? "not started" : value;
     private static string LatestLabel(MangaEntryResponse entry) => entry.MangaDexPreferredLanguageLatestChapter is { } latest ? $"Latest available: {latest:0.###}" : "No language-specific release data yet";
