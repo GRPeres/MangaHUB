@@ -74,7 +74,26 @@ MangaHub__MangaDexEnabled=true
 MangaHub__MyAnimeListClientId=<client id>
 MangaHub__SessionCookieSameSite=Lax
 MangaHub__SessionCookieSecure=true
+MangaHub__Email__SmtpHost=smtp.gmail.com
+MangaHub__Email__SmtpPort=587
+MangaHub__Email__UseSsl=true
+MangaHub__Email__SmtpUsername=<sender address>
+MangaHub__Email__SmtpPassword=<app password>
+MangaHub__Email__FromAddress=<sender address>
+MangaHub__Email__FromName=MangaHub
+MangaHub__GoogleAuth__ClientId=<Google OAuth client id>
+MangaHub__GoogleAuth__ClientSecret=<Google OAuth client secret>
 ```
+
+## Account Recovery And Google Sign-In
+
+Only the mangahub-api service needs account-recovery and Google OAuth configuration. Do not put the SMTP app password or Google client secret in the worker, repository, or GitHub Actions variables used for public builds.
+
+For Gmail SMTP, create a Google App Password after enabling two-step verification, then use smtp.gmail.com, port 587, and TLS. The Google OAuth client must be a Web application with this exact authorized redirect URI:
+
+    https://mangahub.app/auth/google/callback
+
+Existing MangaHub accounts remain valid after deployment. A user can add their recovery email, change password, and link Google from the Account page. New password registration requires at least 10 characters, uppercase, lowercase, and a digit.
 
 Workers:
 

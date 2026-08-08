@@ -34,6 +34,15 @@ services:
       MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:?Set_MYANIMELIST_CLIENT_ID}
       MangaHub__SessionCookieSameSite: Lax
       MangaHub__SessionCookieSecure: "true"
+      MangaHub__Email__SmtpHost: smtp.gmail.com
+      MangaHub__Email__SmtpPort: "587"
+      MangaHub__Email__UseSsl: "true"
+      MangaHub__Email__SmtpUsername: ${SMTP_USERNAME:?Set_SMTP_USERNAME}
+      MangaHub__Email__SmtpPassword: ${SMTP_PASSWORD:?Set_SMTP_PASSWORD}
+      MangaHub__Email__FromAddress: ${SMTP_FROM_ADDRESS:?Set_SMTP_FROM_ADDRESS}
+      MangaHub__Email__FromName: MangaHub
+      MangaHub__GoogleAuth__ClientId: ${GOOGLE_AUTH_CLIENT_ID:?Set_GOOGLE_AUTH_CLIENT_ID}
+      MangaHub__GoogleAuth__ClientSecret: ${GOOGLE_AUTH_CLIENT_SECRET:?Set_GOOGLE_AUTH_CLIENT_SECRET}
     volumes:
       - /mnt/storage/manga:/library:ro
       - /mnt/Shared/NAS/MangaHUBMangaDexCache:/mangadex-cache
