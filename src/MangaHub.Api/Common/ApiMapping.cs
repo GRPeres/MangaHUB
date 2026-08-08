@@ -6,7 +6,7 @@ namespace MangaHub.Api.Common;
 public static class ApiMapping
 {
     public static UserResponse ToUserResponse(MangaUser user, string sessionToken = "") =>
-        new(user.Id, user.Username, user.Role, user.PreferredLanguage, sessionToken, user.Email, !string.IsNullOrWhiteSpace(user.PasswordHash), !string.IsNullOrWhiteSpace(user.GoogleSubject));
+        new(user.Id, user.Username, user.Role, user.PreferredLanguage, sessionToken, user.Email, !string.IsNullOrWhiteSpace(user.PasswordHash), !string.IsNullOrWhiteSpace(user.GoogleSubject), user.EmailConfirmedAt is not null, user.PendingEmail);
 
     public static UserAdminResponse ToUserAdminResponse(MangaUser user) =>
         new(user.Id, user.Username, user.Role, user.CreatedAt);

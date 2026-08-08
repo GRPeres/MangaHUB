@@ -6,6 +6,9 @@ public sealed class MangaUser
     public required string Username { get; set; }
     public string PasswordHash { get; set; } = "";
     public string Email { get; set; } = "";
+    public string PendingEmail { get; set; } = "";
+    public DateTimeOffset? EmailConfirmedAt { get; set; }
+    public DateTimeOffset? SessionInvalidBefore { get; set; }
     public string GoogleSubject { get; set; } = "";
     public string Role { get; set; } = "user";
     public string PreferredLanguage { get; set; } = "en";

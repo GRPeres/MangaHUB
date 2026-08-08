@@ -64,8 +64,20 @@
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.h2">Sign-in and recovery</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Add a recovery email to keep this account recoverable. Existing accounts can keep their current password until they choose to replace it.</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Recovery only activates after you verify the email link. Existing accounts can keep their current password until they choose to replace it.</MudText>
                 <MudTextField T="string" @bind-Value="accountEmail" Label="Recovery email" InputType="InputType.Email" Variant="Variant.Outlined" />
+                @if (currentUser.IsEmailVerified)
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true">Verified recovery email: @currentUser.Email</MudAlert>
+                }
+                else if (!string.IsNullOrWhiteSpace(currentUser.PendingEmail))
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">Verification pending for @currentUser.PendingEmail. Check that inbox for the confirmation link.</MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">No verified recovery email yet.</MudAlert>
+                }
                 <MudTextField T="string" @bind-Value="currentPassword" Label="Current password" InputType="InputType.Password" Variant="Variant.Outlined" />
                 <MudTextField T="string" @bind-Value="newPassword" Label="New password (optional)" InputType="InputType.Password" Variant="Variant.Outlined" />
                 <MudText Typo="Typo.caption" Color="Color.Secondary">New passwords need 10+ characters with uppercase, lowercase, and a number.</MudText>
@@ -163,7 +175,9 @@
     private async Task RefreshAccount()
     {
         currentUser = await Auth.GetCurrentUserAsync(forceRefresh: true);
-        accountEmail = currentUser?.Email ?? "";
+        accountEmail = !string.IsNullOrWhiteSpace(currentUser?.PendingEmail)
+            ? currentUser.PendingEmail
+            : currentUser?.Email ?? "";
         preferredLanguages = ParseLanguages(currentUser?.PreferredLanguage);
         if (IsAdmin)
         {
@@ -229,10 +243,10 @@
                 return;
             }
             currentUser = result.Value;
-            accountEmail = currentUser.Email;
+            accountEmail = currentUser.PendingEmail is { Length: > 0 } ? currentUser.PendingEmail : currentUser.Email;
             currentPassword = "";
             newPassword = "";
-            Messages.Success("Sign-in details saved.");
+            Messages.Success(currentUser.IsEmailVerified ? "Sign-in details saved." : "Check your email to verify recovery.");
         }
         finally
         {

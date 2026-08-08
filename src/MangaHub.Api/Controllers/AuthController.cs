@@ -66,6 +66,13 @@ public sealed class AuthController(
             : BadRequest("This reset link is invalid or has expired.");
     }
 
+    [HttpGet("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromQuery] string token, CancellationToken cancellationToken)
+    {
+        var verified = await auth.ConfirmEmailAsync(token, cancellationToken);
+        return Redirect(verified ? "/account?email=verified" : "/account?email=invalid");
+    }
+
     [HttpPut("account")]
     public async Task<IActionResult> UpdateAccount([FromBody] UpdateAccountRequest request, CancellationToken cancellationToken)
     {
@@ -96,13 +103,15 @@ public sealed class AuthController(
         if (!result.Succeeded || result.Principal is null) return Redirect("/?login=google-failed");
         var subject = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         var email = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+        var emailVerified = result.Principal.FindFirst("email_verified")?.Value;
         var name = result.Principal.Identity?.Name ?? email ?? "reader";
         var linkUserId = result.Properties?.Items.TryGetValue("linkUserId", out var linkedUserId) == true
             && Guid.TryParse(linkedUserId, out var parsedUserId)
             ? parsedUserId
             : (Guid?)null;
         await HttpContext.SignOutAsync("External");
-        if (string.IsNullOrWhiteSpace(subject) || !AuthService.IsValidEmail(email)) return Redirect("/?login=google-failed");
+        if (string.IsNullOrWhiteSpace(subject) || !AuthService.IsValidEmail(email) || !string.Equals(emailVerified, "true", StringComparison.OrdinalIgnoreCase))
+            return Redirect("/?login=google-failed");
         if (linkUserId is not null)
         {
             var error = await auth.LinkGoogleAsync(linkUserId.Value, subject, cancellationToken);

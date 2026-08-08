@@ -17,6 +17,9 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "Role" character varying(40) NOT NULL DEFAULT 'user';
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "PreferredLanguage" character varying(128) NOT NULL DEFAULT 'en';
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "Email" character varying(320) NOT NULL DEFAULT '';
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS "PendingEmail" character varying(320) NOT NULL DEFAULT '';
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS "EmailConfirmedAt" timestamp with time zone NULL;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS "SessionInvalidBefore" timestamp with time zone NULL;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "GoogleSubject" character varying(255) NOT NULL DEFAULT '';
             ALTER TABLE users ALTER COLUMN "PreferredLanguage" TYPE character varying(128);
 
@@ -32,6 +35,16 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             );
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_password_reset_tokens_TokenHash" ON password_reset_tokens ("TokenHash");
             CREATE INDEX IF NOT EXISTS "IX_password_reset_tokens_UserId_ExpiresAt" ON password_reset_tokens ("UserId", "ExpiresAt");
+            CREATE TABLE IF NOT EXISTS email_verification_tokens (
+                "Id" uuid PRIMARY KEY,
+                "UserId" uuid NOT NULL,
+                "TokenHash" character varying(128) NOT NULL,
+                "ExpiresAt" timestamp with time zone NOT NULL,
+                "UsedAt" timestamp with time zone NULL,
+                "CreatedAt" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_email_verification_tokens_TokenHash" ON email_verification_tokens ("TokenHash");
+            CREATE INDEX IF NOT EXISTS "IX_email_verification_tokens_UserId_ExpiresAt" ON email_verification_tokens ("UserId", "ExpiresAt");
 
             UPDATE users
             SET "Role" = 'admin'

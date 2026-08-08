@@ -16,7 +16,7 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
         {
             var cookieUserId = tokens.ReadUserId(cookieToken);
             var cookieUser = cookieUserId is null ? null : await db.Users.FindAsync([cookieUserId.Value], cancellationToken);
-            if (cookieUser is not null)
+            if (cookieUser is not null && IsSessionValid(cookieUser, tokens.ReadIssuedAt(cookieToken)))
             {
                 await RecordActivityAsync(cookieUser, cancellationToken);
                 return cookieUser;
@@ -30,8 +30,11 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
             if (bearerUserId is not null)
             {
                 var bearerUser = await db.Users.FindAsync([bearerUserId.Value], cancellationToken);
-                await RecordActivityAsync(bearerUser, cancellationToken);
-                return bearerUser;
+                if (bearerUser is not null && IsSessionValid(bearerUser, tokens.ReadIssuedAt(bearerToken)))
+                {
+                    await RecordActivityAsync(bearerUser, cancellationToken);
+                    return bearerUser;
+                }
             }
         }
 
@@ -40,6 +43,9 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
 
     public static bool IsAdmin(MangaUser user) =>
         string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSessionValid(MangaUser user, DateTimeOffset? issuedAt) =>
+        user.SessionInvalidBefore is null || (issuedAt is not null && issuedAt > user.SessionInvalidBefore);
 
     private static string ReadBearerToken(HttpRequest request)
     {

@@ -53,4 +53,16 @@ public sealed class UserRepository(MangaHubDbContext db)
 
     public Task DeleteExpiredResetTokensAsync(CancellationToken cancellationToken) =>
         db.PasswordResetTokens.Where(x => x.ExpiresAt <= DateTimeOffset.UtcNow || x.UsedAt != null).ExecuteDeleteAsync(cancellationToken);
+
+    public async Task AddEmailVerificationTokenAsync(EmailVerificationToken token, CancellationToken cancellationToken)
+    {
+        db.EmailVerificationTokens.Add(token);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public Task<EmailVerificationToken?> GetEmailVerificationTokenAsync(string tokenHash, CancellationToken cancellationToken) =>
+        db.EmailVerificationTokens.FirstOrDefaultAsync(x => x.TokenHash == tokenHash && x.UsedAt == null && x.ExpiresAt > DateTimeOffset.UtcNow, cancellationToken);
+
+    public Task DeleteExpiredEmailVerificationTokensAsync(CancellationToken cancellationToken) =>
+        db.EmailVerificationTokens.Where(x => x.ExpiresAt <= DateTimeOffset.UtcNow || x.UsedAt != null).ExecuteDeleteAsync(cancellationToken);
 }

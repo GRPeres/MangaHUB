@@ -7,6 +7,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
 {
     public DbSet<MangaUser> Users => Set<MangaUser>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
     public DbSet<MangaEntry> MangaEntries => Set<MangaEntry>();
     public DbSet<MangaDexLanguageLatestChapter> MangaDexLanguageLatestChapters => Set<MangaDexLanguageLatestChapter>();
     public DbSet<MangaNotification> Notifications => Set<MangaNotification>();
@@ -26,11 +27,20 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.HasIndex(x => x.Username).IsUnique();
             entity.Property(x => x.Username).HasMaxLength(80);
             entity.Property(x => x.Email).HasMaxLength(320);
+            entity.Property(x => x.PendingEmail).HasMaxLength(320);
             entity.Property(x => x.GoogleSubject).HasMaxLength(255);
             entity.Property(x => x.Role).HasMaxLength(40);
             entity.Property(x => x.PreferredLanguage).HasMaxLength(128);
             entity.HasIndex(x => x.Email).IsUnique().HasFilter("\"Email\" <> ''");
             entity.HasIndex(x => x.GoogleSubject).IsUnique().HasFilter("\"GoogleSubject\" <> ''");
+        });
+
+        modelBuilder.Entity<EmailVerificationToken>(entity =>
+        {
+            entity.ToTable("email_verification_tokens");
+            entity.Property(x => x.TokenHash).HasMaxLength(128);
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.HasIndex(x => new { x.UserId, x.ExpiresAt });
         });
 
         modelBuilder.Entity<PasswordResetToken>(entity =>

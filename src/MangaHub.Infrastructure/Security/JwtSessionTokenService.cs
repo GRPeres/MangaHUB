@@ -17,8 +17,11 @@ public sealed class JwtSessionTokenService(IOptions<MangaHubOptions> options) : 
             claims:
             [
                 new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-                new Claim(JwtRegisteredClaimNames.UniqueName, username)
+                new Claim(JwtRegisteredClaimNames.UniqueName, username),
+                new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+                new Claim("mangahub_iat_ticks", DateTimeOffset.UtcNow.UtcTicks.ToString(), ClaimValueTypes.Integer64)
             ],
+            notBefore: DateTime.UtcNow,
             expires: DateTime.UtcNow.AddMinutes(options.Value.JwtExpiresMinutes),
             signingCredentials: credentials);
 
@@ -68,6 +71,21 @@ public sealed class JwtSessionTokenService(IOptions<MangaHubOptions> options) : 
         {
             Console.WriteLine($"ReadUserId failed: {ex.GetType().Name}");
             Console.WriteLine(ex.Message);
+            return null;
+        }
+    }
+
+    public DateTimeOffset? ReadIssuedAt(string token)
+    {
+        try
+        {
+            var issuedAt = new JwtSecurityTokenHandler().ReadJwtToken(token)
+                .Claims
+                .FirstOrDefault(claim => claim.Type == "mangahub_iat_ticks")?.Value;
+            return long.TryParse(issuedAt, out var ticks) ? new DateTimeOffset(ticks, TimeSpan.Zero) : null;
+        }
+        catch
+        {
             return null;
         }
     }

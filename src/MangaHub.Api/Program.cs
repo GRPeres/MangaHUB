@@ -30,6 +30,14 @@ if (mangaHubOptions.GoogleAuth.IsConfigured)
         options.SignInScheme = "External";
         options.CallbackPath = "/auth/google/callback";
         options.Scope.Add("email");
+        options.Events.OnCreatingTicket = context =>
+        {
+            if (context.User.TryGetProperty("email_verified", out var verified))
+            {
+                context.Identity?.AddClaim(new System.Security.Claims.Claim("email_verified", verified.GetBoolean().ToString().ToLowerInvariant()));
+            }
+            return Task.CompletedTask;
+        };
         options.SaveTokens = false;
     });
 }
@@ -45,13 +53,16 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter("login", limiter =>
-    {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 8;
-        limiter.QueueLimit = 0;
-        limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-    });
+    options.AddPolicy("login", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 8,
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+            }));
 });
 
 builder.Services.AddScoped<DatabaseInitializer>();
