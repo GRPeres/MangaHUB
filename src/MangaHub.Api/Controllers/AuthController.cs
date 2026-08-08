@@ -53,8 +53,14 @@ public sealed class AuthController(
     [EnableRateLimiting("login")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
-        await auth.RequestPasswordResetAsync(request.Email, cancellationToken);
-        return Accepted(new { status = "ok" });
+        var result = await auth.RequestPasswordResetAsync(request.Email, cancellationToken);
+        return result switch
+        {
+            PasswordResetRequestResult.Sent => Accepted(new { status = "ok" }),
+            PasswordResetRequestResult.NoMatchingAccount => NotFound("No account uses that recovery email."),
+            PasswordResetRequestResult.EmailNotConfigured => StatusCode(StatusCodes.Status503ServiceUnavailable, "Password recovery email is not configured on the server."),
+            _ => StatusCode(StatusCodes.Status502BadGateway, "MangaHub could not send the recovery email. Check the API logs and Gmail app-password settings.")
+        };
     }
 
     [HttpPost("reset-password")]
