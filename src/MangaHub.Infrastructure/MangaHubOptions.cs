@@ -34,6 +34,24 @@ public sealed class MangaHubOptions
     public int MangaUpdatesMatchBatchSize { get; set; } = 10;
     public RemoteJobs.RemoteRequestLimitsOptions RemoteRequests { get; set; } = new();
     public WebPushOptions WebPush { get; set; } = new();
+    public EmailOptions Email { get; set; } = new();
+    public GoogleAuthOptions GoogleAuth { get; set; } = new();
 }
 
 public sealed class WebPushOptions { public string PublicKey { get; set; } = ""; public string PrivateKey { get; set; } = ""; public string Subject { get; set; } = "mailto:admin@mangahub.app"; }
+public sealed class EmailOptions
+{
+    public string SmtpHost { get; set; } = "";
+    public int SmtpPort { get; set; } = 587;
+    public bool UseSsl { get; set; } = true;
+    public string SmtpUsername { get; set; } = "";
+    public string SmtpPassword { get; set; } = "";
+    public string FromAddress { get; set; } = "";
+    public string FromName { get; set; } = "MangaHub";
+}
+public sealed class GoogleAuthOptions
+{
+    public string ClientId { get; set; } = "";
+    public string ClientSecret { get; set; } = "";
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
+}

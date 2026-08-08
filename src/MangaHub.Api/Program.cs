@@ -4,6 +4,9 @@ using MangaHub.Api.Services;
 using MangaHub.Core.Services;
 using MangaHub.Infrastructure;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +14,25 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMangaHubInfrastructure(builder.Configuration);
+var mangaHubOptions = builder.Configuration.GetSection("MangaHub").Get<MangaHubOptions>() ?? new MangaHubOptions();
+var authentication = builder.Services.AddAuthentication();
+authentication.AddCookie("External", options =>
+{
+    options.Cookie.Name = "mangahub_external";
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+});
+if (mangaHubOptions.GoogleAuth.IsConfigured)
+{
+    authentication.AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+    {
+        options.ClientId = mangaHubOptions.GoogleAuth.ClientId;
+        options.ClientSecret = mangaHubOptions.GoogleAuth.ClientSecret;
+        options.SignInScheme = "External";
+        options.CallbackPath = "/auth/google/callback";
+        options.Scope.Add("email");
+        options.SaveTokens = false;
+    });
+}
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -42,6 +64,7 @@ builder.Services.AddScoped<NotificationRepository>();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<SessionCookieService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<OpenLibraryService>();
 builder.Services.AddScoped<MangaDexCatalogMatchService>();
@@ -58,6 +81,10 @@ builder.Services.AddScoped<CatalogCacheService>();
 builder.Services.AddScoped<NotificationService>();
 
 var app = builder.Build();
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+});
 
 using (var scope = app.Services.CreateScope())
 {
@@ -71,6 +98,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 app.UseRateLimiter();
+app.UseAuthentication();
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();

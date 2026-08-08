@@ -1,7 +1,10 @@
 namespace MangaHub.Core.Dto;
 
-public sealed record AuthRequest(string Username, string Password);
-public sealed record UserResponse(Guid Id, string Username, string Role, string PreferredLanguage, string SessionToken);
+public sealed record AuthRequest(string Username, string Password, string Email = "");
+public sealed record UserResponse(Guid Id, string Username, string Role, string PreferredLanguage, string SessionToken, string Email = "", bool HasPassword = true, bool HasGoogleSignIn = false);
+public sealed record ForgotPasswordRequest(string Email);
+public sealed record ResetPasswordRequest(string Token, string NewPassword);
+public sealed record UpdateAccountRequest(string Email, string CurrentPassword = "", string NewPassword = "");
 public sealed record UserAdminResponse(Guid Id, string Username, string Role, DateTimeOffset CreatedAt);
 public sealed record UpdateUserRoleRequest(string Role);
 public sealed record UpdatePreferredLanguageRequest(string PreferredLanguage);

@@ -26,9 +26,9 @@ public sealed class AuthSessionService(AuthApiService authApi, SessionTokenStore
         return currentUser;
     }
 
-    public async Task<UserResponse?> RegisterAsync(string username, string password)
+    public async Task<UserResponse?> RegisterAsync(string username, string password, string email)
     {
-        currentUser = await authApi.RegisterAsync(username, password);
+        currentUser = await authApi.RegisterAsync(username, password, email);
         await tokens.SetAsync(currentUser?.SessionToken ?? "");
         loaded = true;
         Changed?.Invoke();
@@ -65,6 +65,20 @@ public sealed class AuthSessionService(AuthApiService authApi, SessionTokenStore
 
         return currentUser;
     }
+
+    public async Task<ApiCallResult<UserResponse>> UpdateAccountAsync(string email, string currentPassword, string newPassword)
+    {
+        var result = await authApi.UpdateAccountAsync(email, currentPassword, newPassword);
+        if (result.Value is not null)
+        {
+            currentUser = result.Value with { SessionToken = currentUser?.SessionToken ?? "" };
+            Changed?.Invoke();
+        }
+        return result;
+    }
+
+    public Task<ApiCallResult<object>> RequestPasswordResetAsync(string email) =>
+        authApi.RequestPasswordResetAsync(email);
 
     public void RequestLogin(string message = "Please log in to continue.", string? returnUrl = null)
     {

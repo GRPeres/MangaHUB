@@ -17,9 +17,11 @@ public partial class LoginModal : ComponentBase
 
     private string username = "";
     private string password = "";
+    private string email = "";
     private string feedback = "";
     private Severity feedbackSeverity = Severity.Info;
     private bool isBusy;
+    private bool isRegistering;
 
     private async Task Login()
     {
@@ -28,7 +30,35 @@ public partial class LoginModal : ComponentBase
 
     private async Task Register()
     {
-        await Authenticate(() => Auth.RegisterAsync(username, password), "Registration failed.");
+        await Authenticate(() => Auth.RegisterAsync(username, password, email), "Registration failed. Use a unique username, a valid email, and a stronger password.");
+    }
+
+    private void ToggleRegister()
+    {
+        isRegistering = !isRegistering;
+        feedback = "";
+    }
+
+    private async Task ForgotPassword()
+    {
+        var address = username.Contains('@') ? username : email;
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            feedbackSeverity = Severity.Info;
+            feedback = "Enter your recovery email in the username field first.";
+            return;
+        }
+        isBusy = true;
+        try
+        {
+            await Auth.RequestPasswordResetAsync(address);
+            feedbackSeverity = Severity.Success;
+            feedback = "If that email belongs to an account, a reset link is on its way.";
+        }
+        finally
+        {
+            isBusy = false;
+        }
     }
 
     private async Task Authenticate(Func<Task<UserResponse?>> action, string failureMessage)

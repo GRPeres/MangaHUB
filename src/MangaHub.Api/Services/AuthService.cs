@@ -1,16 +1,25 @@
+using System.Security.Cryptography;
+using System.Text;
 using MangaHub.Api.Common;
 using MangaHub.Api.Repositories;
 using MangaHub.Core.Dto;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace MangaHub.Api.Services;
 
-public sealed class AuthService(UserRepository users, IPasswordHasher passwordHasher, ISessionTokenService tokens)
+public sealed class AuthService(UserRepository users, IPasswordHasher passwordHasher, ISessionTokenService tokens, IEmailSender emailSender, IConfiguration configuration)
 {
+    public AuthService(UserRepository users, IPasswordHasher passwordHasher, ISessionTokenService tokens)
+        : this(users, passwordHasher, tokens, new DisabledEmailSender(), new ConfigurationBuilder().Build())
+    {
+    }
+
     public async Task<UserResponse?> RegisterAsync(AuthRequest request, CancellationToken cancellationToken)
     {
         var username = request.Username.Trim();
+        var email = NormalizeEmail(request.Email);
         if (await users.UsernameExistsAsync(username, cancellationToken))
         {
             return null;
@@ -21,6 +30,7 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
         {
             Username = username,
             PasswordHash = passwordHasher.Hash(request.Password),
+            Email = email,
             Role = isFirstUser ? "admin" : "user"
         };
 
@@ -31,9 +41,10 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
 
     public async Task<UserResponse?> LoginAsync(AuthRequest request, CancellationToken cancellationToken)
     {
-        var username = request.Username.Trim();
-        var user = await users.GetByUsernameAsync(username, cancellationToken);
-        if (user is null || !passwordHasher.Verify(request.Password, user.PasswordHash))
+        var identifier = request.Username.Trim();
+        var user = await users.GetByUsernameAsync(identifier, cancellationToken)
+                   ?? await users.GetByEmailAsync(NormalizeEmail(identifier), cancellationToken);
+        if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash) || !passwordHasher.Verify(request.Password, user.PasswordHash))
         {
             return null;
         }
@@ -47,5 +58,126 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
         user.PreferredLanguage = LanguagePreferences.Normalize(request.PreferredLanguage);
         await users.SaveChangesAsync(cancellationToken);
         return ApiMapping.ToUserResponse(user);
+    }
+
+    public async Task<string?> UpdateAccountAsync(MangaUser user, UpdateAccountRequest request, CancellationToken cancellationToken)
+    {
+        var email = NormalizeEmail(request.Email);
+        if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email)) return "Enter a valid email address.";
+        var emailOwner = await users.GetByEmailAsync(email, cancellationToken);
+        if (emailOwner is not null && emailOwner.Id != user.Id) return "That email address is already linked to another account.";
+
+        var wantsPasswordChange = !string.IsNullOrWhiteSpace(request.NewPassword);
+        if (wantsPasswordChange)
+        {
+            var passwordError = PasswordRules.Validate(request.NewPassword);
+            if (passwordError is not null) return passwordError;
+            if (!string.IsNullOrWhiteSpace(user.PasswordHash)
+                && !passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
+                return "Your current password is incorrect.";
+            user.PasswordHash = passwordHasher.Hash(request.NewPassword);
+        }
+
+        user.Email = email;
+        await users.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
+    public async Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken)
+    {
+        var normalized = NormalizeEmail(email);
+        var user = await users.GetByEmailAsync(normalized, cancellationToken);
+        if (user is null || !emailSender.IsConfigured) return;
+
+        await users.DeleteExpiredResetTokensAsync(cancellationToken);
+        var rawToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        await users.AddResetTokenAsync(new PasswordResetToken
+        {
+            UserId = user.Id,
+            TokenHash = HashToken(rawToken),
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(1)
+        }, cancellationToken);
+
+        var origin = configuration["FrontendOrigin"]?.TrimEnd('/') ?? "http://localhost:3000";
+        var url = $"{origin}/reset-password?token={Uri.EscapeDataString(rawToken)}";
+        await emailSender.SendAsync(user.Email, "Reset your MangaHub password",
+            $"<p>Use this link to reset your MangaHub password. It expires in one hour.</p><p><a href=\"{url}\">Reset password</a></p>",
+            cancellationToken);
+    }
+
+    public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var passwordError = PasswordRules.Validate(request.NewPassword);
+        if (passwordError is not null) return false;
+        var token = await users.GetResetTokenAsync(HashToken(request.Token), cancellationToken);
+        if (token is null) return false;
+        var user = await users.GetByIdAsync(token.UserId, cancellationToken);
+        if (user is null) return false;
+        user.PasswordHash = passwordHasher.Hash(request.NewPassword);
+        token.UsedAt = DateTimeOffset.UtcNow;
+        await users.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<UserResponse> LoginWithGoogleAsync(string subject, string email, string displayName, CancellationToken cancellationToken)
+    {
+        var normalizedEmail = NormalizeEmail(email);
+        var user = await users.GetByGoogleSubjectAsync(subject, cancellationToken)
+                   ?? await users.GetByEmailAsync(normalizedEmail, cancellationToken);
+        if (user is null)
+        {
+            user = new MangaUser
+            {
+                Username = await CreateGoogleUsernameAsync(displayName, normalizedEmail, cancellationToken),
+                Email = normalizedEmail,
+                GoogleSubject = subject,
+                Role = !await users.AnyAsync(cancellationToken) ? "admin" : "user"
+            };
+            await users.AddAsync(user, cancellationToken);
+        }
+        else if (string.IsNullOrWhiteSpace(user.GoogleSubject))
+        {
+            user.GoogleSubject = subject;
+            await users.SaveChangesAsync(cancellationToken);
+        }
+
+        return ApiMapping.ToUserResponse(user, tokens.CreateToken(user.Id, user.Username));
+    }
+
+    public async Task<string?> LinkGoogleAsync(Guid userId, string subject, CancellationToken cancellationToken)
+    {
+        var user = await users.GetByIdAsync(userId, cancellationToken);
+        if (user is null) return "Your account is no longer available.";
+        var existing = await users.GetByGoogleSubjectAsync(subject, cancellationToken);
+        if (existing is not null && existing.Id != userId) return "That Google account is already linked to another MangaHub account.";
+        user.GoogleSubject = subject;
+        await users.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
+    private async Task<string> CreateGoogleUsernameAsync(string displayName, string email, CancellationToken cancellationToken)
+    {
+        var seed = string.IsNullOrWhiteSpace(displayName) ? email.Split('@')[0] : displayName;
+        var normalized = new string(seed.ToLowerInvariant().Select(character => char.IsLetterOrDigit(character) ? character : '-').ToArray())
+            .Trim('-');
+        if (normalized.Length < 3) normalized = "reader";
+        normalized = normalized[..Math.Min(normalized.Length, 70)];
+        var candidate = normalized;
+        var suffix = 1;
+        while (await users.UsernameExistsAsync(candidate, cancellationToken))
+        {
+            candidate = $"{normalized}-{suffix++}";
+        }
+        return candidate;
+    }
+
+    public static bool IsValidEmail(string? email) => !string.IsNullOrWhiteSpace(email) && System.Net.Mail.MailAddress.TryCreate(email, out _);
+    public static string NormalizeEmail(string? email) => (email ?? "").Trim().ToLowerInvariant();
+    private static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
+    private sealed class DisabledEmailSender : IEmailSender
+    {
+        public bool IsConfigured => false;
+        public Task SendAsync(string recipient, string subject, string htmlBody, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }
