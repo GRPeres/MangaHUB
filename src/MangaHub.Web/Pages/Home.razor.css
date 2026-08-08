@@ -84,6 +84,33 @@
     margin: auto;
 }
 
+.mh-dashboard-rating-row {
+    align-items: center;
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 75%, transparent);
+    display: grid;
+    gap: .55rem;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    padding-top: .5rem;
+}
+
+.mh-dashboard-rating-row img {
+    border-radius: 4px;
+    height: 2.7rem;
+    object-fit: cover;
+    width: 2rem;
+}
+
+.mh-dashboard-rating-row ::deep .mud-typography {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mh-dashboard-stars {
+    display: flex;
+    gap: 0;
+}
+
 @media (max-width: 640px) {
     .mh-dashboard-header {
         align-items: stretch;
@@ -101,5 +128,14 @@
 
     .mh-dashboard-manga-line img {
         height: 88px;
+    }
+
+    .mh-dashboard-rating-row {
+        grid-template-columns: 2rem minmax(0, 1fr);
+    }
+
+    .mh-dashboard-stars {
+        grid-column: 1 / -1;
+        justify-content: center;
     }
 }

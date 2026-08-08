@@ -124,6 +124,37 @@ else
                     }
                 </div>
             </MangaBentoTile>
+
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="warm" CornerIcon="@Icons.Material.Filled.StarRate">
+                <div class="mh-dashboard-tile">
+                    <MudText Typo="Typo.overline">Rate completed manga</MudText>
+                    @if (pendingRatings.Count == 0)
+                    {
+                        <MudText Typo="Typo.h3">Your completed shelf is rated.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Finish another story and it will appear here as a gentle reminder.</MudText>
+                    }
+                    else
+                    {
+                        @foreach (var entry in pendingRatings.Take(2))
+                        {
+                            <div class="mh-dashboard-rating-row">
+                                @if (!string.IsNullOrWhiteSpace(entry.CoverUrl))
+                                {
+                                    <img src="@entry.CoverUrl" alt="" loading="lazy" decoding="async" />
+                                }
+                                <MudText Typo="Typo.subtitle2">@entry.Title</MudText>
+                                <div class="mh-dashboard-stars" aria-label="@($"Rate {entry.Title}")">
+                                    @for (var value = 1; value <= 5; value++)
+                                    {
+                                        var score = value;
+                                        <MudIconButton Icon="@Icons.Material.Outlined.StarBorder" Color="Color.Secondary" Size="Size.Small" Disabled="@savingRatings.Contains(entry.Id)" OnClick="() => SetScore(entry, score)" aria-label="@($"Rate {score} of 5")" />
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </MangaBentoTile>
         </MangaBento>
     </MudStack>
 }

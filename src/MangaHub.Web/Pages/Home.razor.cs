@@ -11,6 +11,7 @@ public partial class Home : IDisposable
     [Inject] private AuthSessionService Auth { get; set; } = default!;
     [Inject] private MangaApiService MangaApi { get; set; } = default!;
     [Inject] private CatalogApiService CatalogApi { get; set; } = default!;
+    [Inject] private ShelfApiService ShelfApi { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private UserResponse? currentUser;
@@ -21,6 +22,8 @@ public partial class Home : IDisposable
     private List<MangaEntryResponse> planned = [];
     private MangaEntryResponse? continueReading;
     private List<CatalogMangaResponse> recommendations = [];
+    private List<MangaEntryResponse> pendingRatings = [];
+    private HashSet<Guid> savingRatings = [];
     private string[] statusLabels = ["Reading", "Planned", "Done"];
     private double[] statusData = [];
 
@@ -52,6 +55,10 @@ public partial class Home : IDisposable
             continueReading = shelf.FirstOrDefault(entry => string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase))
                 ?? planned.FirstOrDefault();
             recommendations = catalog.Where(entry => !entry.IsInMyShelf).OrderBy(entry => entry.Title).Take(3).ToList();
+            pendingRatings = shelf
+                .Where(entry => string.Equals(entry.ReadingStatus, "done", StringComparison.OrdinalIgnoreCase) && entry.Score is null)
+                .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
+                .ToList();
             statusData =
             [
                 shelf.Count(entry => string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)),
@@ -71,6 +78,25 @@ public partial class Home : IDisposable
     private void GoNewReleases() => Navigation.NavigateTo("library?availability=new");
     private void GoPlanned() => Navigation.NavigateTo("library?status=planned");
     private void OpenContinueReading() => Navigation.NavigateTo("library");
+
+    private async Task SetScore(MangaEntryResponse entry, int score)
+    {
+        if (!savingRatings.Add(entry.Id)) return;
+        try
+        {
+            var request = new AddToShelfRequest(entry.Id, entry.ReadingStatus, entry.CurrentChapter, score, entry.Category, entry.Summary, entry.Notes);
+            var updated = await ShelfApi.UpdateShelfAsync(entry.Id, request);
+            if (updated is null) return;
+
+            var index = shelf.FindIndex(item => item.Id == entry.Id);
+            if (index >= 0) shelf[index] = updated;
+            pendingRatings.RemoveAll(item => item.Id == entry.Id);
+        }
+        finally
+        {
+            savingRatings.Remove(entry.Id);
+        }
+    }
 
     private void OnAuthChanged()
     {
