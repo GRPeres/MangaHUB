@@ -83,34 +83,26 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
         return null;
     }
 
-    public async Task<PasswordResetRequestResult> RequestPasswordResetAsync(string email, CancellationToken cancellationToken)
+    public async Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken)
     {
         var normalized = NormalizeEmail(email);
         var user = await users.GetByEmailAsync(normalized, cancellationToken);
-        if (user is null) return PasswordResetRequestResult.NoMatchingAccount;
-        if (!emailSender.IsConfigured) return PasswordResetRequestResult.EmailNotConfigured;
+        if (user is null || !emailSender.IsConfigured) return;
 
         await users.DeleteExpiredResetTokensAsync(cancellationToken);
         var rawToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        await users.AddResetTokenAsync(new PasswordResetToken
+        {
+            UserId = user.Id,
+            TokenHash = HashToken(rawToken),
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(1)
+        }, cancellationToken);
+
         var origin = configuration["FrontendOrigin"]?.TrimEnd('/') ?? "http://localhost:3000";
         var url = $"{origin}/reset-password?token={Uri.EscapeDataString(rawToken)}";
-        try
-        {
-            await emailSender.SendAsync(user.Email, "Reset your MangaHub password",
-                $"<p>Use this link to reset your MangaHub password. It expires in one hour.</p><p><a href=\"{url}\">Reset password</a></p>",
-                cancellationToken);
-            await users.AddResetTokenAsync(new PasswordResetToken
-            {
-                UserId = user.Id,
-                TokenHash = HashToken(rawToken),
-                ExpiresAt = DateTimeOffset.UtcNow.AddHours(1)
-            }, cancellationToken);
-            return PasswordResetRequestResult.Sent;
-        }
-        catch
-        {
-            return PasswordResetRequestResult.SendFailed;
-        }
+        await emailSender.SendAsync(user.Email, "Reset your MangaHub password",
+            $"<p>Use this link to reset your MangaHub password. It expires in one hour.</p><p><a href=\"{url}\">Reset password</a></p>",
+            cancellationToken);
     }
 
     public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken)
@@ -188,12 +180,4 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
         public bool IsConfigured => false;
         public Task SendAsync(string recipient, string subject, string htmlBody, CancellationToken cancellationToken) => Task.CompletedTask;
     }
-}
-
-public enum PasswordResetRequestResult
-{
-    Sent,
-    NoMatchingAccount,
-    EmailNotConfigured,
-    SendFailed
 }
