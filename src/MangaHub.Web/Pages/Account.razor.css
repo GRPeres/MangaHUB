@@ -1,0 +1,12 @@
+.mh-account-language-select { min-width: 13rem; }
+.mh-account-language-custom { max-width: 10rem; }
+.mh-account-language-order { display: grid; gap: .45rem; }
+.mh-account-language-card { align-items: center; display: grid; gap: .5rem; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; padding: .45rem .6rem; }
+.mh-account-language-card ::deep .mud-typography-subtitle2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 600px) {
+    .mh-account-language-select { min-width: min(100%, 16rem); }
+    .mh-account-language-custom { max-width: 8rem; }
+    .mh-account-language-card { grid-template-columns: auto minmax(0, 1fr) auto auto auto; }
+    .mh-account-language-card ::deep .mud-typography-caption { display: none; }
+}

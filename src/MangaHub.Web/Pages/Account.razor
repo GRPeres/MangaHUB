@@ -32,11 +32,32 @@
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.h2">Reading language order</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Enter MangaDex language codes in priority order, separated by commas. MangaHub uses the first available one to read, while every listed language contributes to release alerts. Examples: <code>en, pt-br</code>, <code>en, es, pt-br</code>.</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">MangaHub reads with the highest available language first. Every language in this list contributes to new-release counts and notifications.</MudText>
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
-                    <MudTextField T="string" @bind-Value="preferredLanguage" Label="Preferred languages" Variant="Variant.Outlined" Immediate="true" Class="mh-account-language-input" />
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@isSavingLanguage" OnClick="SavePreferredLanguage">Save languages</MudButton>
+                    <MudSelect T="string" Value="@languageToAdd" ValueChanged="AddLanguage" Label="Add language" Variant="Variant.Outlined" Class="mh-account-language-select">
+                        @foreach (var language in AvailableLanguages)
+                        {
+                            <MudSelectItem Value="@language.Code" Disabled="@preferredLanguages.Contains(language.Code, StringComparer.OrdinalIgnoreCase)">@language.Label</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudTextField T="string" @bind-Value="customLanguage" Label="Custom code" Variant="Variant.Outlined" Immediate="true" Class="mh-account-language-custom" />
+                    <MudTooltip Text="Add custom language"><MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(customLanguage)" OnClick="AddCustomLanguage" aria-label="Add custom language" /></MudTooltip>
                 </MudStack>
+                <div class="mh-account-language-order" aria-label="Language priority order">
+                    @for (var index = 0; index < preferredLanguages.Count; index++)
+                    {
+                        var language = preferredLanguages[index];
+                        <MudPaper Elevation="0" Outlined="true" Class="mh-account-language-card">
+                            <MudChip T="string" Size="Size.Small" Color="@(index == 0 ? Color.Primary : Color.Secondary)" Variant="Variant.Filled">@(index + 1)</MudChip>
+                            <MudText Typo="Typo.subtitle2">@LanguageLabel(language)</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@language</MudText>
+                            <MudTooltip Text="Move up"><MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp" Size="Size.Small" Disabled="@(index == 0)" OnClick="() => MoveLanguage(index, -1)" aria-label="Move language up" /></MudTooltip>
+                            <MudTooltip Text="Move down"><MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Disabled="@(index == preferredLanguages.Count - 1)" OnClick="() => MoveLanguage(index, 1)" aria-label="Move language down" /></MudTooltip>
+                            <MudTooltip Text="Remove language"><MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" Disabled="@(preferredLanguages.Count == 1)" OnClick="() => RemoveLanguage(index)" aria-label="Remove language" /></MudTooltip>
+                        </MudPaper>
+                    }
+                </div>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@isSavingLanguage" OnClick="SavePreferredLanguage">Save language order</MudButton>
             </MudStack>
         </MudPaper>
 
@@ -95,7 +116,15 @@
     private List<UserAdminResponse> users = [];
     private string message = "";
     private Severity messageSeverity = Severity.Info;
-    private string preferredLanguage = "en";
+    private static readonly (string Code, string Label)[] AvailableLanguages =
+    [
+        ("en", "English"), ("pt-br", "Portuguese (Brazil)"), ("pt", "Portuguese"),
+        ("es", "Spanish"), ("fr", "French"), ("de", "German"), ("it", "Italian"),
+        ("ja", "Japanese"), ("ko", "Korean"), ("zh", "Chinese"), ("zh-ro", "Chinese (Romanized)")
+    ];
+    private List<string> preferredLanguages = ["en"];
+    private string languageToAdd = "";
+    private string customLanguage = "";
     private bool isSavingLanguage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -108,7 +137,7 @@
     private async Task RefreshAccount()
     {
         currentUser = await Auth.GetCurrentUserAsync(forceRefresh: true);
-        preferredLanguage = currentUser?.PreferredLanguage ?? "en";
+        preferredLanguages = ParseLanguages(currentUser?.PreferredLanguage);
         if (IsAdmin)
         {
             await LoadUsers();
@@ -144,7 +173,7 @@
         isSavingLanguage = true;
         try
         {
-            var updated = await Auth.UpdatePreferredLanguageAsync(preferredLanguage);
+            var updated = await Auth.UpdatePreferredLanguageAsync(string.Join(',', preferredLanguages));
             if (updated is null)
             {
                 Messages.Error("Could not save your preferred language.");
@@ -153,11 +182,52 @@
 
             Messages.Success("Preferred reading languages saved.");
             currentUser = updated;
-            preferredLanguage = updated.PreferredLanguage;
+            preferredLanguages = ParseLanguages(updated.PreferredLanguage);
         }
         finally
         {
             isSavingLanguage = false;
         }
     }
+
+    private void AddLanguage(string language)
+    {
+        languageToAdd = "";
+        AddLanguageCode(language);
+    }
+
+    private void AddCustomLanguage()
+    {
+        AddLanguageCode(customLanguage);
+        customLanguage = "";
+    }
+
+    private void AddLanguageCode(string? language)
+    {
+        var normalized = (language ?? "").Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalized) || preferredLanguages.Contains(normalized, StringComparer.OrdinalIgnoreCase)) return;
+        preferredLanguages.Add(normalized);
+    }
+
+    private void MoveLanguage(int index, int direction)
+    {
+        var destination = index + direction;
+        if (destination < 0 || destination >= preferredLanguages.Count) return;
+        (preferredLanguages[index], preferredLanguages[destination]) = (preferredLanguages[destination], preferredLanguages[index]);
+    }
+
+    private void RemoveLanguage(int index)
+    {
+        if (preferredLanguages.Count <= 1) return;
+        preferredLanguages.RemoveAt(index);
+    }
+
+    private static List<string> ParseLanguages(string? value) => (value ?? "en")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(language => language.ToLowerInvariant())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList() is { Count: > 0 } languages ? languages : ["en"];
+
+    private static string LanguageLabel(string language) => AvailableLanguages
+        .FirstOrDefault(item => string.Equals(item.Code, language, StringComparison.OrdinalIgnoreCase)).Label ?? language;
 }
