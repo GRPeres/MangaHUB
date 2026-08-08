@@ -212,7 +212,7 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
         await users.DeleteExpiredEmailVerificationTokensAsync(cancellationToken);
         var rawToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
         var origin = configuration["FrontendOrigin"]?.TrimEnd('/') ?? "http://localhost:3000";
-        var url = $"{origin}/verify-email?token={Uri.EscapeDataString(rawToken)}";
+        var url = $"{origin}/auth/verify-email?token={Uri.EscapeDataString(rawToken)}";
         await emailSender.SendAsync(user.PendingEmail, "Verify your MangaHub recovery email",
             $"<p>Confirm this address for MangaHub password recovery.</p><p><a href=\"{url}\">Verify recovery email</a></p>",
             cancellationToken);
