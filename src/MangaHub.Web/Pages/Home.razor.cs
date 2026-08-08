@@ -97,6 +97,7 @@ public partial class Home : IDisposable
     private static string DisplayChapter(string value) => string.IsNullOrWhiteSpace(value) ? "not started" : value;
     private static string LatestLabel(MangaEntryResponse entry) => entry.MangaDexPreferredLanguageLatestChapter is { } latest ? $"Latest available: {latest:0.###}" : "No language-specific release data yet";
     private static string ReleaseLabel(MangaEntryResponse entry) => $"+{ReleaseGap(entry):0.###} chapter{(ReleaseGap(entry) == 1 ? "" : "s")}";
+    private string PreferredLanguagesLabel => string.Join(" / ", (currentUser?.PreferredLanguage ?? "en").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(language => language.ToUpperInvariant()));
     private static string EntryMeta(CatalogMangaResponse entry) => string.Join(" · ", new[] { entry.MediaType, entry.FirstPublishYear?.ToString() }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
     public void Dispose() => Auth.Changed -= OnAuthChanged;

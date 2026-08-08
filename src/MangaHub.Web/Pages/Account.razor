@@ -31,11 +31,11 @@
 
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
-                <MudText Typo="Typo.h2">Reading language</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Used whenever MangaHub opens or downloads MangaDex chapters. Any MangaDex language code works, such as <code>en</code>, <code>pt-br</code>, <code>es</code>, or <code>fr</code>.</MudText>
+                <MudText Typo="Typo.h2">Reading language order</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Enter MangaDex language codes in priority order, separated by commas. MangaHub uses the first available one to read, while every listed language contributes to release alerts. Examples: <code>en, pt-br</code>, <code>en, es, pt-br</code>.</MudText>
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
-                    <MudTextField T="string" @bind-Value="preferredLanguage" Label="Preferred language" Variant="Variant.Outlined" Immediate="true" Class="mh-account-language-input" />
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@isSavingLanguage" OnClick="SavePreferredLanguage">Save language</MudButton>
+                    <MudTextField T="string" @bind-Value="preferredLanguage" Label="Preferred languages" Variant="Variant.Outlined" Immediate="true" Class="mh-account-language-input" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@isSavingLanguage" OnClick="SavePreferredLanguage">Save languages</MudButton>
                 </MudStack>
             </MudStack>
         </MudPaper>
@@ -151,7 +151,7 @@
                 return;
             }
 
-            Messages.Success("Preferred reading language saved.");
+            Messages.Success("Preferred reading languages saved.");
             currentUser = updated;
             preferredLanguage = updated.PreferredLanguage;
         }

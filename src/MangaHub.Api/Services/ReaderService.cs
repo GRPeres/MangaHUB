@@ -78,7 +78,8 @@ public sealed class ReaderService(
         {
             return null;
         }
-        var preferredLanguage = NormalizeLanguage(language);
+        var preferredLanguages = LanguagePreferences.Parse(language);
+        var preferredLanguage = preferredLanguages[0];
 
         var cachedSeries = await series.GetBySourceAndExternalIdAsync(MangaDexCacheSource, mangaDexId, cancellationToken);
         var isNewCachedSeries = cachedSeries is null;
@@ -97,13 +98,13 @@ public sealed class ReaderService(
             }
 
             sourceChapter = afterCachedChapterId is not null
-                ? await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguage, cancellationToken)
-                : await FindPreviousMangaDexChapterBeforeNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguage, cancellationToken);
+                ? await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguages, cancellationToken)
+                : await FindPreviousMangaDexChapterBeforeNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguages, cancellationToken);
             if (sourceChapter is null)
             {
                 var availableLanguages = afterCachedChapterId is not null
-                    ? await FindAvailableLanguagesAfterNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguage, cancellationToken)
-                    : await FindAvailableLanguagesBeforeNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguage, cancellationToken);
+                    ? await FindAvailableLanguagesAfterNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguages, cancellationToken)
+                    : await FindAvailableLanguagesBeforeNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguages, cancellationToken);
                 if (!allowLanguageFallback && availableLanguages.Count > 0)
                 {
                     throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
@@ -124,17 +125,17 @@ public sealed class ReaderService(
                     current.ChapterNumber,
                     sourceChapter.Number,
                     NormalizeLanguage(sourceChapter.Language),
-                    await FindCloserNextChapterLanguagesAsync(mangaDexId, current.ChapterNumber, sourceChapter.Number, preferredLanguage, cancellationToken));
+                    await FindCloserNextChapterLanguagesAsync(mangaDexId, current.ChapterNumber, sourceChapter.Number, preferredLanguages, cancellationToken));
             }
 
             cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
         }
         else if (shelfEntry.IsRead && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
         {
-            sourceChapter = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguage, cancellationToken);
+            sourceChapter = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
             if (sourceChapter is null)
             {
-                var availableLanguages = await FindAvailableLanguagesAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguage, cancellationToken);
+                var availableLanguages = await FindAvailableLanguagesAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
                 if (!allowLanguageFallback && availableLanguages.Count > 0)
                 {
                     throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
@@ -154,7 +155,7 @@ public sealed class ReaderService(
                     shelfEntry.CurrentChapter,
                     sourceChapter.Number,
                     NormalizeLanguage(sourceChapter.Language),
-                    await FindCloserNextChapterLanguagesAsync(mangaDexId, shelfEntry.CurrentChapter, sourceChapter.Number, preferredLanguage, cancellationToken));
+                    await FindCloserNextChapterLanguagesAsync(mangaDexId, shelfEntry.CurrentChapter, sourceChapter.Number, preferredLanguages, cancellationToken));
             }
 
             cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
@@ -162,7 +163,7 @@ public sealed class ReaderService(
         else if (cachedSeries is not null && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
         {
             cachedChapter = cachedSeries.Chapters
-                .OrderBy(chapter => string.Equals(chapter.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .OrderBy(chapter => LanguagePreferences.IndexOf(preferredLanguages, chapter.Language))
                 .ThenBy(chapter => chapter.CreatedAt)
                 .FirstOrDefault(chapter => HasExactChapter(chapter.ChapterNumber, shelfEntry.CurrentChapter));
         }
@@ -182,7 +183,7 @@ public sealed class ReaderService(
         {
             var mangaDex = sources.Get("mangadex");
             progress?.Report(new ReaderPreparationProgress("Loading MangaDex chapter list", 8));
-            var preferredChapters = await mangaDex.GetChaptersAsync(mangaDexId, preferredLanguage, cancellationToken);
+            var preferredChapters = await GetPreferredMangaDexChaptersAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
             if (isInitialTrackedChapterSelection
                 && !allowLanguageFallback
                 && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter)
@@ -191,7 +192,7 @@ public sealed class ReaderService(
                 var availableLanguages = await FindAvailableLanguagesForChapterAsync(
                     mangaDexId,
                     shelfEntry.CurrentChapter,
-                    preferredLanguage,
+                    preferredLanguages,
                     cancellationToken);
                 if (availableLanguages.Count > 0)
                 {
@@ -217,7 +218,7 @@ public sealed class ReaderService(
                     "1",
                     sourceChapter.Number,
                     NormalizeLanguage(sourceChapter.Language),
-                    await FindCloserNextChapterLanguagesAsync(mangaDexId, "1", sourceChapter.Number, preferredLanguage, cancellationToken));
+                    await FindCloserNextChapterLanguagesAsync(mangaDexId, "1", sourceChapter.Number, preferredLanguages, cancellationToken));
             }
             if (isInitialTrackedChapterSelection
                 && !allowLanguageFallback
@@ -269,9 +270,9 @@ public sealed class ReaderService(
         if (isInitialTrackedChapterSelection
             && string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)
             && !allowLanguageFallback
-            && !string.Equals(resolvedLanguage, preferredLanguage, StringComparison.OrdinalIgnoreCase))
+            && !LanguagePreferences.Contains(preferredLanguages, resolvedLanguage))
         {
-            var availableLanguages = await FindAvailableLanguagesForChapterAsync(mangaDexId, cachedChapter.ChapterNumber, preferredLanguage, cancellationToken);
+            var availableLanguages = await FindAvailableLanguagesForChapterAsync(mangaDexId, cachedChapter.ChapterNumber, preferredLanguages, cancellationToken);
             if (!availableLanguages.Contains(resolvedLanguage, StringComparer.OrdinalIgnoreCase))
             {
                 availableLanguages.Add(resolvedLanguage);
@@ -411,7 +412,18 @@ public sealed class ReaderService(
             : chapters.FirstOrDefault(chapter => ParseChapterNumber(chapter.Number) is { } chapterNumber && chapterNumber > currentNumber);
     }
 
-    private async Task<List<string>> FindAvailableLanguagesAfterNumberAsync(string mangaDexId, string currentChapterNumber, string preferredLanguage, CancellationToken cancellationToken)
+    private async Task<MangaSourceChapter?> FindNextMangaDexChapterAfterNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
+    {
+        foreach (var language in preferredLanguages)
+        {
+            var chapter = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, currentChapterNumber, language, cancellationToken);
+            if (chapter is not null) return chapter;
+        }
+
+        return null;
+    }
+
+    private async Task<List<string>> FindAvailableLanguagesAfterNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
     {
         var currentNumber = ParseChapterNumber(currentChapterNumber);
         if (currentNumber is null)
@@ -420,7 +432,7 @@ public sealed class ReaderService(
         }
 
         return (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
-            .Where(chapter => !string.Equals(chapter.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase))
+            .Where(chapter => !LanguagePreferences.Contains(preferredLanguages, chapter.Language))
             .Where(chapter => ParseChapterNumber(chapter.Number) is { } number && number > currentNumber)
             .Select(chapter => NormalizeLanguage(chapter.Language))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -442,7 +454,18 @@ public sealed class ReaderService(
                 .FirstOrDefault();
     }
 
-    private async Task<List<string>> FindAvailableLanguagesBeforeNumberAsync(string mangaDexId, string currentChapterNumber, string preferredLanguage, CancellationToken cancellationToken)
+    private async Task<MangaSourceChapter?> FindPreviousMangaDexChapterBeforeNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
+    {
+        foreach (var language in preferredLanguages)
+        {
+            var chapter = await FindPreviousMangaDexChapterBeforeNumberAsync(mangaDexId, currentChapterNumber, language, cancellationToken);
+            if (chapter is not null) return chapter;
+        }
+
+        return null;
+    }
+
+    private async Task<List<string>> FindAvailableLanguagesBeforeNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
     {
         var currentNumber = ParseChapterNumber(currentChapterNumber);
         if (currentNumber is null)
@@ -451,7 +474,7 @@ public sealed class ReaderService(
         }
 
         return (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
-            .Where(chapter => !string.Equals(chapter.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase))
+            .Where(chapter => !LanguagePreferences.Contains(preferredLanguages, chapter.Language))
             .Where(chapter => ParseChapterNumber(chapter.Number) is { } number && number < currentNumber)
             .Select(chapter => NormalizeLanguage(chapter.Language))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -459,9 +482,9 @@ public sealed class ReaderService(
             .ToList();
     }
 
-    private async Task<List<string>> FindAvailableLanguagesForChapterAsync(string mangaDexId, string currentChapterNumber, string preferredLanguage, CancellationToken cancellationToken) =>
+    private async Task<List<string>> FindAvailableLanguagesForChapterAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken) =>
         (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
-            .Where(chapter => !string.Equals(chapter.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase))
+            .Where(chapter => !LanguagePreferences.Contains(preferredLanguages, chapter.Language))
             .Where(chapter => HasExactChapter([chapter], currentChapterNumber))
             .Select(chapter => NormalizeLanguage(chapter.Language))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -472,7 +495,7 @@ public sealed class ReaderService(
         string mangaDexId,
         string currentChapterNumber,
         string proposedChapterNumber,
-        string preferredLanguage,
+        IReadOnlyList<string> preferredLanguages,
         CancellationToken cancellationToken)
     {
         var currentNumber = ParseChapterNumber(currentChapterNumber);
@@ -483,13 +506,30 @@ public sealed class ReaderService(
         }
 
         return (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
-            .Where(chapter => !string.Equals(chapter.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase))
+            .Where(chapter => !LanguagePreferences.Contains(preferredLanguages, chapter.Language))
             .Select(chapter => new { Language = NormalizeLanguage(chapter.Language), Number = ParseChapterNumber(chapter.Number) })
             .Where(item => item.Number is not null && item.Number > currentNumber && item.Number < proposedNumber)
             .Select(item => item.Language)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private async Task<IReadOnlyList<MangaSourceChapter>> GetPreferredMangaDexChaptersAsync(
+        string mangaDexId,
+        string currentChapterNumber,
+        IReadOnlyList<string> preferredLanguages,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<MangaSourceChapter>? firstAvailable = null;
+        foreach (var language in preferredLanguages)
+        {
+            var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken);
+            firstAvailable ??= chapters;
+            if (string.IsNullOrWhiteSpace(currentChapterNumber) || HasExactChapter(chapters, currentChapterNumber)) return chapters;
+        }
+
+        return firstAvailable ?? [];
     }
 
     private async Task RecordCompletedMangaDexChapterAsync(MangaEntry entry, string currentChapterNumber, CancellationToken cancellationToken)

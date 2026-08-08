@@ -44,14 +44,8 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
 
     public async Task<UserResponse> UpdatePreferredLanguageAsync(MangaUser user, UpdatePreferredLanguageRequest request, CancellationToken cancellationToken)
     {
-        user.PreferredLanguage = NormalizeLanguage(request.PreferredLanguage);
+        user.PreferredLanguage = LanguagePreferences.Normalize(request.PreferredLanguage);
         await users.SaveChangesAsync(cancellationToken);
         return ApiMapping.ToUserResponse(user);
-    }
-
-    private static string NormalizeLanguage(string? language)
-    {
-        var normalized = (language ?? "").Trim().ToLowerInvariant();
-        return string.IsNullOrWhiteSpace(normalized) ? "en" : normalized[..Math.Min(normalized.Length, 16)];
     }
 }

@@ -1,5 +1,6 @@
 using MangaHub.Core.Dto;
 using MangaHub.Core.Models;
+using MangaHub.Core.Services;
 using MangaHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,6 +28,7 @@ public sealed class CatalogRepository(MangaHubDbContext db)
 
     public async Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? queryText, string preferredLanguage, int offset, int limit, CancellationToken cancellationToken)
     {
+        var languageCodes = LanguagePreferences.Parse(preferredLanguage).ToArray();
         var shelfIds = db.UserMangaEntries
             .Where(x => x.UserId == userId)
             .Select(x => x.MangaEntryId);
@@ -72,8 +74,8 @@ public sealed class CatalogRepository(MangaHubDbContext db)
                 shelfIds.Contains(x.Id),
                 x.FallbackReaderUrl,
                 x.ReaderPreference,
-                db.MangaDexLanguageLatestChapters.Where(latest => latest.MangaEntryId == x.Id && latest.Language == preferredLanguage)
-                    .Select(latest => (decimal?)latest.LatestChapter).FirstOrDefault()))
+                db.MangaDexLanguageLatestChapters.Where(latest => latest.MangaEntryId == x.Id && languageCodes.Contains(latest.Language))
+                    .Select(latest => (decimal?)latest.LatestChapter).Max()))
             .ToListAsync(cancellationToken);
     }
 

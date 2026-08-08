@@ -55,9 +55,9 @@ public sealed class AuthServiceTests
         var registered = await service.RegisterAsync(new AuthRequest("delta", "secret"), CancellationToken.None);
         var user = await users.GetByIdAsync(registered!.Id, CancellationToken.None);
 
-        var updated = await service.UpdatePreferredLanguageAsync(user!, new UpdatePreferredLanguageRequest(" PT-BR "), CancellationToken.None);
+        var updated = await service.UpdatePreferredLanguageAsync(user!, new UpdatePreferredLanguageRequest(" PT-BR, en, pt-br "), CancellationToken.None);
 
-        Assert.Equal("pt-br", updated.PreferredLanguage);
-        Assert.Equal("pt-br", (await users.GetByIdAsync(registered.Id, CancellationToken.None))!.PreferredLanguage);
+        Assert.Equal("pt-br,en", updated.PreferredLanguage);
+        Assert.Equal("pt-br,en", (await users.GetByIdAsync(registered.Id, CancellationToken.None))!.PreferredLanguage);
     }
 }

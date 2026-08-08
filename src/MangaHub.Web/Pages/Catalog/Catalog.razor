@@ -191,7 +191,7 @@
     protected override async Task OnInitializedAsync()
     {
         currentUser = await Auth.GetCurrentUserAsync(forceRefresh: true);
-        selectedLanguage = currentUser?.PreferredLanguage ?? "en";
+        selectedLanguage = (currentUser?.PreferredLanguage ?? "en").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? "en";
         if (!IsAdmin)
         {
             return;

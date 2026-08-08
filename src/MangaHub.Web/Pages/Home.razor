@@ -25,7 +25,7 @@ else
     <MudStack Spacing="3">
         <section class="mh-dashboard-header">
             <MudStack Spacing="1">
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@currentUser.PreferredLanguage.ToUpperInvariant() reading dashboard</MudText>
+                <MudText Typo="Typo.overline" Color="Color.Secondary">@PreferredLanguagesLabel reading dashboard</MudText>
                 <MudText Typo="Typo.h2">Good to see you, @currentUser.Username.</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Your shelf is quiet until there is something worth reading.</MudText>
             </MudStack>
@@ -63,7 +63,7 @@ else
                 <div class="mh-dashboard-tile mh-dashboard-stat">
                     <MudText Typo="Typo.overline">New releases</MudText>
                     <MudText Typo="Typo.h2">@newReleases.Count</MudText>
-                    <MudText Typo="Typo.caption">in @currentUser.PreferredLanguage.ToUpperInvariant()</MudText>
+                    <MudText Typo="Typo.caption">in @PreferredLanguagesLabel</MudText>
                 </div>
             </MangaBentoTile>
 

@@ -1,5 +1,6 @@
 using MangaHub.Api.Services;
 using MangaHub.Core.Dto;
+using MangaHub.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -78,7 +79,7 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
         if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
-        var result = await cache.DownloadAsync(entryId, request, string.IsNullOrWhiteSpace(request.Language) ? user.PreferredLanguage : request.Language, cancellationToken);
+        var result = await cache.DownloadAsync(entryId, request, string.IsNullOrWhiteSpace(request.Language) ? LanguagePreferences.Primary(user.PreferredLanguage) : request.Language, cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }
 

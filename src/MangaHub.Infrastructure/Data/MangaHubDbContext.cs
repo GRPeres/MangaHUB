@@ -25,7 +25,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.HasIndex(x => x.Username).IsUnique();
             entity.Property(x => x.Username).HasMaxLength(80);
             entity.Property(x => x.Role).HasMaxLength(40);
-            entity.Property(x => x.PreferredLanguage).HasMaxLength(16);
+            entity.Property(x => x.PreferredLanguage).HasMaxLength(128);
         });
 
         modelBuilder.Entity<MangaEntry>(entity =>

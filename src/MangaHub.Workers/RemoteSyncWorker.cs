@@ -373,12 +373,16 @@ public sealed class RemoteSyncWorker(
                 join user in db.Users on shelf.UserId equals user.Id
                 where shelf.MangaEntryId == entry.Id
                     && shelf.ReadingStatus == "reading"
-                    && user.PreferredLanguage == language
-                select new { shelf.UserId, shelf.CurrentChapter })
+                select new { shelf.UserId, shelf.CurrentChapter, user.PreferredLanguage })
                 .ToListAsync(cancellationToken);
 
             foreach (var recipient in recipients)
             {
+                if (!LanguagePreferences.Contains(LanguagePreferences.Parse(recipient.PreferredLanguage), language))
+                {
+                    continue;
+                }
+
                 var currentChapter = ParseChapterNumber(recipient.CurrentChapter);
                 if (currentChapter is null || chapter <= currentChapter.Value)
                 {

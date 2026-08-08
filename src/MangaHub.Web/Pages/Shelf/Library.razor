@@ -364,7 +364,8 @@
         progressiveLoadReference?.Dispose();
     }
 
-    private string PreferredLanguage => string.IsNullOrWhiteSpace(currentUser?.PreferredLanguage) ? "en" : currentUser.PreferredLanguage;
+    private string PreferredLanguages => string.IsNullOrWhiteSpace(currentUser?.PreferredLanguage) ? "en" : currentUser.PreferredLanguage;
+    private string PreferredLanguage => PreferredLanguages.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? "en";
 
     private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false, bool allowChapterJump = false, string? requestedChapter = null)
     {
@@ -393,7 +394,7 @@
 
             if (options.HasMangaDex)
             {
-                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguage, allowLanguageFallback: allowLanguageFallback, allowChapterJump: allowChapterJump, requestedChapter: requestedChapter);
+                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguages, allowLanguageFallback: allowLanguageFallback, allowChapterJump: allowChapterJump, requestedChapter: requestedChapter);
                 if (readerPreparation is null)
                 {
                     ShowWarning("Could not start MangaDex chapter preparation.");

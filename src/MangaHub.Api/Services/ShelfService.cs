@@ -2,6 +2,7 @@ using MangaHub.Api.Common;
 using MangaHub.Api.Repositories;
 using MangaHub.Core.Dto;
 using MangaHub.Core.Models;
+using MangaHub.Core.Services;
 
 namespace MangaHub.Api.Services;
 
@@ -13,8 +14,8 @@ public sealed class ShelfService(
     public async Task<List<MangaEntryResponse>> ListAsync(Guid targetUserId, string? status, int offset, int limit, CancellationToken cancellationToken)
     {
         var user = await users.GetByIdAsync(targetUserId, cancellationToken);
-        var language = string.IsNullOrWhiteSpace(user?.PreferredLanguage) ? "en" : user.PreferredLanguage.Trim().ToLowerInvariant();
-        return await shelf.ListEntriesAsync(targetUserId, status, language, offset, limit, cancellationToken);
+        var languages = LanguagePreferences.Parse(user?.PreferredLanguage);
+        return await shelf.ListEntriesAsync(targetUserId, status, languages, offset, limit, cancellationToken);
     }
 
     public async Task<MangaEntryResponse?> AddAsync(Guid userId, AddToShelfRequest request, CancellationToken cancellationToken)
