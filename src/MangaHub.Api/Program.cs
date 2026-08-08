@@ -81,10 +81,14 @@ builder.Services.AddScoped<CatalogCacheService>();
 builder.Services.AddScoped<NotificationService>();
 
 var app = builder.Build();
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+var forwardedHeaders = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
-});
+};
+// The API is internal-only in Compose; nginx is the trusted reverse proxy.
+forwardedHeaders.KnownNetworks.Clear();
+forwardedHeaders.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeaders);
 
 using (var scope = app.Services.CreateScope())
 {

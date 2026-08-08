@@ -51,7 +51,16 @@ public partial class LoginModal : ComponentBase
         isBusy = true;
         try
         {
-            await Auth.RequestPasswordResetAsync(address);
+            var result = await Auth.RequestPasswordResetAsync(address);
+            if (result.StatusCode is < 200 or >= 300)
+            {
+                feedbackSeverity = Severity.Error;
+                feedback = string.IsNullOrWhiteSpace(result.Error)
+                    ? "Password recovery is temporarily unavailable."
+                    : $"Password recovery failed: {result.Error}";
+                return;
+            }
+
             feedbackSeverity = Severity.Success;
             feedback = "If that email belongs to an account, a reset link is on its way.";
         }
