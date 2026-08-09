@@ -46,22 +46,23 @@
                 <div class="mh-account-language-order" aria-label="Language priority order">
                     @for (var index = 0; index < preferredLanguages.Count; index++)
                     {
-                        var language = preferredLanguages[index];
+                        var cardIndex = index;
+                        var language = preferredLanguages[cardIndex];
                         <MudPaper Elevation="0"
                                   Outlined="true"
-                                  Class="@($"mh-account-language-card {(draggingLanguageIndex == index ? "is-dragging" : "")}")"
+                                  Class="@($"mh-account-language-card {(draggingLanguageIndex == cardIndex ? "is-dragging" : "")}")"
                                   draggable="true"
-                                  @ondragstart="() => BeginLanguageDrag(index)"
+                                  @ondragstart="() => BeginLanguageDrag(cardIndex)"
                                   @ondragover:preventDefault
-                                  @ondrop="() => DropLanguage(index)"
+                                  @ondrop="() => DropLanguage(cardIndex)"
                                   @ondragend="EndLanguageDrag">
                             <MudTooltip Text="Drag to change priority">
                                 <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Color="Color.Secondary" Class="mh-account-language-grip" />
                             </MudTooltip>
-                            <MudChip T="string" Size="Size.Small" Color="@(index == 0 ? Color.Primary : Color.Secondary)" Variant="Variant.Filled">@(index + 1)</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="@(cardIndex == 0 ? Color.Primary : Color.Secondary)" Variant="Variant.Filled">@(cardIndex + 1)</MudChip>
                             <MudText Typo="Typo.subtitle2">@LanguageLabel(language)</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@language</MudText>
-                            <MudTooltip Text="Remove language"><MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" Disabled="@(preferredLanguages.Count == 1)" OnClick="() => RemoveLanguage(index)" aria-label="Remove language" /></MudTooltip>
+                            <MudTooltip Text="Remove language"><MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" Disabled="@(preferredLanguages.Count == 1)" OnClick="() => RemoveLanguage(cardIndex)" aria-label="Remove language" /></MudTooltip>
                         </MudPaper>
                     }
                 </div>
