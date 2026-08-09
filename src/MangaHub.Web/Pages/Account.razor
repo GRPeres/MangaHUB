@@ -47,12 +47,20 @@
                     @for (var index = 0; index < preferredLanguages.Count; index++)
                     {
                         var language = preferredLanguages[index];
-                        <MudPaper Elevation="0" Outlined="true" Class="mh-account-language-card">
+                        <MudPaper Elevation="0"
+                                  Outlined="true"
+                                  Class="@($"mh-account-language-card {(draggingLanguageIndex == index ? "is-dragging" : "")}")"
+                                  draggable="true"
+                                  @ondragstart="() => BeginLanguageDrag(index)"
+                                  @ondragover:preventDefault
+                                  @ondrop="() => DropLanguage(index)"
+                                  @ondragend="EndLanguageDrag">
+                            <MudTooltip Text="Drag to change priority">
+                                <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Color="Color.Secondary" Class="mh-account-language-grip" />
+                            </MudTooltip>
                             <MudChip T="string" Size="Size.Small" Color="@(index == 0 ? Color.Primary : Color.Secondary)" Variant="Variant.Filled">@(index + 1)</MudChip>
                             <MudText Typo="Typo.subtitle2">@LanguageLabel(language)</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@language</MudText>
-                            <MudTooltip Text="Move up"><MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp" Size="Size.Small" Disabled="@(index == 0)" OnClick="() => MoveLanguage(index, -1)" aria-label="Move language up" /></MudTooltip>
-                            <MudTooltip Text="Move down"><MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Disabled="@(index == preferredLanguages.Count - 1)" OnClick="() => MoveLanguage(index, 1)" aria-label="Move language down" /></MudTooltip>
                             <MudTooltip Text="Remove language"><MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" Disabled="@(preferredLanguages.Count == 1)" OnClick="() => RemoveLanguage(index)" aria-label="Remove language" /></MudTooltip>
                         </MudPaper>
                     }
@@ -160,6 +168,7 @@
     private string languageToAdd = "";
     private string customLanguage = "";
     private bool isSavingLanguage;
+    private int? draggingLanguageIndex;
     private string accountEmail = "";
     private string currentPassword = "";
     private string newPassword = "";
@@ -273,11 +282,23 @@
         preferredLanguages.Add(normalized);
     }
 
-    private void MoveLanguage(int index, int direction)
+    private void BeginLanguageDrag(int index)
     {
-        var destination = index + direction;
-        if (destination < 0 || destination >= preferredLanguages.Count) return;
-        (preferredLanguages[index], preferredLanguages[destination]) = (preferredLanguages[destination], preferredLanguages[index]);
+        draggingLanguageIndex = index;
+    }
+
+    private void DropLanguage(int destination)
+    {
+        if (draggingLanguageIndex is not { } source || source == destination) return;
+        var language = preferredLanguages[source];
+        preferredLanguages.RemoveAt(source);
+        preferredLanguages.Insert(destination > source ? destination - 1 : destination, language);
+        draggingLanguageIndex = null;
+    }
+
+    private void EndLanguageDrag()
+    {
+        draggingLanguageIndex = null;
     }
 
     private void RemoveLanguage(int index)
