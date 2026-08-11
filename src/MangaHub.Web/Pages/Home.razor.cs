@@ -12,6 +12,7 @@ public partial class Home : IDisposable
     [Inject] private MangaApiService MangaApi { get; set; } = default!;
     [Inject] private CatalogApiService CatalogApi { get; set; } = default!;
     [Inject] private ShelfApiService ShelfApi { get; set; } = default!;
+    [Inject] private UsageApiService UsageApi { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private UserResponse? currentUser;
@@ -26,6 +27,7 @@ public partial class Home : IDisposable
     private HashSet<Guid> savingRatings = [];
     private string[] statusLabels = ["Reading", "Planned", "Done"];
     private double[] statusData = [];
+    private UsageDashboardResponse? usageDashboard;
 
     protected override async Task OnInitializedAsync()
     {
@@ -46,9 +48,11 @@ public partial class Home : IDisposable
         {
             var shelfTask = MangaApi.GetMangaEntriesAsync();
             var catalogTask = CatalogApi.GetCatalogAsync(language: currentUser.PreferredLanguage);
-            await Task.WhenAll(shelfTask, catalogTask);
+            var usageTask = currentUser.UsageAnalyticsEnabled ? UsageApi.GetDashboardAsync(30) : Task.FromResult<UsageDashboardResponse?>(null);
+            await Task.WhenAll(shelfTask, catalogTask, usageTask);
             shelf = shelfTask.Result;
             catalog = catalogTask.Result;
+            usageDashboard = usageTask.Result;
 
             newReleases = shelf.Where(IsReadingWithNewChapters).OrderByDescending(ReleaseGap).ThenBy(entry => entry.Title).ToList();
             planned = shelf.Where(entry => string.Equals(entry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)).OrderBy(entry => entry.Title).ToList();
@@ -78,6 +82,17 @@ public partial class Home : IDisposable
     private void GoNewReleases() => Navigation.NavigateTo("library?availability=new");
     private void GoPlanned() => Navigation.NavigateTo("library?status=planned");
     private void OpenContinueReading() => Navigation.NavigateTo("library");
+    private void GoAccount() => Navigation.NavigateTo("account");
+
+    private int ChaptersReadYesterday => usageDashboard?.Days.FirstOrDefault(day => day.Date == DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)))?.ChaptersCompleted ?? 0;
+    private int WeeklyReaderSeconds => usageDashboard?.Days.Where(day => day.Date >= DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-6))).Sum(day => day.ReaderSeconds) ?? 0;
+    private int WeeklyChapters => usageDashboard?.Days.Where(day => day.Date >= DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-6))).Sum(day => day.ChaptersCompleted) ?? 0;
+    private string WeeklyReadingTime => WeeklyReaderSeconds switch
+    {
+        < 60 => "< 1 min",
+        < 3600 => $"{WeeklyReaderSeconds / 60} min",
+        _ => $"{WeeklyReaderSeconds / 3600.0:0.#} h"
+    };
 
     private async Task SetScore(MangaEntryResponse entry, int score)
     {

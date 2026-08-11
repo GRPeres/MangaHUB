@@ -75,11 +75,24 @@ else
                 </div>
             </MangaBentoTile>
 
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="primary" CornerIcon="@Icons.Material.Filled.AutoGraph">
-                <div class="mh-dashboard-tile mh-dashboard-chart">
-                    <MudText Typo="Typo.overline">Shelf mix</MudText>
-                    <MudChart T="double" ChartType="ChartType.Donut" InputData="@statusData" InputLabels="@statusLabels" Width="100%" Height="180px" />
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Your reading, planned, and completed titles.</MudText>
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="primary" CornerIcon="@Icons.Material.Filled.AutoGraph" OnClick="GoAccount">
+                <div class="mh-dashboard-tile mh-dashboard-activity">
+                    <MudText Typo="Typo.overline">Reading activity</MudText>
+                    @if (currentUser.UsageAnalyticsEnabled)
+                    {
+                        <div class="mh-dashboard-activity-grid">
+                            <div><MudText Typo="Typo.caption">Yesterday</MudText><MudText Typo="Typo.h3">@ChaptersReadYesterday</MudText><MudText Typo="Typo.caption">chapters read</MudText></div>
+                            <div><MudText Typo="Typo.caption">This week</MudText><MudText Typo="Typo.h3">@WeeklyReadingTime</MudText><MudText Typo="Typo.caption">reading time</MudText></div>
+                            <div><MudText Typo="Typo.caption">Active days</MudText><MudText Typo="Typo.h3">@(usageDashboard?.ActiveDays ?? 0)</MudText><MudText Typo="Typo.caption">last 30 days</MudText></div>
+                            <div><MudText Typo="Typo.caption">Current streak</MudText><MudText Typo="Typo.h3">@(usageDashboard?.CurrentStreak ?? 0)</MudText><MudText Typo="Typo.caption">day@(usageDashboard?.CurrentStreak == 1 ? "" : "s")</MudText></div>
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@WeeklyChapters chapter@(WeeklyChapters == 1 ? "" : "s") completed this week.</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h3">Make your reading visible.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Enable private usage insights in Account to see reading time, chapters, active days, and future recommendations.</MudText>
+                    }
                 </div>
             </MangaBentoTile>
 

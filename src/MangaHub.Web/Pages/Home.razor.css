@@ -80,8 +80,20 @@
     flex: 0 0 auto;
 }
 
-.mh-dashboard-chart ::deep .mud-chart {
-    margin: auto;
+.mh-dashboard-activity {
+    justify-content: space-between;
+}
+
+.mh-dashboard-activity-grid {
+    display: grid;
+    gap: .7rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mh-dashboard-activity-grid > div {
+    border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 75%, transparent);
+    min-width: 0;
+    padding-top: .45rem;
 }
 
 .mh-dashboard-rating-row {
