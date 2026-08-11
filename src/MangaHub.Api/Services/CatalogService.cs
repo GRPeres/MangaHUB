@@ -11,7 +11,8 @@ public sealed class CatalogService(
     CatalogRepository catalog,
     IOpenLibraryClient openLibrary,
     MangaDexCatalogMatchService mangaDexMatches,
-    MangaUpdatesCatalogMatchService mangaUpdatesMatches)
+    MangaUpdatesCatalogMatchService mangaUpdatesMatches,
+    UsageTrackingService? usage = null)
 {
     public Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? query, string preferredLanguage, int offset, int limit, CancellationToken cancellationToken) =>
         catalog.SearchAsync(userId, query, preferredLanguage, offset, limit, cancellationToken);
@@ -47,6 +48,7 @@ public sealed class CatalogService(
         };
 
         await catalog.AddAsync(manga, cancellationToken);
+        if (usage is not null) await usage.TrackAsync(currentUserId, UsageEventTypes.CatalogCreated, manga.Id, cancellationToken);
         return ApiMapping.ToCatalogMangaResponse(manga, false);
     }
 
@@ -86,6 +88,7 @@ public sealed class CatalogService(
         manga.UpdatedAt = DateTimeOffset.UtcNow;
 
         await catalog.SaveChangesAsync(cancellationToken);
+        if (usage is not null) await usage.TrackAsync(currentUserId, UsageEventTypes.CatalogUpdated, manga.Id, cancellationToken);
         var isInShelf = await catalog.IsInUserShelfAsync(currentUserId, manga.Id, cancellationToken);
         return ApiMapping.ToCatalogMangaResponse(manga, isInShelf);
     }

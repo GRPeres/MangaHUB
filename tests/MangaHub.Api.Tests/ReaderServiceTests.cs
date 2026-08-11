@@ -510,6 +510,7 @@ public sealed class ReaderServiceTests
             new ShelfRepository(db),
             new SeriesRepository(db),
             archive,
+            null,
             cache ?? new FakeMangaDexChapterCache(),
             Options.Create(new MangaHubOptions { LibraryPath = libraryPath, MangaDexCachePath = libraryPath }),
             new MangaSourceRegistry([mangaDex ?? new FakeMangaDexSource()]));

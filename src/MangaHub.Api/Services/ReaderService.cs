@@ -15,6 +15,7 @@ public sealed class ReaderService(
     ShelfRepository shelf,
     SeriesRepository series,
     IArchiveReader archives,
+    UsageTrackingService? usage,
     IMangaDexChapterCache mangaDexCache,
     IOptions<MangaHubOptions> options,
     MangaSourceRegistry sources)
@@ -283,6 +284,7 @@ public sealed class ReaderService(
         var shouldAdvanceReadingProgress = updateReadingProgress && beforeCachedChapterId is null;
         if (shouldAdvanceReadingProgress)
         {
+            var startedReading = string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase);
             shelfEntry.CurrentChapter = cachedChapter.ChapterNumber;
             shelfEntry.IsRead = false;
             if (string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase))
@@ -293,6 +295,7 @@ public sealed class ReaderService(
 
             progress?.Report(new ReaderPreparationProgress("Saving your reading progress", 98));
             await shelf.SaveChangesAsync(cancellationToken);
+            if (startedReading && usage is not null) await usage.TrackAsync(userId, UsageEventTypes.MangaStarted, entry.Id, cancellationToken);
         }
         else
         {
@@ -367,6 +370,7 @@ public sealed class ReaderService(
         shelfEntry.IsRead = true;
         shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
         await shelf.SaveChangesAsync(cancellationToken);
+        if (usage is not null) await usage.TrackAsync(userId, UsageEventTypes.ChapterCompleted, entryId, chapterId, "", $"chapter-complete:{entryId}:{chapterId}", null, cancellationToken);
         return true;
     }
 
@@ -553,6 +557,7 @@ public sealed class ReaderService(
         shelfEntry.IsRead = true;
         shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
         await shelf.SaveChangesAsync(cancellationToken);
+        if (usage is not null) await usage.TrackAsync(shelfEntry.UserId, UsageEventTypes.MangaCompleted, shelfEntry.MangaEntryId, cancellationToken);
     }
 
     private static bool IsPublishingComplete(MangaEntry entry) =>

@@ -7,6 +7,7 @@
 @inject IJSRuntime JS
 @inject MessageService Messages
 @inject ReaderSettingsService ReaderSettings
+@inject UsageApiService UsageApi
 @implements IAsyncDisposable
 
 <PageTitle>Reader</PageTitle>
@@ -201,6 +202,8 @@
     private ReaderChapterJump? chapterJump;
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private string readerMessage = "";
+    private readonly string usageSessionId = Guid.NewGuid().ToString("N");
+    private readonly DateTimeOffset usageSessionStartedAt = DateTimeOffset.UtcNow;
     private string NextLabel => page < PageCount - 1 ? "Next" : EntryId is null ? "Next" : "Next chapter";
     private string NextIcon => page < PageCount - 1 ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.SkipNext;
     private string PreviousLabel => page > 0 ? "Previous" : EntryId is null ? "Previous" : "Previous chapter";
@@ -600,6 +603,15 @@
 
     public async ValueTask DisposeAsync()
     {
+        if (EntryId is not null)
+        {
+            var seconds = (int)Math.Min((DateTimeOffset.UtcNow - usageSessionStartedAt).TotalSeconds, 3600);
+            if (seconds >= 15)
+            {
+                try { await UsageApi.TrackAsync(new("reader.session", EntryId, ChapterId, usageSessionId, $"reader-session:{usageSessionId}", seconds)); }
+                catch (HttpRequestException) { }
+            }
+        }
         try
         {
             await JS.InvokeVoidAsync("mangaHubReader.disposePage", pageFrame);

@@ -21,6 +21,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "EmailConfirmedAt" timestamp with time zone NULL;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "SessionInvalidBefore" timestamp with time zone NULL;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "GoogleSubject" character varying(255) NOT NULL DEFAULT '';
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS "UsageAnalyticsEnabled" boolean NOT NULL DEFAULT false;
             ALTER TABLE users ALTER COLUMN "PreferredLanguage" TYPE character varying(128);
 
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_users_Email" ON users ("Email") WHERE "Email" <> '';
@@ -45,6 +46,39 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             );
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_email_verification_tokens_TokenHash" ON email_verification_tokens ("TokenHash");
             CREATE INDEX IF NOT EXISTS "IX_email_verification_tokens_UserId_ExpiresAt" ON email_verification_tokens ("UserId", "ExpiresAt");
+
+            CREATE TABLE IF NOT EXISTS usage_events (
+                "Id" uuid PRIMARY KEY,
+                "UserId" uuid NOT NULL,
+                "OccurredAt" timestamp with time zone NOT NULL,
+                "EventType" character varying(80) NOT NULL,
+                "MangaEntryId" uuid NULL,
+                "ChapterId" uuid NULL,
+                "SessionId" character varying(80) NOT NULL DEFAULT '',
+                "IdempotencyKey" character varying(160) NOT NULL DEFAULT '',
+                "DurationSeconds" integer NULL,
+                "MetadataJson" jsonb NOT NULL DEFAULT '{}'::jsonb
+            );
+            CREATE INDEX IF NOT EXISTS "IX_usage_events_UserId_OccurredAt" ON usage_events ("UserId", "OccurredAt");
+            CREATE INDEX IF NOT EXISTS "IX_usage_events_UserId_EventType_OccurredAt" ON usage_events ("UserId", "EventType", "OccurredAt");
+            CREATE INDEX IF NOT EXISTS "IX_usage_events_MangaEntryId" ON usage_events ("MangaEntryId");
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_usage_events_UserId_IdempotencyKey" ON usage_events ("UserId", "IdempotencyKey") WHERE "IdempotencyKey" <> '';
+            CREATE TABLE IF NOT EXISTS usage_daily_summaries (
+                "Id" uuid PRIMARY KEY,
+                "UserId" uuid NOT NULL,
+                "Date" date NOT NULL,
+                "ReaderSeconds" integer NOT NULL DEFAULT 0,
+                "ChaptersCompleted" integer NOT NULL DEFAULT 0,
+                "MangaStarted" integer NOT NULL DEFAULT 0,
+                "MangaCompleted" integer NOT NULL DEFAULT 0,
+                "ShelfChanges" integer NOT NULL DEFAULT 0,
+                "CatalogChanges" integer NOT NULL DEFAULT 0,
+                "Searches" integer NOT NULL DEFAULT 0,
+                "NotificationOpens" integer NOT NULL DEFAULT 0,
+                "SignIns" integer NOT NULL DEFAULT 0,
+                "UpdatedAt" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_usage_daily_summaries_UserId_Date" ON usage_daily_summaries ("UserId", "Date");
 
             UPDATE users
             SET "Role" = 'admin'

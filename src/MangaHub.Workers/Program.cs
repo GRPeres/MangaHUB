@@ -8,6 +8,7 @@ builder.Services.AddMangaHubInfrastructure(builder.Configuration);
 builder.Services.AddScoped<MangaUpdatesCatalogMatchService>();
 builder.Services.AddHostedService<LibraryScanWorker>();
 builder.Services.AddHostedService<RemoteSyncWorker>();
+builder.Services.AddHostedService<UsageAnalyticsWorker>();
 
 var host = builder.Build();
 host.Run();

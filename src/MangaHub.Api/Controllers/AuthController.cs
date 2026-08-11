@@ -16,6 +16,7 @@ namespace MangaHub.Api.Controllers;
 public sealed class AuthController(
     AuthService auth,
     CurrentUserService currentUsers,
+    UsageTrackingService usage,
     SessionCookieService sessionCookies,
     IOptions<MangaHubOptions> options) : ControllerBase
 {
@@ -32,6 +33,7 @@ public sealed class AuthController(
         }
 
         sessionCookies.SetSessionCookie(Response, user.SessionToken, options.Value);
+        await usage.TrackAsync(user.Id, MangaHub.Core.Services.UsageEventTypes.SignIn, null, cancellationToken);
         return Created("/auth/me", user);
     }
 
@@ -46,6 +48,7 @@ public sealed class AuthController(
         }
 
         sessionCookies.SetSessionCookie(Response, user.SessionToken, options.Value);
+        await usage.TrackAsync(user.Id, MangaHub.Core.Services.UsageEventTypes.SignIn, null, cancellationToken);
         return Ok(user);
     }
 

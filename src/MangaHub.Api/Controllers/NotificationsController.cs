@@ -2,6 +2,7 @@ using MangaHub.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using MangaHub.Core.Dto;
 using MangaHub.Core.Models;
+using MangaHub.Core.Services;
 using MangaHub.Infrastructure;
 using MangaHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/notifications")]
-public sealed class NotificationsController(CurrentUserService currentUsers, NotificationService notifications, MangaHubDbContext db, IOptions<MangaHubOptions> options) : ControllerBase
+public sealed class NotificationsController(CurrentUserService currentUsers, NotificationService notifications, UsageTrackingService usage, MangaHubDbContext db, IOptions<MangaHubOptions> options) : ControllerBase
 {
     [HttpGet] public async Task<IActionResult> List(CancellationToken cancellationToken)
     {
@@ -117,7 +118,9 @@ public sealed class NotificationsController(CurrentUserService currentUsers, Not
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        return await notifications.MarkReadAsync(user.Id, notificationId, cancellationToken) ? NoContent() : NotFound();
+        if (!await notifications.MarkReadAsync(user.Id, notificationId, cancellationToken)) return NotFound();
+        await usage.TrackAsync(user.Id, UsageEventTypes.NotificationOpened, null, cancellationToken);
+        return NoContent();
     }
 
     [HttpPost("read")] public async Task<IActionResult> MarkAllRead(CancellationToken cancellationToken)

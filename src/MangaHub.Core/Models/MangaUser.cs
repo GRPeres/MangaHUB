@@ -12,5 +12,6 @@ public sealed class MangaUser
     public string GoogleSubject { get; set; } = "";
     public string Role { get; set; } = "user";
     public string PreferredLanguage { get; set; } = "en";
+    public bool UsageAnalyticsEnabled { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

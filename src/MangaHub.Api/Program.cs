@@ -72,6 +72,7 @@ builder.Services.AddScoped<ShelfRepository>();
 builder.Services.AddScoped<SeriesRepository>();
 builder.Services.AddScoped<ProgressRepository>();
 builder.Services.AddScoped<NotificationRepository>();
+builder.Services.AddScoped<UsageRepository>();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<SessionCookieService>();
 builder.Services.AddScoped<AuthService>();
@@ -90,6 +91,7 @@ builder.Services.AddSingleton<ReaderPreparationService>();
 builder.Services.AddScoped<ProgressService>();
 builder.Services.AddScoped<CatalogCacheService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<UsageTrackingService>();
 
 var app = builder.Build();
 var forwardedHeaders = new ForwardedHeadersOptions

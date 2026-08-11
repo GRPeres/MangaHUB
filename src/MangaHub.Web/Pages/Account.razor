@@ -3,6 +3,7 @@
 @inject AuthSessionService Auth
 @inject AdminApiService AdminApi
 @inject MessageService Messages
+@inject UsageApiService UsageApi
 
 <PageTitle>Account</PageTitle>
 
@@ -71,6 +72,21 @@
                     }
                 </div>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@isSavingLanguage" OnClick="SavePreferredLanguage">Save language order</MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h2">Private usage insights</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Optional on-device activity is saved only in MangaHub to build future reading insights, recommendations, and better alerts. It never includes page images, passwords, search text, IP addresses, or browser details.</MudText>
+                <MudSwitch T="bool" Value="@(currentUser?.UsageAnalyticsEnabled ?? false)" ValueChanged="SetUsageAnalytics" Color="Color.Primary" Label="Save my usage analytics" Disabled="@isSavingUsage" />
+                @if (currentUser?.UsageAnalyticsEnabled == true)
+                {
+                    <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                        <MudButton Href="@UsageApi.ExportUrl" Target="_blank" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download">Export analytics</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteOutline" OnClick="DeleteUsageAnalytics">Delete analytics history</MudButton>
+                    </MudStack>
+                }
             </MudStack>
         </MudPaper>
 
@@ -178,6 +194,7 @@
     private string currentPassword = "";
     private string newPassword = "";
     private bool isSavingAccount;
+    private bool isSavingUsage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -266,6 +283,25 @@
         {
             isSavingAccount = false;
         }
+    }
+
+    private async Task SetUsageAnalytics(bool enabled)
+    {
+        isSavingUsage = true;
+        try
+        {
+            var updated = await UsageApi.SetEnabledAsync(enabled);
+            if (updated is null) { Messages.Error("Could not update analytics preferences."); return; }
+            currentUser = updated;
+            Messages.Success(enabled ? "Private usage insights enabled." : "Usage analytics disabled.");
+        }
+        finally { isSavingUsage = false; }
+    }
+
+    private async Task DeleteUsageAnalytics()
+    {
+        if (!await UsageApi.DeleteAsync()) { Messages.Error("Could not delete analytics history."); return; }
+        Messages.Success("Analytics history deleted. Your shelf and reading progress were not changed.");
     }
 
     private void AddLanguage(string language)

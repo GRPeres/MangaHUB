@@ -9,7 +9,8 @@ namespace MangaHub.Api.Services;
 public sealed class ShelfService(
     ShelfRepository shelf,
     CatalogRepository catalog,
-    UserRepository users)
+    UserRepository users,
+    UsageTrackingService? usage = null)
 {
     public async Task<List<MangaEntryResponse>> ListAsync(Guid targetUserId, string? status, int offset, int limit, CancellationToken cancellationToken)
     {
@@ -27,6 +28,7 @@ public sealed class ShelfService(
         }
 
         var existingShelf = await shelf.GetAsync(userId, manga.Id, cancellationToken);
+        var isNewShelfEntry = existingShelf is null;
         if (existingShelf is null)
         {
             existingShelf = new UserMangaEntry
@@ -49,6 +51,7 @@ public sealed class ShelfService(
         }
 
         await shelf.SaveChangesAsync(cancellationToken);
+        if (usage is not null) await usage.TrackAsync(userId, isNewShelfEntry ? UsageEventTypes.ShelfAdded : UsageEventTypes.ShelfUpdated, manga.Id, cancellationToken);
         return ApiMapping.ToMangaEntryResponse(manga, existingShelf);
     }
 
@@ -68,6 +71,7 @@ public sealed class ShelfService(
         }
         shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
         await shelf.SaveChangesAsync(cancellationToken);
+        if (usage is not null) await usage.TrackAsync(targetUserId, UsageEventTypes.ShelfUpdated, entryId, cancellationToken);
         return ApiMapping.ToMangaEntryResponse(shelfEntry.MangaEntry, shelfEntry);
     }
 
@@ -81,6 +85,7 @@ public sealed class ShelfService(
 
         shelf.Remove(shelfEntry);
         await shelf.SaveChangesAsync(cancellationToken);
+        if (usage is not null) await usage.TrackAsync(targetUserId, UsageEventTypes.ShelfRemoved, entryId, cancellationToken);
         return true;
     }
 

@@ -1,13 +1,17 @@
 namespace MangaHub.Core.Dto;
 
 public sealed record AuthRequest(string Username, string Password, string Email = "");
-public sealed record UserResponse(Guid Id, string Username, string Role, string PreferredLanguage, string SessionToken, string Email = "", bool HasPassword = true, bool HasGoogleSignIn = false, bool IsEmailVerified = false, string PendingEmail = "");
+public sealed record UserResponse(Guid Id, string Username, string Role, string PreferredLanguage, string SessionToken, string Email = "", bool HasPassword = true, bool HasGoogleSignIn = false, bool IsEmailVerified = false, string PendingEmail = "", bool UsageAnalyticsEnabled = false);
 public sealed record ForgotPasswordRequest(string Email);
 public sealed record ResetPasswordRequest(string Token, string NewPassword);
 public sealed record UpdateAccountRequest(string Email, string CurrentPassword = "", string NewPassword = "");
 public sealed record UserAdminResponse(Guid Id, string Username, string Role, DateTimeOffset CreatedAt);
 public sealed record UpdateUserRoleRequest(string Role);
 public sealed record UpdatePreferredLanguageRequest(string PreferredLanguage);
+public sealed record UpdateUsageAnalyticsRequest(bool Enabled);
+public sealed record UsageTelemetryRequest(string EventType, Guid? MangaEntryId = null, Guid? ChapterId = null, string SessionId = "", string IdempotencyKey = "", int? DurationSeconds = null);
+public sealed record UsageDailySummaryResponse(DateOnly Date, int ReaderSeconds, int ChaptersCompleted, int MangaStarted, int MangaCompleted, int ShelfChanges, int CatalogChanges, int Searches, int NotificationOpens, int SignIns);
+public sealed record UsageDashboardResponse(List<UsageDailySummaryResponse> Days, int ActiveDays, int CurrentStreak, List<string> TopMangaIds);
 public sealed record MangaNotificationResponse(Guid Id, Guid MangaEntryId, string Type, decimal ChapterNumber, string Language, string Title, string Body, DateTimeOffset CreatedAt, DateTimeOffset? ReadAt);
 public sealed record WebPushSubscriptionRequest(string Endpoint, string P256dh, string Auth, string DeviceLabel = "");
 public sealed record WebPushSubscriptionResponse(Guid Id, string DeviceLabel, DateTimeOffset UpdatedAt);

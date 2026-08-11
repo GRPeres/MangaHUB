@@ -1,3 +1,3 @@
 namespace MangaHub.Web.API.DTOs;
 
-public sealed record UserResponse(Guid Id, string Username, string Role, string PreferredLanguage, string SessionToken, string Email = "", bool HasPassword = true, bool HasGoogleSignIn = false, bool IsEmailVerified = false, string PendingEmail = "");
+public sealed record UserResponse(Guid Id, string Username, string Role, string PreferredLanguage, string SessionToken, string Email = "", bool HasPassword = true, bool HasGoogleSignIn = false, bool IsEmailVerified = false, string PendingEmail = "", bool UsageAnalyticsEnabled = false);

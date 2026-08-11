@@ -18,6 +18,8 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
     public DbSet<ReadingProgress> ReadingProgress => Set<ReadingProgress>();
     public DbSet<Follow> Follows => Set<Follow>();
     public DbSet<SiteActivity> SiteActivities => Set<SiteActivity>();
+    public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
+    public DbSet<UsageDailySummary> UsageDailySummaries => Set<UsageDailySummary>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -140,6 +142,25 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
         {
             entity.ToTable("site_activity");
             entity.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<UsageEvent>(entity =>
+        {
+            entity.ToTable("usage_events");
+            entity.Property(x => x.EventType).HasMaxLength(80);
+            entity.Property(x => x.SessionId).HasMaxLength(80);
+            entity.Property(x => x.IdempotencyKey).HasMaxLength(160);
+            entity.Property(x => x.MetadataJson).HasColumnType("jsonb");
+            entity.HasIndex(x => new { x.UserId, x.OccurredAt });
+            entity.HasIndex(x => new { x.UserId, x.EventType, x.OccurredAt });
+            entity.HasIndex(x => x.MangaEntryId);
+            entity.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" <> ''");
+        });
+
+        modelBuilder.Entity<UsageDailySummary>(entity =>
+        {
+            entity.ToTable("usage_daily_summaries");
+            entity.HasIndex(x => new { x.UserId, x.Date }).IsUnique();
         });
     }
 }
