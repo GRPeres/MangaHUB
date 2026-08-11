@@ -20,6 +20,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
     public DbSet<SiteActivity> SiteActivities => Set<SiteActivity>();
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
     public DbSet<UsageDailySummary> UsageDailySummaries => Set<UsageDailySummary>();
+    public DbSet<MaintenanceJob> MaintenanceJobs => Set<MaintenanceJob>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -161,6 +162,15 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
         {
             entity.ToTable("usage_daily_summaries");
             entity.HasIndex(x => new { x.UserId, x.Date }).IsUnique();
+        });
+
+        modelBuilder.Entity<MaintenanceJob>(entity =>
+        {
+            entity.ToTable("maintenance_jobs");
+            entity.Property(x => x.Type).HasMaxLength(80);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.Error).HasColumnType("text");
+            entity.HasIndex(x => new { x.Status, x.RequestedAt });
         });
     }
 }

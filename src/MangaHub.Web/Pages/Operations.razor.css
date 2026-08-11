@@ -1,0 +1,16 @@
+.mh-operations-loading { min-height: 50vh; }
+
+::deep .mh-operations-bento {
+    --bzb-gap: 4px;
+    --mh-bento-item-min-height: 124px;
+    --mh-bento-row-height: 124px;
+}
+
+.mh-operation-stat,
+.mh-operation-jobs { display: flex; flex-direction: column; gap: .7rem; height: 100%; }
+.mh-operation-stat { justify-content: flex-end; }
+.mh-operation-job { align-items: center; border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 75%, transparent); display: flex; justify-content: space-between; padding-top: .5rem; }
+
+@media (max-width: 640px) {
+    ::deep .mh-operations-bento { --mh-bento-item-min-height: 116px; --mh-bento-row-height: 116px; }
+}

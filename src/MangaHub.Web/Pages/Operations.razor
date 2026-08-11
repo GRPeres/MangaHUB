@@ -1,0 +1,87 @@
+@page "/operations"
+@using MangaHub.Web.API.DTOs
+@using MangaHub.Web.API.Services
+@inject AuthSessionService Auth
+@inject AdminApiService AdminApi
+@inject MessageService Messages
+
+<PageTitle>Operations</PageTitle>
+
+@if (user is null)
+{
+    <MudAlert Severity="Severity.Warning">Sign in to view operations.</MudAlert>
+}
+else if (!isAdmin)
+{
+    <MudAlert Severity="Severity.Error">Admin permissions are required.</MudAlert>
+}
+else if (isLoading)
+{
+    <MudStack AlignItems="AlignItems.Center" Class="mh-operations-loading"><MudProgressCircular Indeterminate="true" /><MudText>Loading operations...</MudText></MudStack>
+}
+else if (overview is not null)
+{
+    <MudStack Spacing="3">
+        <section class="mh-dashboard-header">
+            <MudStack Spacing="1"><MudText Typo="Typo.overline" Color="Color.Secondary">Admin maintenance</MudText><MudText Typo="Typo.h2">Operations</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Storage, source freshness, and worker requests in one place.</MudText></MudStack>
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">Refresh</MudButton>
+        </section>
+
+        <MangaBento Columns="4" Class="mh-operations-bento">
+            <MangaBentoTile Scheme="deep" CornerIcon="@Icons.Material.Filled.Inventory2"><div class="mh-operation-stat"><MudText Typo="Typo.overline">Catalog</MudText><MudText Typo="Typo.h3">@overview.CatalogCount</MudText><MudText Typo="Typo.caption">@overview.MangaDexLinkedCount MangaDex / @overview.MangaUpdatesLinkedCount MangaUpdates linked</MudText></div></MangaBentoTile>
+            <MangaBentoTile Scheme="primary" CornerIcon="@Icons.Material.Filled.Storage"><div class="mh-operation-stat"><MudText Typo="Typo.overline">Chapter cache</MudText><MudText Typo="Typo.h3">@overview.CachedChapterCount</MudText><MudText Typo="Typo.caption">@FormatBytes(overview.CacheBytes) stored locally</MudText></div></MangaBentoTile>
+            <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.CloudSync"><div class="mh-operation-stat"><MudText Typo="Typo.overline">MangaDex freshness</MudText><MudText Typo="Typo.h3">@overview.StaleMangaDexCount stale</MudText><MudText Typo="Typo.caption">Last sync: @FormatDate(overview.LastMangaDexSyncAt)</MudText></div></MangaBentoTile>
+            <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.Update"><div class="mh-operation-stat"><MudText Typo="Typo.overline">MangaUpdates freshness</MudText><MudText Typo="Typo.h3">@overview.StaleMangaUpdatesCount stale</MudText><MudText Typo="Typo.caption">Last sync: @FormatDate(overview.LastMangaUpdatesSyncAt)</MudText></div></MangaBentoTile>
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="ink" CornerIcon="@Icons.Material.Filled.PlaylistPlay">
+                <div class="mh-operation-jobs">
+                    <MudText Typo="Typo.overline">Run maintenance</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Requests are picked up by the worker within about 20 seconds.</MudText>
+                    <MudStack Spacing="1">
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Sync" Disabled="@isQueueing" OnClick='@(() => QueueAsync("release-sync"))'>Refresh MangaDex releases</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Update" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangaupdates-sync"))'>Refresh MangaUpdates</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Link" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangaupdates-match"))'>Match missing MangaUpdates IDs</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Folder" Disabled="@isQueueing" OnClick='@(() => QueueAsync("library-scan"))'>Scan local library</MudButton>
+                    </MudStack>
+                </div>
+            </MangaBentoTile>
+            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="soft" CornerIcon="@Icons.Material.Filled.History">
+                <div class="mh-operation-jobs">
+                    <MudText Typo="Typo.overline">Recent worker jobs</MudText>
+                    @if (overview.RecentJobs.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No manual jobs have been requested yet.</MudText>
+                    }
+                    else
+                    {
+                        @foreach (var job in overview.RecentJobs)
+                        {
+                            <div class="mh-operation-job"><MudStack Spacing="0"><MudText Typo="Typo.subtitle2">@JobLabel(job.Type)</MudText><MudText Typo="Typo.caption">@FormatDate(job.RequestedAt)</MudText></MudStack><MudChip T="string" Size="Size.Small" Color="@JobColor(job.Status)">@job.Status</MudChip></div>
+                            @if (!string.IsNullOrWhiteSpace(job.Error)) { <MudText Typo="Typo.caption" Color="Color.Error">@job.Error</MudText> }
+                        }
+                    }
+                </div>
+            </MangaBentoTile>
+        </MangaBento>
+    </MudStack>
+}
+
+@code {
+    private UserResponse? user;
+    private OperationsOverviewResponse? overview;
+    private bool isLoading = true;
+    private bool isQueueing;
+    private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    protected override async Task OnInitializedAsync() { user = await Auth.GetCurrentUserAsync(); if (isAdmin) await LoadAsync(); else isLoading = false; }
+    private async Task LoadAsync() { isLoading = true; try { overview = await AdminApi.GetOperationsAsync(); if (overview is null) Messages.Error("Could not load operations."); } finally { isLoading = false; } }
+    private async Task QueueAsync(string type) { isQueueing = true; try { var job = await AdminApi.QueueMaintenanceJobAsync(type); if (job is null) { Messages.Error("Could not queue maintenance."); return; } Messages.Success($"{JobLabel(job.Type)} is {job.Status}."); await LoadAsync(); } finally { isQueueing = false; } }
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024d:0.#} KB";
+        if (bytes < 1024 * 1024 * 1024) return $"{bytes / 1024d / 1024d:0.#} MB";
+        return $"{bytes / 1024d / 1024d / 1024d:0.##} GB";
+    }
+    private static string FormatDate(DateTimeOffset? value) => value?.ToLocalTime().ToString("g") ?? "Not yet";
+    private static string JobLabel(string type) => type switch { "release-sync" => "MangaDex release refresh", "mangaupdates-sync" => "MangaUpdates refresh", "mangaupdates-match" => "MangaUpdates ID matching", "library-scan" => "Local library scan", _ => type };
+    private static Color JobColor(string status) => status switch { "completed" => Color.Success, "failed" => Color.Error, "running" => Color.Warning, _ => Color.Info };
+}

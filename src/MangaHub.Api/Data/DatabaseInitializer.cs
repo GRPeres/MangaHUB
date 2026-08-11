@@ -79,6 +79,17 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "UpdatedAt" timestamp with time zone NOT NULL
             );
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_usage_daily_summaries_UserId_Date" ON usage_daily_summaries ("UserId", "Date");
+            CREATE TABLE IF NOT EXISTS maintenance_jobs (
+                "Id" uuid PRIMARY KEY,
+                "Type" character varying(80) NOT NULL,
+                "Status" character varying(20) NOT NULL,
+                "RequestedByUserId" uuid NOT NULL,
+                "RequestedAt" timestamp with time zone NOT NULL,
+                "StartedAt" timestamp with time zone NULL,
+                "CompletedAt" timestamp with time zone NULL,
+                "Error" text NOT NULL DEFAULT ''
+            );
+            CREATE INDEX IF NOT EXISTS "IX_maintenance_jobs_Status_RequestedAt" ON maintenance_jobs ("Status", "RequestedAt");
 
             UPDATE users
             SET "Role" = 'admin'

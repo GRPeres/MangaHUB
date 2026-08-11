@@ -60,6 +60,7 @@
                     <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
                     @if (IsAdmin)
                     {
+                        <MudMenuItem Icon="@Icons.Material.Filled.SettingsSuggest" OnClick="GoOperations">Operations</MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.BugReport" OnClick="GoBentoCardLab">Bento card lab</MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.NotificationsActive" OnClick="TestPhoneNotification">Test phone notification</MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.Storage" OnClick="TestDatabase">Test database</MudMenuItem>
@@ -86,6 +87,7 @@
                 @if (IsAdmin)
                 {
                     <NavRailButton Route="catalog" Label="Catalog" Icon="@Icons.Material.Filled.Inventory2" Expanded="@_drawerExpanded" IsActive="@IsActive("catalog")" OnNavigate="Navigate" />
+                    <NavRailButton Route="operations" Label="Operations" Icon="@Icons.Material.Filled.SettingsSuggest" Expanded="@_drawerExpanded" IsActive="@IsActive("operations")" OnNavigate="Navigate" />
                 }
                 <NavRailButton Route="account" Label="Account" Icon="@Icons.Material.Filled.ManageAccounts" Expanded="@_drawerExpanded" IsActive="@IsActive("account")" OnNavigate="Navigate" />
 
@@ -120,6 +122,10 @@
                 <button type="button" class="@MobileNavClass("catalog")" @onclick="@(() => Navigate("catalog"))">
                     <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
                     <span>Catalog</span>
+                </button>
+                <button type="button" class="@MobileNavClass("operations")" @onclick="@(() => Navigate("operations"))">
+                    <MudIcon Icon="@Icons.Material.Filled.SettingsSuggest" />
+                    <span>Ops</span>
                 </button>
             }
             <button type="button" class="@MobileNavClass("account")" @onclick="@(() => Navigate("account"))">

@@ -8,7 +8,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
+public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, AdminOperationsService operations, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
 {
     [HttpGet("users")]
     public async Task<IActionResult> Users(CancellationToken cancellationToken)
@@ -51,6 +51,25 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         {
             return Ok(new DiagnosticResult(false, $"MangaDex connection failed: {ex.Message}"));
         }
+    }
+
+    [HttpGet("operations")]
+    public async Task<IActionResult> Operations(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return Ok(await operations.GetOverviewAsync(cancellationToken));
+    }
+
+    [HttpPost("operations/jobs")]
+    public async Task<IActionResult> QueueJob([FromBody] QueueMaintenanceJobRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var job = await operations.QueueAsync(user.Id, request.Type, cancellationToken);
+        return job is null ? BadRequest("Unsupported maintenance job.") : Accepted(job);
     }
 
     [HttpPut("users/{userId:guid}/role")]

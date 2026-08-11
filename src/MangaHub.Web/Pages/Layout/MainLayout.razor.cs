@@ -56,6 +56,7 @@ public partial class MainLayout : IDisposable
     private void GoLibrary() => Navigate("library");
     private void GoAccount() => Navigate("account");
     private void GoBentoCardLab() => Navigate("bento-card-lab");
+    private void GoOperations() => Navigate("operations");
     private void OpenPushSubscriptions() => _pushSubscriptionsOpen = true;
 
     private void Navigate(string route)

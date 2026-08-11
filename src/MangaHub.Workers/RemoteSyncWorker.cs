@@ -21,6 +21,16 @@ public sealed class RemoteSyncWorker(
     ILogger<RemoteSyncWorker> logger) : BackgroundService
 {
     private const string MangaDexCacheSource = "mangadex-cache";
+    public async Task RunRequestedAsync(string type, CancellationToken cancellationToken)
+    {
+        switch (type)
+        {
+            case "release-sync": await RunReleaseSyncAsync(cancellationToken); break;
+            case "mangaupdates-sync": await RunMangaUpdatesSyncAsync(cancellationToken); break;
+            case "mangaupdates-match": await RunMangaUpdatesMatchingAsync(cancellationToken); break;
+            default: throw new InvalidOperationException($"Unsupported remote maintenance job '{type}'.");
+        }
+    }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var nextReleaseSyncAt = DateTimeOffset.MinValue;

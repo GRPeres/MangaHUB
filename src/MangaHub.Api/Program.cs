@@ -78,6 +78,7 @@ builder.Services.AddScoped<SessionCookieService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<AdminService>();
+builder.Services.AddScoped<AdminOperationsService>();
 builder.Services.AddScoped<OpenLibraryService>();
 builder.Services.AddScoped<MangaDexCatalogMatchService>();
 builder.Services.AddScoped<MangaUpdatesCatalogMatchService>();
