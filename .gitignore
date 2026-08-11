@@ -12,6 +12,7 @@ obj/
 *.local.json
 appsettings.Local.json
 appsettings.Production.json
+TODO.local.md
 docker-compose.override.yml
 deploy.truenas.local.yml
 *.user
