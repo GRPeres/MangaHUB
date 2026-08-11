@@ -57,7 +57,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "SessionId" character varying(80) NOT NULL DEFAULT '',
                 "IdempotencyKey" character varying(160) NOT NULL DEFAULT '',
                 "DurationSeconds" integer NULL,
-                "MetadataJson" jsonb NOT NULL DEFAULT '{}'::jsonb
+                "MetadataJson" jsonb NOT NULL DEFAULT '{{}}'::jsonb
             );
             CREATE INDEX IF NOT EXISTS "IX_usage_events_UserId_OccurredAt" ON usage_events ("UserId", "OccurredAt");
             CREATE INDEX IF NOT EXISTS "IX_usage_events_UserId_EventType_OccurredAt" ON usage_events ("UserId", "EventType", "OccurredAt");
