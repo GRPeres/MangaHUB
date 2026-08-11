@@ -78,7 +78,7 @@ public partial class Home : IDisposable
 
     private void OpenLogin() => Auth.RequestLogin("Log in to open your reading dashboard.");
     private void GoLibrary() => Navigation.NavigateTo("library");
-    private void GoCatalog() => Navigation.NavigateTo("catalog");
+    private void GoCatalog() => Navigation.NavigateTo("admin/catalog");
     private void GoNewReleases() => Navigation.NavigateTo("library?availability=new");
     private void GoPlanned() => Navigation.NavigateTo("library?status=planned");
     private void OpenContinueReading() => Navigation.NavigateTo("library");

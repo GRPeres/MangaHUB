@@ -56,7 +56,7 @@ public partial class MainLayout : IDisposable
     private void GoLibrary() => Navigate("library");
     private void GoAccount() => Navigate("account");
     private void GoBentoCardLab() => Navigate("bento-card-lab");
-    private void GoOperations() => Navigate("operations");
+    private void GoAdminManagement() => Navigate("admin/catalog");
     private void OpenPushSubscriptions() => _pushSubscriptionsOpen = true;
 
     private void Navigate(string route)
@@ -127,7 +127,8 @@ public partial class MainLayout : IDisposable
             return !IsLocalhost;
         }
 
-        return cleanRoute is "library" or "search" or "catalog" or "account" or "bento-card-lab";
+        return cleanRoute is "library" or "search" or "catalog" or "operations" or "account" or "bento-card-lab"
+            || cleanRoute.StartsWith("admin/", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool IsActive(string route)
@@ -140,6 +141,19 @@ public partial class MainLayout : IDisposable
 
     private string MobileNavClass(string route) =>
         IsActive(route) ? "mh-mobile-nav-item mh-mobile-nav-item-active" : "mh-mobile-nav-item";
+
+    private bool IsAdminSectionActive
+    {
+        get
+        {
+            var relative = Navigation.ToBaseRelativePath(Navigation.Uri).Trim('/');
+            return relative.StartsWith("admin/", StringComparison.OrdinalIgnoreCase)
+                || relative is "catalog" or "operations";
+        }
+    }
+
+    private string AdminMobileNavClass =>
+        IsAdminSectionActive ? "mh-mobile-nav-item mh-mobile-nav-item-active" : "mh-mobile-nav-item";
 
     private async Task Logout()
     {

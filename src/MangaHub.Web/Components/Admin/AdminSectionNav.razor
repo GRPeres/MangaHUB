@@ -1,0 +1,14 @@
+<nav class="mh-admin-section-nav" aria-label="Admin management sections">
+    <MudButton Variant="@(IsCatalogActive ? Variant.Filled : Variant.Outlined)"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Inventory2"
+               OnClick="GoCatalog">
+        Catalog
+    </MudButton>
+    <MudButton Variant="@(IsOperationsActive ? Variant.Filled : Variant.Outlined)"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.SettingsSuggest"
+               OnClick="GoOperations">
+        Operations
+    </MudButton>
+</nav>

@@ -60,7 +60,7 @@
                     <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
                     @if (IsAdmin)
                     {
-                        <MudMenuItem Icon="@Icons.Material.Filled.SettingsSuggest" OnClick="GoOperations">Operations</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.AdminPanelSettings" OnClick="GoAdminManagement">Admin management</MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.BugReport" OnClick="GoBentoCardLab">Bento card lab</MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.NotificationsActive" OnClick="TestPhoneNotification">Test phone notification</MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.Storage" OnClick="TestDatabase">Test database</MudMenuItem>
@@ -86,8 +86,7 @@
                 <NavRailButton Route="library" Label="Shelf" Icon="@Icons.Material.Filled.AutoStories" Expanded="@_drawerExpanded" IsActive="@IsActive("library")" OnNavigate="Navigate" />
                 @if (IsAdmin)
                 {
-                    <NavRailButton Route="catalog" Label="Catalog" Icon="@Icons.Material.Filled.Inventory2" Expanded="@_drawerExpanded" IsActive="@IsActive("catalog")" OnNavigate="Navigate" />
-                    <NavRailButton Route="operations" Label="Operations" Icon="@Icons.Material.Filled.SettingsSuggest" Expanded="@_drawerExpanded" IsActive="@IsActive("operations")" OnNavigate="Navigate" />
+                    <NavRailButton Route="admin/catalog" Label="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="@_drawerExpanded" IsActive="@IsAdminSectionActive" OnNavigate="Navigate" />
                 }
                 <NavRailButton Route="account" Label="Account" Icon="@Icons.Material.Filled.ManageAccounts" Expanded="@_drawerExpanded" IsActive="@IsActive("account")" OnNavigate="Navigate" />
 
@@ -119,13 +118,9 @@
             </button>
             @if (IsAdmin)
             {
-                <button type="button" class="@MobileNavClass("catalog")" @onclick="@(() => Navigate("catalog"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
-                    <span>Catalog</span>
-                </button>
-                <button type="button" class="@MobileNavClass("operations")" @onclick="@(() => Navigate("operations"))">
-                    <MudIcon Icon="@Icons.Material.Filled.SettingsSuggest" />
-                    <span>Ops</span>
+                <button type="button" class="@AdminMobileNavClass" @onclick="@(() => Navigate("admin/catalog"))">
+                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
+                    <span>Admin</span>
                 </button>
             }
             <button type="button" class="@MobileNavClass("account")" @onclick="@(() => Navigate("account"))">
