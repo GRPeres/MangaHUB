@@ -1,4 +1,5 @@
 @page "/"
+@using MudBlazor.Charts
 
 <PageTitle>MangaHub</PageTitle>
 
@@ -80,13 +81,27 @@ else
                     <MudText Typo="Typo.overline">Reading activity</MudText>
                     @if (currentUser.UsageAnalyticsEnabled)
                     {
+                        @if (HasReadingActivity)
+                        {
+                            <MudChart ChartType="ChartType.Line"
+                                      ChartSeries="@readingActivitySeries"
+                                      ChartLabels="@readingActivityLabels"
+                                      ChartOptions="@readingActivityChartOptions"
+                                      Height="132px"
+                                      Width="100%"
+                                      MatchBoundsToSize="true"
+                                      Class="mh-dashboard-activity-chart" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.h3">Your reading story starts here.</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Finish a chapter and this space will turn into your weekly reading trend.</MudText>
+                        }
                         <div class="mh-dashboard-activity-grid">
                             <div><MudText Typo="Typo.caption">Yesterday</MudText><MudText Typo="Typo.h3">@ChaptersReadYesterday</MudText><MudText Typo="Typo.caption">chapters read</MudText></div>
-                            <div><MudText Typo="Typo.caption">This week</MudText><MudText Typo="Typo.h3">@WeeklyReadingTime</MudText><MudText Typo="Typo.caption">reading time</MudText></div>
-                            <div><MudText Typo="Typo.caption">Active days</MudText><MudText Typo="Typo.h3">@(usageDashboard?.ActiveDays ?? 0)</MudText><MudText Typo="Typo.caption">last 30 days</MudText></div>
-                            <div><MudText Typo="Typo.caption">Current streak</MudText><MudText Typo="Typo.h3">@(usageDashboard?.CurrentStreak ?? 0)</MudText><MudText Typo="Typo.caption">day@(usageDashboard?.CurrentStreak == 1 ? "" : "s")</MudText></div>
+                            <div><MudText Typo="Typo.caption">This week</MudText><MudText Typo="Typo.h3">@WeeklyReadingTime</MudText><MudText Typo="Typo.caption">@WeeklyChapters chapter@(WeeklyChapters == 1 ? "" : "s") finished</MudText></div>
+                            <div><MudText Typo="Typo.caption">Current streak</MudText><MudText Typo="Typo.h3">@(usageDashboard?.CurrentStreak ?? 0)</MudText><MudText Typo="Typo.caption">@(usageDashboard?.ActiveDays ?? 0) active days this month</MudText></div>
                         </div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@WeeklyChapters chapter@(WeeklyChapters == 1 ? "" : "s") completed this week.</MudText>
                     }
                     else
                     {

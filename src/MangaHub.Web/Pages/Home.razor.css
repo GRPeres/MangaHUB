@@ -87,13 +87,17 @@
 .mh-dashboard-activity-grid {
     display: grid;
     gap: .7rem;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .mh-dashboard-activity-grid > div {
     border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 75%, transparent);
     min-width: 0;
     padding-top: .45rem;
+}
+
+.mh-dashboard-activity-chart {
+    min-height: 132px;
 }
 
 .mh-dashboard-rating-row {
@@ -144,6 +148,10 @@
 
     .mh-dashboard-rating-row {
         grid-template-columns: 2rem minmax(0, 1fr);
+    }
+
+    .mh-dashboard-activity-grid {
+        gap: .45rem;
     }
 
     .mh-dashboard-stars {

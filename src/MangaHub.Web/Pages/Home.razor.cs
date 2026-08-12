@@ -3,6 +3,7 @@ using MangaHub.Web.API.Services;
 using MangaHub.Web.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using MudBlazor.Charts;
 
 namespace MangaHub.Web.Pages;
 
@@ -25,9 +26,13 @@ public partial class Home : IDisposable
     private List<CatalogMangaResponse> recommendations = [];
     private List<MangaEntryResponse> pendingRatings = [];
     private HashSet<Guid> savingRatings = [];
-    private string[] statusLabels = ["Reading", "Planned", "Done"];
-    private double[] statusData = [];
     private UsageDashboardResponse? usageDashboard;
+    private string[] readingActivityLabels = [];
+    private List<ChartSeries<double>> readingActivitySeries = [];
+    private readonly LineChartOptions readingActivityChartOptions = new()
+    {
+        ChartPalette = ["#C4B5FD"]
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -63,12 +68,7 @@ public partial class Home : IDisposable
                 .Where(entry => string.Equals(entry.ReadingStatus, "done", StringComparison.OrdinalIgnoreCase) && entry.Score is null)
                 .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            statusData =
-            [
-                shelf.Count(entry => string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)),
-                planned.Count,
-                shelf.Count(entry => string.Equals(entry.ReadingStatus, "done", StringComparison.OrdinalIgnoreCase))
-            ];
+            BuildReadingActivityChart();
         }
         finally
         {
@@ -93,6 +93,30 @@ public partial class Home : IDisposable
         < 3600 => $"{WeeklyReaderSeconds / 60} min",
         _ => $"{WeeklyReaderSeconds / 3600.0:0.#} h"
     };
+
+    private bool HasReadingActivity => readingActivitySeries.Count > 0 && readingActivitySeries[0].Data.Values.Any(value => value > 0);
+
+    private void BuildReadingActivityChart()
+    {
+        var start = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-6));
+        var days = Enumerable.Range(0, 7)
+            .Select(offset => start.AddDays(offset))
+            .ToList();
+        var dailyChapters = usageDashboard?.Days
+            .GroupBy(day => day.Date)
+            .ToDictionary(group => group.Key, group => group.Sum(day => day.ChaptersCompleted))
+            ?? [];
+
+        readingActivityLabels = days.Select(day => day.ToString("ddd")).ToArray();
+        readingActivitySeries =
+        [
+            new ChartSeries<double>
+            {
+                Name = "Chapters read",
+                Data = new ChartData<double>(days.Select(day => (double)dailyChapters.GetValueOrDefault(day)).ToArray())
+            }
+        ];
+    }
 
     private async Task SetScore(MangaEntryResponse entry, int score)
     {
