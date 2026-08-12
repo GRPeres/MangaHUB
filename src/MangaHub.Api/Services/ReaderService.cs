@@ -110,7 +110,9 @@ public sealed class ReaderService(
                 {
                     throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
                 }
-                if (afterCachedChapterId is not null && IsPublishingComplete(entry))
+                if (afterCachedChapterId is not null
+                    && CanMarkShelfEntryDone(shelfEntry, current.ChapterNumber)
+                    && await IsPublishingCompleteAsync(entry, cancellationToken))
                 {
                     await MarkShelfEntryDoneAsync(shelfEntry, cancellationToken);
                     throw new MangaCompletedException();
@@ -142,7 +144,7 @@ public sealed class ReaderService(
                     throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
                 }
                 await RecordCompletedMangaDexChapterAsync(entry, shelfEntry.CurrentChapter, cancellationToken);
-                if (IsPublishingComplete(entry))
+                if (await IsPublishingCompleteAsync(entry, cancellationToken))
                 {
                     await MarkShelfEntryDoneAsync(shelfEntry, cancellationToken);
                     throw new MangaCompletedException();
@@ -560,9 +562,56 @@ public sealed class ReaderService(
         if (usage is not null) await usage.TrackAsync(shelfEntry.UserId, UsageEventTypes.MangaCompleted, shelfEntry.MangaEntryId, cancellationToken);
     }
 
-    private static bool IsPublishingComplete(MangaEntry entry) =>
-        entry.MangaUpdatesCompleted == true
-        || entry.PublishingStatus.Trim().ToLowerInvariant() is "finished" or "complete" or "completed" or "done" or "ended";
+    private async Task<bool> IsPublishingCompleteAsync(MangaEntry entry, CancellationToken cancellationToken)
+    {
+        var mangaDexId = GetMangaDexId(entry);
+        if (string.IsNullOrWhiteSpace(mangaDexId))
+        {
+            return false;
+        }
+
+        try
+        {
+            // MangaDex is the active reader source, so its live status wins over stale catalog metadata.
+            var mangaDexSeries = await sources.Get("mangadex").GetSeriesAsync(mangaDexId, cancellationToken);
+            if (mangaDexSeries is null)
+            {
+                return false;
+            }
+
+            if (IsPublishingOngoing(mangaDexSeries.Status))
+            {
+                return false;
+            }
+
+            if (IsCompletionStatus(mangaDexSeries.Status))
+            {
+                return true;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+
+        // MangaUpdates is only used when MangaDex returned a known non-ongoing status.
+        return entry.MangaUpdatesCompleted == true;
+    }
+
+    private static bool CanMarkShelfEntryDone(UserMangaEntry shelfEntry, string chapterNumber) =>
+        shelfEntry.IsRead
+        && HasExactChapter(shelfEntry.CurrentChapter, chapterNumber)
+        && string.Equals(shelfEntry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsPublishingOngoing(string? status) =>
+        status?.Trim().ToLowerInvariant() is "ongoing" or "hiatus";
+
+    private static bool IsCompletionStatus(string? status) =>
+        status?.Trim().ToLowerInvariant() is "finished" or "complete" or "completed" or "done" or "ended";
 
     private static string ReaderModeQuery(MangaEntry entry) => UsesVerticalReader(entry) ? "&vertical=true" : "";
 

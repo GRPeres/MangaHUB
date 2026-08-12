@@ -42,12 +42,13 @@ internal sealed class FakeMangaDexSource : IMangaSource, IMangaDexCatalogLookup
     public List<MangaSourceChapter> Chapters { get; } = [];
     public Dictionary<string, IReadOnlyList<MangaPage>> Pages { get; } = [];
     public List<MangaDexCatalogMatch> CatalogMatches { get; } = [];
+    public MangaSourceSeries? Series { get; set; }
 
     public Task<IReadOnlyList<MangaSearchResult>> SearchAsync(string query, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MangaSearchResult>>([]);
 
     public Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken) =>
-        Task.FromResult<MangaSourceSeries?>(null);
+        Task.FromResult(Series);
 
     public Task<MangaDexCatalogMatch?> FindByMyAnimeListIdAsync(string myAnimeListId, string title, CancellationToken cancellationToken) =>
         Task.FromResult(CatalogMatches.FirstOrDefault());

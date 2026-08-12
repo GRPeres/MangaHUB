@@ -37,8 +37,41 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
         return results;
     }
 
-    public Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken) =>
-        Task.FromResult<MangaSourceSeries?>(null);
+    public async Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaDexEnabled || string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
+
+        var cacheKey = $"mangadex:reader:series:{id}";
+        if (cache.TryGetValue(cacheKey, out MangaSourceSeries? cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        var response = await httpClient.GetAsync($"/manga/{Uri.EscapeDataString(id)}?includes[]=cover_art", cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        if (!document.RootElement.TryGetProperty("data", out var item)
+            || !item.TryGetProperty("id", out var idElement)
+            || !item.TryGetProperty("attributes", out var attributes))
+        {
+            return null;
+        }
+
+        var series = new MangaSourceSeries(
+            idElement.GetString() ?? id,
+            attributes.TryGetProperty("title", out var titles) ? ReadLocalized(titles) : "",
+            attributes.TryGetProperty("description", out var descriptions) ? ReadLocalized(descriptions) : "",
+            "",
+            ReadString(attributes, "status"),
+            Name);
+        cache.Set(cacheKey, series, TimeSpan.FromMinutes(Math.Max(1, options.Value.MangaDexReaderCacheMinutes)));
+        return series;
+    }
 
     public async Task<MangaDexCatalogMatch?> FindByMyAnimeListIdAsync(string myAnimeListId, string title, CancellationToken cancellationToken)
     {
