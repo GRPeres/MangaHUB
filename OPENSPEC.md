@@ -79,6 +79,7 @@ docs/
 - Put frontend API calls in one service per backend controller.
 - Keep business rules in API services unless a frontend-only UI behavior requires local state.
 - Use MudBlazor for UI controls and layout.
+- Use MudBlazor Charts (`MudChart`) as the default chart library. Add a separate chart package only when a documented requirement exceeds its capabilities.
 - Keep visual styles in `.razor.css` or shared `wwwroot/css/app.css`; avoid inline styling.
 - Preserve local secret files as ignored files.
 - Do not commit `deploy.truenas.local.yml`, `.env`, appsettings production secrets, database dumps, or manga archives.

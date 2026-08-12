@@ -96,3 +96,17 @@ The web app uses:
 
 Avoid having auth/session state perform duplicate raw API calls when an API service already exists.
 
+## Charts
+
+MangaHub's default chart library is the charting built into MudBlazor (`MudChart` and the types in `MudBlazor.Charts`). Do not add a separate chart package for normal dashboard work.
+
+This covers the expected dashboard visuals:
+
+- line and area-style reading activity trends
+- bar and stacked-bar comparisons
+- pie, donut, and rose breakdowns
+- heat maps and radar charts when they genuinely aid comparison
+
+Use the existing MangaHub palette through `ChartOptions.ChartPalette`; chart colors must remain readable in both light and dark themes. Keep charts in a bounded-height component or bento tile, and provide an adjacent textual summary so a chart is not the only way to understand a value.
+
+`LiveChartsCore.SkiaSharpView.Blazor` is the approved escalation path only when a future requirement needs capabilities MudBlazor does not provide well, such as zoomable/time-axis-heavy analytics, advanced gauges, or custom drawing. Record the reason in the relevant change/spec before adding it. Do not introduce Blazor-ApexCharts as a second default.

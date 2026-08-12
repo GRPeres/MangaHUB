@@ -87,6 +87,7 @@ Owns Blazor WebAssembly UI:
 - pages
 - reusable components
 - MudBlazor layout
+- MudBlazor Charts (`MudChart`) for standard dashboard visualizations
 - API client services
 - browser-local session/theme state
 
