@@ -26,6 +26,7 @@ public sealed class RemoteSyncWorker(
         switch (type)
         {
             case "release-sync": await RunReleaseSyncAsync(cancellationToken); break;
+            case "mangadex-status-sync": await RunMangaDexStatusSyncAsync(cancellationToken); break;
             case "mangaupdates-sync": await RunMangaUpdatesSyncAsync(cancellationToken); break;
             case "mangaupdates-match": await RunMangaUpdatesMatchingAsync(cancellationToken); break;
             default: throw new InvalidOperationException($"Unsupported remote maintenance job '{type}'.");
@@ -102,7 +103,7 @@ public sealed class RemoteSyncWorker(
     {
         try
         {
-            await SyncMangaDexCatalogAsync(cancellationToken);
+            await SyncMangaDexCatalogAsync(false, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -111,6 +112,22 @@ public sealed class RemoteSyncWorker(
         catch (Exception ex)
         {
             logger.LogError(ex, "MangaDex release sync run failed. Due entries will retry on the next poll.");
+        }
+    }
+
+    private async Task RunMangaDexStatusSyncAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await SyncMangaDexCatalogAsync(true, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "MangaDex status sync run failed.");
         }
     }
 
@@ -270,7 +287,7 @@ public sealed class RemoteSyncWorker(
         }
     }
 
-    private async Task SyncMangaDexCatalogAsync(CancellationToken cancellationToken)
+    private async Task SyncMangaDexCatalogAsync(bool force, CancellationToken cancellationToken)
     {
         if (!options.Value.MangaDexEnabled)
         {
@@ -284,11 +301,14 @@ public sealed class RemoteSyncWorker(
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
         var totalLinkedEntries = await db.MangaEntries.CountAsync(entry => entry.MangaDexId != "", cancellationToken);
-        var batchSize = GetReleaseSyncBatchSize(totalLinkedEntries);
+        var batchSize = force
+            ? Math.Clamp(options.Value.MangaDexSyncMaxBatchSize, 1, 1000)
+            : GetReleaseSyncBatchSize(totalLinkedEntries);
 
         var entries = await db.MangaEntries
             .Where(entry => entry.MangaDexId != "" &&
-                (entry.MangaDexLatestChapter == null
+                (force
+                    || entry.MangaDexLatestChapter == null
                     || !db.MangaDexLanguageLatestChapters.Any(latest => latest.MangaEntryId == entry.Id)
                     || entry.MangaDexLastSyncedAt == null
                     || entry.MangaDexLastSyncedAt < cutoff))
@@ -306,7 +326,9 @@ public sealed class RemoteSyncWorker(
         }
 
         var client = httpClientFactory.CreateClient("mangadex-sync");
+        var mangaDex = scope.ServiceProvider.GetRequiredService<MangaSourceRegistry>().Get("mangadex");
         var updated = 0;
+        var reopened = 0;
 
         foreach (var entry in entries)
         {
@@ -314,6 +336,32 @@ public sealed class RemoteSyncWorker(
 
             try
             {
+                var sourceSeries = await mangaDex.GetSeriesAsync(entry.MangaDexId, cancellationToken);
+                if (sourceSeries is not null && !string.IsNullOrWhiteSpace(sourceSeries.Status))
+                {
+                    var statusChanged = !string.Equals(entry.PublishingStatus, sourceSeries.Status, StringComparison.OrdinalIgnoreCase);
+                    entry.PublishingStatus = sourceSeries.Status;
+
+                    if (IsMangaDexOngoing(sourceSeries.Status))
+                    {
+                        var completedShelfEntries = await db.UserMangaEntries
+                            .Where(shelf => shelf.MangaEntryId == entry.Id && shelf.ReadingStatus == "done")
+                            .ToListAsync(cancellationToken);
+                        foreach (var shelfEntry in completedShelfEntries)
+                        {
+                            shelfEntry.ReadingStatus = "reading";
+                            shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
+                            reopened++;
+                        }
+                    }
+
+                    if (statusChanged)
+                    {
+                        entry.UpdatedAt = DateTimeOffset.UtcNow;
+                        updated++;
+                    }
+                }
+
                 var latestChapters = await GetLatestChapterNumbersByLanguageAsync(client, entry.MangaDexId, cancellationToken);
                 decimal? latestChapter = latestChapters.Count == 0 ? null : latestChapters.Values.Max();
                 entry.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
@@ -367,8 +415,15 @@ public sealed class RemoteSyncWorker(
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        logger.LogInformation("MangaDex catalog sync checked {CheckedCount} entries and updated {UpdatedCount}.", entries.Count, updated);
+        logger.LogInformation(
+            "MangaDex catalog sync checked {CheckedCount} entries, updated {UpdatedCount}, and reopened {ReopenedCount} shelf entries because their manga are ongoing.",
+            entries.Count,
+            updated,
+            reopened);
     }
+
+    private static bool IsMangaDexOngoing(string? status) =>
+        status?.Trim().ToLowerInvariant() is "ongoing" or "hiatus";
 
     private async Task CreateReleaseNotificationsAsync(
         MangaHubDbContext db,

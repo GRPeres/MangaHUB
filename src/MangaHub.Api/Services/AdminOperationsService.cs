@@ -9,7 +9,7 @@ namespace MangaHub.Api.Services;
 
 public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaHubOptions> options)
 {
-    private static readonly HashSet<string> AllowedJobTypes = ["release-sync", "mangaupdates-sync", "mangaupdates-match", "library-scan"];
+    private static readonly HashSet<string> AllowedJobTypes = ["release-sync", "mangadex-status-sync", "mangaupdates-sync", "mangaupdates-match", "library-scan"];
 
     public async Task<OperationsOverviewResponse> GetOverviewAsync(CancellationToken cancellationToken)
     {

@@ -40,6 +40,7 @@ else if (overview is not null)
                     <MudText Typo="Typo.body2" Color="Color.Secondary">Requests are picked up by the worker within about 20 seconds.</MudText>
                     <MudStack Spacing="1">
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Sync" Disabled="@isQueueing" OnClick='@(() => QueueAsync("release-sync"))'>Refresh MangaDex releases</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.RestartAlt" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangadex-status-sync"))'>Refresh MangaDex statuses and repair shelves</MudButton>
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Update" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangaupdates-sync"))'>Refresh MangaUpdates</MudButton>
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Link" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangaupdates-match"))'>Match missing MangaUpdates IDs</MudButton>
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Folder" Disabled="@isQueueing" OnClick='@(() => QueueAsync("library-scan"))'>Scan local library</MudButton>
@@ -84,6 +85,6 @@ else if (overview is not null)
         return $"{bytes / 1024d / 1024d / 1024d:0.##} GB";
     }
     private static string FormatDate(DateTimeOffset? value) => value?.ToLocalTime().ToString("g") ?? "Not yet";
-    private static string JobLabel(string type) => type switch { "release-sync" => "MangaDex release refresh", "mangaupdates-sync" => "MangaUpdates refresh", "mangaupdates-match" => "MangaUpdates ID matching", "library-scan" => "Local library scan", _ => type };
+    private static string JobLabel(string type) => type switch { "release-sync" => "MangaDex release refresh", "mangadex-status-sync" => "MangaDex status and shelf repair", "mangaupdates-sync" => "MangaUpdates refresh", "mangaupdates-match" => "MangaUpdates ID matching", "library-scan" => "Local library scan", _ => type };
     private static Color JobColor(string status) => status switch { "completed" => Color.Success, "failed" => Color.Error, "running" => Color.Warning, _ => Color.Info };
 }

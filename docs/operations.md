@@ -89,6 +89,8 @@ If UI loads but API calls fail:
 
 ## MangaDex Maintenance
 
+Each MangaDex release sync also refreshes the live publishing status for the catalog entries it checks. When MangaDex reports `ongoing` or `hiatus`, every shelf entry marked `done` for that title is restored to `reading`, while retaining its chapter progress, `IsRead` state, notes, and rating. The admin Operations page can queue **Refresh MangaDex statuses and repair shelves** to run this correction across the configured full maintenance batch immediately.
+
 `mangahub-workers` performs MangaDex maintenance immediately at startup and then at 04:00 in `America/Sao_Paulo` by default. It first refreshes stale chapter metadata, then pre-downloads recent chapters for manga that are actively being read.
 
 Check the worker logs for `MangaDex catalog sync` and `MangaDex pre-download`. The first run only records each reading manga's current chapter watermark. Subsequent runs cache newer releases, up to the configured batch limits.
