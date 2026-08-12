@@ -152,7 +152,7 @@
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
                             <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("paused")">Paused</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("paused")">On hiatus</MudSelectItem>
                             <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
                             <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
                         </MudSelect>
@@ -689,12 +689,16 @@
             || (entry.MangaDexPreferredLanguageLatestChapter.Value == currentChapter && !entry.IsRead));
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
-        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        IsActivelyTracked(entry)
         && HasNewChapters(entry);
 
     private static bool NeedsManualReleaseCheck(MangaEntryResponse entry) =>
-        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        IsActivelyTracked(entry)
         && !HasMangaDexLink(entry);
+
+    private static bool IsActivelyTracked(MangaEntryResponse entry) =>
+        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(entry.ReadingStatus, "paused", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsPlanned(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase);

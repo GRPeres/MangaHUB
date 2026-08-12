@@ -86,7 +86,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     }
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
-        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        IsActivelyTracked(entry)
         && !string.IsNullOrWhiteSpace(entry.MangaDexId)
         && entry.MangaDexPreferredLanguageLatestChapter is not null
         && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
@@ -94,8 +94,12 @@ public sealed class ShelfRepository(MangaHubDbContext db)
             || (entry.MangaDexPreferredLanguageLatestChapter.Value == currentChapter && !entry.IsRead));
 
     private static bool NeedsManualReleaseCheck(MangaEntryResponse entry) =>
-        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        IsActivelyTracked(entry)
         && string.IsNullOrWhiteSpace(entry.MangaDexId);
+
+    private static bool IsActivelyTracked(MangaEntryResponse entry) =>
+        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(entry.ReadingStatus, "paused", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryGetCurrentChapterNumber(string currentChapter, out decimal chapter)
     {

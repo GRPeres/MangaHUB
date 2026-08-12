@@ -77,7 +77,7 @@
                     </MangaBentoTile>
                 }
                 <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="@StatusScheme" OnClick="FilterByStatus">
-                    <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.h6">@StatusLabel</MudText></div>
+                    <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.h6">@StatusDisplayLabel</MudText></div>
                 </MangaBentoTile>
                 <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="@ProgressScheme" Class="@(HasNewChapters ? "mh-mobile-shelf-release-tile" : "")">
                     <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">@(HasNewChapters ? "New" : "Progress")</MudText><MudText Typo="Typo.h6">@(HasNewChapters ? $"+{NewChapterCount}" : CurrentChapterValue)</MudText><MudText Typo="Typo.caption">@(HasNewChapters ? $"Latest {LatestChapterValue}" : ProgressHint)</MudText></div>
@@ -106,7 +106,7 @@
                 <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header"><MudText id="@MetadataTitleId" Typo="Typo.h2">@Entry.Title</MudText><MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CloseMetadata" aria-label="Close manga metadata" /></MudStack>
                 @if (GenreLabels.Count > 0) { <MudStack Row="true" Spacing="1" Class="flex-wrap">@foreach (var category in GenreLabels) { <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@category</MudChip> }</MudStack> }
                 @if (!string.IsNullOrWhiteSpace(DescriptionText)) { <MudText Typo="Typo.body1">@DescriptionText</MudText> }
-                <MudGrid Spacing="2"><MudItem xs="6"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.body2">@StatusLabel</MudText></MudItem><MudItem xs="6"><MudText Typo="Typo.overline">Current</MudText><MudText Typo="Typo.body2">@CurrentChapterValue</MudText></MudItem><MudItem xs="6"><MudText Typo="Typo.overline">Newest</MudText><MudText Typo="Typo.body2">@LatestChapterValue</MudText></MudItem><MudItem xs="6"><MudText Typo="Typo.overline">Score</MudText><MudText Typo="Typo.body2">@ScoreLabel</MudText></MudItem></MudGrid>
+                <MudGrid Spacing="2"><MudItem xs="6"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.body2">@StatusDisplayLabel</MudText></MudItem><MudItem xs="6"><MudText Typo="Typo.overline">Current</MudText><MudText Typo="Typo.body2">@CurrentChapterValue</MudText></MudItem><MudItem xs="6"><MudText Typo="Typo.overline">Newest</MudText><MudText Typo="Typo.body2">@LatestChapterValue</MudText></MudItem><MudItem xs="6"><MudText Typo="Typo.overline">Score</MudText><MudText Typo="Typo.body2">@ScoreLabel</MudText></MudItem></MudGrid>
             </MudStack>
         </section>
     </div>

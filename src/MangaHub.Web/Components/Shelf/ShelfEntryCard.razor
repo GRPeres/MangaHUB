@@ -74,7 +74,7 @@
             <MangaBentoTile ColSpan="1" RowSpan="2" Scheme="@StatusScheme" OnClick="FilterByStatus" Class="mh-entry-stat-tile">
                 <div class="mh-entry-stat">
                     <MudText Typo="Typo.overline">Status</MudText>
-                    <MudText Typo="Typo.h3">@StatusLabel</MudText>
+                    <MudText Typo="Typo.h3">@StatusDisplayLabel</MudText>
                     <MudText Typo="Typo.caption" Class="mh-mobile-hide">@StatusFilterHint</MudText>
                 </div>
             </MangaBentoTile>
@@ -205,7 +205,7 @@
                 }
 
                 <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.body2">@StatusLabel</MudText></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.body2">@StatusDisplayLabel</MudText></MudItem>
                     <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Current</MudText><MudText Typo="Typo.body2">@CurrentChapterValue</MudText></MudItem>
                     <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">Newest</MudText><MudText Typo="Typo.body2">@LatestChapterValue</MudText></MudItem>
                     <MudItem xs="12" sm="6" md="4"><MudText Typo="Typo.overline">MangaDex sync</MudText><MudText Typo="Typo.body2">@MangaDexSyncLabel</MudText></MudItem>

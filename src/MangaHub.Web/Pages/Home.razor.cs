@@ -148,10 +148,14 @@ public partial class Home : IDisposable
     }
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
-        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        IsActivelyTracked(entry)
         && entry.MangaDexPreferredLanguageLatestChapter is { } latest
         && (latest > ParseChapter(entry.CurrentChapter)
             || (latest == ParseChapter(entry.CurrentChapter) && !entry.IsRead));
+
+    private static bool IsActivelyTracked(MangaEntryResponse entry) =>
+        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(entry.ReadingStatus, "paused", StringComparison.OrdinalIgnoreCase);
 
     private static decimal ReleaseGap(MangaEntryResponse entry)
     {

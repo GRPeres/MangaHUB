@@ -19,6 +19,7 @@ public partial class ShelfEntryCard
     private bool isSavingScore;
     private int? selectedScore;
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
+    private string StatusDisplayLabel => StatusLabel.Equals("paused", StringComparison.OrdinalIgnoreCase) ? "On hiatus" : StatusLabel;
     private string GenreLabel => FirstNonEmpty(Entry.Category, Entry.CatalogCategory);
     private List<string> GenreLabels => SplitLabels(GenreLabel);
     private string VisibleGenreLabel => GenreLabels.Count == 0 ? "" : CompactCategoryLabel(GenreLabels[0]);

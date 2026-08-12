@@ -330,7 +330,8 @@ public sealed class RemoteSyncWorker(
         var client = httpClientFactory.CreateClient("mangadex-sync");
         var mangaDex = scope.ServiceProvider.GetRequiredService<MangaSourceRegistry>().Get("mangadex");
         var updated = 0;
-        var reopened = 0;
+        var resumed = 0;
+        var paused = 0;
 
         foreach (var entry in entries)
         {
@@ -344,16 +345,30 @@ public sealed class RemoteSyncWorker(
                     var statusChanged = !string.Equals(entry.PublishingStatus, sourceSeries.Status, StringComparison.OrdinalIgnoreCase);
                     entry.PublishingStatus = sourceSeries.Status;
 
-                    if (IsMangaDexOngoing(sourceSeries.Status))
+                    if (IsMangaDexHiatus(sourceSeries.Status))
                     {
-                        var completedShelfEntries = await db.UserMangaEntries
-                            .Where(shelf => shelf.MangaEntryId == entry.Id && shelf.ReadingStatus == "done")
+                        var activeShelfEntries = await db.UserMangaEntries
+                            .Where(shelf => shelf.MangaEntryId == entry.Id
+                                && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "done"))
                             .ToListAsync(cancellationToken);
-                        foreach (var shelfEntry in completedShelfEntries)
+                        foreach (var shelfEntry in activeShelfEntries)
+                        {
+                            shelfEntry.ReadingStatus = "paused";
+                            shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
+                            paused++;
+                        }
+                    }
+                    else if (IsMangaDexOngoing(sourceSeries.Status))
+                    {
+                        var resumableShelfEntries = await db.UserMangaEntries
+                            .Where(shelf => shelf.MangaEntryId == entry.Id
+                                && (shelf.ReadingStatus == "paused" || shelf.ReadingStatus == "done"))
+                            .ToListAsync(cancellationToken);
+                        foreach (var shelfEntry in resumableShelfEntries)
                         {
                             shelfEntry.ReadingStatus = "reading";
                             shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
-                            reopened++;
+                            resumed++;
                         }
                     }
 
@@ -418,10 +433,11 @@ public sealed class RemoteSyncWorker(
         }
 
         logger.LogInformation(
-            "MangaDex catalog sync checked {CheckedCount} entries, updated {UpdatedCount}, and reopened {ReopenedCount} shelf entries because their manga are ongoing.",
+            "MangaDex catalog sync checked {CheckedCount} entries, updated {UpdatedCount}, resumed {ResumedCount} shelf entries, and marked {PausedCount} shelf entries as paused for a MangaDex hiatus.",
             entries.Count,
             updated,
-            reopened);
+            resumed,
+            paused);
     }
 
     private async Task RunCacheRetentionAsync(CancellationToken cancellationToken)
@@ -437,7 +453,8 @@ public sealed class RemoteSyncWorker(
             var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
             var cache = scope.ServiceProvider.GetRequiredService<IMangaDexChapterCache>();
             var activeProgress = await db.UserMangaEntries
-                .Where(shelf => shelf.ReadingStatus == "reading" && shelf.MangaEntry!.MangaDexId != "")
+                .Where(shelf => (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
+                    && shelf.MangaEntry!.MangaDexId != "")
                 .Select(shelf => new { shelf.MangaEntry!.MangaDexId, shelf.CurrentChapter })
                 .ToListAsync(cancellationToken);
 
@@ -491,7 +508,10 @@ public sealed class RemoteSyncWorker(
     }
 
     private static bool IsMangaDexOngoing(string? status) =>
-        status?.Trim().ToLowerInvariant() is "ongoing" or "hiatus";
+        string.Equals(status?.Trim(), "ongoing", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsMangaDexHiatus(string? status) =>
+        string.Equals(status?.Trim(), "hiatus", StringComparison.OrdinalIgnoreCase);
 
     private async Task CreateReleaseNotificationsAsync(
         MangaHubDbContext db,
@@ -505,7 +525,7 @@ public sealed class RemoteSyncWorker(
                 from shelf in db.UserMangaEntries
                 join user in db.Users on shelf.UserId equals user.Id
                 where shelf.MangaEntryId == entry.Id
-                    && shelf.ReadingStatus == "reading"
+                    && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
                 select new { shelf.UserId, shelf.CurrentChapter, user.PreferredLanguage })
                 .ToListAsync(cancellationToken);
 
@@ -585,7 +605,8 @@ public sealed class RemoteSyncWorker(
 
         var entries = await db.MangaEntries
             .Where(entry => entry.MangaDexId != ""
-                && db.UserMangaEntries.Any(shelf => shelf.MangaEntryId == entry.Id && shelf.ReadingStatus == "reading"))
+                && db.UserMangaEntries.Any(shelf => shelf.MangaEntryId == entry.Id
+                    && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")))
             .OrderBy(entry => entry.MangaDexLastPrefetchedAt ?? DateTimeOffset.MinValue)
             .ThenBy(entry => entry.Title)
             .Take(batchSize)

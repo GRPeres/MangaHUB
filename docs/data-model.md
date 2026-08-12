@@ -75,6 +75,8 @@ planned
 dropped
 ```
 
+`paused` represents a remote publication hiatus for a manga being followed. It is managed by MangaDex status synchronization and returns to `reading` when MangaDex reports the manga as ongoing again.
+
 Score is primarily relevant when status is `done`, but existing data may contain score independently.
 
 ## Local Library
