@@ -59,7 +59,7 @@ public partial class ShelfEntryCard
             return chapterGap == 0 && !Entry.IsRead ? 1 : 0;
         }
     }
-    private bool HasNewChapters => !StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) && NewChapterCount > 0;
+    private bool HasNewChapters => NewChapterCount > 0;
     private bool IsMangaDexSyncOverdue => HasMangaDexLink
         && Entry.MangaDexLastSyncedAt is not null
         && Entry.MangaDexLastSyncedAt < DateTimeOffset.UtcNow.AddHours(-30);

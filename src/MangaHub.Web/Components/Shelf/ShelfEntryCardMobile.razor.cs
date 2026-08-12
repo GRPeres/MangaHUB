@@ -47,7 +47,7 @@ public partial class ShelfEntryCardMobile
             return chapterGap == 0 && !Entry.IsRead ? 1 : 0;
         }
     }
-    private bool HasNewChapters => !StatusLabel.Equals("done", StringComparison.OrdinalIgnoreCase) && NewChapterCount > 0;
+    private bool HasNewChapters => NewChapterCount > 0;
     private string CardClass => HasNewChapters ? "mh-mobile-shelf-card mh-mobile-shelf-has-release" : "mh-mobile-shelf-card";
     private string ProgressHint => !HasMangaDexLink ? "MangaDex sync unavailable" : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
     private string ProgressScheme => HasNewChapters ? "release" : "secondary";
