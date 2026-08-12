@@ -27,6 +27,7 @@ public sealed class RemoteSyncWorker(
         {
             case "release-sync": await RunReleaseSyncAsync(cancellationToken); break;
             case "mangadex-status-sync": await RunMangaDexStatusSyncAsync(cancellationToken); break;
+            case "mangadex-cache-cleanup": await RunCacheRetentionAsync(cancellationToken); break;
             case "mangaupdates-sync": await RunMangaUpdatesSyncAsync(cancellationToken); break;
             case "mangaupdates-match": await RunMangaUpdatesMatchingAsync(cancellationToken); break;
             default: throw new InvalidOperationException($"Unsupported remote maintenance job '{type}'.");
@@ -54,6 +55,7 @@ public sealed class RemoteSyncWorker(
                 using (priorityContext.Push(RemoteJobPriority.Prefetch))
                 {
                     await RunPrefetchAsync(stoppingToken);
+                    await RunCacheRetentionAsync(stoppingToken);
                 }
                 nextPrefetchAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
                 logger.LogInformation("Next MangaDex pre-download maintenance is scheduled for {ScheduledAt}.", nextPrefetchAt);
@@ -420,6 +422,72 @@ public sealed class RemoteSyncWorker(
             entries.Count,
             updated,
             reopened);
+    }
+
+    private async Task RunCacheRetentionAsync(CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaDexCacheRetentionEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+            var cache = scope.ServiceProvider.GetRequiredService<IMangaDexChapterCache>();
+            var activeProgress = await db.UserMangaEntries
+                .Where(shelf => shelf.ReadingStatus == "reading" && shelf.MangaEntry!.MangaDexId != "")
+                .Select(shelf => new { shelf.MangaEntry!.MangaDexId, shelf.CurrentChapter })
+                .ToListAsync(cancellationToken);
+
+            var earliestActiveChapterByMangaDexId = activeProgress
+                .GroupBy(item => item.MangaDexId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Select(item => MangaDexCacheRetentionPolicy.ParseChapterNumber(item.CurrentChapter) ?? 0m).Min(),
+                    StringComparer.OrdinalIgnoreCase);
+
+            var cachedSeries = await db.Series
+                .Include(series => series.Chapters)
+                .Where(series => series.Source == MangaDexCacheSource)
+                .ToListAsync(cancellationToken);
+            var deleted = 0;
+
+            foreach (var cached in cachedSeries)
+            {
+                earliestActiveChapterByMangaDexId.TryGetValue(cached.ExternalId, out var earliestActiveChapter);
+                var retainFrom = earliestActiveChapterByMangaDexId.ContainsKey(cached.ExternalId)
+                    ? earliestActiveChapter
+                    : (decimal?)null;
+                foreach (var chapter in cached.Chapters.ToList())
+                {
+                    if (MangaDexCacheRetentionPolicy.ShouldRetain(chapter.SourceId, chapter.ChapterNumber, retainFrom))
+                    {
+                        continue;
+                    }
+
+                    await cache.DeleteAsync(cached.ExternalId, chapter.SourceId, cancellationToken);
+                    db.Chapters.Remove(chapter);
+                    deleted++;
+                }
+            }
+
+            if (deleted > 0)
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            logger.LogInformation("MangaDex cache retention removed {DeletedCount} cached chapters; active readers retain chapters from their earliest current chapter onward.", deleted);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "MangaDex cache retention could not finish; it will retry at the next maintenance run.");
+        }
     }
 
     private static bool IsMangaDexOngoing(string? status) =>

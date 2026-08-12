@@ -22,6 +22,7 @@ public sealed class MangaHubOptions
     public int MangaDexIdleBackfillCheckMinutes { get; set; } = 60;
     public int MangaDexIdleBackfillBatchSize { get; set; } = 1;
     public int MangaDexIdleBackfillMaxChaptersPerManga { get; set; } = 2;
+    public bool MangaDexCacheRetentionEnabled { get; set; } = true;
     public int MangaDexReaderCacheMinutes { get; set; } = 15;
     public int MangaDexReaderMaxChapters { get; set; } = 1000;
     public string MangaDexCachePath { get; set; } = "/mangadex-cache";

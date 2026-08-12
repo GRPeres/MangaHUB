@@ -1,11 +1,11 @@
-const CACHE_NAME = "mangahub-app-v154";
+const CACHE_NAME = "mangahub-app-v155";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
   "/icons/book.svg",
-  "/css/app.css?v=165",
-  "/MangaHub.Web.styles.css?v=165"
+  "/css/app.css?v=166",
+  "/MangaHub.Web.styles.css?v=166"
 ];
 
 self.addEventListener("install", event => {
