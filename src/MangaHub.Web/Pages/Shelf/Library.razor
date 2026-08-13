@@ -568,7 +568,7 @@
 
         var language = chapterJump.Language;
         CancelChapterJump();
-        await Read(entryId, language, allowLanguageFallback: true);
+        await Read(entryId, language, allowLanguageFallback: true, allowChapterJump: true);
     }
 
     private async Task ReadChapterJumpAlternative(string language)
