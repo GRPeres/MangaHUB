@@ -294,30 +294,28 @@ a {
 }
 
 .reader {
-    align-items: center;
-    display: flex;
+    box-sizing: border-box;
+    display: grid;
     height: 100%;
-    justify-content: center;
     min-height: 0;
     overflow: hidden;
+    place-items: center;
     padding: .5rem 0;
     width: 100%;
 }
 
 .reader-page-frame {
-    align-self: stretch;
     align-items: center;
     aspect-ratio: 2 / 3;
     background: #05020a;
     border-radius: 8px;
     display: grid;
-    flex: 0 0 auto;
     height: 100%;
     justify-items: center;
     min-height: 0;
     min-width: 0;
     max-height: 100%;
-    max-width: 100%;
+    max-width: calc(100% - 1rem);
     overflow: hidden;
     position: relative;
     width: auto;
@@ -355,7 +353,9 @@ a {
 
 .reader-workspace-vertical .reader {
     align-items: flex-start;
+    display: flex;
     justify-content: stretch;
+    place-items: unset;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: .5rem 0;
