@@ -28,6 +28,7 @@ public sealed class ShelfServiceTests
         Assert.NotNull(result);
         Assert.Equal("done", result.ReadingStatus);
         Assert.Equal("376", result.CurrentChapter);
+        Assert.True(result.IsRead);
         Assert.Equal(5, result.Score);
         Assert.Equal("Dark fantasy", result.Category);
         Assert.Equal("A grim journey.", result.Summary);
@@ -50,6 +51,33 @@ public sealed class ShelfServiceTests
         Assert.Single(db.UserMangaEntries);
         Assert.Equal("reading", db.UserMangaEntries.Single().ReadingStatus);
         Assert.Equal("12", db.UserMangaEntries.Single().CurrentChapter);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_MarkingAnEntryDoneMarksItsCurrentChapterRead()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var manga = new MangaEntry { Title = "Witch Hat Atelier" };
+        db.MangaEntries.Add(manga);
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = userId,
+            MangaEntry = manga,
+            ReadingStatus = "reading",
+            CurrentChapter = "10",
+            IsRead = false
+        });
+        await db.SaveChangesAsync();
+        var service = CreateShelfService(db);
+
+        var result = await service.UpdateAsync(userId, manga.Id,
+            new AddToShelfRequest(manga.Id, "done", "12", null, "", "", ""), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("done", result.ReadingStatus);
+        Assert.Equal("12", result.CurrentChapter);
+        Assert.True(result.IsRead);
     }
 
     [Fact]
@@ -89,6 +117,7 @@ public sealed class ShelfServiceTests
         Assert.Single(db.MangaEntries);
         Assert.Single(db.UserMangaEntries);
         Assert.Equal("done", db.UserMangaEntries.Single().ReadingStatus);
+        Assert.True(db.UserMangaEntries.Single().IsRead);
     }
 
     [Fact]

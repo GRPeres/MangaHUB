@@ -32,6 +32,10 @@ public static class TextRules
     {
         shelf.ReadingStatus = NormalizeShelfStatus(request.ReadingStatus);
         shelf.CurrentChapter = request.CurrentChapter.Trim();
+        if (shelf.ReadingStatus == "done")
+        {
+            shelf.IsRead = true;
+        }
         shelf.Score = NormalizeScore(request.Score);
         shelf.Category = FirstNonEmpty(request.Category, catalogEntry?.Category);
         shelf.Summary = FirstNonEmpty(request.Summary, catalogEntry?.Description);

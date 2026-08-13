@@ -43,7 +43,7 @@ public sealed class ShelfService(
         {
             var currentChapterChanged = !string.Equals(existingShelf.CurrentChapter, request.CurrentChapter.Trim(), StringComparison.Ordinal);
             TextRules.ApplyShelfRequest(existingShelf, request, manga);
-            if (currentChapterChanged)
+            if (currentChapterChanged && existingShelf.ReadingStatus != "done")
             {
                 existingShelf.IsRead = false;
             }
@@ -65,7 +65,7 @@ public sealed class ShelfService(
 
         var currentChapterChanged = !string.Equals(shelfEntry.CurrentChapter, request.CurrentChapter.Trim(), StringComparison.Ordinal);
         TextRules.ApplyShelfRequest(shelfEntry, request, shelfEntry.MangaEntry);
-        if (currentChapterChanged)
+        if (currentChapterChanged && shelfEntry.ReadingStatus != "done")
         {
             shelfEntry.IsRead = false;
         }
@@ -223,7 +223,11 @@ public sealed class ShelfService(
 
                 shelfEntry.ReadingStatus = TextRules.NormalizeShelfStatus(TextRules.FirstValue(values, "status", "readingstatus"));
                 var currentChapter = TextRules.FirstValue(values, "chapter", "currentchapter", "chapters").Trim();
-                if (!string.Equals(shelfEntry.CurrentChapter, currentChapter, StringComparison.Ordinal))
+                if (shelfEntry.ReadingStatus == "done")
+                {
+                    shelfEntry.IsRead = true;
+                }
+                else if (!string.Equals(shelfEntry.CurrentChapter, currentChapter, StringComparison.Ordinal))
                 {
                     shelfEntry.IsRead = false;
                 }
