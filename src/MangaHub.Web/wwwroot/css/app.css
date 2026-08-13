@@ -967,8 +967,8 @@ html body .mh-mobile-catalog-card {
     html body .mh-mobile-shelf-header {
         align-items: start !important;
         display: grid !important;
-        gap: .2rem .5rem !important;
-        grid-template-columns: minmax(0, 1fr) auto !important;
+        gap: .35rem !important;
+        grid-template-columns: minmax(0, 1fr) !important;
         grid-template-rows: minmax(0, 1fr) auto !important;
         padding: .55rem 0 .35rem .75rem !important;
         position: relative !important;
@@ -997,8 +997,8 @@ html body .mh-mobile-catalog-card {
         flex-direction: column !important;
         gap: .45rem !important;
         grid-column: 1 !important;
-        grid-row: 1 / span 2 !important;
-        height: 100% !important;
+        grid-row: 1 !important;
+        height: auto !important;
         justify-content: space-between !important;
         min-width: 0 !important;
         padding: 0 !important;
@@ -1012,7 +1012,7 @@ html body .mh-mobile-catalog-card {
         line-height: 1.15 !important;
         overflow: hidden !important;
         -webkit-box-orient: vertical !important;
-        -webkit-line-clamp: 2 !important;
+        -webkit-line-clamp: 1 !important;
     }
 
     html body .mh-mobile-shelf-header .mud-typography,
@@ -1040,25 +1040,26 @@ html body .mh-mobile-catalog-card {
     html body .mh-mobile-catalog-header {
         align-items: start !important;
         display: grid !important;
-        gap: 0 !important;
-        grid-template-columns: minmax(0, 1fr) auto !important;
+        gap: .35rem !important;
+        grid-template-columns: minmax(0, 1fr) !important;
         grid-template-rows: minmax(0, 1fr) auto !important;
         padding: .55rem 0 .35rem .75rem !important;
         position: relative !important;
     }
 
-    /* One shared right rail keeps release state and actions aligned with the card inset. */
+    /* A lower action row avoids squeezing title and controls into the same narrow header line. */
     html body .mh-mobile-card-controls {
-        align-items: flex-end !important;
-        align-self: stretch !important;
+        align-items: center !important;
+        align-self: auto !important;
         display: flex !important;
-        flex-direction: column !important;
-        grid-column: 2 !important;
-        grid-row: 1 / span 2 !important;
+        flex-direction: row !important;
+        grid-column: 1 !important;
+        grid-row: 2 !important;
         justify-content: space-between !important;
-        height: 100% !important;
-        margin: .15rem .75rem .35rem 0 !important;
+        height: auto !important;
+        margin: 0 .75rem 0 0 !important;
         min-height: 0 !important;
+        width: auto !important;
         z-index: 2 !important;
     }
 
@@ -1073,8 +1074,8 @@ html body .mh-mobile-catalog-card {
         flex-direction: column !important;
         gap: .45rem !important;
         grid-column: 1 !important;
-        grid-row: 1 / span 2 !important;
-        height: 100% !important;
+        grid-row: 1 !important;
+        height: auto !important;
         justify-content: space-between !important;
         min-width: 0 !important;
         padding: 0 !important;
@@ -1137,6 +1138,15 @@ html body .mh-mobile-catalog-card {
 
     html body .mh-mobile-shelf-release {
         margin: 0 !important;
+    }
+
+    html body .mh-mobile-card-control-spacer {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+    }
+
+    html body .mh-mobile-card-actions {
+        margin-left: auto !important;
     }
 
 }
