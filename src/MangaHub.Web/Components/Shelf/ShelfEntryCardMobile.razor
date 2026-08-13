@@ -23,11 +23,11 @@
                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
                     @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-shelf-chip">@VisibleGenreLabel</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-shelf-chip" OnClick="@(_ => FilterByCategory(VisibleGenreLabel))">@VisibleGenreLabel</MudChip>
                     }
                     @if (HasHiddenGenres)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-shelf-chip">+@HiddenGenreCount</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-mobile-shelf-chip" OnClick="@(_ => FilterByCategory(VisibleGenreLabel))">+@HiddenGenreCount</MudChip>
                     }
                 </MudStack>
             </div>

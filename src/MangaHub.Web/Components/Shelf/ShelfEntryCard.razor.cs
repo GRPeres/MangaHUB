@@ -13,6 +13,7 @@ public partial class ShelfEntryCard
     [Parameter] public EventCallback<MangaEntryResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<Guid> OnRead { get; set; }
     [Parameter] public EventCallback<string> OnStatusFilter { get; set; }
+    [Parameter] public EventCallback<string> OnCategoryFilter { get; set; }
     [Parameter] public EventCallback<int?> OnScoreChanged { get; set; }
 
     private bool metadataOpen;
@@ -139,6 +140,7 @@ public partial class ShelfEntryCard
     private Task Edit() => OnEdit.InvokeAsync(Entry);
     private Task Read() => OnRead.InvokeAsync(Entry.Id);
     private Task FilterByStatus() => OnStatusFilter.InvokeAsync(StatusLabel);
+    private Task FilterByCategory(string category) => OnCategoryFilter.InvokeAsync(category);
 
     protected override void OnParametersSet() => selectedScore = Entry.Score;
 

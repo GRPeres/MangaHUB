@@ -10,6 +10,7 @@ public partial class CatalogEntryCard
     [Parameter] public EventCallback<CatalogMangaResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<CatalogMangaResponse> OnManageCache { get; set; }
     [Parameter] public EventCallback<string> OnSourceFilter { get; set; }
+    [Parameter] public EventCallback<string> OnCategoryFilter { get; set; }
 
     private bool metadataOpen;
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "", "Manual");
@@ -105,6 +106,7 @@ public partial class CatalogEntryCard
     private Task Edit() => OnEdit.InvokeAsync(Entry);
     private Task ManageCache() => OnManageCache.InvokeAsync(Entry);
     private Task FilterBySource() => OnSourceFilter.InvokeAsync(SourceLabel);
+    private Task FilterByCategory(string category) => OnCategoryFilter.InvokeAsync(category);
     private string MetadataTitleId => $"catalog-metadata-{Entry.Id:N}";
     private void OpenMetadata() => metadataOpen = true;
     private void CloseMetadata() => metadataOpen = false;

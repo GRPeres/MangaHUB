@@ -44,7 +44,7 @@
                             }
                             @if (!string.IsNullOrWhiteSpace(VisibleCategoryLabel))
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleCategoryLabel</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip" OnClick="@(_ => FilterByCategory(VisibleCategoryLabel))">@VisibleCategoryLabel</MudChip>
                             }
                             @if (HasHiddenCategories)
                             {
@@ -52,7 +52,7 @@
                                          Size="Size.Small"
                                          Color="Color.Primary"
                                          Variant="Variant.Outlined"
-                                         Class="mh-card-chip mh-count-chip">+@HiddenCategoryCount</MudChip>
+                                         Class="mh-card-chip mh-count-chip" OnClick="@(_ => FilterByCategory(VisibleCategoryLabel))">+@HiddenCategoryCount</MudChip>
                             }
                         </MudStack>
                     </div>
@@ -141,7 +141,8 @@
 
 <CatalogEntryCardMobile Entry="@Entry"
                          OnEdit="@OnEdit"
-                         OnManageCache="@OnManageCache" />
+                         OnManageCache="@OnManageCache"
+                         OnCategoryFilter="@OnCategoryFilter" />
 
 @if (metadataOpen)
 {

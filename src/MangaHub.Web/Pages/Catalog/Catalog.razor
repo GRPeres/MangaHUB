@@ -63,7 +63,7 @@
             <MudStack Spacing="2">
                 @foreach (var item in FilteredCatalog)
                 {
-                    <CatalogEntryCard @key="item.Id" Entry="@item" ActiveSourceFilter="@sourceFilter" OnEdit="EditCatalog" OnManageCache="OpenCache" OnSourceFilter="ToggleSourceFilter" />
+                    <CatalogEntryCard @key="item.Id" Entry="@item" ActiveSourceFilter="@sourceFilter" OnEdit="EditCatalog" OnManageCache="OpenCache" OnSourceFilter="ToggleSourceFilter" OnCategoryFilter="OpenCategoryFilter" />
                 }
 
                 @if (hasMoreCatalog)
@@ -288,6 +288,11 @@
     }
     private void OpenImportCatalog() => isImportCatalogOpen = true;
     private void OpenFilters() => filtersOpen = true;
+    private void OpenCategoryFilter(string category)
+    {
+        categoryFilter = category;
+        filtersOpen = true;
+    }
     private void CloseFilters() => filtersOpen = false;
     private void OnCatalogModalOpenChanged(bool open)
     {
@@ -397,7 +402,8 @@
     private int ActiveFilterCount => Count(query) + Count(sourceFilter) + Count(categoryFilter) + Count(mediaTypeFilter) + Count(publishingStatusFilter) + Count(linkFilter) + Count(shelfFilter);
 
     private bool MatchesCategory(CatalogMangaResponse entry) =>
-        string.IsNullOrWhiteSpace(categoryFilter) || string.Equals(entry.Category, categoryFilter, StringComparison.OrdinalIgnoreCase);
+        string.IsNullOrWhiteSpace(categoryFilter)
+        || SplitCategories(entry.Category).Contains(categoryFilter, StringComparer.OrdinalIgnoreCase);
 
     private bool MatchesMediaType(CatalogMangaResponse entry) =>
         string.IsNullOrWhiteSpace(mediaTypeFilter) || string.Equals(entry.MediaType, mediaTypeFilter, StringComparison.OrdinalIgnoreCase);
@@ -426,6 +432,9 @@
     };
 
     private static int Count(string value) => string.IsNullOrWhiteSpace(value) ? 0 : 1;
+
+    private static IEnumerable<string> SplitCategories(string value) =>
+        (value ?? "").Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static string GetSourceLabel(CatalogMangaResponse entry)
     {

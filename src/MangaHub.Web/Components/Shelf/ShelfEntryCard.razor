@@ -33,7 +33,7 @@
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mh-primary-tags flex-wrap">
                             @if (!string.IsNullOrWhiteSpace(VisibleGenreLabel))
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip">@VisibleGenreLabel</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mh-card-chip" OnClick="@(_ => FilterByCategory(VisibleGenreLabel))">@VisibleGenreLabel</MudChip>
                             }
                             @if (HasHiddenGenres)
                             {
@@ -41,7 +41,7 @@
                                          Size="Size.Small"
                                          Color="Color.Primary"
                                          Variant="Variant.Outlined"
-                                         Class="mh-card-chip mh-count-chip">+@HiddenGenreCount</MudChip>
+                                         Class="mh-card-chip mh-count-chip" OnClick="@(_ => FilterByCategory(VisibleGenreLabel))">+@HiddenGenreCount</MudChip>
                             }
                         </MudStack>
                     </div>
@@ -171,6 +171,7 @@
                        OnRead="@OnRead"
                        OnEdit="@OnEdit"
                        OnStatusFilter="@OnStatusFilter"
+                       OnCategoryFilter="@OnCategoryFilter"
                        OnScoreChanged="@OnScoreChanged" />
 
 @if (metadataOpen)

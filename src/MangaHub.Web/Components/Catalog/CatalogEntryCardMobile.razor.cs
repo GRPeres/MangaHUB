@@ -8,6 +8,7 @@ public partial class CatalogEntryCardMobile
     [Parameter, EditorRequired] public CatalogMangaResponse Entry { get; set; } = default!;
     [Parameter] public EventCallback<CatalogMangaResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<CatalogMangaResponse> OnManageCache { get; set; }
+    [Parameter] public EventCallback<string> OnCategoryFilter { get; set; }
 
     private bool metadataOpen;
     private bool detailsOpen;
@@ -31,6 +32,7 @@ public partial class CatalogEntryCardMobile
 
     private Task Edit() => OnEdit.InvokeAsync(Entry);
     private Task ManageCache() => OnManageCache.InvokeAsync(Entry);
+    private Task FilterByCategory(string category) => OnCategoryFilter.InvokeAsync(category);
     private void OpenMetadata() => metadataOpen = true;
     private void CloseMetadata() => metadataOpen = false;
     private void ToggleDetails() => detailsOpen = !detailsOpen;

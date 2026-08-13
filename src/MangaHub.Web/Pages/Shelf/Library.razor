@@ -43,7 +43,7 @@
                 <MudText Typo="Typo.h6" Color="Color.Error">New releases</MudText>
                 @foreach (var item in NewReleaseEntries)
                 {
-                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
                 }
             }
 
@@ -57,7 +57,7 @@
                 <MudText Typo="Typo.h6" Color="Color.Error">Untracked manga</MudText>
                 @foreach (var item in UntrackedEntries)
                 {
-                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
                 }
             }
 
@@ -69,7 +69,7 @@
 
             @foreach (var item in OtherFilteredEntries)
             {
-                <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
             }
 
             @if (hasMoreEntries)
@@ -277,6 +277,11 @@
     private void OpenAddShelf() => isAddShelfOpen = true;
     private void OpenImportShelf() => isImportShelfOpen = true;
     private void OpenFilters() => filtersOpen = true;
+    private void OpenCategoryFilter(string category)
+    {
+        categoryFilter = category;
+        filtersOpen = true;
+    }
     private void CloseFilters() => filtersOpen = false;
     private void OnAddShelfOpenChanged(bool open) => isAddShelfOpen = open;
     private void OnImportShelfOpenChanged(bool open) => isImportShelfOpen = open;
@@ -644,7 +649,9 @@
         string.IsNullOrWhiteSpace(sourceFilter) || string.Equals(GetSourceLabel(entry.MetadataSource, entry.MyAnimeListId, entry.OpenLibraryKey), sourceFilter, StringComparison.OrdinalIgnoreCase);
 
     private bool MatchesCategory(MangaEntryResponse entry) =>
-        string.IsNullOrWhiteSpace(categoryFilter) || string.Equals(FirstNonEmpty(entry.Category, entry.CatalogCategory), categoryFilter, StringComparison.OrdinalIgnoreCase);
+        string.IsNullOrWhiteSpace(categoryFilter)
+        || SplitCategories(FirstNonEmpty(entry.Category, entry.CatalogCategory))
+            .Contains(categoryFilter, StringComparer.OrdinalIgnoreCase);
 
     private bool MatchesAvailability(MangaEntryResponse entry) => availabilityFilter switch
     {
@@ -718,6 +725,9 @@
 
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
+
+    private static IEnumerable<string> SplitCategories(string value) =>
+        (value ?? "").Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static bool TryGetCurrentChapterNumber(string currentChapter, out decimal chapter)
     {
