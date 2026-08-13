@@ -17,11 +17,20 @@ public sealed class CatalogRepository(MangaHubDbContext db)
     public Task<MangaEntry?> FindByMangaDexIdAsync(string mangaDexId, CancellationToken cancellationToken) =>
         db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.MangaDexId == mangaDexId, cancellationToken);
 
+    public Task<MangaEntry?> FindByMyAnimeListIdAsync(string myAnimeListId, CancellationToken cancellationToken) =>
+        db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.MyAnimeListId == myAnimeListId, cancellationToken);
+
+    public Task<MangaEntry?> FindByMangaUpdatesIdAsync(string mangaUpdatesId, CancellationToken cancellationToken) =>
+        db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.MangaUpdatesId == mangaUpdatesId, cancellationToken);
+
+    public Task<MangaEntry?> FindByOpenLibraryKeyAsync(string openLibraryKey, CancellationToken cancellationToken) =>
+        db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.OpenLibraryKey == openLibraryKey, cancellationToken);
+
     public Task<MangaEntry?> FindByReaderUrlAsync(string url, CancellationToken cancellationToken) =>
         db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.FallbackReaderUrl == url, cancellationToken);
 
     public Task<MangaEntry?> FindByTitleAsync(string title, CancellationToken cancellationToken) =>
-        db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => EF.Functions.ILike(x.Title, title), cancellationToken);
+        db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.Title.ToLower() == title.Trim().ToLower(), cancellationToken);
 
     public Task<bool> IsInUserShelfAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken) =>
         db.UserMangaEntries.AnyAsync(x => x.UserId == userId && x.MangaEntryId == mangaEntryId, cancellationToken);

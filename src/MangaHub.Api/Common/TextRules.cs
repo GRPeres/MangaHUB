@@ -108,6 +108,39 @@ public static class TextRules
         return values;
     }
 
+    public static bool TryApplyColumnMappings(
+        Dictionary<string, string> values,
+        IReadOnlyDictionary<string, string>? mappings,
+        ISet<string> availableHeaders,
+        out string error)
+    {
+        error = "";
+        if (mappings is null || mappings.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var (field, sourceHeader) in mappings)
+        {
+            var normalizedField = NormalizeHeader(field);
+            var normalizedSource = NormalizeHeader(sourceHeader);
+            if (string.IsNullOrWhiteSpace(normalizedField) || string.IsNullOrWhiteSpace(normalizedSource))
+            {
+                continue;
+            }
+
+            if (!availableHeaders.Contains(normalizedSource))
+            {
+                error = $"Mapped column '{sourceHeader}' was not found in the CSV header.";
+                return false;
+            }
+
+            values[normalizedField] = values.GetValueOrDefault(normalizedSource, "");
+        }
+
+        return true;
+    }
+
     public static string FirstValue(Dictionary<string, string> values, params string[] keys)
     {
         foreach (var key in keys)
@@ -119,6 +152,46 @@ public static class TextRules
         }
 
         return "";
+    }
+
+    public static bool TryFirstValue(Dictionary<string, string> values, out string value, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (values.TryGetValue(NormalizeHeader(key), out value!))
+            {
+                return true;
+            }
+        }
+
+        value = "";
+        return false;
+    }
+
+    public static int? ParseNullableInt(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+        return int.TryParse(digits, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+    }
+
+    public static bool? ParseBoolean(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "true" or "yes" or "y" or "1" or "read" or "completed" => true,
+            "false" or "no" or "n" or "0" or "unread" => false,
+            _ => null
+        };
     }
 
     public static string CleanTitle(string title)

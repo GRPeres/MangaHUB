@@ -1,0 +1,61 @@
+@if (Open)
+{
+    <div class="mh-modal-backdrop" @onclick="Close">
+        <section class="mh-modal mh-filter-modal" role="dialog" aria-modal="true" aria-labelledby="csv-import-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">@ContextLabel import</MudText>
+                        <MudText id="csv-import-title" Typo="Typo.h2">Map your CSV columns</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Choose only the fields your spreadsheet has. Unused columns are ignored.</MudText>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" Disabled="@isImporting" OnClick="Close" aria-label="Close CSV import" />
+                </MudStack>
+
+                <InputFile OnChange="ReadCsv" accept=".csv,text/csv" disabled="@isImporting" />
+
+                @if (headers.Count > 0)
+                {
+                    <MudAlert Severity="@preflightSeverity" Variant="Variant.Outlined">@PreflightMessage</MudAlert>
+                    <MudGrid Spacing="2">
+                        @foreach (var field in Fields)
+                        {
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudSelect T="string" Label="@field.Label" Variant="Variant.Outlined" Dense="true" Value="@GetMapping(field.Key)" ValueChanged="@(value => SetMapping(field.Key, value))" Required="@field.Required">
+                                    <MudSelectItem T="string" Value="@string.Empty">Not used</MudSelectItem>
+                                    @foreach (var header in headers)
+                                    {
+                                        <MudSelectItem T="string" Value="@header">@header</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+
+                @if (isImporting)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Checking and importing your CSV...</MudText>
+                    </MudStack>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(importMessage))
+                {
+                    <MudAlert Severity="@importSeverity" Variant="Variant.Outlined">@importMessage</MudAlert>
+                }
+
+                @if (headers.Count > 0)
+                {
+                    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="flex-wrap">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@isImporting" OnClick="ResetMapping">Reset mapping</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.UploadFile" Disabled="@(isImporting || !IsMappingValid)" OnClick="Import">Import @rowCount rows</MudButton>
+                    </MudStack>
+                }
+            </MudStack>
+        </section>
+    </div>
+}
+
+<CsvImportGuideModal Open="@Open" CanCreateCatalog="@CreateMissingCatalogEntries" />

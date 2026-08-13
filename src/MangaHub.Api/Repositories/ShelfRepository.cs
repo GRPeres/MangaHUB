@@ -3,11 +3,20 @@ using MangaHub.Core.Models;
 using MangaHub.Core.Services;
 using MangaHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace MangaHub.Api.Repositories;
 
 public sealed class ShelfRepository(MangaHubDbContext db)
 {
+    public bool SupportsTransactions => !string.Equals(
+        db.Database.ProviderName,
+        "Microsoft.EntityFrameworkCore.InMemory",
+        StringComparison.Ordinal);
+
+    public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken) =>
+        db.Database.BeginTransactionAsync(cancellationToken);
+
     public async Task<List<MangaEntryResponse>> ListEntriesAsync(Guid userId, string? status, IReadOnlyList<string> preferredLanguages, int offset, int limit, CancellationToken cancellationToken)
     {
         var languageCodes = preferredLanguages.ToArray();

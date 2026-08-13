@@ -14,6 +14,14 @@
                 document.documentElement.classList.toggle("mh-theme-light", !isDark);
             }
         };
+        window.mangaHubStorage = {
+            getBoolean: function (key) {
+                try { return localStorage.getItem(key) === "true"; } catch { return false; }
+            },
+            setBoolean: function (key, value) {
+                try { localStorage.setItem(key, value ? "true" : "false"); } catch { }
+            }
+        };
         window.mangaHubPush = {
             subscribe: async function (publicKey) {
                 if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
@@ -241,8 +249,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=169" />
-    <link href="MangaHub.Web.styles.css?v=169" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=170" />
+    <link href="MangaHub.Web.styles.css?v=170" rel="stylesheet" />
 </head>
 
 <body>

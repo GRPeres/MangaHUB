@@ -14,7 +14,8 @@ public sealed class ShelfExportService
         AppendRow(csv,
             "Name", "Link", "Status", "Chapter", "Rating", "Type", "Summary", "Notes",
             "Authors", "Categories", "Current Chapter Read", "Publishing Status", "Latest Preferred Language Chapter",
-            "Metadata Source", "MAL ID", "MangaDex ID", "MangaUpdates ID", "Fallback Reader URL", "OpenLibrary Key");
+            "Metadata Source", "MAL ID", "MangaDex ID", "MangaUpdates ID", "Fallback Reader URL", "Reader Preference", "OpenLibrary Key",
+            "Personal Category", "Catalog Description", "First Published", "Chapter Count", "Volume Count");
 
         foreach (var entry in entries)
         {
@@ -38,7 +39,13 @@ public sealed class ShelfExportService
                 entry.MangaDexId,
                 entry.MangaUpdatesId,
                 entry.FallbackReaderUrl,
-                entry.OpenLibraryKey);
+                entry.ReaderPreference,
+                entry.OpenLibraryKey,
+                entry.Category,
+                entry.Description,
+                entry.FirstPublishYear?.ToString() ?? "",
+                entry.ChapterCount?.ToString() ?? "",
+                entry.VolumeCount?.ToString() ?? "");
         }
 
         return new UTF8Encoding(encoderShouldEmitUTF8Identifier: true).GetBytes(csv.ToString());

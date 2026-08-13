@@ -132,7 +132,7 @@ public sealed record AddToShelfRequest(
     string Category,
     string Summary,
     string Notes);
-public sealed record ShelfImportRequest(string CsvText, bool CreateMissingCatalogEntries);
+public sealed record ShelfImportRequest(string CsvText, bool CreateMissingCatalogEntries, Dictionary<string, string>? ColumnMappings = null);
 public sealed record ShelfImportResponse(int Imported, int CreatedCatalogEntries, int UpdatedShelfEntries, int Skipped, List<string> Messages);
 public sealed record ReaderLaunchResponse(string ReaderUrl, string CurrentChapter, int PageCount);
 public sealed record ReaderChapterMatch(string RequestedChapter, string MatchedChapter, string Language);

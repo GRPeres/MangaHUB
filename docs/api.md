@@ -54,6 +54,14 @@ Shelf:
 - import shelf CSV
 - export the signed-in user's shelf as migration-ready CSV or a shareable PDF
 
+### CSV Migration
+
+Import accepts a standard CSV with one title column (`Name`, `Title`, `Manga`, or `Series`) and any subset of optional columns. The import modal auto-detects MangaHub exports, then lets the user map arbitrary spreadsheet headers to title, personal progress, identifiers, links, and catalog metadata before sending anything to the API. A title mapping is required; each source column can be used once; unused spreadsheet columns are ignored.
+
+When mapping is supplied, the API validates that every mapped source header exists. Missing optional columns preserve existing shelf values rather than clearing them. For a new shelf entry, a supplied current chapter without a status defaults to `reading`; an otherwise minimal title-only row defaults to `planned`. `done` always marks the supplied current chapter as read.
+
+Admins importing through Catalog can create missing catalog entries. The importer first matches MangaDex ID, MAL ID, MangaUpdates ID, OpenLibrary key, reader URL, then exact case-insensitive title. Imported catalog metadata enriches blank fields and does not overwrite established catalog metadata.
+
 Metadata:
 
 - search metadata, preferring MyAnimeList

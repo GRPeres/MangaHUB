@@ -1,0 +1,40 @@
+@if (guideVisible)
+{
+    <div class="mh-modal-backdrop">
+        <section class="mh-modal mh-filter-modal" role="dialog" aria-modal="true" aria-labelledby="csv-import-guide-title">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">Migration guide</MudText>
+                        <MudText id="csv-import-guide-title" Typo="Typo.h2">Bring your spreadsheet</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">CSV headers are flexible. Missing optional columns are fine.</MudText>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Continue" aria-label="Close import guide" />
+                </MudStack>
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.subtitle2">Required</MudText><MudText Typo="Typo.body2">One title column: Name, Title, Manga, or Series.</MudText></MudPaper></MudItem>
+                    <MudItem xs="12" md="6"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.subtitle2">Reading data</MudText><MudText Typo="Typo.body2">Status, Chapter, Rating/Score, Notes, Summary, and Personal Category are optional.</MudText></MudPaper></MudItem>
+                    <MudItem xs="12" md="6"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.subtitle2">Matching</MudText><MudText Typo="Typo.body2">Link/URL, MangaDex ID, MAL ID, MangaUpdates ID, and OpenLibrary Key help avoid duplicates.</MudText></MudPaper></MudItem>
+                    <MudItem xs="12" md="6"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.subtitle2">Catalog details</MudText><MudText Typo="Typo.body2">Authors, Categories, Cover URL, Format, publishing status, counts, and reader URLs are optional.</MudText></MudPaper></MudItem>
+                </MudGrid>
+
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @if (CanCreateCatalog)
+                    {
+                        <text>Unknown titles create catalog entries. Existing catalog fields are enriched only when blank.</text>
+                    }
+                    else
+                    {
+                        <text>Unknown titles are skipped. Use the Catalog import when you need to create shared manga records.</text>
+                    }
+                </MudAlert>
+
+                <MudCheckBox @bind-Value="hideGuide" Label="Don't show this guide again" Color="Color.Primary" />
+                <MudStack Row="true" Justify="Justify.FlexEnd">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.UploadFile" OnClick="Continue">Choose CSV</MudButton>
+                </MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
