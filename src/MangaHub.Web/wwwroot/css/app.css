@@ -307,6 +307,8 @@ a {
 .reader-page-frame {
     align-items: center;
     aspect-ratio: 2 / 3;
+    background: #000;
+    border-radius: 8px;
     display: grid;
     flex: 0 1 auto;
     height: 100%;
@@ -320,15 +322,13 @@ a {
 }
 
 .reader-page-frame img {
-    background: #05020a;
-    border-radius: 8px;
     display: block;
-    height: 100%;
+    height: auto;
     margin: 0 auto;
     max-height: 100%;
     max-width: 100%;
     object-fit: contain;
-    width: 100%;
+    width: auto;
 }
 
 .reader-page-loading-preview {
@@ -344,8 +344,7 @@ a {
 }
 
 .reader-page-frame.is-page-loading {
-    background: var(--mud-palette-background);
-    border-radius: 8px;
+    background: #000;
 }
 
 .reader-page-frame.is-page-loading > img.reader-page-image {
@@ -362,6 +361,8 @@ a {
 
 .reader-workspace-vertical .reader-page-frame {
     aspect-ratio: auto;
+    background: transparent;
+    border-radius: 0;
     display: block;
     height: auto;
     margin: 0 auto;
