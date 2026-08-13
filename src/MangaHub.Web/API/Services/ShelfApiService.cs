@@ -2,6 +2,9 @@ namespace MangaHub.Web.API.Services;
 
 public sealed class ShelfApiService(ApiHttpClient api)
 {
+    public string ExportCsvUrl => api.GetAbsoluteUrl("/api/shelf/export/csv");
+    public string ExportPdfUrl => api.GetAbsoluteUrl("/api/shelf/export/pdf");
+
     public async Task<MangaEntryResponse?> AddToShelfAsync(AddToShelfRequest request) =>
         await api.SendAsync<AddToShelfRequest, MangaEntryResponse>(HttpMethod.Post, "/api/shelf", request);
 

@@ -23,6 +23,10 @@
                 <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">Add manga</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportShelf">Import CSV</MudMenuItem>
             </MudMenu>
+            <MudMenu Label="Export" StartIcon="@Icons.Material.Filled.Download" Variant="Variant.Outlined" Color="Color.Primary">
+                <MudMenuItem Icon="@Icons.Material.Filled.TableView" Href="@ShelfApi.ExportCsvUrl" Target="_blank">Excel CSV</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.PictureAsPdf" Href="@ShelfApi.ExportPdfUrl" Target="_blank">Shareable PDF</MudMenuItem>
+            </MudMenu>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterList" OnClick="OpenFilters">@FilterButtonLabel</MudButton>
         </MudStack>
     </MudStack>

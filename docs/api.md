@@ -52,6 +52,7 @@ Shelf:
 - update shelf entry
 - delete shelf entry
 - import shelf CSV
+- export the signed-in user's shelf as migration-ready CSV or a shareable PDF
 
 Metadata:
 

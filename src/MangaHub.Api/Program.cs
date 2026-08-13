@@ -8,8 +8,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Threading.RateLimiting;
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+QuestPDF.Settings.License = LicenseType.Community;
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -85,6 +87,7 @@ builder.Services.AddScoped<MangaUpdatesCatalogMatchService>();
 builder.Services.AddScoped<MetadataService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<ShelfService>();
+builder.Services.AddScoped<ShelfExportService>();
 builder.Services.AddScoped<LibraryService>();
 builder.Services.AddScoped<SeriesService>();
 builder.Services.AddScoped<ReaderService>();

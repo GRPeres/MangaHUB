@@ -6,7 +6,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/shelf")]
-public sealed class ShelfController(CurrentUserService currentUsers, ShelfService shelf) : ControllerBase
+public sealed class ShelfController(CurrentUserService currentUsers, ShelfService shelf, ShelfExportService exports) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Add([FromBody] AddToShelfRequest request, CancellationToken cancellationToken)
@@ -71,5 +71,31 @@ public sealed class ShelfController(CurrentUserService currentUsers, ShelfServic
         var canCreateCatalog = CurrentUserService.IsAdmin(user) && request.CreateMissingCatalogEntries;
         var result = await shelf.ImportAsync(user.Id, canCreateCatalog, request, cancellationToken);
         return result is null ? BadRequest("CSV text is required.") : Ok(result);
+    }
+
+    [HttpGet("export/csv")]
+    public async Task<IActionResult> ExportCsv(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var entries = await shelf.ExportAsync(user.Id, cancellationToken);
+        return File(exports.CreateCsv(entries), "text/csv; charset=utf-8", "mangahub-shelf.csv");
+    }
+
+    [HttpGet("export/pdf")]
+    public async Task<IActionResult> ExportPdf(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var entries = await shelf.ExportAsync(user.Id, cancellationToken);
+        return File(exports.CreatePdf(user.Username, entries), "application/pdf", "mangahub-shelf.pdf");
     }
 }
