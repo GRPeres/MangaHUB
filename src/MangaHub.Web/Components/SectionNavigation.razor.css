@@ -19,7 +19,7 @@
         padding-inline: .7rem;
     }
 
-    .mh-section-nav.is-collapsible:not(.is-expanded) .mh-section-nav-optional {
+    .mh-section-nav.is-collapsible:not(.is-expanded) ::deep .mh-section-nav-optional {
         display: none;
     }
 
