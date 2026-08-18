@@ -232,6 +232,7 @@
     private const int PageSize = 24;
     private bool hasMoreEntries;
     private bool isLoadingEntries;
+    private bool isSavingOfflineSnapshot;
     private ElementReference loadMoreSentinel;
     private DotNetObjectReference<Library>? progressiveLoadReference;
     private List<UserAdminResponse> users = [];
@@ -355,6 +356,7 @@
         hasMoreEntries = true;
         await RefreshSectionSummaryAsync();
         await LoadMoreEntries();
+        _ = SaveOfflineSnapshotAsync();
         CloseEdit();
     }
 
@@ -371,7 +373,6 @@
             var nextPage = await MangaApi.GetMangaEntriesAsync(userId: IsAdmin ? selectedUserId : null, offset: entries.Count, limit: PageSize, section: activeSection);
             entries.AddRange(nextPage);
             hasMoreEntries = nextPage.Count == PageSize;
-            await SaveOfflineSnapshotAsync();
         }
         finally
         {
@@ -399,18 +400,43 @@
 
     private async Task SaveOfflineSnapshotAsync()
     {
-        if (currentUser is null || (IsAdmin && selectedUserId is not null && selectedUserId != currentUser.Id))
+        if (isSavingOfflineSnapshot || currentUser is null || (IsAdmin && selectedUserId is not null && selectedUserId != currentUser.Id))
         {
             return;
         }
 
+        isSavingOfflineSnapshot = true;
         try
         {
-            await JS.InvokeVoidAsync("mangaHubOfflineShelf.save", currentUser.Id.ToString(), entries);
+            var snapshotEntries = new List<MangaEntryResponse>();
+            const int snapshotPageSize = 500;
+            for (var offset = 0; ; offset += snapshotPageSize)
+            {
+                var page = await MangaApi.GetMangaEntriesAsync(
+                    userId: currentUser.Id,
+                    offset: offset,
+                    limit: snapshotPageSize,
+                    section: "all");
+                snapshotEntries.AddRange(page);
+                if (page.Count < snapshotPageSize)
+                {
+                    break;
+                }
+            }
+
+            await JS.InvokeVoidAsync("mangaHubOfflineShelf.save", currentUser.Id.ToString(), snapshotEntries);
         }
         catch (JSDisconnectedException)
         {
             // The browser is gone; the next successful Shelf load will refresh the local snapshot.
+        }
+        catch
+        {
+            // Offline support is best-effort and must not interfere with the active Shelf view.
+        }
+        finally
+        {
+            isSavingOfflineSnapshot = false;
         }
     }
 
