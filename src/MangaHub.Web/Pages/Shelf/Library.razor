@@ -1,4 +1,5 @@
 @page "/library"
+@page "/library/{RouteSection}"
 @using MangaHub.Web.API.Services
 @inject AuthSessionService Auth
 @inject NavigationManager Navigation
@@ -10,27 +11,9 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<PageTitle>Shelf</PageTitle>
+<PageTitle>@PageTitleText</PageTitle>
 
 <MudStack Spacing="4">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mh-page-title mh-shelf-page-title">
-        <MudStack Spacing="1" Class="mh-page-heading">
-            <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mh-page-kicker">Personal tracker</MudText>
-            <MudText Typo="Typo.h1">Shelf</MudText>
-        </MudStack>
-        <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
-            <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
-                <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">Add manga</MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportShelf">Import CSV</MudMenuItem>
-            </MudMenu>
-            <MudMenu Label="Export" StartIcon="@Icons.Material.Filled.Download" Variant="Variant.Outlined" Color="Color.Primary">
-                <MudMenuItem Icon="@Icons.Material.Filled.TableView" Href="@ShelfApi.ExportCsvUrl" Target="_blank">Excel CSV</MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.PictureAsPdf" Href="@ShelfApi.ExportPdfUrl" Target="_blank">Shareable PDF</MudMenuItem>
-            </MudMenu>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterList" OnClick="OpenFilters">@FilterButtonLabel</MudButton>
-        </MudStack>
-    </MudStack>
-
     <nav class="mh-shelf-section-nav" aria-label="Shelf sections">
         @foreach (var shelfSection in ShelfSections)
         {
@@ -46,6 +29,24 @@
             }
         }
     </nav>
+
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mh-page-title mh-shelf-page-title">
+        <MudStack Spacing="1" Class="mh-page-heading">
+            <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mh-page-kicker">Personal tracker</MudText>
+            <MudText Typo="Typo.h1">@SectionTitle</MudText>
+        </MudStack>
+        <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
+            <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
+                <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">Add manga</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportShelf">Import CSV</MudMenuItem>
+            </MudMenu>
+            <MudMenu Label="Export" StartIcon="@Icons.Material.Filled.Download" Variant="Variant.Outlined" Color="Color.Primary">
+                <MudMenuItem Icon="@Icons.Material.Filled.TableView" Href="@ShelfApi.ExportCsvUrl" Target="_blank">Excel CSV</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.PictureAsPdf" Href="@ShelfApi.ExportPdfUrl" Target="_blank">Shareable PDF</MudMenuItem>
+            </MudMenu>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterList" OnClick="OpenFilters">@FilterButtonLabel</MudButton>
+        </MudStack>
+    </MudStack>
 
     @if (VisibleEntries.Count == 0 && !hasMoreEntries)
     {
@@ -230,6 +231,7 @@
     private UserResponse? currentUser;
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private Guid? selectedUserId;
+    [Parameter] public string? RouteSection { get; set; }
     [SupplyParameterFromQuery(Name = "section")] public string? SectionQuery { get; set; }
     private string activeSection = "updates";
     private bool hasInitialized;
@@ -271,7 +273,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        activeSection = NormalizeSection(SectionQuery);
+        activeSection = RequestedSection;
         currentUser = await Auth.GetCurrentUserAsync();
         if (IsAdmin)
         {
@@ -316,7 +318,7 @@
             return;
         }
 
-        Navigation.NavigateTo($"/library?section={Uri.EscapeDataString(normalized)}");
+        Navigation.NavigateTo($"/library/{Uri.EscapeDataString(normalized)}");
     }
 
     private async Task ApplyFilters()
@@ -378,7 +380,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var requestedSection = NormalizeSection(SectionQuery);
+        var requestedSection = RequestedSection;
         if (!hasInitialized || string.Equals(activeSection, requestedSection, StringComparison.Ordinal))
         {
             return;
@@ -689,6 +691,9 @@
         Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
 
     private bool IsUpdatesSection => string.Equals(activeSection, "updates", StringComparison.Ordinal);
+    private string RequestedSection => NormalizeSection(RouteSection ?? SectionQuery);
+    private string SectionTitle => ShelfSections.First(section => section.Key == activeSection).Label;
+    private string PageTitleText => $"{SectionTitle} | MangaHub";
     private string ActiveStatusFilter => activeSection is "planned" or "reading" or "paused" or "done" or "dropped" ? activeSection : "";
     private string EmptySectionMessage => IsUpdatesSection ? "No new releases or untracked manga need your attention." : "Your shelf is empty for this section and filter.";
     private bool IsSectionActive(string section) => string.Equals(activeSection, section, StringComparison.Ordinal);
