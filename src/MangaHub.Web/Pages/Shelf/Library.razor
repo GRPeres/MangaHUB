@@ -14,7 +14,7 @@
 <PageTitle>@PageTitleText</PageTitle>
 
 <MudStack Spacing="4">
-    <nav class="mh-shelf-section-nav" aria-label="Shelf sections">
+    <nav class="mh-shelf-section-nav @(mobileSectionsExpanded ? "is-expanded" : "")" aria-label="Shelf sections">
         @foreach (var shelfSection in ShelfSections)
         {
             @if (ShouldShowSection(shelfSection.Key))
@@ -22,13 +22,20 @@
                 <MudButton Variant="@(IsSectionActive(shelfSection.Key) ? Variant.Filled : Variant.Outlined)"
                            Color="@(shelfSection.Key == "updates" ? Color.Error : Color.Primary)"
                            StartIcon="@shelfSection.Icon"
-                           Class="mh-shelf-section-button"
+                           Class="@($"mh-shelf-section-button {(IsPrimarySection(shelfSection.Key) ? "" : "mh-shelf-section-optional")}")"
                            OnClick="@(() => SelectSection(shelfSection.Key))"
                            aria-current="@(IsSectionActive(shelfSection.Key) ? "page" : null)">
                     @shelfSection.Label (@SectionCount(shelfSection.Key))
                 </MudButton>
             }
         }
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Secondary"
+                   StartIcon="@(mobileSectionsExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.MoreHoriz)"
+                   Class="mh-shelf-section-button mh-shelf-section-toggle"
+                   OnClick="ToggleMobileSections">
+            @(mobileSectionsExpanded ? "Fewer sections" : "More sections")
+        </MudButton>
     </nav>
 
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mh-page-title mh-shelf-page-title">
@@ -242,6 +249,7 @@
     [Parameter] public string? RouteSection { get; set; }
     [SupplyParameterFromQuery(Name = "section")] public string? SectionQuery { get; set; }
     private string activeSection = "updates";
+    private bool mobileSectionsExpanded;
     private bool hasInitialized;
     private ShelfSectionSummaryResponse sectionSummary = new(0, 0, 0, 0, 0, 0, 0, 0, 0);
     private string searchText = "";
@@ -282,6 +290,7 @@
     protected override async Task OnInitializedAsync()
     {
         activeSection = RequestedSection;
+        mobileSectionsExpanded = !IsPrimarySection(activeSection);
         currentUser = await Auth.GetCurrentUserAsync();
         if (IsAdmin)
         {
@@ -328,6 +337,8 @@
 
         Navigation.NavigateTo($"/library/{Uri.EscapeDataString(normalized)}");
     }
+
+    private void ToggleMobileSections() => mobileSectionsExpanded = !mobileSectionsExpanded;
 
     private async Task ApplyFilters()
     {
@@ -395,6 +406,7 @@
         }
 
         activeSection = requestedSection;
+        mobileSectionsExpanded = !IsPrimarySection(activeSection);
         await Load();
     }
 
@@ -733,6 +745,7 @@
     private string ActiveStatusFilter => activeSection is "planned" or "reading" or "paused" or "done" or "dropped" ? activeSection : "";
     private string EmptySectionMessage => IsUpdatesSection ? "No new releases or untracked manga need your attention." : "Your shelf is empty for this section and filter.";
     private bool IsSectionActive(string section) => string.Equals(activeSection, section, StringComparison.Ordinal);
+    private static bool IsPrimarySection(string section) => section is "updates" or "planned";
     private bool ShouldShowSection(string section) => section != "updates" || sectionSummary.Updates > 0;
     private int SectionCount(string section) => section switch
     {

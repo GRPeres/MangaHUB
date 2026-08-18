@@ -286,6 +286,10 @@ a {
     white-space: nowrap;
 }
 
+.mh-shelf-section-toggle {
+    display: none;
+}
+
 .mh-progressive-load-sentinel {
     height: 1px;
     width: 100%;
@@ -1175,5 +1179,13 @@ html body .mh-mobile-catalog-card {
 
     .mh-shelf-section-button {
         min-width: 0;
+    }
+
+    .mh-shelf-section-nav:not(.is-expanded) .mh-shelf-section-optional {
+        display: none;
+    }
+
+    .mh-shelf-section-toggle {
+        display: inline-flex;
     }
 }
