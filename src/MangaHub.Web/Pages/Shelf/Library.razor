@@ -34,13 +34,16 @@
     <nav class="mh-shelf-section-nav" aria-label="Shelf sections">
         @foreach (var shelfSection in ShelfSections)
         {
-            <MudButton Variant="@(IsSectionActive(shelfSection.Key) ? Variant.Filled : Variant.Outlined)"
-                       Color="@(shelfSection.Key == "updates" ? Color.Error : Color.Primary)"
-                       Class="mh-shelf-section-button"
-                       OnClick="@(() => SelectSection(shelfSection.Key))"
-                       aria-current="@(IsSectionActive(shelfSection.Key) ? "page" : null)">
-                @shelfSection.Label (@SectionCount(shelfSection.Key))
-            </MudButton>
+            @if (ShouldShowSection(shelfSection.Key))
+            {
+                <MudButton Variant="@(IsSectionActive(shelfSection.Key) ? Variant.Filled : Variant.Outlined)"
+                           Color="@(shelfSection.Key == "updates" ? Color.Error : Color.Primary)"
+                           Class="mh-shelf-section-button"
+                           OnClick="@(() => SelectSection(shelfSection.Key))"
+                           aria-current="@(IsSectionActive(shelfSection.Key) ? "page" : null)">
+                    @shelfSection.Label (@SectionCount(shelfSection.Key))
+                </MudButton>
+            }
         }
     </nav>
 
@@ -689,6 +692,7 @@
     private string ActiveStatusFilter => activeSection is "planned" or "reading" or "paused" or "done" or "dropped" ? activeSection : "";
     private string EmptySectionMessage => IsUpdatesSection ? "No new releases or untracked manga need your attention." : "Your shelf is empty for this section and filter.";
     private bool IsSectionActive(string section) => string.Equals(activeSection, section, StringComparison.Ordinal);
+    private bool ShouldShowSection(string section) => section != "updates" || sectionSummary.Updates > 0;
     private int SectionCount(string section) => section switch
     {
         "updates" => sectionSummary.Updates,
