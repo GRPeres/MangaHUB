@@ -21,6 +21,7 @@
             {
                 <MudButton Variant="@(IsSectionActive(shelfSection.Key) ? Variant.Filled : Variant.Outlined)"
                            Color="@(shelfSection.Key == "updates" ? Color.Error : Color.Primary)"
+                           StartIcon="@shelfSection.Icon"
                            Class="mh-shelf-section-button"
                            OnClick="@(() => SelectSection(shelfSection.Key))"
                            aria-current="@(IsSectionActive(shelfSection.Key) ? "page" : null)">
@@ -260,15 +261,15 @@
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private MangaEntryResponse? editingEntry;
 
-    private static readonly (string Key, string Label)[] ShelfSections =
+    private static readonly (string Key, string Label, string Icon)[] ShelfSections =
     [
-        ("updates", "Updates"),
-        ("planned", "Planned"),
-        ("reading", "Reading"),
-        ("paused", "On hiatus"),
-        ("done", "Done"),
-        ("dropped", "Dropped"),
-        ("all", "All")
+        ("updates", "Updates", Icons.Material.Filled.NewReleases),
+        ("planned", "Planned", Icons.Material.Filled.BookmarkAdd),
+        ("reading", "Reading", Icons.Material.Filled.AutoStories),
+        ("paused", "On hiatus", Icons.Material.Filled.PauseCircle),
+        ("done", "Done", Icons.Material.Filled.TaskAlt),
+        ("dropped", "Dropped", Icons.Material.Filled.RemoveCircle),
+        ("all", "All", Icons.Material.Filled.LibraryBooks)
     ];
 
     protected override async Task OnInitializedAsync()
