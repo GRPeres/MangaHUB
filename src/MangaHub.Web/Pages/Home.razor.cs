@@ -80,7 +80,7 @@ public partial class Home : IDisposable
     private void GoLibrary() => Navigation.NavigateTo("library");
     private void GoCatalog() => Navigation.NavigateTo("admin/catalog");
     private void GoNewReleases() => Navigation.NavigateTo("library?availability=new");
-    private void GoPlanned() => Navigation.NavigateTo("library?status=planned");
+    private void GoPlanned() => Navigation.NavigateTo("library?section=planned");
     private void OpenContinueReading() => Navigation.NavigateTo("library");
     private void GoAccount() => Navigation.NavigateTo("account");
 

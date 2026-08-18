@@ -95,6 +95,17 @@ public sealed record MangaEntryResponse(
     string ReaderPreference = "mangahub",
     decimal? MangaDexPreferredLanguageLatestChapter = null,
     bool IsRead = false);
+
+public sealed record ShelfSectionSummaryResponse(
+    int Updates,
+    int NewReleases,
+    int Untracked,
+    int Planned,
+    int Reading,
+    int Paused,
+    int Done,
+    int Dropped,
+    int All);
 public sealed record CatalogMangaResponse(
     Guid Id,
     string Title,

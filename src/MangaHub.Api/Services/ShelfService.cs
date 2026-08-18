@@ -12,18 +12,25 @@ public sealed class ShelfService(
     UserRepository users,
     UsageTrackingService? usage = null)
 {
-    public async Task<List<MangaEntryResponse>> ListAsync(Guid targetUserId, string? status, int offset, int limit, CancellationToken cancellationToken)
+    public async Task<List<MangaEntryResponse>> ListAsync(Guid targetUserId, string? status, string? section, int offset, int limit, CancellationToken cancellationToken)
     {
         var user = await users.GetByIdAsync(targetUserId, cancellationToken);
         var languages = LanguagePreferences.Parse(user?.PreferredLanguage);
-        return await shelf.ListEntriesAsync(targetUserId, status, languages, offset, limit, cancellationToken);
+        return await shelf.ListEntriesAsync(targetUserId, status, section, languages, offset, limit, cancellationToken);
+    }
+
+    public async Task<ShelfSectionSummaryResponse> GetSectionSummaryAsync(Guid targetUserId, CancellationToken cancellationToken)
+    {
+        var user = await users.GetByIdAsync(targetUserId, cancellationToken);
+        var languages = LanguagePreferences.Parse(user?.PreferredLanguage);
+        return await shelf.GetSectionSummaryAsync(targetUserId, languages, cancellationToken);
     }
 
     public async Task<List<MangaEntryResponse>> ExportAsync(Guid userId, CancellationToken cancellationToken)
     {
         var user = await users.GetByIdAsync(userId, cancellationToken);
         var languages = LanguagePreferences.Parse(user?.PreferredLanguage);
-        return await shelf.ListEntriesAsync(userId, null, languages, 0, int.MaxValue, cancellationToken);
+        return await shelf.ListEntriesAsync(userId, null, null, languages, 0, int.MaxValue, cancellationToken);
     }
 
     public async Task<MangaEntryResponse?> AddAsync(Guid userId, AddToShelfRequest request, CancellationToken cancellationToken)

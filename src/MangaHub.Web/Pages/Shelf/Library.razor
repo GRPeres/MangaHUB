@@ -31,23 +31,36 @@
         </MudStack>
     </MudStack>
 
-    @if (AllFilteredEntries.Count == 0 && !hasMoreEntries)
+    <nav class="mh-shelf-section-nav" aria-label="Shelf sections">
+        @foreach (var shelfSection in ShelfSections)
+        {
+            <MudButton Variant="@(IsSectionActive(shelfSection.Key) ? Variant.Filled : Variant.Outlined)"
+                       Color="@(shelfSection.Key == "updates" ? Color.Error : Color.Primary)"
+                       Class="mh-shelf-section-button"
+                       OnClick="@(() => SelectSection(shelfSection.Key))"
+                       aria-current="@(IsSectionActive(shelfSection.Key) ? "page" : null)">
+                @shelfSection.Label (@SectionCount(shelfSection.Key))
+            </MudButton>
+        }
+    </nav>
+
+    @if (VisibleEntries.Count == 0 && !hasMoreEntries)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Your shelf is empty for this filter.</MudAlert>
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@EmptySectionMessage</MudAlert>
     }
     else
     {
         <MudStack Spacing="2">
-            @if (NewReleaseEntries.Count > 0)
+            @if (IsUpdatesSection && NewReleaseEntries.Count > 0)
             {
                 <MudText Typo="Typo.h6" Color="Color.Error">New releases</MudText>
                 @foreach (var item in NewReleaseEntries)
                 {
-                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@ActiveStatusFilter" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
                 }
             }
 
-            @if (UntrackedEntries.Count > 0)
+            @if (IsUpdatesSection && UntrackedEntries.Count > 0)
             {
                 @if (NewReleaseEntries.Count > 0)
                 {
@@ -57,19 +70,13 @@
                 <MudText Typo="Typo.h6" Color="Color.Error">Untracked manga</MudText>
                 @foreach (var item in UntrackedEntries)
                 {
-                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@ActiveStatusFilter" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
                 }
             }
 
-            @if (OtherFilteredEntries.Count > 0 && (NewReleaseEntries.Count > 0 || UntrackedEntries.Count > 0))
+            @foreach (var item in IsUpdatesSection ? [] : VisibleEntries)
             {
-                <MudDivider />
-                <MudText Typo="Typo.h6" Color="Color.Error">Others</MudText>
-            }
-
-            @foreach (var item in OtherFilteredEntries)
-            {
-                <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@status" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@ActiveStatusFilter" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
             }
 
             @if (hasMoreEntries)
@@ -151,17 +158,7 @@
                     <MudItem xs="12" md="6">
                         <MudTextField T="string" @bind-Value="searchText" Label="Search title, author, notes" Variant="Variant.Outlined" Immediate="true" />
                     </MudItem>
-                    <MudItem xs="12" md="3">
-                        <MudSelect T="string" @bind-Value="status" Label="Status" Variant="Variant.Outlined">
-                            <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("reading")">Reading</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("done")">Done</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("paused")">On hiatus</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("planned")">Planned</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("dropped")">Dropped</MudSelectItem>
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" md="3">
+                    <MudItem xs="12" md="6">
                         <MudSelect T="string" @bind-Value="sourceFilter" Label="Metadata source" Variant="Variant.Outlined">
                             <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                             <MudSelectItem T="string" Value="@("MAL")">MAL</MudSelectItem>
@@ -230,7 +227,10 @@
     private UserResponse? currentUser;
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private Guid? selectedUserId;
-    private string status = "";
+    [SupplyParameterFromQuery(Name = "section")] public string? SectionQuery { get; set; }
+    private string activeSection = "updates";
+    private bool hasInitialized;
+    private ShelfSectionSummaryResponse sectionSummary = new(0, 0, 0, 0, 0, 0, 0, 0, 0);
     private string searchText = "";
     private string sourceFilter = "";
     private string categoryFilter = "";
@@ -255,14 +255,27 @@
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private MangaEntryResponse? editingEntry;
 
+    private static readonly (string Key, string Label)[] ShelfSections =
+    [
+        ("updates", "Updates"),
+        ("planned", "Planned"),
+        ("reading", "Reading"),
+        ("paused", "On hiatus"),
+        ("done", "Done"),
+        ("dropped", "Dropped"),
+        ("all", "All")
+    ];
+
     protected override async Task OnInitializedAsync()
     {
+        activeSection = NormalizeSection(SectionQuery);
         currentUser = await Auth.GetCurrentUserAsync();
         if (IsAdmin)
         {
             users = await AdminApi.GetUsersAsync();
             selectedUserId = currentUser?.Id;
         }
+        hasInitialized = true;
         await Load();
         if (NotificationEntryId is not null && !string.IsNullOrWhiteSpace(NotificationChapter))
         {
@@ -286,10 +299,21 @@
     private void OnAddShelfOpenChanged(bool open) => isAddShelfOpen = open;
     private void OnImportShelfOpenChanged(bool open) => isImportShelfOpen = open;
 
-    private async Task ToggleStatusFilter(string clickedStatus)
+    private Task ToggleStatusFilter(string clickedStatus)
     {
-        status = string.Equals(status, clickedStatus, StringComparison.OrdinalIgnoreCase) ? "" : clickedStatus;
-        await Load();
+        SelectSection(string.Equals(activeSection, clickedStatus, StringComparison.OrdinalIgnoreCase) ? "all" : clickedStatus);
+        return Task.CompletedTask;
+    }
+
+    private void SelectSection(string section)
+    {
+        var normalized = NormalizeSection(section);
+        if (string.Equals(activeSection, normalized, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Navigation.NavigateTo($"/library?section={Uri.EscapeDataString(normalized)}");
     }
 
     private async Task ApplyFilters()
@@ -300,7 +324,6 @@
 
     private async Task ClearFilters()
     {
-        status = "";
         searchText = "";
         sourceFilter = "";
         categoryFilter = "";
@@ -318,6 +341,7 @@
     {
         entries = [];
         hasMoreEntries = true;
+        await RefreshSectionSummaryAsync();
         await LoadMoreEntries();
         CloseEdit();
     }
@@ -332,7 +356,7 @@
         isLoadingEntries = true;
         try
         {
-            var nextPage = await MangaApi.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null, entries.Count, PageSize);
+            var nextPage = await MangaApi.GetMangaEntriesAsync(userId: IsAdmin ? selectedUserId : null, offset: entries.Count, limit: PageSize, section: activeSection);
             entries.AddRange(nextPage);
             hasMoreEntries = nextPage.Count == PageSize;
             await SaveOfflineSnapshotAsync();
@@ -341,6 +365,24 @@
         {
             isLoadingEntries = false;
         }
+    }
+
+    private async Task RefreshSectionSummaryAsync()
+    {
+        sectionSummary = await MangaApi.GetShelfSectionSummaryAsync(IsAdmin ? selectedUserId : null)
+            ?? new ShelfSectionSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var requestedSection = NormalizeSection(SectionQuery);
+        if (!hasInitialized || string.Equals(activeSection, requestedSection, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        activeSection = requestedSection;
+        await Load();
     }
 
     private async Task SaveOfflineSnapshotAsync()
@@ -616,26 +658,20 @@
     private static bool IsNoLaterChapter(ReaderPreparationStatus? preparation) =>
         string.Equals(preparation?.Error, "No later readable MangaDex chapter is available.", StringComparison.Ordinal);
 
-    private List<MangaEntryResponse> AllFilteredEntries => entries
+    private List<MangaEntryResponse> VisibleEntries => entries
         .Where(MatchesSearch)
         .Where(MatchesSource)
         .Where(MatchesCategory)
         .Where(MatchesAvailability)
         .Where(MatchesScore)
-        .OrderBy(ShelfSortRank)
-        .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
-    private List<MangaEntryResponse> NewReleaseEntries => AllFilteredEntries
+    private List<MangaEntryResponse> NewReleaseEntries => VisibleEntries
         .Where(IsReadingWithNewChapters)
         .ToList();
 
-    private List<MangaEntryResponse> UntrackedEntries => AllFilteredEntries
+    private List<MangaEntryResponse> UntrackedEntries => VisibleEntries
         .Where(NeedsManualReleaseCheck)
-        .ToList();
-
-    private List<MangaEntryResponse> OtherFilteredEntries => AllFilteredEntries
-        .Where(entry => !IsReadingWithNewChapters(entry) && !NeedsManualReleaseCheck(entry))
         .ToList();
 
     private List<string> CategoryOptions => entries
@@ -647,7 +683,28 @@
 
     private string FilterButtonLabel => ActiveFilterCount == 0 ? "Filters" : $"Filters ({ActiveFilterCount})";
     private int ActiveFilterCount =>
-        Count(status) + Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
+        Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
+
+    private bool IsUpdatesSection => string.Equals(activeSection, "updates", StringComparison.Ordinal);
+    private string ActiveStatusFilter => activeSection is "planned" or "reading" or "paused" or "done" or "dropped" ? activeSection : "";
+    private string EmptySectionMessage => IsUpdatesSection ? "No new releases or untracked manga need your attention." : "Your shelf is empty for this section and filter.";
+    private bool IsSectionActive(string section) => string.Equals(activeSection, section, StringComparison.Ordinal);
+    private int SectionCount(string section) => section switch
+    {
+        "updates" => sectionSummary.Updates,
+        "planned" => sectionSummary.Planned,
+        "reading" => sectionSummary.Reading,
+        "paused" => sectionSummary.Paused,
+        "done" => sectionSummary.Done,
+        "dropped" => sectionSummary.Dropped,
+        _ => sectionSummary.All
+    };
+
+    private static string NormalizeSection(string? section) => section?.Trim().ToLowerInvariant() switch
+    {
+        "updates" or "planned" or "reading" or "paused" or "done" or "dropped" or "all" => section.Trim().ToLowerInvariant(),
+        _ => "updates"
+    };
 
     private bool MatchesSearch(MangaEntryResponse entry)
     {

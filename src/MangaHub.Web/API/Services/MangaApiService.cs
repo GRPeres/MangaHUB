@@ -2,7 +2,7 @@ namespace MangaHub.Web.API.Services;
 
 public sealed class MangaApiService(ApiHttpClient api)
 {
-    public async Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null, Guid? userId = null, int offset = 0, int limit = 500)
+    public async Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null, Guid? userId = null, int offset = 0, int limit = 500, string? section = null)
     {
         var queryParts = new List<string>();
         if (!string.IsNullOrWhiteSpace(status))
@@ -13,11 +13,21 @@ public sealed class MangaApiService(ApiHttpClient api)
         {
             queryParts.Add($"userId={Uri.EscapeDataString(userId.Value.ToString())}");
         }
+        if (!string.IsNullOrWhiteSpace(section))
+        {
+            queryParts.Add($"section={Uri.EscapeDataString(section)}");
+        }
         queryParts.Add($"offset={Math.Max(offset, 0)}");
         queryParts.Add($"limit={Math.Clamp(limit, 1, 500)}");
 
         var query = queryParts.Count == 0 ? "" : $"?{string.Join("&", queryParts)}";
         return await api.GetAsync<List<MangaEntryResponse>>($"/api/manga{query}") ?? [];
+    }
+
+    public async Task<ShelfSectionSummaryResponse?> GetShelfSectionSummaryAsync(Guid? userId = null)
+    {
+        var query = userId is null ? "" : $"?userId={Uri.EscapeDataString(userId.Value.ToString())}";
+        return await api.GetAsync<ShelfSectionSummaryResponse>($"/api/manga/sections{query}");
     }
 
     public async Task<ReadOptions?> GetReadOptionsAsync(Guid entryId) =>

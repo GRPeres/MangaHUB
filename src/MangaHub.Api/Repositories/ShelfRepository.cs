@@ -17,7 +17,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken) =>
         db.Database.BeginTransactionAsync(cancellationToken);
 
-    public async Task<List<MangaEntryResponse>> ListEntriesAsync(Guid userId, string? status, IReadOnlyList<string> preferredLanguages, int offset, int limit, CancellationToken cancellationToken)
+    public async Task<List<MangaEntryResponse>> ListEntriesAsync(Guid userId, string? status, string? section, IReadOnlyList<string> preferredLanguages, int offset, int limit, CancellationToken cancellationToken)
     {
         var languageCodes = preferredLanguages.ToArray();
         var query = db.UserMangaEntries.AsNoTracking()
@@ -70,13 +70,52 @@ public sealed class ShelfRepository(MangaHubDbContext db)
 
         // Shelf ordering depends on the user's language-specific release progress, so sort the
         // projected records before sending a compact page to the client.
-        return entries
+        return FilterBySection(entries, section)
             .OrderBy(DisplayRank)
             .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
             .Skip(offset)
             .Take(limit)
             .ToList();
     }
+
+    public async Task<ShelfSectionSummaryResponse> GetSectionSummaryAsync(Guid userId, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
+    {
+        var entries = await ListEntriesAsync(userId, null, null, preferredLanguages, 0, int.MaxValue, cancellationToken);
+        var newReleases = entries.Count(IsReadingWithNewChapters);
+        var untracked = entries.Count(NeedsManualReleaseCheck);
+
+        return new ShelfSectionSummaryResponse(
+            newReleases + untracked,
+            newReleases,
+            untracked,
+            entries.Count(entry => HasStatus(entry, "planned")),
+            entries.Count(entry => HasStatus(entry, "reading")),
+            entries.Count(entry => HasStatus(entry, "paused")),
+            entries.Count(entry => HasStatus(entry, "done")),
+            entries.Count(entry => HasStatus(entry, "dropped")),
+            entries.Count);
+    }
+
+    private static IEnumerable<MangaEntryResponse> FilterBySection(IEnumerable<MangaEntryResponse> entries, string? section) =>
+        NormalizeSection(section) switch
+        {
+            "updates" => entries.Where(entry => IsReadingWithNewChapters(entry) || NeedsManualReleaseCheck(entry)),
+            "planned" => entries.Where(entry => HasStatus(entry, "planned")),
+            "reading" => entries.Where(entry => HasStatus(entry, "reading")),
+            "paused" => entries.Where(entry => HasStatus(entry, "paused")),
+            "done" => entries.Where(entry => HasStatus(entry, "done")),
+            "dropped" => entries.Where(entry => HasStatus(entry, "dropped")),
+            _ => entries
+        };
+
+    private static string NormalizeSection(string? section) => section?.Trim().ToLowerInvariant() switch
+    {
+        "updates" or "planned" or "reading" or "paused" or "done" or "dropped" or "all" => section.Trim().ToLowerInvariant(),
+        _ => "all"
+    };
+
+    private static bool HasStatus(MangaEntryResponse entry, string status) =>
+        string.Equals(entry.ReadingStatus, status, StringComparison.OrdinalIgnoreCase);
 
     private static int DisplayRank(MangaEntryResponse entry)
     {

@@ -8,6 +8,43 @@ namespace MangaHub.Api.Tests;
 public sealed class ShelfServiceTests
 {
     [Fact]
+    public async Task ListAsync_SectionsKeepUpdatesSeparateFromDoneAndSummarizeCounts()
+    {
+        await using var db = TestDb.Create();
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash", PreferredLanguage = "en" };
+        var release = new MangaEntry { Title = "Fresh release", MangaDexId = "release-id" };
+        var untracked = new MangaEntry { Title = "Needs tracking" };
+        var planned = new MangaEntry { Title = "Plan next" };
+        var done = new MangaEntry { Title = "Finished locally", MangaDexId = "done-id" };
+        db.Users.Add(user);
+        db.MangaEntries.AddRange(release, untracked, planned, done);
+        await db.SaveChangesAsync();
+        db.MangaDexLanguageLatestChapters.AddRange(
+            new MangaDexLanguageLatestChapter { MangaEntryId = release.Id, Language = "en", LatestChapter = 12 },
+            new MangaDexLanguageLatestChapter { MangaEntryId = done.Id, Language = "en", LatestChapter = 20 });
+        db.UserMangaEntries.AddRange(
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = release.Id, ReadingStatus = "reading", CurrentChapter = "10", IsRead = true },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = untracked.Id, ReadingStatus = "paused", CurrentChapter = "4", IsRead = true },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = planned.Id, ReadingStatus = "planned" },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = done.Id, ReadingStatus = "done", CurrentChapter = "10", IsRead = true });
+        await db.SaveChangesAsync();
+        var service = CreateShelfService(db);
+
+        var updates = await service.ListAsync(user.Id, null, "updates", 0, 20, CancellationToken.None);
+        var doneEntries = await service.ListAsync(user.Id, null, "done", 0, 20, CancellationToken.None);
+        var summary = await service.GetSectionSummaryAsync(user.Id, CancellationToken.None);
+
+        Assert.Equal(["Fresh release", "Needs tracking"], updates.Select(entry => entry.Title));
+        Assert.Equal(["Finished locally"], doneEntries.Select(entry => entry.Title));
+        Assert.Equal(2, summary.Updates);
+        Assert.Equal(1, summary.NewReleases);
+        Assert.Equal(1, summary.Untracked);
+        Assert.Equal(1, summary.Planned);
+        Assert.Equal(1, summary.Done);
+        Assert.Equal(4, summary.All);
+    }
+
+    [Fact]
     public async Task AddAsync_CreatesShelfEntryWithNormalizedStatusAndCatalogDefaults()
     {
         await using var db = TestDb.Create();
