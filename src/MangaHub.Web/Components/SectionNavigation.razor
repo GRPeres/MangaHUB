@@ -1,0 +1,21 @@
+<nav class="@NavigationClass" aria-label="@AriaLabel">
+    @foreach (var item in Items)
+    {
+        <MudButton Variant="@(IsActive(item) ? Variant.Filled : Variant.Outlined)"
+                   Color="@item.ButtonColor"
+                   StartIcon="@item.Icon"
+                   Class="@ButtonClass(item)"
+                   OnClick="@(() => SelectAsync(item.Key))"
+                   aria-current="@(IsActive(item) ? "page" : null)">
+            @item.Label
+        </MudButton>
+    }
+    @if (CollapseOnMobile)
+    {
+        <MudIconButton Icon="@(Expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.MoreHoriz)"
+                       Color="Color.Secondary"
+                       Class="mh-section-nav-toggle"
+                       OnClick="ToggleAsync"
+                       aria-label="@(Expanded ? "Show fewer sections" : "Show more sections")" />
+    }
+</nav>

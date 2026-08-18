@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using MudBlazor;
 
 namespace MangaHub.Web.Components.Admin;
 
@@ -7,9 +8,17 @@ public partial class AdminSectionNav
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private string CurrentRoute => Navigation.ToBaseRelativePath(Navigation.Uri).Trim('/');
-    private bool IsCatalogActive => CurrentRoute is "catalog" or "admin/catalog";
-    private bool IsOperationsActive => CurrentRoute is "operations" or "admin/operations";
+    private static readonly SectionNavigationItem[] Sections =
+    [
+        new("catalog", "Catalog", Icons.Material.Filled.Inventory2),
+        new("operations", "Operations", Icons.Material.Filled.SettingsSuggest)
+    ];
 
-    private void GoCatalog() => Navigation.NavigateTo("admin/catalog");
-    private void GoOperations() => Navigation.NavigateTo("admin/operations");
+    private string ActiveSection => CurrentRoute is "operations" or "admin/operations" ? "operations" : "catalog";
+
+    private Task SelectSection(string section)
+    {
+        Navigation.NavigateTo($"admin/{section}");
+        return Task.CompletedTask;
+    }
 }
