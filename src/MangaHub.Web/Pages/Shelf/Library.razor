@@ -335,10 +335,28 @@
             var nextPage = await MangaApi.GetMangaEntriesAsync(status, IsAdmin ? selectedUserId : null, entries.Count, PageSize);
             entries.AddRange(nextPage);
             hasMoreEntries = nextPage.Count == PageSize;
+            await SaveOfflineSnapshotAsync();
         }
         finally
         {
             isLoadingEntries = false;
+        }
+    }
+
+    private async Task SaveOfflineSnapshotAsync()
+    {
+        if (currentUser is null || (IsAdmin && selectedUserId is not null && selectedUserId != currentUser.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("mangaHubOfflineShelf.save", currentUser.Id.ToString(), entries);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser is gone; the next successful Shelf load will refresh the local snapshot.
         }
     }
 

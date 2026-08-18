@@ -1,11 +1,12 @@
-const CACHE_NAME = "mangahub-app-v169";
+const CACHE_NAME = "mangahub-app-v170";
 const APP_SHELL = [
   "/",
   "/index.html",
+  "/offline.html",
   "/manifest.webmanifest",
   "/icons/book.svg",
-  "/css/app.css?v=180",
-  "/MangaHub.Web.styles.css?v=180"
+  "/css/app.css?v=181",
+  "/MangaHub.Web.styles.css?v=181"
 ];
 
 self.addEventListener("install", event => {
@@ -40,11 +41,17 @@ self.addEventListener("fetch", event => {
   event.respondWith(
     fetch(request)
       .then(response => {
+        if (request.mode === "navigate" && response.status >= 500) {
+          return caches.match("/offline.html");
+        }
+        if (!response.ok) {
+          return response;
+        }
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
         return response;
       })
-      .catch(() => caches.match(request).then(response => response || caches.match("/index.html")))
+      .catch(() => caches.match(request).then(response => response || (request.mode === "navigate" ? caches.match("/offline.html") : caches.match("/index.html"))))
   );
 });
 

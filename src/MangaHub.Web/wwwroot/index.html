@@ -249,8 +249,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=180" />
-    <link href="MangaHub.Web.styles.css?v=180" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=181" />
+    <link href="MangaHub.Web.styles.css?v=181" rel="stylesheet" />
 </head>
 
 <body>
@@ -270,6 +270,43 @@
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script>
+        window.mangaHubOfflineShelf = {
+            save: function (userId, entries) {
+                if (!userId || !Array.isArray(entries) || !window.indexedDB) {
+                    return Promise.resolve();
+                }
+
+                return new Promise(function (resolve) {
+                    var request = indexedDB.open("mangahub-offline", 1);
+                    request.onupgradeneeded = function () {
+                        request.result.createObjectStore("shelf", { keyPath: "id" });
+                    };
+                    request.onerror = resolve;
+                    request.onsuccess = function () {
+                        var database = request.result;
+                        var transaction = database.transaction("shelf", "readwrite");
+                        transaction.objectStore("shelf").put({
+                            id: "latest",
+                            userId: userId,
+                            savedAt: new Date().toISOString(),
+                            entries: entries.map(function (entry) {
+                                return {
+                                    title: entry.title || "",
+                                    coverUrl: entry.coverUrl || "",
+                                    readingStatus: entry.readingStatus || "",
+                                    currentChapter: entry.currentChapter || "",
+                                    mangaDexId: entry.mangaDexId || "",
+                                    fallbackReaderUrl: entry.fallbackReaderUrl || ""
+                                };
+                            })
+                        });
+                        transaction.oncomplete = function () { database.close(); resolve(); };
+                        transaction.onerror = function () { database.close(); resolve(); };
+                    };
+                });
+            }
+        };
+
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", function () {
                 navigator.serviceWorker.register("service-worker.js");

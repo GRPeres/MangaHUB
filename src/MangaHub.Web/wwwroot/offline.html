@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#6d3bb6" />
+  <title>MangaHub offline</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { background: #160d22; color: #f7f2ff; margin: 0; }
+    main { margin: 0 auto; max-width: 760px; padding: 28px 18px 48px; }
+    h1 { margin: 0; font-size: 1.55rem; }
+    p { color: #d6c9e8; line-height: 1.45; }
+    #updated { font-size: .85rem; }
+    #entries { display: grid; gap: 10px; margin-top: 20px; }
+    article { align-items: center; background: #271936; border: 1px solid #442a5b; border-radius: 8px; display: grid; gap: 12px; grid-template-columns: 54px minmax(0, 1fr) auto; min-height: 64px; overflow: hidden; padding: 8px; }
+    img, .cover { background: #0b0710; border-radius: 5px; height: 64px; object-fit: cover; width: 48px; }
+    .cover { align-items: center; color: #c4b5fd; display: flex; font-weight: 700; justify-content: center; }
+    strong, small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    small { color: #cdbce4; margin-top: 4px; }
+    a { background: #b799ff; border-radius: 5px; color: #170b24; font-size: .85rem; font-weight: 700; padding: 9px 11px; text-decoration: none; white-space: nowrap; }
+    .unavailable { color: #bba8ce; font-size: .8rem; text-align: right; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>MangaHub is offline</h1>
+    <p>Your server or connection is unavailable. Here is the last Shelf snapshot saved on this device. External and MangaDex links can still open when those services are online.</p>
+    <p id="updated">Loading saved shelf...</p>
+    <section id="entries" aria-live="polite"></section>
+  </main>
+  <script>
+    (function () {
+      const databaseName = "mangahub-offline";
+      const storeName = "shelf";
+      const entriesElement = document.getElementById("entries");
+      const updatedElement = document.getElementById("updated");
+
+      function openDatabase() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(databaseName, 1);
+          request.onupgradeneeded = () => request.result.createObjectStore(storeName, { keyPath: "id" });
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      function readerUrl(entry) {
+        if (/^https?:\/\//i.test(entry.fallbackReaderUrl || "")) return entry.fallbackReaderUrl;
+        if (entry.mangaDexId) return "https://mangadex.org/title/" + encodeURIComponent(entry.mangaDexId);
+        return "";
+      }
+
+      function render(snapshot) {
+        if (!snapshot || !Array.isArray(snapshot.entries) || snapshot.entries.length === 0) {
+          updatedElement.textContent = "No Shelf snapshot has been saved on this device yet. Open MangaHub while it is online once, then this page will be available during an outage.";
+          return;
+        }
+        updatedElement.textContent = "Saved " + new Date(snapshot.savedAt).toLocaleString() + ". " + snapshot.entries.length + " manga available offline.";
+        snapshot.entries.forEach(entry => {
+          const card = document.createElement("article");
+          if (entry.coverUrl) {
+            const image = document.createElement("img");
+            image.src = entry.coverUrl;
+            image.alt = "";
+            card.appendChild(image);
+          } else {
+            const cover = document.createElement("div");
+            cover.className = "cover";
+            cover.textContent = "MH";
+            card.appendChild(cover);
+          }
+          const details = document.createElement("div");
+          details.innerHTML = "<strong></strong><small></small>";
+          details.querySelector("strong").textContent = entry.title || "Untitled manga";
+          details.querySelector("small").textContent = [entry.readingStatus, entry.currentChapter ? "Ch. " + entry.currentChapter : ""].filter(Boolean).join(" · ") || "Shelf entry";
+          card.appendChild(details);
+          const url = readerUrl(entry);
+          if (url) {
+            const link = document.createElement("a");
+            link.href = url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = entry.fallbackReaderUrl ? "Open reader" : "Open MangaDex";
+            card.appendChild(link);
+          } else {
+            const unavailable = document.createElement("span");
+            unavailable.className = "unavailable";
+            unavailable.textContent = "Origin required";
+            card.appendChild(unavailable);
+          }
+          entriesElement.appendChild(card);
+        });
+      }
+
+      openDatabase().then(database => {
+        const transaction = database.transaction(storeName, "readonly");
+        const request = transaction.objectStore(storeName).get("latest");
+        request.onsuccess = () => render(request.result);
+        request.onerror = () => render(null);
+      }).catch(() => render(null));
+    }());
+  </script>
+</body>
+</html>
