@@ -45,6 +45,29 @@ public sealed class ShelfServiceTests
     }
 
     [Fact]
+    public async Task ExportAsync_UsesTheRequestedShelfSection()
+    {
+        await using var db = TestDb.Create();
+        var user = new MangaUser { Username = "exporter", PasswordHash = "hash" };
+        var planned = new MangaEntry { Title = "Planned" };
+        var reading = new MangaEntry { Title = "Reading" };
+        db.Users.Add(user);
+        db.MangaEntries.AddRange(planned, reading);
+        await db.SaveChangesAsync();
+        db.UserMangaEntries.AddRange(
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = planned.Id, ReadingStatus = "planned" },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = reading.Id, ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+        var service = CreateShelfService(db);
+
+        var plannedExport = await service.ExportAsync(user.Id, "planned", CancellationToken.None);
+        var completeExport = await service.ExportAsync(user.Id, null, CancellationToken.None);
+
+        Assert.Equal(["Planned"], plannedExport.Select(entry => entry.Title));
+        Assert.Equal(2, completeExport.Count);
+    }
+
+    [Fact]
     public async Task AddAsync_CreatesShelfEntryWithNormalizedStatusAndCatalogDefaults()
     {
         await using var db = TestDb.Create();

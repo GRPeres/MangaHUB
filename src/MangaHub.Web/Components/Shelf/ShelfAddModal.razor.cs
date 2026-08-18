@@ -13,6 +13,7 @@ public partial class ShelfAddModal
     [Parameter] public bool Open { get; set; }
     [Parameter] public EventCallback<bool> OpenChanged { get; set; }
     [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public string InitialReadingStatus { get; set; } = "planned";
 
     private string catalogQuery = "";
     private string catalogMessage = "";
@@ -21,6 +22,14 @@ public partial class ShelfAddModal
     private CatalogMangaResponse? selectedCatalogManga;
     private int shelfWizardStep = 1;
     private bool IsDoneStatus => string.Equals(readingStatus, "done", StringComparison.OrdinalIgnoreCase);
+    private string SuggestedStatusLabel => NormalizeReadingStatus(InitialReadingStatus) switch
+    {
+        "reading" => "Reading",
+        "done" => "Done",
+        "paused" => "On hiatus",
+        "dropped" => "Dropped",
+        _ => "Planned"
+    };
     private string readingStatus = "planned";
     private string currentChapter = "";
     private int? score;
@@ -29,6 +38,7 @@ public partial class ShelfAddModal
     private string notes = "";
     private bool isSearchingCatalog;
     private bool isSaving;
+    private bool wasOpen;
     private int catalogSearchVersion;
     private List<CatalogMangaResponse> AvailableCatalogResults => catalogResults
         .Where(item => !item.IsInMyShelf)
@@ -36,6 +46,13 @@ public partial class ShelfAddModal
 
     protected override async Task OnParametersSetAsync()
     {
+        if (Open && !wasOpen)
+        {
+            Reset();
+            readingStatus = NormalizeReadingStatus(InitialReadingStatus);
+        }
+        wasOpen = Open;
+
         if (Open && catalogResults.Count == 0)
         {
             catalogResults = await CatalogApi.GetCatalogAsync();
@@ -79,7 +96,7 @@ public partial class ShelfAddModal
         selectedCatalogManga = item;
         shelfWizardStep = 2;
         catalogMessage = "";
-        readingStatus = "planned";
+        readingStatus = NormalizeReadingStatus(InitialReadingStatus);
         currentChapter = "";
         score = null;
         category = "";
@@ -156,7 +173,7 @@ public partial class ShelfAddModal
         shelfWizardStep = 1;
         selectedCatalogManga = null;
         catalogMessage = "";
-        readingStatus = "planned";
+        readingStatus = NormalizeReadingStatus(InitialReadingStatus);
         currentChapter = "";
         score = null;
         category = "";
@@ -166,4 +183,10 @@ public partial class ShelfAddModal
         isSearchingCatalog = false;
         catalogSearchVersion++;
     }
+
+    private static string NormalizeReadingStatus(string? status) => status?.Trim().ToLowerInvariant() switch
+    {
+        "reading" or "done" or "paused" or "planned" or "dropped" => status.Trim().ToLowerInvariant(),
+        _ => "planned"
+    };
 }

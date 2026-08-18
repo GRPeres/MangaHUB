@@ -38,12 +38,18 @@
         </MudStack>
         <MudStack Row="true" Spacing="2" Class="mh-page-actions flex-wrap">
             <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
-                <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">Add manga</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.PlaylistAdd" OnClick="OpenAddShelf">@AddActionLabel</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportShelf">Import CSV</MudMenuItem>
             </MudMenu>
             <MudMenu Label="Export" StartIcon="@Icons.Material.Filled.Download" Variant="Variant.Outlined" Color="Color.Primary">
-                <MudMenuItem Icon="@Icons.Material.Filled.TableView" Href="@ShelfApi.ExportCsvUrl" Target="_blank">Excel CSV</MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.PictureAsPdf" Href="@ShelfApi.ExportPdfUrl" Target="_blank">Shareable PDF</MudMenuItem>
+                @if (!IsAllSection)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.TableView" Href="@ShelfApi.GetExportCsvUrl(activeSection)" Target="_blank">@($"{SectionTitle} Excel CSV")</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.PictureAsPdf" Href="@ShelfApi.GetExportPdfUrl(activeSection)" Target="_blank">@($"{SectionTitle} shareable PDF")</MudMenuItem>
+                    <MudDivider />
+                }
+                <MudMenuItem Icon="@Icons.Material.Filled.TableView" Href="@ShelfApi.GetExportCsvUrl()" Target="_blank">Full shelf Excel CSV</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.PictureAsPdf" Href="@ShelfApi.GetExportPdfUrl()" Target="_blank">Full shelf shareable PDF</MudMenuItem>
             </MudMenu>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterList" OnClick="OpenFilters">@FilterButtonLabel</MudButton>
         </MudStack>
@@ -98,7 +104,7 @@
 
 </MudStack>
 
-<ShelfAddModal Open="@isAddShelfOpen" OpenChanged="OnAddShelfOpenChanged" OnSaved="Load" />
+<ShelfAddModal Open="@isAddShelfOpen" OpenChanged="OnAddShelfOpenChanged" OnSaved="Load" InitialReadingStatus="@SuggestedReadingStatus" />
 <ShelfImportModal Open="@isImportShelfOpen" OpenChanged="OnImportShelfOpenChanged" OnImported="Load" />
 <ShelfEditModal Entry="@editingEntry" OwnerUserId="@(IsAdmin ? selectedUserId : null)" OnSaved="OnShelfEditSaved" OnClosed="CloseEdit" />
 
@@ -153,8 +159,8 @@
             <MudStack Spacing="3">
                 <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
                     <MudStack Spacing="1">
-                        <MudText id="shelf-filter-title" Typo="Typo.h2">Shelf filters</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Narrow your shelf by progress, metadata, source, and reading options.</MudText>
+                        <MudText id="shelf-filter-title" Typo="Typo.h2">@SectionTitle filters</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Refine the @SectionTitle shelf view by metadata, source, and reading options.</MudText>
                     </MudStack>
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CloseFilters" aria-label="Close shelf filters" />
                 </MudStack>
@@ -692,9 +698,12 @@
         Count(searchText) + Count(sourceFilter) + Count(categoryFilter) + Count(availabilityFilter) + Count(scoreFilter) + (IsAdmin && selectedUserId != currentUser?.Id ? 1 : 0);
 
     private bool IsUpdatesSection => string.Equals(activeSection, "updates", StringComparison.Ordinal);
+    private bool IsAllSection => string.Equals(activeSection, "all", StringComparison.Ordinal);
     private string RequestedSection => NormalizeSection(RouteSection ?? SectionQuery);
     private string SectionTitle => ShelfSections.First(section => section.Key == activeSection).Label;
     private string PageTitleText => $"{SectionTitle} | MangaHub";
+    private string SuggestedReadingStatus => activeSection is "reading" or "paused" or "done" or "planned" or "dropped" ? activeSection : "planned";
+    private string AddActionLabel => activeSection is "updates" or "all" ? "Add manga" : $"Add to {SectionTitle}";
     private string ActiveStatusFilter => activeSection is "planned" or "reading" or "paused" or "done" or "dropped" ? activeSection : "";
     private string EmptySectionMessage => IsUpdatesSection ? "No new releases or untracked manga need your attention." : "Your shelf is empty for this section and filter.";
     private bool IsSectionActive(string section) => string.Equals(activeSection, section, StringComparison.Ordinal);

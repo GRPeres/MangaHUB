@@ -26,11 +26,11 @@ public sealed class ShelfService(
         return await shelf.GetSectionSummaryAsync(targetUserId, languages, cancellationToken);
     }
 
-    public async Task<List<MangaEntryResponse>> ExportAsync(Guid userId, CancellationToken cancellationToken)
+    public async Task<List<MangaEntryResponse>> ExportAsync(Guid userId, string? section, CancellationToken cancellationToken)
     {
         var user = await users.GetByIdAsync(userId, cancellationToken);
         var languages = LanguagePreferences.Parse(user?.PreferredLanguage);
-        return await shelf.ListEntriesAsync(userId, null, null, languages, 0, int.MaxValue, cancellationToken);
+        return await shelf.ListEntriesAsync(userId, null, section, languages, 0, int.MaxValue, cancellationToken);
     }
 
     public async Task<MangaEntryResponse?> AddAsync(Guid userId, AddToShelfRequest request, CancellationToken cancellationToken)

@@ -74,7 +74,7 @@ public sealed class ShelfController(CurrentUserService currentUsers, ShelfServic
     }
 
     [HttpGet("export/csv")]
-    public async Task<IActionResult> ExportCsv(CancellationToken cancellationToken)
+    public async Task<IActionResult> ExportCsv([FromQuery] string? section, CancellationToken cancellationToken)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null)
@@ -82,12 +82,12 @@ public sealed class ShelfController(CurrentUserService currentUsers, ShelfServic
             return Unauthorized();
         }
 
-        var entries = await shelf.ExportAsync(user.Id, cancellationToken);
-        return File(exports.CreateCsv(entries), "text/csv; charset=utf-8", "mangahub-shelf.csv");
+        var entries = await shelf.ExportAsync(user.Id, section, cancellationToken);
+        return File(exports.CreateCsv(entries), "text/csv; charset=utf-8", ExportFileName(section, "csv"));
     }
 
     [HttpGet("export/pdf")]
-    public async Task<IActionResult> ExportPdf(CancellationToken cancellationToken)
+    public async Task<IActionResult> ExportPdf([FromQuery] string? section, CancellationToken cancellationToken)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null)
@@ -95,7 +95,15 @@ public sealed class ShelfController(CurrentUserService currentUsers, ShelfServic
             return Unauthorized();
         }
 
-        var entries = await shelf.ExportAsync(user.Id, cancellationToken);
-        return File(exports.CreatePdf(user.Username, entries), "application/pdf", "mangahub-shelf.pdf");
+        var entries = await shelf.ExportAsync(user.Id, section, cancellationToken);
+        return File(exports.CreatePdf(user.Username, entries), "application/pdf", ExportFileName(section, "pdf"));
+    }
+
+    private static string ExportFileName(string? section, string extension)
+    {
+        var suffix = string.IsNullOrWhiteSpace(section) || string.Equals(section, "all", StringComparison.OrdinalIgnoreCase)
+            ? "shelf"
+            : $"shelf-{section.Trim().ToLowerInvariant()}";
+        return $"mangahub-{suffix}.{extension}";
     }
 }

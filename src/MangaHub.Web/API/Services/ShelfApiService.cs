@@ -2,8 +2,8 @@ namespace MangaHub.Web.API.Services;
 
 public sealed class ShelfApiService(ApiHttpClient api)
 {
-    public string ExportCsvUrl => api.GetAbsoluteUrl("/api/shelf/export/csv");
-    public string ExportPdfUrl => api.GetAbsoluteUrl("/api/shelf/export/pdf");
+    public string GetExportCsvUrl(string? section = null) => api.GetAbsoluteUrl(ExportUrl("csv", section));
+    public string GetExportPdfUrl(string? section = null) => api.GetAbsoluteUrl(ExportUrl("pdf", section));
 
     public async Task<MangaEntryResponse?> AddToShelfAsync(AddToShelfRequest request) =>
         await api.SendAsync<AddToShelfRequest, MangaEntryResponse>(HttpMethod.Post, "/api/shelf", request);
@@ -22,5 +22,10 @@ public sealed class ShelfApiService(ApiHttpClient api)
 
     public async Task<ShelfImportResponse?> ImportShelfAsync(ShelfImportRequest request) =>
         await api.SendAsync<ShelfImportRequest, ShelfImportResponse>(HttpMethod.Post, "/api/shelf/import", request);
+
+    private static string ExportUrl(string format, string? section) =>
+        string.IsNullOrWhiteSpace(section) || string.Equals(section, "all", StringComparison.OrdinalIgnoreCase)
+            ? $"/api/shelf/export/{format}"
+            : $"/api/shelf/export/{format}?section={Uri.EscapeDataString(section)}";
 }
 
