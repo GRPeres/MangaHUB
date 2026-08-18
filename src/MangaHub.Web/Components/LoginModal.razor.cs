@@ -28,6 +28,8 @@ public partial class LoginModal : ComponentBase
         await Authenticate(() => Auth.LoginAsync(username, password), "Login failed.");
     }
 
+    private Task Submit() => isRegistering ? Register() : Login();
+
     private async Task Register()
     {
         await Authenticate(() => Auth.RegisterAsync(username, password, email), "Registration failed. Use a unique username, a valid email, and a stronger password.");
@@ -72,6 +74,11 @@ public partial class LoginModal : ComponentBase
 
     private async Task Authenticate(Func<Task<UserResponse?>> action, string failureMessage)
     {
+        if (isBusy)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
             feedbackSeverity = Severity.Warning;

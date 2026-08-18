@@ -12,35 +12,37 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="Close" aria-label="Close login" />
                 </MudStack>
 
-                <MudGrid Spacing="2">
-                    <MudItem xs="12">
-                        <MudTextField T="string" @bind-Value="username" Label="Username or email" Variant="Variant.Outlined" AutoFocus="true" />
-                    </MudItem>
-                    <MudItem xs="12">
-                        <MudTextField T="string" @bind-Value="password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined" />
-                    </MudItem>
-                    @if (isRegistering)
-                    {
+                <form @onsubmit="Submit" @onsubmit:preventDefault="true">
+                    <MudGrid Spacing="2">
                         <MudItem xs="12">
-                            <MudTextField T="string" @bind-Value="email" Label="Recovery email" InputType="InputType.Email" Variant="Variant.Outlined" />
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Use 10+ characters with upper/lowercase letters and a number.</MudText>
+                            <MudTextField T="string" @bind-Value="username" Label="Username or email" Variant="Variant.Outlined" AutoFocus="true" />
                         </MudItem>
-                    }
-                </MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField T="string" @bind-Value="password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined" />
+                        </MudItem>
+                        @if (isRegistering)
+                        {
+                            <MudItem xs="12">
+                                <MudTextField T="string" @bind-Value="email" Label="Recovery email" InputType="InputType.Email" Variant="Variant.Outlined" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Use 10+ characters with upper/lowercase letters and a number.</MudText>
+                            </MudItem>
+                        }
+                    </MudGrid>
 
-                <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                    @if (isRegistering)
-                    {
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" Disabled="@isBusy" OnClick="Register">Create account</MudButton>
-                        <MudButton Variant="Variant.Text" Color="Color.Secondary" Disabled="@isBusy" OnClick="ToggleRegister">I already have an account</MudButton>
-                    }
-                    else
-                    {
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login" Disabled="@isBusy" OnClick="Login">@(isBusy ? "Signing in..." : "Log in")</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" Disabled="@isBusy" OnClick="ToggleRegister">Create account</MudButton>
-                        <MudButton Variant="Variant.Text" Color="Color.Secondary" Disabled="@isBusy" OnClick="ForgotPassword">Forgot password?</MudButton>
-                    }
-                </MudStack>
+                    <MudStack Row="true" Spacing="2" Class="flex-wrap mt-4">
+                        @if (isRegistering)
+                        {
+                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" Disabled="@isBusy">Create account</MudButton>
+                            <MudButton ButtonType="ButtonType.Button" Variant="Variant.Text" Color="Color.Secondary" Disabled="@isBusy" OnClick="ToggleRegister">I already have an account</MudButton>
+                        }
+                        else
+                        {
+                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login" Disabled="@isBusy">@(isBusy ? "Signing in..." : "Log in")</MudButton>
+                            <MudButton ButtonType="ButtonType.Button" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" Disabled="@isBusy" OnClick="ToggleRegister">Create account</MudButton>
+                            <MudButton ButtonType="ButtonType.Button" Variant="Variant.Text" Color="Color.Secondary" Disabled="@isBusy" OnClick="ForgotPassword">Forgot password?</MudButton>
+                        }
+                    </MudStack>
+                </form>
                 <MudDivider />
                 <MudButton Href="/auth/google" Variant="Variant.Outlined" Color="Color.Inherit" StartIcon="@Icons.Custom.Brands.Google">Continue with Google</MudButton>
 
