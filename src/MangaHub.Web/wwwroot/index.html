@@ -85,6 +85,44 @@
                 }
             }
         };
+        window.mangaHubSectionNavigation = {
+            observe: function (element, dotNetReference) {
+                if (!element || !dotNetReference || !window.ResizeObserver) return;
+                if (element.__mangaHubSectionNavigationState) {
+                    element.__mangaHubSectionNavigationState.observer.disconnect();
+                }
+
+                var measure = function () {
+                    var wasOverflowing = element.classList.contains("is-overflowing");
+                    element.classList.remove("is-overflowing");
+
+                    var buttons = Array.from(element.querySelectorAll(".mh-section-nav-button"));
+                    var styles = window.getComputedStyle(element);
+                    var gap = parseFloat(styles.columnGap || styles.gap || "0") || 0;
+                    var requiredWidth = buttons.reduce(function (total, button) { return total + button.getBoundingClientRect().width; }, 0)
+                        + Math.max(0, buttons.length - 1) * gap;
+
+                    element.classList.toggle("is-overflowing", wasOverflowing);
+                    dotNetReference.invokeMethodAsync("SetOverflowAsync", requiredWidth > element.clientWidth + .5);
+                };
+
+                var observer = new ResizeObserver(measure);
+                observer.observe(element);
+                element.__mangaHubSectionNavigationState = { observer: observer, measure: measure };
+                requestAnimationFrame(measure);
+            },
+            measure: function (element) {
+                if (element && element.__mangaHubSectionNavigationState) {
+                    requestAnimationFrame(element.__mangaHubSectionNavigationState.measure);
+                }
+            },
+            disconnect: function (element) {
+                if (element && element.__mangaHubSectionNavigationState) {
+                    element.__mangaHubSectionNavigationState.observer.disconnect();
+                    delete element.__mangaHubSectionNavigationState;
+                }
+            }
+        };
 
         try {
             window.mangaHubTheme.apply(localStorage.getItem("mangahub_theme") || "light");
@@ -249,8 +287,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=191" />
-    <link href="MangaHub.Web.styles.css?v=191" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=192" />
+    <link href="MangaHub.Web.styles.css?v=192" rel="stylesheet" />
 </head>
 
 <body>

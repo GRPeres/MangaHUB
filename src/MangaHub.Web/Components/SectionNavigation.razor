@@ -1,4 +1,6 @@
-<nav class="@NavigationClass" aria-label="@AriaLabel">
+@implements IAsyncDisposable
+
+<nav @ref="navigationElement" class="@NavigationClass" aria-label="@AriaLabel">
     @foreach (var item in Items)
     {
         <MudButton Variant="@(IsActive(item) ? Variant.Filled : Variant.Outlined)"
@@ -11,7 +13,7 @@
             @item.Label
         </MudButton>
     }
-    @if (CollapseOnMobile)
+    @if (CollapseOnOverflow && isOverflowing)
     {
         <MudIconButton Icon="@(Expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.MoreHoriz)"
                        Color="Color.Secondary"

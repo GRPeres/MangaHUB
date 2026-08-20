@@ -12,20 +12,18 @@
     display: none;
 }
 
-@media (max-width: 720px) {
-    .mh-section-nav ::deep .mh-section-nav-button {
-        flex: 0 1 auto;
-        min-width: 0;
-        padding-inline: .7rem;
-    }
+.mh-section-nav ::deep .mh-section-nav-button {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding-inline: .7rem;
+}
 
-    .mh-section-nav.is-collapsible:not(.is-expanded) ::deep .mh-section-nav-optional {
-        display: none;
-    }
+.mh-section-nav.is-collapsible.is-overflowing:not(.is-expanded) ::deep .mh-section-nav-optional {
+    display: none;
+}
 
-    .mh-section-nav ::deep .mh-section-nav-toggle {
-        display: inline-flex;
-        flex: 0 0 auto;
-        margin-inline-start: auto;
-    }
+.mh-section-nav ::deep .mh-section-nav-toggle {
+    display: inline-flex;
+    flex: 0 0 auto;
+    margin-inline-start: auto;
 }
