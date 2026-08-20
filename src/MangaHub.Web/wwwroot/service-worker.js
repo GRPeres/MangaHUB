@@ -1,12 +1,12 @@
-const CACHE_NAME = "mangahub-app-v182";
+const CACHE_NAME = "mangahub-app-v183";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/offline.html",
   "/manifest.webmanifest",
   "/icons/book.svg",
-  "/css/app.css?v=193",
-  "/MangaHub.Web.styles.css?v=193"
+  "/css/app.css?v=194",
+  "/MangaHub.Web.styles.css?v=194"
 ];
 
 self.addEventListener("install", event => {
@@ -64,5 +64,17 @@ self.addEventListener("push", event => {
 
 self.addEventListener("notificationclick", event => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url));
+  const targetUrl = new URL(event.notification.data?.url || "/library", self.location.origin).href;
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(windows => {
+      const existingWindow = windows.find(windowClient => new URL(windowClient.url).origin === self.location.origin);
+      if (!existingWindow) {
+        return clients.openWindow(targetUrl);
+      }
+
+      return existingWindow.navigate(targetUrl)
+        .catch(() => existingWindow)
+        .then(windowClient => (windowClient || existingWindow).focus());
+    })
+  );
 });
