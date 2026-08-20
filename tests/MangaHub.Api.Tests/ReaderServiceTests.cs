@@ -484,6 +484,31 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenNextChapterHasDecimalSuffix_DoesNotRequireJumpConfirmation()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Decimal Test", MangaDexId = "decimal-test-id" };
+        var series = new MangaSeries { Title = "Decimal Test", Source = "mangadex-cache", ExternalId = "decimal-test-id" };
+        var cachedChapter = new MangaChapter { Series = series, SourceId = "chapter-1-en", ChapterNumber = "1", Language = "en", PageCount = 20 };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(series);
+        db.Chapters.Add(cachedChapter);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "1", ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-2-1-en", "2.1", "Bonus", 20, "en"));
+        mangaDex.Pages["chapter-2-1-en"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/021.jpg")];
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var launch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, cachedChapter.Id, null, CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Equal("2.1", launch.CurrentChapter);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_WhenNextChapterJumps_RequiresConfirmationAndOffersCloserLanguage()
     {
         await using var db = TestDb.Create();
