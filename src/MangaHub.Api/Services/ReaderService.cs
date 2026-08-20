@@ -659,7 +659,13 @@ public sealed class ReaderService(
     private static bool IsChapterJump(string currentChapter, string nextChapter) =>
         ParseChapterNumber(currentChapter) is { } current
         && ParseChapterNumber(nextChapter) is { } next
-        && decimal.Truncate(next) - decimal.Truncate(current) > 1m;
+        && next - current > 1m
+        && !IsImmediateDecimalFollowUp(current, next);
+
+    private static bool IsImmediateDecimalFollowUp(decimal current, decimal next) =>
+        current == decimal.Truncate(current)
+        && decimal.Truncate(next) == current + 1m
+        && next == decimal.Truncate(next) + .1m;
 
     private static decimal? ParseChapterNumber(string value)
     {

@@ -509,6 +509,31 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenNextChapterSkipsDecimalSuffix_RequiresJumpConfirmation()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Decimal Gap Test", MangaDexId = "decimal-gap-test-id" };
+        var series = new MangaSeries { Title = "Decimal Gap Test", Source = "mangadex-cache", ExternalId = "decimal-gap-test-id" };
+        var cachedChapter = new MangaChapter { Series = series, SourceId = "chapter-1-en", ChapterNumber = "1", Language = "en", PageCount = 20 };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(series);
+        db.Chapters.Add(cachedChapter);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "1", ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-2-2-en", "2.2", "Second bonus", 20, "en"));
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var exception = await Assert.ThrowsAsync<ReaderService.MangaDexChapterJumpConfirmationRequiredException>(
+            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, cachedChapter.Id, null, CancellationToken.None));
+
+        Assert.Equal("1", exception.ChapterJump.CurrentChapter);
+        Assert.Equal("2.2", exception.ChapterJump.NextChapter);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_WhenNextChapterJumps_RequiresConfirmationAndOffersCloserLanguage()
     {
         await using var db = TestDb.Create();
