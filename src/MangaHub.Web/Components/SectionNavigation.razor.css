@@ -4,16 +4,16 @@
     gap: .5rem;
 }
 
-.mh-section-nav-button {
+.mh-section-nav ::deep .mh-section-nav-button {
     white-space: nowrap;
 }
 
-.mh-section-nav-toggle {
+.mh-section-nav ::deep .mh-section-nav-toggle {
     display: none;
 }
 
 @media (max-width: 720px) {
-    .mh-section-nav-button {
+    .mh-section-nav ::deep .mh-section-nav-button {
         flex: 0 1 auto;
         min-width: 0;
         padding-inline: .7rem;
@@ -23,7 +23,7 @@
         display: none;
     }
 
-    .mh-section-nav-toggle {
+    .mh-section-nav ::deep .mh-section-nav-toggle {
         display: inline-flex;
         flex: 0 0 auto;
         margin-inline-start: auto;

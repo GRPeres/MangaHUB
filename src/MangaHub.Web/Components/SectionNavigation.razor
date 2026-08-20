@@ -3,6 +3,7 @@
     {
         <MudButton Variant="@(IsActive(item) ? Variant.Filled : Variant.Outlined)"
                    Color="@item.ButtonColor"
+                   Size="Size.Medium"
                    StartIcon="@item.Icon"
                    Class="@ButtonClass(item)"
                    OnClick="@(() => SelectAsync(item.Key))"
@@ -14,6 +15,7 @@
     {
         <MudIconButton Icon="@(Expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.MoreHoriz)"
                        Color="Color.Secondary"
+                       Size="Size.Medium"
                        Class="mh-section-nav-toggle"
                        OnClick="ToggleAsync"
                        aria-label="@(Expanded ? "Show fewer sections" : "Show more sections")" />
