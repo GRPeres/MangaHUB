@@ -895,8 +895,14 @@ html.mh-theme-dark body .mh-row-card {
     background: var(--mud-palette-surface) !important;
 }
 
-/* New chapters should scan as an alert without competing with the whole dark palette. */
-html.mh-theme-dark .mh-entry-release-tile.mh-bento-scheme-release,
+html.mh-theme-dark .mh-entry-release-tile.mh-bento-scheme-release {
+    --mh-bento-accent: var(--mud-palette-primary) !important;
+    --mh-bento-bg: var(--mud-palette-primary-darken) !important;
+    --mh-bento-border: color-mix(in srgb, var(--mud-palette-primary-darken) 68%, #fffaff) !important;
+    --mh-bento-fg: #fffaff !important;
+    --mh-bento-muted: color-mix(in srgb, #fffaff 84%, transparent) !important;
+}
+
 html.mh-theme-dark .mh-mobile-shelf-release-tile .mh-bento-tile {
     --mh-bento-accent: #b86192 !important;
     --mh-bento-bg: #6f2f52 !important;
