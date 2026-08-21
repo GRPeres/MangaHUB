@@ -175,8 +175,7 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
                     : $"{chapter.Number}:{chapter.Language}",
                 StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
-            .OrderBy(chapter => ChapterSortKey(chapter.Number))
-            .ThenBy(chapter => chapter.Number, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(chapter => chapter.Number, ChapterNumberComparer.Instance)
             .ToList();
 
         var expiration = TimeSpan.FromMinutes(Math.Max(1, options.Value.MangaDexReaderCacheMinutes));
@@ -240,8 +239,4 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
     private static int? ReadInt(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) ? number : null;
 
-    private static decimal ChapterSortKey(string number) =>
-        decimal.TryParse(number, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var value)
-            ? value
-            : decimal.MaxValue;
 }
