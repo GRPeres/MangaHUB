@@ -33,7 +33,16 @@ public sealed record MangaEntryResponse(
     string FallbackReaderUrl,
     string ReaderPreference = "mangahub",
     decimal? MangaDexPreferredLanguageLatestChapter = null,
-    bool IsRead = false);
+    bool IsRead = false,
+    bool IsManualReleaseCheckDue = false,
+    DateTimeOffset? LastExternalReaderVerifiedAt = null);
+
+public sealed record ExternalReaderCheckInResponse(
+    Guid MangaEntryId,
+    string Title,
+    string CurrentChapter,
+    string FallbackReaderUrl,
+    DateTimeOffset OpenedAt);
 
 public sealed record ShelfSectionSummaryResponse(
     int Updates,

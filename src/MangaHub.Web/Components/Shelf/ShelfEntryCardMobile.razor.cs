@@ -12,6 +12,7 @@ public partial class ShelfEntryCardMobile
     [Parameter] public bool CanRead { get; set; }
     [Parameter] public EventCallback<MangaEntryResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<Guid> OnRead { get; set; }
+    [Parameter] public EventCallback<MangaEntryResponse> OnExternalRead { get; set; }
     [Parameter] public EventCallback<string> OnStatusFilter { get; set; }
     [Parameter] public EventCallback<string> OnCategoryFilter { get; set; }
     [Parameter] public EventCallback<int?> OnScoreChanged { get; set; }
@@ -51,7 +52,7 @@ public partial class ShelfEntryCardMobile
     }
     private bool HasNewChapters => NewChapterCount > 0;
     private string CardClass => HasNewChapters ? "mh-mobile-shelf-card mh-mobile-shelf-has-release" : "mh-mobile-shelf-card";
-    private string ProgressHint => !HasMangaDexLink ? "MangaDex sync unavailable" : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
+    private string ProgressHint => !HasMangaDexLink && Entry.IsManualReleaseCheckDue ? "Check external reader" : !HasMangaDexLink ? "MangaDex sync unavailable" : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
     private string ProgressScheme => HasNewChapters ? "release" : "secondary";
     private string StatusScheme => StatusLabel.ToLowerInvariant() switch { "reading" => "deep", "done" => "soft", "paused" => "warm", "planned" => "secondary", "dropped" => "ink", _ => "primary" };
     private string MetadataTitleId => $"mobile-shelf-metadata-{Entry.Id:N}";
@@ -59,6 +60,7 @@ public partial class ShelfEntryCardMobile
     protected override void OnParametersSet() => selectedScore = Entry.Score;
     private Task Edit() => OnEdit.InvokeAsync(Entry);
     private Task Read() => OnRead.InvokeAsync(Entry.Id);
+    private Task OpenExternalReader() => OnExternalRead.InvokeAsync(Entry);
     private Task FilterByStatus() => OnStatusFilter.InvokeAsync(StatusLabel);
     private Task FilterByCategory(string category) => OnCategoryFilter.InvokeAsync(category);
     private void ToggleDetails() => detailsOpen = !detailsOpen;

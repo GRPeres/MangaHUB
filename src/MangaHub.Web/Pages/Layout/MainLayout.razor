@@ -138,4 +138,21 @@
                             Subscriptions="_pushSubscriptions"
                             OnRefresh="EnablePhoneNotifications"
                             OnUnsubscribe="UnsubscribeDevice" />
+    @if (_externalReaderCheckIn is not null)
+    {
+        <div class="mh-modal-backdrop">
+            <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="external-reader-check-in-title">
+                <MudStack Spacing="3">
+                    <MudText id="external-reader-check-in-title" Typo="Typo.h2">How was @_externalReaderCheckIn.Title?</MudText>
+                    <MudText Typo="Typo.body1">You opened its external reader. Did you find anything new to add to your progress?</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Currently tracked: @(string.IsNullOrWhiteSpace(_externalReaderCheckIn.CurrentChapter) ? "Not started" : $"Ch. {_externalReaderCheckIn.CurrentChapter}")</MudText>
+                    <MudStack Row="true" Spacing="2" Class="flex-wrap" Justify="Justify.FlexEnd">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="DismissExternalReaderCheckIn">I did not check</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ConfirmNoExternalReaderUpdate">No new chapters</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="UpdateExternalReaderProgress">I found chapters</MudButton>
+                    </MudStack>
+                </MudStack>
+            </section>
+        </div>
+    }
 </div>

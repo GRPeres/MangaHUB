@@ -253,6 +253,9 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Score" integer NULL;
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Category" character varying(120) NOT NULL DEFAULT '';
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "Summary" text NOT NULL DEFAULT '';
+            ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "LastExternalReaderOpenedAt" timestamp with time zone NULL;
+            ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "LastExternalReaderVerifiedAt" timestamp with time zone NULL;
+            ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "ExternalReaderCheckPendingAt" timestamp with time zone NULL;
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "Language" character varying(16) NOT NULL DEFAULT 'en';
 
             INSERT INTO user_manga_entries ("Id", "UserId", "MangaEntryId", "ReadingStatus", "Notes", "CreatedAt", "UpdatedAt")
@@ -287,6 +290,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesLastMatchAttemptAt" ON manga_entries ("MangaUpdatesLastMatchAttemptAt");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_MangaEntryId" ON user_manga_entries ("UserId", "MangaEntryId");
             CREATE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_ReadingStatus" ON user_manga_entries ("UserId", "ReadingStatus");
+            CREATE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_LastExternalReaderVerifiedAt" ON user_manga_entries ("UserId", "LastExternalReaderVerifiedAt");
+            CREATE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_ExternalReaderCheckPendingAt" ON user_manga_entries ("UserId", "ExternalReaderCheckPendingAt");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_mangadex_language_latest_chapters_MangaEntryId_Language" ON mangadex_language_latest_chapters ("MangaEntryId", "Language");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_notifications_UserId_MangaEntryId_Type_ChapterNumber_Language" ON notifications ("UserId", "MangaEntryId", "Type", "ChapterNumber", "Language");
             CREATE INDEX IF NOT EXISTS "IX_notifications_UserId_ReadAt_CreatedAt" ON notifications ("UserId", "ReadAt", "CreatedAt");

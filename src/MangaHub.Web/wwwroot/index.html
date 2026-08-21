@@ -85,6 +85,31 @@
                 }
             }
         };
+        window.mangaHubExternalReader = {
+            open: function (url) {
+                var reader = window.open(url, "_blank", "noopener,noreferrer");
+                if (reader) reader.opener = null;
+                return !!reader;
+            },
+            observeReturn: function (dotNetReference) {
+                if (!dotNetReference || window.__mangaHubExternalReaderReturnHandler) return;
+                var notify = function () {
+                    if (document.visibilityState === "visible") {
+                        dotNetReference.invokeMethodAsync("CheckExternalReaderCheckInsAsync");
+                    }
+                };
+                window.addEventListener("focus", notify);
+                document.addEventListener("visibilitychange", notify);
+                window.__mangaHubExternalReaderReturnHandler = notify;
+            },
+            disconnectReturn: function () {
+                var notify = window.__mangaHubExternalReaderReturnHandler;
+                if (!notify) return;
+                window.removeEventListener("focus", notify);
+                document.removeEventListener("visibilitychange", notify);
+                delete window.__mangaHubExternalReaderReturnHandler;
+            }
+        };
         window.mangaHubSectionNavigation = {
             observe: function (element, dotNetReference) {
                 if (!element || !dotNetReference || !window.ResizeObserver) return;
@@ -287,8 +312,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=194" />
-    <link href="MangaHub.Web.styles.css?v=194" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=195" />
+    <link href="MangaHub.Web.styles.css?v=195" rel="stylesheet" />
 </head>
 
 <body>

@@ -45,7 +45,9 @@ public static class ApiMapping
             entry.FallbackReaderUrl,
             entry.ReaderPreference,
             null,
-            shelf.IsRead);
+            shelf.IsRead,
+            false,
+            shelf.LastExternalReaderVerifiedAt);
 
     public static CatalogMangaResponse ToCatalogMangaResponse(MangaEntry entry, bool isInMyShelf) =>
         new(

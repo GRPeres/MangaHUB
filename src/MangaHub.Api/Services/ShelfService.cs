@@ -3,6 +3,8 @@ using MangaHub.Api.Repositories;
 using MangaHub.Core.Dto;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
+using MangaHub.Infrastructure;
+using Microsoft.Extensions.Options;
 
 namespace MangaHub.Api.Services;
 
@@ -10,27 +12,82 @@ public sealed class ShelfService(
     ShelfRepository shelf,
     CatalogRepository catalog,
     UserRepository users,
-    UsageTrackingService? usage = null)
+    UsageTrackingService? usage = null,
+    IOptions<MangaHubOptions>? options = null)
 {
+    private DateTimeOffset ManualCheckDueBefore => DateTimeOffset.UtcNow.AddDays(-Math.Clamp(options?.Value.ExternalReaderCheckIntervalDays ?? 7, 1, 90));
+
     public async Task<List<MangaEntryResponse>> ListAsync(Guid targetUserId, string? status, string? section, int offset, int limit, CancellationToken cancellationToken)
     {
         var user = await users.GetByIdAsync(targetUserId, cancellationToken);
         var languages = LanguagePreferences.Parse(user?.PreferredLanguage);
-        return await shelf.ListEntriesAsync(targetUserId, status, section, languages, offset, limit, cancellationToken);
+        return await shelf.ListEntriesAsync(targetUserId, status, section, languages, ManualCheckDueBefore, offset, limit, cancellationToken);
     }
 
     public async Task<ShelfSectionSummaryResponse> GetSectionSummaryAsync(Guid targetUserId, CancellationToken cancellationToken)
     {
         var user = await users.GetByIdAsync(targetUserId, cancellationToken);
         var languages = LanguagePreferences.Parse(user?.PreferredLanguage);
-        return await shelf.GetSectionSummaryAsync(targetUserId, languages, cancellationToken);
+        return await shelf.GetSectionSummaryAsync(targetUserId, languages, ManualCheckDueBefore, cancellationToken);
     }
 
     public async Task<List<MangaEntryResponse>> ExportAsync(Guid userId, string? section, CancellationToken cancellationToken)
     {
         var user = await users.GetByIdAsync(userId, cancellationToken);
         var languages = LanguagePreferences.Parse(user?.PreferredLanguage);
-        return await shelf.ListEntriesAsync(userId, null, section, languages, 0, int.MaxValue, cancellationToken);
+        return await shelf.ListEntriesAsync(userId, null, section, languages, ManualCheckDueBefore, 0, int.MaxValue, cancellationToken);
+    }
+
+    public async Task<MangaEntryResponse?> GetAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken) =>
+        (await ListAsync(userId, null, "all", 0, int.MaxValue, cancellationToken))
+            .FirstOrDefault(entry => entry.Id == mangaEntryId);
+
+    public Task<List<ExternalReaderCheckInResponse>> GetPendingExternalReaderCheckInsAsync(Guid userId, CancellationToken cancellationToken) =>
+        shelf.ListPendingExternalReaderCheckInsAsync(userId, cancellationToken);
+
+    public async Task<bool> RecordExternalReaderOpenedAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken)
+    {
+        var entry = await shelf.GetWithMangaAsync(userId, mangaEntryId, cancellationToken);
+        if (!CanTrackExternalReader(entry))
+        {
+            return false;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        entry!.LastExternalReaderOpenedAt = now;
+        entry.ExternalReaderCheckPendingAt = now;
+        entry.UpdatedAt = now;
+        await shelf.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> VerifyExternalReaderCheckAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken)
+    {
+        var entry = await shelf.GetAsync(userId, mangaEntryId, cancellationToken);
+        if (entry is null)
+        {
+            return false;
+        }
+
+        entry.LastExternalReaderVerifiedAt = DateTimeOffset.UtcNow;
+        entry.ExternalReaderCheckPendingAt = null;
+        entry.UpdatedAt = DateTimeOffset.UtcNow;
+        await shelf.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> DismissExternalReaderCheckAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken)
+    {
+        var entry = await shelf.GetAsync(userId, mangaEntryId, cancellationToken);
+        if (entry is null)
+        {
+            return false;
+        }
+
+        entry.ExternalReaderCheckPendingAt = null;
+        entry.UpdatedAt = DateTimeOffset.UtcNow;
+        await shelf.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<MangaEntryResponse?> AddAsync(Guid userId, AddToShelfRequest request, CancellationToken cancellationToken)
@@ -82,6 +139,10 @@ public sealed class ShelfService(
         if (currentChapterChanged && shelfEntry.ReadingStatus != "done")
         {
             shelfEntry.IsRead = false;
+        }
+        if (shelfEntry.ReadingStatus is not ("reading" or "paused"))
+        {
+            shelfEntry.ExternalReaderCheckPendingAt = null;
         }
         shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
         await shelf.SaveChangesAsync(cancellationToken);
@@ -494,6 +555,14 @@ public sealed class ShelfService(
             manga.UpdatedAt = DateTimeOffset.UtcNow;
         }
     }
+
+    private static bool CanTrackExternalReader(UserMangaEntry? entry) =>
+        entry?.MangaEntry is not null
+        && string.IsNullOrWhiteSpace(entry.MangaEntry.MangaDexId)
+        && Uri.TryCreate(entry.MangaEntry.FallbackReaderUrl, UriKind.Absolute, out var readerUrl)
+        && (readerUrl.Scheme == Uri.UriSchemeHttp || readerUrl.Scheme == Uri.UriSchemeHttps)
+        && (string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entry.ReadingStatus, "paused", StringComparison.OrdinalIgnoreCase));
 
     private sealed record CsvImportValues(
         string Title,

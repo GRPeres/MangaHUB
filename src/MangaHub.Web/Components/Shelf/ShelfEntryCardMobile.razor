@@ -49,7 +49,7 @@
                 {
                     @if (OpensExternalReader)
                     {
-                        <div class="mh-mobile-card-action"><MudTooltip Text="Read in external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Read in external reader" /></MudTooltip></div>
+                        <div class="mh-mobile-card-action"><MudTooltip Text="Read in external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" OnClick="OpenExternalReader" aria-label="Read in external reader" /></MudTooltip></div>
                     }
                     else
                     {
@@ -57,7 +57,7 @@
                     }
                     @if (ShowsExternalReaderAction)
                     {
-                        <div class="mh-mobile-card-action"><MudTooltip Text="Open external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" Href="@Entry.FallbackReaderUrl" Target="_blank" Rel="noopener noreferrer" aria-label="Open external reader" /></MudTooltip></div>
+                        <div class="mh-mobile-card-action"><MudTooltip Text="Open external reader"><MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Primary" OnClick="OpenExternalReader" aria-label="Open external reader" /></MudTooltip></div>
                     }
                 }
                 <div class="mh-mobile-card-action"><MudTooltip Text="Edit shelf entry"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" OnClick="Edit" aria-label="Edit shelf entry" /></MudTooltip></div>

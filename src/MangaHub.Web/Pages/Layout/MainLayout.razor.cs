@@ -3,6 +3,7 @@ using MangaHub.Web.API.Services;
 using MangaHub.Web.API.DTOs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.JSInterop;
 
 namespace MangaHub.Web.Pages.Layout;
 
@@ -15,6 +16,7 @@ public partial class MainLayout : IDisposable
     [Inject] private AdminApiService AdminApi { get; set; } = default!;
     [Inject] private Microsoft.JSInterop.IJSRuntime JS { get; set; } = default!;
     [Inject] private MessageService Messages { get; set; } = default!;
+    [Inject] private ShelfApiService ShelfApi { get; set; } = default!;
 
     private bool _drawerExpanded;
     private bool _darkMode;
@@ -27,6 +29,9 @@ public partial class MainLayout : IDisposable
     private bool _phoneNotificationsEnabled;
     private List<WebPushSubscriptionResponse> _pushSubscriptions = [];
     private bool _pushSubscriptionsOpen;
+    private DotNetObjectReference<MainLayout>? _externalReaderReturnReference;
+    private ExternalReaderCheckInResponse? _externalReaderCheckIn;
+    private bool _checkingExternalReaderCheckIns;
     private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
@@ -43,6 +48,81 @@ public partial class MainLayout : IDisposable
         _currentUser = await Auth.GetCurrentUserAsync();
         await LoadNotificationsAsync();
         GuardCurrentRoute();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _externalReaderReturnReference = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("mangaHubExternalReader.observeReturn", _externalReaderReturnReference);
+        await CheckExternalReaderCheckInsAsync();
+    }
+
+    [JSInvokable]
+    public async Task CheckExternalReaderCheckInsAsync()
+    {
+        if (_currentUser is null || _externalReaderCheckIn is not null || _checkingExternalReaderCheckIns)
+        {
+            return;
+        }
+
+        _checkingExternalReaderCheckIns = true;
+        try
+        {
+            _externalReaderCheckIn = (await ShelfApi.GetPendingExternalReaderCheckInsAsync()).FirstOrDefault();
+            if (_externalReaderCheckIn is not null)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // A transient offline return should not surface another modal error.
+        }
+        finally
+        {
+            _checkingExternalReaderCheckIns = false;
+        }
+    }
+
+    private async Task ConfirmNoExternalReaderUpdate()
+    {
+        if (_externalReaderCheckIn is null) return;
+        var entryId = _externalReaderCheckIn.MangaEntryId;
+        if (await ShelfApi.VerifyExternalReaderCheckAsync(entryId))
+        {
+            _externalReaderCheckIn = null;
+            await CheckExternalReaderCheckInsAsync();
+            return;
+        }
+
+        Messages.Error("Could not record that check-in. Please try again.", "External reader check-in");
+    }
+
+    private async Task DismissExternalReaderCheckIn()
+    {
+        if (_externalReaderCheckIn is null) return;
+        var entryId = _externalReaderCheckIn.MangaEntryId;
+        if (await ShelfApi.DismissExternalReaderCheckAsync(entryId))
+        {
+            _externalReaderCheckIn = null;
+            await CheckExternalReaderCheckInsAsync();
+            return;
+        }
+
+        Messages.Error("Could not dismiss that check-in. Please try again.", "External reader check-in");
+    }
+
+    private void UpdateExternalReaderProgress()
+    {
+        if (_externalReaderCheckIn is null) return;
+        var entryId = _externalReaderCheckIn.MangaEntryId;
+        _externalReaderCheckIn = null;
+        Navigation.NavigateTo($"library?externalCheckInEntryId={entryId}");
     }
 
     private void ToggleDrawer() => _drawerExpanded = !_drawerExpanded;
@@ -165,6 +245,7 @@ public partial class MainLayout : IDisposable
     {
         _currentUser = Auth.CurrentUser;
         _ = LoadNotificationsAsync();
+        _ = CheckExternalReaderCheckInsAsync();
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -314,5 +395,7 @@ public partial class MainLayout : IDisposable
         Auth.Changed -= OnAuthChanged;
         Auth.LoginRequested -= OnLoginRequested;
         Navigation.LocationChanged -= OnLocationChanged;
+        _externalReaderReturnReference?.Dispose();
+        _ = JS.InvokeVoidAsync("mangaHubExternalReader.disconnectReturn");
     }
 }

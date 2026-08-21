@@ -20,6 +20,21 @@ public sealed class ShelfApiService(ApiHttpClient api)
         return await api.DeleteAsync($"/api/shelf/{entryId}{query}");
     }
 
+    public async Task<MangaEntryResponse?> GetShelfEntryAsync(Guid entryId) =>
+        await api.GetAsync<MangaEntryResponse>($"/api/shelf/{entryId}");
+
+    public async Task<List<ExternalReaderCheckInResponse>> GetPendingExternalReaderCheckInsAsync() =>
+        await api.GetAsync<List<ExternalReaderCheckInResponse>>("/api/shelf/external-reader/check-ins") ?? [];
+
+    public Task<bool> RecordExternalReaderOpenedAsync(Guid entryId) =>
+        api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/opened", new { });
+
+    public Task<bool> VerifyExternalReaderCheckAsync(Guid entryId) =>
+        api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/verified", new { });
+
+    public Task<bool> DismissExternalReaderCheckAsync(Guid entryId) =>
+        api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/dismiss", new { });
+
     public async Task<ShelfImportResponse?> ImportShelfAsync(ShelfImportRequest request) =>
         await api.SendAsync<ShelfImportRequest, ShelfImportResponse>(HttpMethod.Post, "/api/shelf/import", request);
 

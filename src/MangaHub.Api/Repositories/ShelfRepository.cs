@@ -17,7 +17,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken) =>
         db.Database.BeginTransactionAsync(cancellationToken);
 
-    public async Task<List<MangaEntryResponse>> ListEntriesAsync(Guid userId, string? status, string? section, IReadOnlyList<string> preferredLanguages, int offset, int limit, CancellationToken cancellationToken)
+    public async Task<List<MangaEntryResponse>> ListEntriesAsync(Guid userId, string? status, string? section, IReadOnlyList<string> preferredLanguages, DateTimeOffset manualCheckDueBefore, int offset, int limit, CancellationToken cancellationToken)
     {
         var languageCodes = preferredLanguages.ToArray();
         var query = db.UserMangaEntries.AsNoTracking()
@@ -65,12 +65,18 @@ public sealed class ShelfRepository(MangaHubDbContext db)
                     .Where(latest => latest.MangaEntryId == x.MangaEntryId && languageCodes.Contains(latest.Language))
                     .Select(latest => (decimal?)latest.LatestChapter)
                     .Max(),
-                x.IsRead))
+                x.IsRead,
+                false,
+                x.LastExternalReaderVerifiedAt))
             .ToListAsync(cancellationToken);
 
         // Shelf ordering depends on the user's language-specific release progress, so sort the
         // projected records before sending a compact page to the client.
-        return FilterBySection(entries, section)
+        var enrichedEntries = entries
+            .Select(entry => entry with { IsManualReleaseCheckDue = NeedsManualReleaseCheck(entry, manualCheckDueBefore) })
+            .ToList();
+
+        return FilterBySection(enrichedEntries, section)
             .OrderBy(DisplayRank)
             .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
             .Skip(offset)
@@ -78,11 +84,11 @@ public sealed class ShelfRepository(MangaHubDbContext db)
             .ToList();
     }
 
-    public async Task<ShelfSectionSummaryResponse> GetSectionSummaryAsync(Guid userId, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
+    public async Task<ShelfSectionSummaryResponse> GetSectionSummaryAsync(Guid userId, IReadOnlyList<string> preferredLanguages, DateTimeOffset manualCheckDueBefore, CancellationToken cancellationToken)
     {
-        var entries = await ListEntriesAsync(userId, null, null, preferredLanguages, 0, int.MaxValue, cancellationToken);
+        var entries = await ListEntriesAsync(userId, null, null, preferredLanguages, manualCheckDueBefore, 0, int.MaxValue, cancellationToken);
         var newReleases = entries.Count(IsReadingWithNewChapters);
-        var untracked = entries.Count(NeedsManualReleaseCheck);
+        var untracked = entries.Count(entry => entry.IsManualReleaseCheckDue);
 
         return new ShelfSectionSummaryResponse(
             newReleases + untracked,
@@ -99,7 +105,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     private static IEnumerable<MangaEntryResponse> FilterBySection(IEnumerable<MangaEntryResponse> entries, string? section) =>
         NormalizeSection(section) switch
         {
-            "updates" => entries.Where(entry => IsReadingWithNewChapters(entry) || NeedsManualReleaseCheck(entry)),
+            "updates" => entries.Where(entry => IsReadingWithNewChapters(entry) || entry.IsManualReleaseCheckDue),
             "planned" => entries.Where(entry => HasStatus(entry, "planned")),
             "reading" => entries.Where(entry => HasStatus(entry, "reading")),
             "paused" => entries.Where(entry => HasStatus(entry, "paused")),
@@ -120,7 +126,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     private static int DisplayRank(MangaEntryResponse entry)
     {
         if (IsReadingWithNewChapters(entry)) return 0;
-        if (NeedsManualReleaseCheck(entry)) return 1;
+        if (entry.IsManualReleaseCheckDue) return 1;
 
         return (entry.ReadingStatus ?? "").ToLowerInvariant() switch
         {
@@ -141,9 +147,26 @@ public sealed class ShelfRepository(MangaHubDbContext db)
         && (entry.MangaDexPreferredLanguageLatestChapter.Value > currentChapter
             || (entry.MangaDexPreferredLanguageLatestChapter.Value == currentChapter && !entry.IsRead));
 
-    private static bool NeedsManualReleaseCheck(MangaEntryResponse entry) =>
+    private static bool NeedsManualReleaseCheck(MangaEntryResponse entry, DateTimeOffset dueBefore) =>
         IsActivelyTracked(entry)
-        && string.IsNullOrWhiteSpace(entry.MangaDexId);
+        && string.IsNullOrWhiteSpace(entry.MangaDexId)
+        && (entry.LastExternalReaderVerifiedAt is null || entry.LastExternalReaderVerifiedAt <= dueBefore);
+
+    public async Task<List<ExternalReaderCheckInResponse>> ListPendingExternalReaderCheckInsAsync(Guid userId, CancellationToken cancellationToken) =>
+        await db.UserMangaEntries.AsNoTracking()
+            .Where(entry => entry.UserId == userId && entry.ExternalReaderCheckPendingAt != null)
+            .Where(entry => entry.MangaEntry != null
+                && entry.MangaEntry.MangaDexId == ""
+                && entry.MangaEntry.FallbackReaderUrl != ""
+                && (entry.ReadingStatus == "reading" || entry.ReadingStatus == "paused"))
+            .OrderBy(entry => entry.ExternalReaderCheckPendingAt)
+            .Select(entry => new ExternalReaderCheckInResponse(
+                entry.MangaEntryId,
+                entry.MangaEntry!.Title,
+                entry.CurrentChapter,
+                entry.MangaEntry.FallbackReaderUrl,
+                entry.ExternalReaderCheckPendingAt!.Value))
+            .ToListAsync(cancellationToken);
 
     private static bool IsActivelyTracked(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)

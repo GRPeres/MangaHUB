@@ -136,9 +136,7 @@
                         <MudButton Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    StartIcon="@Icons.Material.Filled.OpenInNew"
-                                   Href="@Entry.FallbackReaderUrl"
-                                   Target="_blank"
-                                   Rel="noopener noreferrer">
+                                   OnClick="OpenExternalReader">
                             Read
                         </MudButton>
                     }
@@ -151,9 +149,7 @@
                         <MudTooltip Text="Open external reader">
                             <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
                                            Color="Color.Primary"
-                                           Href="@Entry.FallbackReaderUrl"
-                                           Target="_blank"
-                                           Rel="noopener noreferrer"
+                                           OnClick="OpenExternalReader"
                                            aria-label="Open external reader" />
                         </MudTooltip>
                     }
@@ -169,6 +165,7 @@
                        ActiveStatusFilter="@ActiveStatusFilter"
                        CanRead="@CanRead"
                        OnRead="@OnRead"
+                       OnExternalRead="@OnExternalRead"
                        OnEdit="@OnEdit"
                        OnStatusFilter="@OnStatusFilter"
                        OnCategoryFilter="@OnCategoryFilter"

@@ -12,6 +12,7 @@ public partial class ShelfEntryCard
     [Parameter] public bool CanRead { get; set; }
     [Parameter] public EventCallback<MangaEntryResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<Guid> OnRead { get; set; }
+    [Parameter] public EventCallback<MangaEntryResponse> OnExternalRead { get; set; }
     [Parameter] public EventCallback<string> OnStatusFilter { get; set; }
     [Parameter] public EventCallback<string> OnCategoryFilter { get; set; }
     [Parameter] public EventCallback<int?> OnScoreChanged { get; set; }
@@ -67,7 +68,9 @@ public partial class ShelfEntryCard
         && Entry.MangaDexLastSyncedAt < DateTimeOffset.UtcNow.AddHours(-30);
     private string CardClass => HasNewChapters ? "mh-row-card mh-row-card-has-release" : "mh-row-card";
     private string ProgressTileClass => HasNewChapters ? "mh-entry-stat-tile mh-entry-release-tile" : "mh-entry-stat-tile";
-    private string ProgressHint => !HasMangaDexLink
+    private string ProgressHint => !HasMangaDexLink && Entry.IsManualReleaseCheckDue
+        ? "Check external reader"
+        : !HasMangaDexLink
         ? "MangaDex sync unavailable"
         : IsMangaDexSyncOverdue ? "Sync overdue"
         : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
@@ -139,6 +142,7 @@ public partial class ShelfEntryCard
 
     private Task Edit() => OnEdit.InvokeAsync(Entry);
     private Task Read() => OnRead.InvokeAsync(Entry.Id);
+    private Task OpenExternalReader() => OnExternalRead.InvokeAsync(Entry);
     private Task FilterByStatus() => OnStatusFilter.InvokeAsync(StatusLabel);
     private Task FilterByCategory(string category) => OnCategoryFilter.InvokeAsync(category);
 

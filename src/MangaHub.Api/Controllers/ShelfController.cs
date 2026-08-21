@@ -8,6 +8,44 @@ namespace MangaHub.Api.Controllers;
 [Route("api/shelf")]
 public sealed class ShelfController(CurrentUserService currentUsers, ShelfService shelf, ShelfExportService exports) : ControllerBase
 {
+    [HttpGet("{entryId:guid}")]
+    public async Task<IActionResult> Get(Guid entryId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        return user is null ? Unauthorized() : (await shelf.GetAsync(user.Id, entryId, cancellationToken) is { } entry ? Ok(entry) : NotFound());
+    }
+
+    [HttpGet("external-reader/check-ins")]
+    public async Task<IActionResult> PendingExternalReaderCheckIns(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        return user is null ? Unauthorized() : Ok(await shelf.GetPendingExternalReaderCheckInsAsync(user.Id, cancellationToken));
+    }
+
+    [HttpPost("{entryId:guid}/external-reader/opened")]
+    public async Task<IActionResult> RecordExternalReaderOpened(Guid entryId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        return await shelf.RecordExternalReaderOpenedAsync(user.Id, entryId, cancellationToken) ? NoContent() : NotFound();
+    }
+
+    [HttpPost("{entryId:guid}/external-reader/verified")]
+    public async Task<IActionResult> VerifyExternalReaderCheck(Guid entryId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        return await shelf.VerifyExternalReaderCheckAsync(user.Id, entryId, cancellationToken) ? NoContent() : NotFound();
+    }
+
+    [HttpPost("{entryId:guid}/external-reader/dismiss")]
+    public async Task<IActionResult> DismissExternalReaderCheck(Guid entryId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        return await shelf.DismissExternalReaderCheckAsync(user.Id, entryId, cancellationToken) ? NoContent() : NotFound();
+    }
+
     [HttpPost]
     public async Task<IActionResult> Add([FromBody] AddToShelfRequest request, CancellationToken cancellationToken)
     {

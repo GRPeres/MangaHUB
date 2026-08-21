@@ -58,7 +58,7 @@
                 <MudText Typo="Typo.h6" Color="Color.Error">New releases</MudText>
                 @foreach (var item in NewReleaseEntries)
                 {
-                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@ActiveStatusFilter" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@ActiveStatusFilter" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnExternalRead="OpenExternalReader" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
                 }
             }
 
@@ -72,13 +72,13 @@
                 <MudText Typo="Typo.h6" Color="Color.Error">Untracked manga</MudText>
                 @foreach (var item in UntrackedEntries)
                 {
-                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@ActiveStatusFilter" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                    <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@ActiveStatusFilter" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnExternalRead="OpenExternalReader" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
                 }
             }
 
             @foreach (var item in IsUpdatesSection ? [] : VisibleEntries)
             {
-                <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@ActiveStatusFilter" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
+                <ShelfEntryCard @key="item.Id" Entry="@item" ActiveStatusFilter="@ActiveStatusFilter" CanRead="@IsAdmin" OnRead="@(id => Read(id))" OnExternalRead="OpenExternalReader" OnEdit="Edit" OnStatusFilter="ToggleStatusFilter" OnCategoryFilter="OpenCategoryFilter" OnScoreChanged="@(score => UpdateScore(item, score))" />
             }
 
             @if (hasMoreEntries)
@@ -257,8 +257,11 @@
     [SupplyParameterFromQuery(Name = "chapter")] public string? NotificationChapter { get; set; }
     [SupplyParameterFromQuery(Name = "language")] public string? NotificationLanguage { get; set; }
     [SupplyParameterFromQuery(Name = "notificationId")] public Guid? NotificationId { get; set; }
+    [SupplyParameterFromQuery(Name = "externalCheckInEntryId")] public Guid? ExternalCheckInEntryId { get; set; }
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private MangaEntryResponse? editingEntry;
+    private Guid? pendingExternalCheckInEntryId;
+    private Guid? handledExternalCheckInEntryId;
 
     private static readonly (string Key, string Label, string Icon)[] ShelfSections =
     [
@@ -291,10 +294,25 @@
             }
             await Read(NotificationEntryId.Value, NotificationLanguage, allowLanguageFallback: true, allowChapterJump: true, requestedChapter: NotificationChapter);
         }
+        await OpenExternalCheckInEditAsync();
     }
 
     private void OpenAddShelf() => isAddShelfOpen = true;
     private void OpenImportShelf() => isImportShelfOpen = true;
+    private async Task OpenExternalReader(MangaEntryResponse entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.FallbackReaderUrl))
+        {
+            return;
+        }
+
+        await ShelfApi.RecordExternalReaderOpenedAsync(entry.Id);
+        var opened = await JS.InvokeAsync<bool>("mangaHubExternalReader.open", entry.FallbackReaderUrl);
+        if (!opened)
+        {
+            Messages.Warning("Your browser blocked the external reader tab. Allow pop-ups for MangaHub, then try again.", "External reader");
+        }
+    }
     private void OpenFilters() => filtersOpen = true;
     private void OpenCategoryFilter(string category)
     {
@@ -389,8 +407,14 @@
     protected override async Task OnParametersSetAsync()
     {
         var requestedSection = RequestedSection;
-        if (!hasInitialized || string.Equals(activeSection, requestedSection, StringComparison.Ordinal))
+        if (!hasInitialized)
         {
+            return;
+        }
+
+        if (string.Equals(activeSection, requestedSection, StringComparison.Ordinal))
+        {
+            await OpenExternalCheckInEditAsync();
             return;
         }
 
@@ -592,8 +616,30 @@
 
     private async Task OnShelfEditSaved(string text)
     {
+        if (pendingExternalCheckInEntryId is { } entryId)
+        {
+            await ShelfApi.VerifyExternalReaderCheckAsync(entryId);
+            pendingExternalCheckInEntryId = null;
+            Navigation.NavigateTo("/library", replace: true);
+        }
         Messages.Success(text);
         await Load();
+    }
+
+    private async Task OpenExternalCheckInEditAsync()
+    {
+        if (ExternalCheckInEntryId is not { } entryId || handledExternalCheckInEntryId == entryId)
+        {
+            return;
+        }
+
+        handledExternalCheckInEntryId = entryId;
+        var entry = await ShelfApi.GetShelfEntryAsync(entryId);
+        if (entry is not null)
+        {
+            pendingExternalCheckInEntryId = entryId;
+            editingEntry = entry;
+        }
     }
 
     private async Task UpdateScore(MangaEntryResponse entry, int? score)
@@ -710,7 +756,7 @@
         .ToList();
 
     private List<MangaEntryResponse> UntrackedEntries => VisibleEntries
-        .Where(NeedsManualReleaseCheck)
+        .Where(entry => entry.IsManualReleaseCheckDue)
         .ToList();
 
     private List<string> CategoryOptions => entries
@@ -833,10 +879,6 @@
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         IsActivelyTracked(entry)
         && HasNewChapters(entry);
-
-    private static bool NeedsManualReleaseCheck(MangaEntryResponse entry) =>
-        IsActivelyTracked(entry)
-        && !HasMangaDexLink(entry);
 
     private static bool IsActivelyTracked(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)

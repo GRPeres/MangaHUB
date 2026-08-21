@@ -25,6 +25,7 @@ public sealed class MangaHubOptions
     public bool MangaDexCacheRetentionEnabled { get; set; } = true;
     public int MangaDexReaderCacheMinutes { get; set; } = 15;
     public int MangaDexReaderMaxChapters { get; set; } = 1000;
+    public int ExternalReaderCheckIntervalDays { get; set; } = 7;
     public string MangaDexCachePath { get; set; } = "/mangadex-cache";
     public bool MangaUpdatesEnabled { get; set; } = true;
     public int MangaUpdatesReleasePollMinutes { get; set; } = 60;

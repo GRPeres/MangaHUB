@@ -45,6 +45,62 @@ public sealed class ShelfServiceTests
     }
 
     [Fact]
+    public async Task ListAsync_UpdatesOnlyIncludeExternalEntriesWhoseWeeklyCheckIsDue()
+    {
+        await using var db = TestDb.Create();
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash" };
+        var due = new MangaEntry { Title = "Due check" };
+        var recent = new MangaEntry { Title = "Recently checked" };
+        var planned = new MangaEntry { Title = "Planned check" };
+        db.Users.Add(user);
+        db.MangaEntries.AddRange(due, recent, planned);
+        await db.SaveChangesAsync();
+        db.UserMangaEntries.AddRange(
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = due.Id, ReadingStatus = "reading" },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = recent.Id, ReadingStatus = "paused", LastExternalReaderVerifiedAt = DateTimeOffset.UtcNow.AddDays(-2) },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = planned.Id, ReadingStatus = "planned" });
+        await db.SaveChangesAsync();
+        var service = CreateShelfService(db);
+
+        var updates = await service.ListAsync(user.Id, null, "updates", 0, 20, CancellationToken.None);
+        var summary = await service.GetSectionSummaryAsync(user.Id, CancellationToken.None);
+
+        Assert.Equal(["Due check"], updates.Select(entry => entry.Title));
+        Assert.True(updates.Single().IsManualReleaseCheckDue);
+        Assert.Equal(1, summary.Untracked);
+    }
+
+    [Fact]
+    public async Task ExternalReaderCheckIns_ArePerUserAndRequireAnEligibleEntry()
+    {
+        await using var db = TestDb.Create();
+        var firstUser = new MangaUser { Username = "first", PasswordHash = "hash" };
+        var secondUser = new MangaUser { Username = "second", PasswordHash = "hash" };
+        var external = new MangaEntry { Title = "External", FallbackReaderUrl = "https://reader.example/title" };
+        var tracked = new MangaEntry { Title = "Tracked", MangaDexId = "mangadex-id", FallbackReaderUrl = "https://reader.example/title" };
+        db.Users.AddRange(firstUser, secondUser);
+        db.MangaEntries.AddRange(external, tracked);
+        await db.SaveChangesAsync();
+        db.UserMangaEntries.AddRange(
+            new UserMangaEntry { UserId = firstUser.Id, MangaEntryId = external.Id, ReadingStatus = "reading" },
+            new UserMangaEntry { UserId = secondUser.Id, MangaEntryId = external.Id, ReadingStatus = "reading" },
+            new UserMangaEntry { UserId = firstUser.Id, MangaEntryId = tracked.Id, ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+        var service = CreateShelfService(db);
+
+        Assert.True(await service.RecordExternalReaderOpenedAsync(firstUser.Id, external.Id, CancellationToken.None));
+        Assert.False(await service.RecordExternalReaderOpenedAsync(firstUser.Id, tracked.Id, CancellationToken.None));
+        Assert.Single(await service.GetPendingExternalReaderCheckInsAsync(firstUser.Id, CancellationToken.None));
+        Assert.Empty(await service.GetPendingExternalReaderCheckInsAsync(secondUser.Id, CancellationToken.None));
+
+        Assert.True(await service.VerifyExternalReaderCheckAsync(firstUser.Id, external.Id, CancellationToken.None));
+        var entry = db.UserMangaEntries.Single(item => item.UserId == firstUser.Id && item.MangaEntryId == external.Id);
+        Assert.NotNull(entry.LastExternalReaderOpenedAt);
+        Assert.NotNull(entry.LastExternalReaderVerifiedAt);
+        Assert.Null(entry.ExternalReaderCheckPendingAt);
+    }
+
+    [Fact]
     public async Task ExportAsync_UsesTheRequestedShelfSection()
     {
         await using var db = TestDb.Create();

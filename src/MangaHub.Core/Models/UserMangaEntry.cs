@@ -12,6 +12,9 @@ public sealed class UserMangaEntry
     public string Category { get; set; } = "";
     public string Summary { get; set; } = "";
     public string Notes { get; set; } = "";
+    public DateTimeOffset? LastExternalReaderOpenedAt { get; set; }
+    public DateTimeOffset? LastExternalReaderVerifiedAt { get; set; }
+    public DateTimeOffset? ExternalReaderCheckPendingAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     public MangaEntry? MangaEntry { get; set; }
