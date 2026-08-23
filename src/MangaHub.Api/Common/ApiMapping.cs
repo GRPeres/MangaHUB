@@ -47,7 +47,8 @@ public static class ApiMapping
             null,
             shelf.IsRead,
             false,
-            shelf.LastExternalReaderVerifiedAt);
+            shelf.LastExternalReaderVerifiedAt,
+            shelf.ExternalReaderLatestChapter);
 
     public static CatalogMangaResponse ToCatalogMangaResponse(MangaEntry entry, bool isInMyShelf) =>
         new(

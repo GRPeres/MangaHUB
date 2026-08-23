@@ -7,6 +7,7 @@ public sealed class UserMangaEntry
     public Guid MangaEntryId { get; set; }
     public string ReadingStatus { get; set; } = "planned";
     public string CurrentChapter { get; set; } = "";
+    public string ExternalReaderLatestChapter { get; set; } = "";
     public bool IsRead { get; set; }
     public int? Score { get; set; }
     public string Category { get; set; } = "";

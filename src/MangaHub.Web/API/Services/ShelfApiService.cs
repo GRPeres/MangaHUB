@@ -29,8 +29,8 @@ public sealed class ShelfApiService(ApiHttpClient api)
     public Task<bool> VerifyExternalReaderCheckAsync(Guid entryId) =>
         api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/verified", new { });
 
-    public Task<bool> UpdateExternalReaderProgressAsync(Guid entryId, string currentChapter) =>
-        api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/progress", new ExternalReaderProgressRequest(currentChapter));
+    public Task<bool> UpdateExternalReaderProgressAsync(Guid entryId, string currentChapter, string? latestChapter) =>
+        api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/progress", new ExternalReaderProgressRequest(currentChapter, latestChapter));
 
     public Task<bool> DismissExternalReaderCheckAsync(Guid entryId) =>
         api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/dismiss", new { });

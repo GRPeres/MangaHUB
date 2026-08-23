@@ -86,6 +86,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.HasIndex(x => new { x.UserId, x.MangaEntryId }).IsUnique();
             entity.Property(x => x.ReadingStatus).HasMaxLength(40);
             entity.Property(x => x.CurrentChapter).HasMaxLength(40);
+            entity.Property(x => x.ExternalReaderLatestChapter).HasMaxLength(40);
             entity.Property(x => x.Category).HasMaxLength(120);
             entity.HasIndex(x => new { x.UserId, x.LastExternalReaderVerifiedAt });
             entity.HasIndex(x => new { x.UserId, x.ExternalReaderCheckPendingAt });

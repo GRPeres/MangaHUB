@@ -67,7 +67,8 @@ public sealed class ShelfRepository(MangaHubDbContext db)
                     .Max(),
                 x.IsRead,
                 false,
-                x.LastExternalReaderVerifiedAt))
+                x.LastExternalReaderVerifiedAt,
+                x.ExternalReaderLatestChapter))
             .ToListAsync(cancellationToken);
 
         // Shelf ordering depends on the user's language-specific release progress, so sort the
@@ -141,11 +142,12 @@ public sealed class ShelfRepository(MangaHubDbContext db)
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         IsActivelyTracked(entry)
-        && !string.IsNullOrWhiteSpace(entry.MangaDexId)
-        && entry.MangaDexPreferredLanguageLatestChapter is not null
         && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
-        && (entry.MangaDexPreferredLanguageLatestChapter.Value > currentChapter
-            || (entry.MangaDexPreferredLanguageLatestChapter.Value == currentChapter && !entry.IsRead));
+        && ((entry.MangaDexPreferredLanguageLatestChapter is { } mangaDexLatest
+                && !string.IsNullOrWhiteSpace(entry.MangaDexId)
+                && (mangaDexLatest > currentChapter || (mangaDexLatest == currentChapter && !entry.IsRead)))
+            || (TryGetCurrentChapterNumber(entry.ExternalReaderLatestChapter, out var externalLatest)
+                && externalLatest > currentChapter));
 
     private static bool NeedsManualReleaseCheck(MangaEntryResponse entry, DateTimeOffset dueBefore) =>
         IsActivelyTracked(entry)
@@ -163,6 +165,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
                 entry.MangaEntryId,
                 entry.MangaEntry!.Title,
                 entry.CurrentChapter,
+                entry.ExternalReaderLatestChapter,
                 entry.MangaEntry.FallbackReaderUrl,
                 entry.ExternalReaderCheckPendingAt!.Value))
             .ToListAsync(cancellationToken);

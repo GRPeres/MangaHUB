@@ -71,6 +71,33 @@ public sealed class ShelfServiceTests
     }
 
     [Fact]
+    public async Task ListAsync_ExternalLatestChapterKeepsManualReleaseVisibleAfterVerification()
+    {
+        await using var db = TestDb.Create();
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash" };
+        var external = new MangaEntry { Title = "External release", FallbackReaderUrl = "https://reader.example/title" };
+        db.Users.Add(user);
+        db.MangaEntries.Add(external);
+        await db.SaveChangesAsync();
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = user.Id,
+            MangaEntryId = external.Id,
+            ReadingStatus = "reading",
+            CurrentChapter = "50",
+            ExternalReaderLatestChapter = "54",
+            LastExternalReaderVerifiedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var service = CreateShelfService(db);
+
+        var updates = await service.ListAsync(user.Id, null, "updates", 0, 20, CancellationToken.None);
+
+        Assert.Equal(["External release"], updates.Select(entry => entry.Title));
+        Assert.False(updates.Single().IsManualReleaseCheckDue);
+    }
+
+    [Fact]
     public async Task ExternalReaderCheckIns_ArePerUserAndRequireAnEligibleEntry()
     {
         await using var db = TestDb.Create();
@@ -96,12 +123,13 @@ public sealed class ShelfServiceTests
         Assert.Equal(2, (await service.GetPendingExternalReaderCheckInsAsync(firstUser.Id, CancellationToken.None)).Count);
         Assert.Empty(await service.GetPendingExternalReaderCheckInsAsync(secondUser.Id, CancellationToken.None));
 
-        Assert.True(await service.UpdateExternalReaderProgressAsync(firstUser.Id, external.Id, new ExternalReaderProgressRequest("12.5"), CancellationToken.None));
+        Assert.True(await service.UpdateExternalReaderProgressAsync(firstUser.Id, external.Id, new ExternalReaderProgressRequest("12.5", "15"), CancellationToken.None));
         var entry = db.UserMangaEntries.Single(item => item.UserId == firstUser.Id && item.MangaEntryId == external.Id);
         Assert.NotNull(entry.LastExternalReaderOpenedAt);
         Assert.NotNull(entry.LastExternalReaderVerifiedAt);
         Assert.Null(entry.ExternalReaderCheckPendingAt);
         Assert.Equal("12.5", entry.CurrentChapter);
+        Assert.Equal("15", entry.ExternalReaderLatestChapter);
     }
 
     [Fact]

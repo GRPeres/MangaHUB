@@ -47,19 +47,23 @@ public partial class ShelfEntryCard
         : HasExternalReaderLink ? "External link" : "Unlinked";
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
     private decimal? PreferredLatestChapter => Entry.MangaDexPreferredLanguageLatestChapter;
+    private decimal? ExternalLatestChapter => TryGetChapterNumber(Entry.ExternalReaderLatestChapter);
     private string LatestChapterValue => PreferredLatestChapter is not null
         ? $"Ch. {PreferredLatestChapter.Value:0.###}"
+        : ExternalLatestChapter is not null ? $"Ch. {ExternalLatestChapter.Value:0.###}"
         : Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
     private int NewChapterCount
     {
         get
         {
-            if (!HasMangaDexLink || PreferredLatestChapter is null || !TryGetCurrentChapterNumber(out var currentChapter)) return 0;
+            if (!TryGetCurrentChapterNumber(out var currentChapter)) return 0;
 
-            var chapterGap = PreferredLatestChapter.Value - currentChapter;
+            var latestChapter = HasMangaDexLink ? PreferredLatestChapter : ExternalLatestChapter;
+            if (latestChapter is null) return 0;
+            var chapterGap = latestChapter.Value - currentChapter;
             if (chapterGap > 0) return (int)Math.Ceiling(chapterGap);
 
-            return chapterGap == 0 && !Entry.IsRead ? 1 : 0;
+            return HasMangaDexLink && chapterGap == 0 && !Entry.IsRead ? 1 : 0;
         }
     }
     private bool HasNewChapters => NewChapterCount > 0;
@@ -68,7 +72,9 @@ public partial class ShelfEntryCard
         && Entry.MangaDexLastSyncedAt < DateTimeOffset.UtcNow.AddHours(-30);
     private string CardClass => HasNewChapters ? "mh-row-card mh-row-card-has-release" : "mh-row-card";
     private string ProgressTileClass => HasNewChapters ? "mh-entry-stat-tile mh-entry-release-tile" : "mh-entry-stat-tile";
-    private string ProgressHint => !HasMangaDexLink && Entry.IsManualReleaseCheckDue
+    private string ProgressHint => !HasMangaDexLink && HasNewChapters
+        ? $"{NewChapterCount} found externally"
+        : !HasMangaDexLink && Entry.IsManualReleaseCheckDue
         ? "Check external reader"
         : !HasMangaDexLink
         ? "MangaDex sync unavailable"
@@ -218,5 +224,11 @@ public partial class ShelfEntryCard
             .ToArray())
             .Replace(',', '.');
         return decimal.TryParse(chapterText, NumberStyles.Number, CultureInfo.InvariantCulture, out chapter);
+    }
+
+    private static decimal? TryGetChapterNumber(string value)
+    {
+        var chapterText = new string((value ?? "").SkipWhile(character => !char.IsDigit(character)).TakeWhile(character => char.IsDigit(character) || character is '.' or ',').ToArray()).Replace(',', '.');
+        return decimal.TryParse(chapterText, NumberStyles.Number, CultureInfo.InvariantCulture, out var chapter) ? chapter : null;
     }
 }

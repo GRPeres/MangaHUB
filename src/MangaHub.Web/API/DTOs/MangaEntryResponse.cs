@@ -35,16 +35,18 @@ public sealed record MangaEntryResponse(
     decimal? MangaDexPreferredLanguageLatestChapter = null,
     bool IsRead = false,
     bool IsManualReleaseCheckDue = false,
-    DateTimeOffset? LastExternalReaderVerifiedAt = null);
+    DateTimeOffset? LastExternalReaderVerifiedAt = null,
+    string ExternalReaderLatestChapter = "");
 
 public sealed record ExternalReaderCheckInResponse(
     Guid MangaEntryId,
     string Title,
     string CurrentChapter,
+    string ExternalReaderLatestChapter,
     string FallbackReaderUrl,
     DateTimeOffset OpenedAt);
 
-public sealed record ExternalReaderProgressRequest(string CurrentChapter);
+public sealed record ExternalReaderProgressRequest(string CurrentChapter, string? LatestChapter = null);
 
 public sealed record ShelfSectionSummaryResponse(
     int Updates,

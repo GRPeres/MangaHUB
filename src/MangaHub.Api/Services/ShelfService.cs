@@ -87,6 +87,10 @@ public sealed class ShelfService(
 
         var chapterChanged = !string.Equals(entry.CurrentChapter, currentChapter, StringComparison.Ordinal);
         entry.CurrentChapter = currentChapter;
+        if (!string.IsNullOrWhiteSpace(request.LatestChapter))
+        {
+            entry.ExternalReaderLatestChapter = request.LatestChapter.Trim();
+        }
         if (chapterChanged && entry.ReadingStatus != "done")
         {
             entry.IsRead = false;

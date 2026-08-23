@@ -143,15 +143,22 @@
         <div class="mh-modal-backdrop">
             <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="external-reader-check-in-title">
                 <MudStack Spacing="3">
-                    <MudText id="external-reader-check-in-title" Typo="Typo.h2">How was @_externalReaderCheckIn.Title?</MudText>
-                    <MudText Typo="Typo.body1">Update your current chapter here if you found something new.</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Currently tracked: @(string.IsNullOrWhiteSpace(_externalReaderCheckIn.CurrentChapter) ? "Not started" : $"Ch. {_externalReaderCheckIn.CurrentChapter}")</MudText>
-                    <MudTextField T="string" @bind-Value="_externalReaderCurrentChapter" Label="Current chapter" Variant="Variant.Outlined" Immediate="true" Disabled="@_savingExternalReaderProgress" />
-                    <MudStack Row="true" Spacing="2" Class="flex-wrap" Justify="Justify.FlexEnd">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@_savingExternalReaderProgress" OnClick="DismissExternalReaderCheckIn">I did not check</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@_savingExternalReaderProgress" OnClick="ConfirmNoExternalReaderUpdate">No new chapters</MudButton>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_savingExternalReaderProgress" OnClick="UpdateExternalReaderProgress">@(_savingExternalReaderProgress ? "Saving..." : "Save progress")</MudButton>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText id="external-reader-check-in-title" Typo="Typo.h2">@_externalReaderCheckIn.Title</MudText>
+                        <MudTooltip Text="Leave this check-in for later"><MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Inherit" aria-label="Close check-in" Disabled="@_savingExternalReaderProgress" OnClick="DismissExternalReaderCheckIn" /></MudTooltip>
                     </MudStack>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Update the chapter you reached. Saving marks this reader check as complete for seven days.</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="1">
+                        <MudIconButton Icon="@Icons.Material.Filled.Remove" Color="Color.Primary" aria-label="Previous chapter" Disabled="@_savingExternalReaderProgress" OnClick="() => AdjustExternalReaderChapter(-1)" />
+                        <MudTextField T="string" @bind-Value="_externalReaderCurrentChapter" Label="Current chapter" Variant="Variant.Outlined" Immediate="true" Disabled="@_savingExternalReaderProgress" Class="mh-external-reader-chapter-field" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" aria-label="Next chapter" Disabled="@_savingExternalReaderProgress" OnClick="() => AdjustExternalReaderChapter(1)" />
+                    </MudStack>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@(_externalReaderDetailsOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="ToggleExternalReaderDetails">More details</MudButton>
+                    @if (_externalReaderDetailsOpen)
+                    {
+                        <MudTextField T="string" @bind-Value="_externalReaderLatestChapter" Label="Latest chapter you found" HelperText="Optional. A higher chapter keeps a +N reminder visible until you reach it." Variant="Variant.Outlined" Immediate="true" Disabled="@_savingExternalReaderProgress" />
+                    }
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_savingExternalReaderProgress" OnClick="UpdateExternalReaderProgress">@(_savingExternalReaderProgress ? "Saving..." : "Save progress")</MudButton>
                 </MudStack>
             </section>
         </div>

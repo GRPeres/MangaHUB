@@ -37,22 +37,25 @@ public partial class ShelfEntryCardMobile
     private bool ShowsExternalReaderAction => !OpensExternalReader && Entry.ReaderPreference == "hybrid" && HasExternalReaderLink;
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
     private decimal? PreferredLatestChapter => Entry.MangaDexPreferredLanguageLatestChapter;
-    private string LatestChapterValue => PreferredLatestChapter is not null ? $"Ch. {PreferredLatestChapter.Value:0.###}" : Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
+    private decimal? ExternalLatestChapter => TryGetChapterNumber(Entry.ExternalReaderLatestChapter);
+    private string LatestChapterValue => PreferredLatestChapter is not null ? $"Ch. {PreferredLatestChapter.Value:0.###}" : ExternalLatestChapter is not null ? $"Ch. {ExternalLatestChapter.Value:0.###}" : Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
     private int NewChapterCount
     {
         get
         {
-            if (!HasMangaDexLink || PreferredLatestChapter is null || !TryGetCurrentChapterNumber(out var currentChapter)) return 0;
+            if (!TryGetCurrentChapterNumber(out var currentChapter)) return 0;
 
-            var chapterGap = PreferredLatestChapter.Value - currentChapter;
+            var latestChapter = HasMangaDexLink ? PreferredLatestChapter : ExternalLatestChapter;
+            if (latestChapter is null) return 0;
+            var chapterGap = latestChapter.Value - currentChapter;
             if (chapterGap > 0) return (int)Math.Ceiling(chapterGap);
 
-            return chapterGap == 0 && !Entry.IsRead ? 1 : 0;
+            return HasMangaDexLink && chapterGap == 0 && !Entry.IsRead ? 1 : 0;
         }
     }
     private bool HasNewChapters => NewChapterCount > 0;
     private string CardClass => HasNewChapters ? "mh-mobile-shelf-card mh-mobile-shelf-has-release" : "mh-mobile-shelf-card";
-    private string ProgressHint => !HasMangaDexLink && Entry.IsManualReleaseCheckDue ? "Check external reader" : !HasMangaDexLink ? "MangaDex sync unavailable" : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
+    private string ProgressHint => !HasMangaDexLink && HasNewChapters ? $"{NewChapterCount} found externally" : !HasMangaDexLink && Entry.IsManualReleaseCheckDue ? "Check external reader" : !HasMangaDexLink ? "MangaDex sync unavailable" : HasNewChapters ? $"{NewChapterCount} new chapter{(NewChapterCount == 1 ? "" : "s")}" : $"Newest {LatestChapterValue}";
     private string ProgressScheme => HasNewChapters ? "release" : "secondary";
     private string StatusScheme => StatusLabel.ToLowerInvariant() switch { "reading" => "deep", "done" => "soft", "paused" => "warm", "planned" => "secondary", "dropped" => "ink", _ => "primary" };
     private string MetadataTitleId => $"mobile-shelf-metadata-{Entry.Id:N}";
@@ -85,6 +88,12 @@ public partial class ShelfEntryCardMobile
         if (string.IsNullOrWhiteSpace(Entry.CurrentChapter)) return false;
         var chapterText = new string(Entry.CurrentChapter.SkipWhile(value => !char.IsDigit(value)).TakeWhile(value => char.IsDigit(value) || value is '.' or ',').ToArray()).Replace(',', '.');
         return decimal.TryParse(chapterText, NumberStyles.Number, CultureInfo.InvariantCulture, out chapter);
+    }
+
+    private static decimal? TryGetChapterNumber(string value)
+    {
+        var chapterText = new string((value ?? "").SkipWhile(character => !char.IsDigit(character)).TakeWhile(character => char.IsDigit(character) || character is '.' or ',').ToArray()).Replace(',', '.');
+        return decimal.TryParse(chapterText, NumberStyles.Number, CultureInfo.InvariantCulture, out var chapter) ? chapter : null;
     }
 
     private static string FirstNonEmpty(params string[] values) => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";

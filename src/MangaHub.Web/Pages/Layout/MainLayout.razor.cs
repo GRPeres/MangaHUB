@@ -33,7 +33,9 @@ public partial class MainLayout : IDisposable
     private ExternalReaderCheckInResponse? _externalReaderCheckIn;
     private bool _checkingExternalReaderCheckIns;
     private string _externalReaderCurrentChapter = "";
+    private string _externalReaderLatestChapter = "";
     private bool _savingExternalReaderProgress;
+    private bool _externalReaderDetailsOpen;
     private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
@@ -80,6 +82,8 @@ public partial class MainLayout : IDisposable
             if (_externalReaderCheckIn is not null)
             {
                 _externalReaderCurrentChapter = _externalReaderCheckIn.CurrentChapter;
+                _externalReaderLatestChapter = _externalReaderCheckIn.ExternalReaderLatestChapter;
+                _externalReaderDetailsOpen = false;
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -129,6 +133,7 @@ public partial class MainLayout : IDisposable
         {
             _externalReaderCheckIn = null;
             _externalReaderCurrentChapter = "";
+            _externalReaderLatestChapter = "";
             await CheckExternalReaderCheckInsAsync();
             return;
         }
@@ -144,6 +149,7 @@ public partial class MainLayout : IDisposable
         {
             _externalReaderCheckIn = null;
             _externalReaderCurrentChapter = "";
+            _externalReaderLatestChapter = "";
             await CheckExternalReaderCheckInsAsync();
             return;
         }
@@ -165,10 +171,11 @@ public partial class MainLayout : IDisposable
         _savingExternalReaderProgress = true;
         try
         {
-            if (await ShelfApi.UpdateExternalReaderProgressAsync(entryId, currentChapter))
+            if (await ShelfApi.UpdateExternalReaderProgressAsync(entryId, currentChapter, _externalReaderDetailsOpen ? _externalReaderLatestChapter : null))
             {
                 _externalReaderCheckIn = null;
                 _externalReaderCurrentChapter = "";
+                _externalReaderLatestChapter = "";
                 await CheckExternalReaderCheckInsAsync();
                 return;
             }
@@ -180,6 +187,18 @@ public partial class MainLayout : IDisposable
             _savingExternalReaderProgress = false;
         }
     }
+
+    private void AdjustExternalReaderChapter(int amount)
+    {
+        if (!decimal.TryParse(_externalReaderCurrentChapter, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var chapter))
+        {
+            chapter = 0;
+        }
+
+        _externalReaderCurrentChapter = Math.Max(0, chapter + amount).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private void ToggleExternalReaderDetails() => _externalReaderDetailsOpen = !_externalReaderDetailsOpen;
 
     private void ToggleDrawer() => _drawerExpanded = !_drawerExpanded;
     private async Task ToggleTheme()
