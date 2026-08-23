@@ -20,6 +20,19 @@
     small { color: #cdbce4; margin-top: 4px; }
     a { background: #b799ff; border-radius: 5px; color: #170b24; font-size: .85rem; font-weight: 700; padding: 9px 11px; text-decoration: none; white-space: nowrap; }
     .unavailable { color: #bba8ce; font-size: .8rem; text-align: right; }
+    .check-in { align-items: center; background: rgba(5, 3, 8, .72); display: none; inset: 0; justify-content: center; padding: 18px; position: fixed; z-index: 3; }
+    .check-in.open { display: flex; }
+    .check-in-panel { background: #271936; border: 1px solid #573576; border-radius: 8px; box-sizing: border-box; max-width: 430px; padding: 18px; width: 100%; }
+    .check-in-head, .stepper { align-items: center; display: flex; gap: 10px; justify-content: space-between; }
+    .check-in h2 { font-size: 1.1rem; margin: 0; }
+    .icon-button, .save { border: 0; border-radius: 6px; cursor: pointer; font: inherit; font-weight: 700; }
+    .icon-button { background: #3b2750; color: #f7f2ff; font-size: 1.2rem; height: 36px; width: 36px; }
+    .stepper input, .details input { background: #160d22; border: 1px solid #654181; border-radius: 5px; box-sizing: border-box; color: #f7f2ff; font: inherit; padding: 10px; width: 100%; }
+    .details { display: none; margin-top: 12px; }
+    .details.open { display: block; }
+    .details label { color: #d6c9e8; display: block; font-size: .85rem; margin-bottom: 5px; }
+    .more { background: none; border: 0; color: #c8aaff; cursor: pointer; font: inherit; margin: 12px 0 0; padding: 0; }
+    .save { background: #b799ff; color: #170b24; margin-top: 16px; padding: 11px; width: 100%; }
   </style>
 </head>
 <body>
@@ -29,14 +42,31 @@
     <p id="updated">Loading saved shelf...</p>
     <section id="entries" aria-live="polite"></section>
   </main>
+  <section id="check-in" class="check-in" role="dialog" aria-modal="true" aria-labelledby="check-in-title">
+    <div class="check-in-panel">
+      <div class="check-in-head"><h2 id="check-in-title">Update progress</h2><button id="check-in-close" class="icon-button" type="button" aria-label="Leave for later">×</button></div>
+      <p id="check-in-message"></p>
+      <div class="stepper"><button id="chapter-less" class="icon-button" type="button" aria-label="Previous chapter">−</button><input id="current-chapter" inputmode="decimal" aria-label="Current chapter" /><button id="chapter-more" class="icon-button" type="button" aria-label="Next chapter">+</button></div>
+      <button id="details-toggle" class="more" type="button">More details</button>
+      <div id="details" class="details"><label for="latest-chapter">Latest chapter you found</label><input id="latest-chapter" inputmode="decimal" /></div>
+      <button id="save-progress" class="save" type="button">Save progress for sync</button>
+    </div>
+  </section>
   <script>
     (function () {
       const databaseName = "mangahub-offline";
-      const databaseVersion = 2;
+      const databaseVersion = 3;
       const storeName = "shelf";
       const externalReaderLaunchStore = "external-reader-launches";
+      const externalReaderProgressStore = "external-reader-progress-updates";
       const entriesElement = document.getElementById("entries");
       const updatedElement = document.getElementById("updated");
+      const checkInElement = document.getElementById("check-in");
+      const checkInMessage = document.getElementById("check-in-message");
+      const currentChapterInput = document.getElementById("current-chapter");
+      const latestChapterInput = document.getElementById("latest-chapter");
+      const detailsElement = document.getElementById("details");
+      let pendingEntry = null;
 
       function openDatabase() {
         return new Promise((resolve, reject) => {
@@ -44,10 +74,44 @@
           request.onupgradeneeded = () => {
             if (!request.result.objectStoreNames.contains(storeName)) request.result.createObjectStore(storeName, { keyPath: "id" });
             if (!request.result.objectStoreNames.contains(externalReaderLaunchStore)) request.result.createObjectStore(externalReaderLaunchStore, { keyPath: "id" });
+            if (!request.result.objectStoreNames.contains(externalReaderProgressStore)) request.result.createObjectStore(externalReaderProgressStore, { keyPath: "id" });
           };
           request.onsuccess = () => resolve(request.result);
           request.onerror = () => reject(request.error);
         });
+      }
+
+      function queueExternalReaderProgress(entry, currentChapter, latestChapter) {
+        if (!entry || !entry.id || !currentChapter) return;
+        openDatabase().then(database => {
+          const transaction = database.transaction(externalReaderProgressStore, "readwrite");
+          transaction.objectStore(externalReaderProgressStore).put({
+            id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random(),
+            mangaEntryId: entry.id,
+            currentChapter: currentChapter,
+            latestChapter: latestChapter || ""
+          });
+          transaction.oncomplete = () => database.close();
+          transaction.onerror = () => database.close();
+        }).catch(() => undefined);
+      }
+
+      function showCheckIn(entry) {
+        if (!entry) return;
+        pendingEntry = entry;
+        checkInMessage.textContent = "Update " + (entry.title || "this manga") + ". This save will sync when MangaHub reconnects.";
+        currentChapterInput.value = entry.currentChapter || "";
+        latestChapterInput.value = "";
+        detailsElement.classList.remove("open");
+        document.getElementById("details-toggle").textContent = "More details";
+        checkInElement.classList.add("open");
+      }
+
+      function closeCheckIn() { checkInElement.classList.remove("open"); pendingEntry = null; }
+
+      function adjustChapter(amount) {
+        const value = Number.parseFloat((currentChapterInput.value || "").replace(",", "."));
+        currentChapterInput.value = String(Math.max(0, (Number.isFinite(value) ? value : 0) + amount));
       }
 
       function readerUrl(entry) {
@@ -101,7 +165,10 @@
             link.target = "_blank";
             link.rel = "noopener noreferrer";
             link.textContent = entry.fallbackReaderUrl ? "Open reader" : "Open MangaDex";
-            link.addEventListener("click", () => queueExternalReaderLaunch(entry));
+            link.addEventListener("click", () => {
+              queueExternalReaderLaunch(entry);
+              pendingEntry = entry;
+            });
             card.appendChild(link);
           } else {
             const unavailable = document.createElement("span");
@@ -119,6 +186,23 @@
         request.onsuccess = () => render(request.result);
         request.onerror = () => render(null);
       }).catch(() => render(null));
+
+      window.addEventListener("focus", () => { if (pendingEntry) showCheckIn(pendingEntry); });
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && pendingEntry) showCheckIn(pendingEntry); });
+      document.getElementById("check-in-close").addEventListener("click", closeCheckIn);
+      document.getElementById("chapter-less").addEventListener("click", () => adjustChapter(-1));
+      document.getElementById("chapter-more").addEventListener("click", () => adjustChapter(1));
+      document.getElementById("details-toggle").addEventListener("click", () => {
+        const open = detailsElement.classList.toggle("open");
+        document.getElementById("details-toggle").textContent = open ? "Less details" : "More details";
+      });
+      document.getElementById("save-progress").addEventListener("click", () => {
+        const currentChapter = currentChapterInput.value.trim();
+        if (!currentChapter) return;
+        queueExternalReaderProgress(pendingEntry, currentChapter, latestChapterInput.value.trim());
+        updatedElement.textContent = "Progress saved on this device. MangaHub will sync it when the connection returns.";
+        closeCheckIn();
+      });
     }());
   </script>
 </body>

@@ -78,6 +78,7 @@ public partial class MainLayout : IDisposable
         try
         {
             await SyncOfflineExternalReaderLaunchesAsync();
+            await SyncOfflineExternalReaderProgressAsync();
             _externalReaderCheckIn = (await ShelfApi.GetPendingExternalReaderCheckInsAsync()).FirstOrDefault();
             if (_externalReaderCheckIn is not null)
             {
@@ -122,6 +123,29 @@ public partial class MainLayout : IDisposable
         catch (JSException)
         {
             // Offline tracking is optional when browser storage is unavailable.
+        }
+    }
+
+    private async Task SyncOfflineExternalReaderProgressAsync()
+    {
+        try
+        {
+            var updates = await JS.InvokeAsync<List<OfflineExternalReaderProgressUpdate>>("mangaHubOfflineShelf.getExternalReaderProgressUpdates");
+            foreach (var update in updates.Where(update => update.MangaEntryId != Guid.Empty && !string.IsNullOrWhiteSpace(update.Id) && !string.IsNullOrWhiteSpace(update.CurrentChapter)))
+            {
+                if (await ShelfApi.UpdateExternalReaderProgressAsync(update.MangaEntryId, update.CurrentChapter, update.LatestChapter))
+                {
+                    await JS.InvokeVoidAsync("mangaHubOfflineShelf.removeExternalReaderProgressUpdate", update.Id);
+                }
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Keep the local progress outbox intact until the next online return.
+        }
+        catch (JSException)
+        {
+            // Local queueing is optional when browser storage is unavailable.
         }
     }
 
@@ -192,6 +216,20 @@ public partial class MainLayout : IDisposable
             }
 
             Messages.Error("Could not save your current chapter. Please try again.", "External reader check-in");
+        }
+        catch (HttpRequestException)
+        {
+            await JS.InvokeVoidAsync("mangaHubOfflineShelf.queueExternalReaderProgress", new
+            {
+                id = Guid.NewGuid().ToString(),
+                mangaEntryId = entryId,
+                currentChapter,
+                latestChapter = _externalReaderDetailsOpen ? _externalReaderLatestChapter.Trim() : ""
+            });
+            _externalReaderCheckIn = null;
+            _externalReaderCurrentChapter = "";
+            _externalReaderLatestChapter = "";
+            Messages.Info("Your chapter update is saved on this device and will sync when MangaHub reconnects.", "Progress saved offline");
         }
         finally
         {
@@ -486,4 +524,5 @@ public partial class MainLayout : IDisposable
     }
 
     private sealed record OfflineExternalReaderLaunch(string Id, Guid MangaEntryId, DateTimeOffset OpenedAt);
+    private sealed record OfflineExternalReaderProgressUpdate(string Id, Guid MangaEntryId, string CurrentChapter, string? LatestChapter);
 }

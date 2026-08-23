@@ -312,8 +312,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=199" />
-    <link href="MangaHub.Web.styles.css?v=199" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=200" />
+    <link href="MangaHub.Web.styles.css?v=200" rel="stylesheet" />
 </head>
 
 <body>
@@ -340,10 +340,11 @@
                 }
 
                 return new Promise(function (resolve) {
-                    var request = indexedDB.open("mangahub-offline", 2);
+                    var request = indexedDB.open("mangahub-offline", 3);
                     request.onupgradeneeded = function () {
                         if (!request.result.objectStoreNames.contains("shelf")) request.result.createObjectStore("shelf", { keyPath: "id" });
                         if (!request.result.objectStoreNames.contains("external-reader-launches")) request.result.createObjectStore("external-reader-launches", { keyPath: "id" });
+                        if (!request.result.objectStoreNames.contains("external-reader-progress-updates")) request.result.createObjectStore("external-reader-progress-updates", { keyPath: "id" });
                     };
                     request.onerror = resolve;
                     request.onsuccess = function () {
@@ -373,10 +374,11 @@
             getExternalReaderLaunches: function () {
                 if (!window.indexedDB) return Promise.resolve([]);
                 return new Promise(function (resolve) {
-                    var request = indexedDB.open("mangahub-offline", 2);
+                    var request = indexedDB.open("mangahub-offline", 3);
                     request.onupgradeneeded = function () {
                         if (!request.result.objectStoreNames.contains("shelf")) request.result.createObjectStore("shelf", { keyPath: "id" });
                         if (!request.result.objectStoreNames.contains("external-reader-launches")) request.result.createObjectStore("external-reader-launches", { keyPath: "id" });
+                        if (!request.result.objectStoreNames.contains("external-reader-progress-updates")) request.result.createObjectStore("external-reader-progress-updates", { keyPath: "id" });
                     };
                     request.onerror = function () { resolve([]); };
                     request.onsuccess = function () {
@@ -399,6 +401,55 @@
                         if (!database.objectStoreNames.contains("external-reader-launches")) { database.close(); resolve(); return; }
                         var transaction = database.transaction("external-reader-launches", "readwrite");
                         transaction.objectStore("external-reader-launches").delete(id);
+                        transaction.oncomplete = function () { database.close(); resolve(); };
+                        transaction.onerror = function () { database.close(); resolve(); };
+                    };
+                });
+            },
+            queueExternalReaderProgress: function (update) {
+                if (!update || !update.id || !update.mangaEntryId || !update.currentChapter || !window.indexedDB) return Promise.resolve();
+                return new Promise(function (resolve) {
+                    var request = indexedDB.open("mangahub-offline", 3);
+                    request.onupgradeneeded = function () {
+                        if (!request.result.objectStoreNames.contains("shelf")) request.result.createObjectStore("shelf", { keyPath: "id" });
+                        if (!request.result.objectStoreNames.contains("external-reader-launches")) request.result.createObjectStore("external-reader-launches", { keyPath: "id" });
+                        if (!request.result.objectStoreNames.contains("external-reader-progress-updates")) request.result.createObjectStore("external-reader-progress-updates", { keyPath: "id" });
+                    };
+                    request.onerror = resolve;
+                    request.onsuccess = function () {
+                        var database = request.result;
+                        var transaction = database.transaction("external-reader-progress-updates", "readwrite");
+                        transaction.objectStore("external-reader-progress-updates").put(update);
+                        transaction.oncomplete = function () { database.close(); resolve(); };
+                        transaction.onerror = function () { database.close(); resolve(); };
+                    };
+                });
+            },
+            getExternalReaderProgressUpdates: function () {
+                if (!window.indexedDB) return Promise.resolve([]);
+                return new Promise(function (resolve) {
+                    var request = indexedDB.open("mangahub-offline", 3);
+                    request.onerror = function () { resolve([]); };
+                    request.onsuccess = function () {
+                        var database = request.result;
+                        if (!database.objectStoreNames.contains("external-reader-progress-updates")) { database.close(); resolve([]); return; }
+                        var transaction = database.transaction("external-reader-progress-updates", "readonly");
+                        var updates = transaction.objectStore("external-reader-progress-updates").getAll();
+                        updates.onsuccess = function () { database.close(); resolve(updates.result || []); };
+                        updates.onerror = function () { database.close(); resolve([]); };
+                    };
+                });
+            },
+            removeExternalReaderProgressUpdate: function (id) {
+                if (!id || !window.indexedDB) return Promise.resolve();
+                return new Promise(function (resolve) {
+                    var request = indexedDB.open("mangahub-offline", 3);
+                    request.onerror = resolve;
+                    request.onsuccess = function () {
+                        var database = request.result;
+                        if (!database.objectStoreNames.contains("external-reader-progress-updates")) { database.close(); resolve(); return; }
+                        var transaction = database.transaction("external-reader-progress-updates", "readwrite");
+                        transaction.objectStore("external-reader-progress-updates").delete(id);
                         transaction.oncomplete = function () { database.close(); resolve(); };
                         transaction.onerror = function () { database.close(); resolve(); };
                     };
