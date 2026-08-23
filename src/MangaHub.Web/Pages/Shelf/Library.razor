@@ -847,11 +847,12 @@
     private static int Count(bool value) => value ? 1 : 0;
 
     private static bool HasNewChapters(MangaEntryResponse entry) =>
-        HasMangaDexLink(entry)
-        && entry.MangaDexPreferredLanguageLatestChapter is not null
         && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
-        && (entry.MangaDexPreferredLanguageLatestChapter.Value > currentChapter
-            || (entry.MangaDexPreferredLanguageLatestChapter.Value == currentChapter && !entry.IsRead));
+        && ((HasMangaDexLink(entry)
+                && entry.MangaDexPreferredLanguageLatestChapter is { } mangaDexLatest
+                && (mangaDexLatest > currentChapter || (mangaDexLatest == currentChapter && !entry.IsRead)))
+            || (TryGetCurrentChapterNumber(entry.ExternalReaderLatestChapter, out var externalLatest)
+                && externalLatest > currentChapter));
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         IsActivelyTracked(entry)
