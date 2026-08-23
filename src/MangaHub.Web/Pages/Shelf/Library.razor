@@ -847,7 +847,7 @@
     private static int Count(bool value) => value ? 1 : 0;
 
     private static bool HasNewChapters(MangaEntryResponse entry) =>
-        && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
+        TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
         && ((HasMangaDexLink(entry)
                 && entry.MangaDexPreferredLanguageLatestChapter is { } mangaDexLatest
                 && (mangaDexLatest > currentChapter || (mangaDexLatest == currentChapter && !entry.IsRead)))
