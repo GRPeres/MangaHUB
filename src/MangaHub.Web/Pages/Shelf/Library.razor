@@ -302,12 +302,7 @@
             return;
         }
 
-        var opened = await JS.InvokeAsync<bool>("mangaHubExternalReader.open", entry.FallbackReaderUrl);
-        if (!opened)
-        {
-            Messages.Warning("Your browser blocked the external reader tab. Allow pop-ups for MangaHub, then try again.", "External reader");
-            return;
-        }
+        await JS.InvokeVoidAsync("mangaHubExternalReader.open", entry.FallbackReaderUrl);
 
         try
         {
