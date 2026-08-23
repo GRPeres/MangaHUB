@@ -145,16 +145,27 @@ public partial class MainLayout : IDisposable
     {
         if (_externalReaderCheckIn is null) return;
         var entryId = _externalReaderCheckIn.MangaEntryId;
-        if (await ShelfApi.DismissExternalReaderCheckAsync(entryId))
+        try
         {
-            _externalReaderCheckIn = null;
-            _externalReaderCurrentChapter = "";
-            _externalReaderLatestChapter = "";
-            await CheckExternalReaderCheckInsAsync();
-            return;
+            if (await ShelfApi.DismissExternalReaderCheckAsync(entryId))
+            {
+                _externalReaderCheckIn = null;
+                _externalReaderCurrentChapter = "";
+                _externalReaderLatestChapter = "";
+                await CheckExternalReaderCheckInsAsync();
+                return;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Keep the persisted reminder for the next successful return to the app.
         }
 
-        Messages.Error("Could not dismiss that check-in. Please try again.", "External reader check-in");
+        // Closing a prompt should never look like a reader failure. Keep the server-side
+        // reminder pending so it can be shown again after a transient connection problem.
+        _externalReaderCheckIn = null;
+        _externalReaderCurrentChapter = "";
+        _externalReaderLatestChapter = "";
     }
 
     private async Task UpdateExternalReaderProgress()
