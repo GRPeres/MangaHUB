@@ -558,9 +558,9 @@ public sealed class ShelfService(
 
     private static bool CanTrackExternalReader(UserMangaEntry? entry) =>
         entry?.MangaEntry is not null
-        && string.IsNullOrWhiteSpace(entry.MangaEntry.MangaDexId)
-        && Uri.TryCreate(entry.MangaEntry.FallbackReaderUrl, UriKind.Absolute, out var readerUrl)
-        && (readerUrl.Scheme == Uri.UriSchemeHttp || readerUrl.Scheme == Uri.UriSchemeHttps)
+        && (!string.IsNullOrWhiteSpace(entry.MangaEntry.MangaDexId)
+            || (Uri.TryCreate(entry.MangaEntry.FallbackReaderUrl, UriKind.Absolute, out var readerUrl)
+                && (readerUrl.Scheme == Uri.UriSchemeHttp || readerUrl.Scheme == Uri.UriSchemeHttps)))
         && (string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
             || string.Equals(entry.ReadingStatus, "paused", StringComparison.OrdinalIgnoreCase));
 

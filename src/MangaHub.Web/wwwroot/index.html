@@ -312,8 +312,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=195" />
-    <link href="MangaHub.Web.styles.css?v=195" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=196" />
+    <link href="MangaHub.Web.styles.css?v=196" rel="stylesheet" />
 </head>
 
 <body>
@@ -340,9 +340,10 @@
                 }
 
                 return new Promise(function (resolve) {
-                    var request = indexedDB.open("mangahub-offline", 1);
+                    var request = indexedDB.open("mangahub-offline", 2);
                     request.onupgradeneeded = function () {
-                        request.result.createObjectStore("shelf", { keyPath: "id" });
+                        if (!request.result.objectStoreNames.contains("shelf")) request.result.createObjectStore("shelf", { keyPath: "id" });
+                        if (!request.result.objectStoreNames.contains("external-reader-launches")) request.result.createObjectStore("external-reader-launches", { keyPath: "id" });
                     };
                     request.onerror = resolve;
                     request.onsuccess = function () {
@@ -354,6 +355,7 @@
                             savedAt: new Date().toISOString(),
                             entries: entries.map(function (entry) {
                                 return {
+                                    id: entry.id || "",
                                     title: entry.title || "",
                                     coverUrl: entry.coverUrl || "",
                                     readingStatus: entry.readingStatus || "",
@@ -363,6 +365,40 @@
                                 };
                             })
                         });
+                        transaction.oncomplete = function () { database.close(); resolve(); };
+                        transaction.onerror = function () { database.close(); resolve(); };
+                    };
+                });
+            },
+            getExternalReaderLaunches: function () {
+                if (!window.indexedDB) return Promise.resolve([]);
+                return new Promise(function (resolve) {
+                    var request = indexedDB.open("mangahub-offline", 2);
+                    request.onupgradeneeded = function () {
+                        if (!request.result.objectStoreNames.contains("shelf")) request.result.createObjectStore("shelf", { keyPath: "id" });
+                        if (!request.result.objectStoreNames.contains("external-reader-launches")) request.result.createObjectStore("external-reader-launches", { keyPath: "id" });
+                    };
+                    request.onerror = function () { resolve([]); };
+                    request.onsuccess = function () {
+                        var database = request.result;
+                        if (!database.objectStoreNames.contains("external-reader-launches")) { database.close(); resolve([]); return; }
+                        var transaction = database.transaction("external-reader-launches", "readonly");
+                        var launches = transaction.objectStore("external-reader-launches").getAll();
+                        launches.onsuccess = function () { database.close(); resolve(launches.result || []); };
+                        launches.onerror = function () { database.close(); resolve([]); };
+                    };
+                });
+            },
+            removeExternalReaderLaunch: function (id) {
+                if (!id || !window.indexedDB) return Promise.resolve();
+                return new Promise(function (resolve) {
+                    var request = indexedDB.open("mangahub-offline", 2);
+                    request.onerror = resolve;
+                    request.onsuccess = function () {
+                        var database = request.result;
+                        if (!database.objectStoreNames.contains("external-reader-launches")) { database.close(); resolve(); return; }
+                        var transaction = database.transaction("external-reader-launches", "readwrite");
+                        transaction.objectStore("external-reader-launches").delete(id);
                         transaction.oncomplete = function () { database.close(); resolve(); };
                         transaction.onerror = function () { database.close(); resolve(); };
                     };

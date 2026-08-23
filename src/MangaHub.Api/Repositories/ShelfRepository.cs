@@ -156,8 +156,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
         await db.UserMangaEntries.AsNoTracking()
             .Where(entry => entry.UserId == userId && entry.ExternalReaderCheckPendingAt != null)
             .Where(entry => entry.MangaEntry != null
-                && entry.MangaEntry.MangaDexId == ""
-                && entry.MangaEntry.FallbackReaderUrl != ""
+                && (entry.MangaEntry.MangaDexId != "" || entry.MangaEntry.FallbackReaderUrl != "")
                 && (entry.ReadingStatus == "reading" || entry.ReadingStatus == "paused"))
             .OrderBy(entry => entry.ExternalReaderCheckPendingAt)
             .Select(entry => new ExternalReaderCheckInResponse(

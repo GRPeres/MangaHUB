@@ -73,6 +73,7 @@ public partial class MainLayout : IDisposable
         _checkingExternalReaderCheckIns = true;
         try
         {
+            await SyncOfflineExternalReaderLaunchesAsync();
             _externalReaderCheckIn = (await ShelfApi.GetPendingExternalReaderCheckInsAsync()).FirstOrDefault();
             if (_externalReaderCheckIn is not null)
             {
@@ -86,6 +87,34 @@ public partial class MainLayout : IDisposable
         finally
         {
             _checkingExternalReaderCheckIns = false;
+        }
+    }
+
+    private async Task SyncOfflineExternalReaderLaunchesAsync()
+    {
+        if (_currentUser is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var launches = await JS.InvokeAsync<List<OfflineExternalReaderLaunch>>("mangaHubOfflineShelf.getExternalReaderLaunches");
+            foreach (var launch in launches.Where(launch => launch.MangaEntryId != Guid.Empty && !string.IsNullOrWhiteSpace(launch.Id)))
+            {
+                if (await ShelfApi.RecordExternalReaderOpenedAsync(launch.MangaEntryId))
+                {
+                    await JS.InvokeVoidAsync("mangaHubOfflineShelf.removeExternalReaderLaunch", launch.Id);
+                }
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Keep the local outbox intact until the next online return.
+        }
+        catch (JSException)
+        {
+            // Offline tracking is optional when browser storage is unavailable.
         }
     }
 
@@ -398,4 +427,6 @@ public partial class MainLayout : IDisposable
         _externalReaderReturnReference?.Dispose();
         _ = JS.InvokeVoidAsync("mangaHubExternalReader.disconnectReturn");
     }
+
+    private sealed record OfflineExternalReaderLaunch(string Id, Guid MangaEntryId, DateTimeOffset OpenedAt);
 }

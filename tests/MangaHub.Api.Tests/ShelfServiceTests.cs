@@ -78,19 +78,22 @@ public sealed class ShelfServiceTests
         var secondUser = new MangaUser { Username = "second", PasswordHash = "hash" };
         var external = new MangaEntry { Title = "External", FallbackReaderUrl = "https://reader.example/title" };
         var tracked = new MangaEntry { Title = "Tracked", MangaDexId = "mangadex-id", FallbackReaderUrl = "https://reader.example/title" };
+        var planned = new MangaEntry { Title = "Planned", FallbackReaderUrl = "https://reader.example/title" };
         db.Users.AddRange(firstUser, secondUser);
-        db.MangaEntries.AddRange(external, tracked);
+        db.MangaEntries.AddRange(external, tracked, planned);
         await db.SaveChangesAsync();
         db.UserMangaEntries.AddRange(
             new UserMangaEntry { UserId = firstUser.Id, MangaEntryId = external.Id, ReadingStatus = "reading" },
             new UserMangaEntry { UserId = secondUser.Id, MangaEntryId = external.Id, ReadingStatus = "reading" },
-            new UserMangaEntry { UserId = firstUser.Id, MangaEntryId = tracked.Id, ReadingStatus = "reading" });
+            new UserMangaEntry { UserId = firstUser.Id, MangaEntryId = tracked.Id, ReadingStatus = "reading" },
+            new UserMangaEntry { UserId = firstUser.Id, MangaEntryId = planned.Id, ReadingStatus = "planned" });
         await db.SaveChangesAsync();
         var service = CreateShelfService(db);
 
         Assert.True(await service.RecordExternalReaderOpenedAsync(firstUser.Id, external.Id, CancellationToken.None));
-        Assert.False(await service.RecordExternalReaderOpenedAsync(firstUser.Id, tracked.Id, CancellationToken.None));
-        Assert.Single(await service.GetPendingExternalReaderCheckInsAsync(firstUser.Id, CancellationToken.None));
+        Assert.True(await service.RecordExternalReaderOpenedAsync(firstUser.Id, tracked.Id, CancellationToken.None));
+        Assert.False(await service.RecordExternalReaderOpenedAsync(firstUser.Id, planned.Id, CancellationToken.None));
+        Assert.Equal(2, (await service.GetPendingExternalReaderCheckInsAsync(firstUser.Id, CancellationToken.None)).Count);
         Assert.Empty(await service.GetPendingExternalReaderCheckInsAsync(secondUser.Id, CancellationToken.None));
 
         Assert.True(await service.VerifyExternalReaderCheckAsync(firstUser.Id, external.Id, CancellationToken.None));
