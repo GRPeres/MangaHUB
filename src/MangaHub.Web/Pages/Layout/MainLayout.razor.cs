@@ -32,6 +32,8 @@ public partial class MainLayout : IDisposable
     private DotNetObjectReference<MainLayout>? _externalReaderReturnReference;
     private ExternalReaderCheckInResponse? _externalReaderCheckIn;
     private bool _checkingExternalReaderCheckIns;
+    private string _externalReaderCurrentChapter = "";
+    private bool _savingExternalReaderProgress;
     private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
@@ -77,6 +79,7 @@ public partial class MainLayout : IDisposable
             _externalReaderCheckIn = (await ShelfApi.GetPendingExternalReaderCheckInsAsync()).FirstOrDefault();
             if (_externalReaderCheckIn is not null)
             {
+                _externalReaderCurrentChapter = _externalReaderCheckIn.CurrentChapter;
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -125,6 +128,7 @@ public partial class MainLayout : IDisposable
         if (await ShelfApi.VerifyExternalReaderCheckAsync(entryId))
         {
             _externalReaderCheckIn = null;
+            _externalReaderCurrentChapter = "";
             await CheckExternalReaderCheckInsAsync();
             return;
         }
@@ -139,6 +143,7 @@ public partial class MainLayout : IDisposable
         if (await ShelfApi.DismissExternalReaderCheckAsync(entryId))
         {
             _externalReaderCheckIn = null;
+            _externalReaderCurrentChapter = "";
             await CheckExternalReaderCheckInsAsync();
             return;
         }
@@ -146,12 +151,34 @@ public partial class MainLayout : IDisposable
         Messages.Error("Could not dismiss that check-in. Please try again.", "External reader check-in");
     }
 
-    private void UpdateExternalReaderProgress()
+    private async Task UpdateExternalReaderProgress()
     {
-        if (_externalReaderCheckIn is null) return;
+        if (_externalReaderCheckIn is null || _savingExternalReaderProgress) return;
+        var currentChapter = _externalReaderCurrentChapter.Trim();
+        if (string.IsNullOrWhiteSpace(currentChapter))
+        {
+            Messages.Warning("Enter the chapter you reached before saving.", "Current chapter needed");
+            return;
+        }
+
         var entryId = _externalReaderCheckIn.MangaEntryId;
-        _externalReaderCheckIn = null;
-        Navigation.NavigateTo($"library?externalCheckInEntryId={entryId}");
+        _savingExternalReaderProgress = true;
+        try
+        {
+            if (await ShelfApi.UpdateExternalReaderProgressAsync(entryId, currentChapter))
+            {
+                _externalReaderCheckIn = null;
+                _externalReaderCurrentChapter = "";
+                await CheckExternalReaderCheckInsAsync();
+                return;
+            }
+
+            Messages.Error("Could not save your current chapter. Please try again.", "External reader check-in");
+        }
+        finally
+        {
+            _savingExternalReaderProgress = false;
+        }
     }
 
     private void ToggleDrawer() => _drawerExpanded = !_drawerExpanded;

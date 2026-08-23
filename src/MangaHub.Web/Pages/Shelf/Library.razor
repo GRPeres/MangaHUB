@@ -257,11 +257,8 @@
     [SupplyParameterFromQuery(Name = "chapter")] public string? NotificationChapter { get; set; }
     [SupplyParameterFromQuery(Name = "language")] public string? NotificationLanguage { get; set; }
     [SupplyParameterFromQuery(Name = "notificationId")] public Guid? NotificationId { get; set; }
-    [SupplyParameterFromQuery(Name = "externalCheckInEntryId")] public Guid? ExternalCheckInEntryId { get; set; }
     private string PreparingStage => readerPreparation?.Stage ?? "Waiting to prepare the chapter";
     private MangaEntryResponse? editingEntry;
-    private Guid? pendingExternalCheckInEntryId;
-    private Guid? handledExternalCheckInEntryId;
 
     private static readonly (string Key, string Label, string Icon)[] ShelfSections =
     [
@@ -294,7 +291,6 @@
             }
             await Read(NotificationEntryId.Value, NotificationLanguage, allowLanguageFallback: true, allowChapterJump: true, requestedChapter: NotificationChapter);
         }
-        await OpenExternalCheckInEditAsync();
     }
 
     private void OpenAddShelf() => isAddShelfOpen = true;
@@ -414,7 +410,6 @@
 
         if (string.Equals(activeSection, requestedSection, StringComparison.Ordinal))
         {
-            await OpenExternalCheckInEditAsync();
             return;
         }
 
@@ -616,30 +611,8 @@
 
     private async Task OnShelfEditSaved(string text)
     {
-        if (pendingExternalCheckInEntryId is { } entryId)
-        {
-            await ShelfApi.VerifyExternalReaderCheckAsync(entryId);
-            pendingExternalCheckInEntryId = null;
-            Navigation.NavigateTo("/library", replace: true);
-        }
         Messages.Success(text);
         await Load();
-    }
-
-    private async Task OpenExternalCheckInEditAsync()
-    {
-        if (ExternalCheckInEntryId is not { } entryId || handledExternalCheckInEntryId == entryId)
-        {
-            return;
-        }
-
-        handledExternalCheckInEntryId = entryId;
-        var entry = await ShelfApi.GetShelfEntryAsync(entryId);
-        if (entry is not null)
-        {
-            pendingExternalCheckInEntryId = entryId;
-            editingEntry = entry;
-        }
     }
 
     private async Task UpdateScore(MangaEntryResponse entry, int? score)

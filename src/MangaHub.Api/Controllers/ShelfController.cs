@@ -8,13 +8,6 @@ namespace MangaHub.Api.Controllers;
 [Route("api/shelf")]
 public sealed class ShelfController(CurrentUserService currentUsers, ShelfService shelf, ShelfExportService exports) : ControllerBase
 {
-    [HttpGet("{entryId:guid}")]
-    public async Task<IActionResult> Get(Guid entryId, CancellationToken cancellationToken)
-    {
-        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
-        return user is null ? Unauthorized() : (await shelf.GetAsync(user.Id, entryId, cancellationToken) is { } entry ? Ok(entry) : NotFound());
-    }
-
     [HttpGet("external-reader/check-ins")]
     public async Task<IActionResult> PendingExternalReaderCheckIns(CancellationToken cancellationToken)
     {
@@ -36,6 +29,16 @@ public sealed class ShelfController(CurrentUserService currentUsers, ShelfServic
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
         return await shelf.VerifyExternalReaderCheckAsync(user.Id, entryId, cancellationToken) ? NoContent() : NotFound();
+    }
+
+    [HttpPost("{entryId:guid}/external-reader/progress")]
+    public async Task<IActionResult> UpdateExternalReaderProgress(Guid entryId, [FromBody] ExternalReaderProgressRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (string.IsNullOrWhiteSpace(request.CurrentChapter)) return BadRequest("Enter the chapter you reached.");
+
+        return await shelf.UpdateExternalReaderProgressAsync(user.Id, entryId, request, cancellationToken) ? NoContent() : NotFound();
     }
 
     [HttpPost("{entryId:guid}/external-reader/dismiss")]

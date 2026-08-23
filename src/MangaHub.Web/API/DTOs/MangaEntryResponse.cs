@@ -44,6 +44,8 @@ public sealed record ExternalReaderCheckInResponse(
     string FallbackReaderUrl,
     DateTimeOffset OpenedAt);
 
+public sealed record ExternalReaderProgressRequest(string CurrentChapter);
+
 public sealed record ShelfSectionSummaryResponse(
     int Updates,
     int NewReleases,

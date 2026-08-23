@@ -96,11 +96,12 @@ public sealed class ShelfServiceTests
         Assert.Equal(2, (await service.GetPendingExternalReaderCheckInsAsync(firstUser.Id, CancellationToken.None)).Count);
         Assert.Empty(await service.GetPendingExternalReaderCheckInsAsync(secondUser.Id, CancellationToken.None));
 
-        Assert.True(await service.VerifyExternalReaderCheckAsync(firstUser.Id, external.Id, CancellationToken.None));
+        Assert.True(await service.UpdateExternalReaderProgressAsync(firstUser.Id, external.Id, new ExternalReaderProgressRequest("12.5"), CancellationToken.None));
         var entry = db.UserMangaEntries.Single(item => item.UserId == firstUser.Id && item.MangaEntryId == external.Id);
         Assert.NotNull(entry.LastExternalReaderOpenedAt);
         Assert.NotNull(entry.LastExternalReaderVerifiedAt);
         Assert.Null(entry.ExternalReaderCheckPendingAt);
+        Assert.Equal("12.5", entry.CurrentChapter);
     }
 
     [Fact]

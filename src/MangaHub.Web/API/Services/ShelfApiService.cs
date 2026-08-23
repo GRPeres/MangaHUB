@@ -20,9 +20,6 @@ public sealed class ShelfApiService(ApiHttpClient api)
         return await api.DeleteAsync($"/api/shelf/{entryId}{query}");
     }
 
-    public async Task<MangaEntryResponse?> GetShelfEntryAsync(Guid entryId) =>
-        await api.GetAsync<MangaEntryResponse>($"/api/shelf/{entryId}");
-
     public async Task<List<ExternalReaderCheckInResponse>> GetPendingExternalReaderCheckInsAsync() =>
         await api.GetAsync<List<ExternalReaderCheckInResponse>>("/api/shelf/external-reader/check-ins") ?? [];
 
@@ -31,6 +28,9 @@ public sealed class ShelfApiService(ApiHttpClient api)
 
     public Task<bool> VerifyExternalReaderCheckAsync(Guid entryId) =>
         api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/verified", new { });
+
+    public Task<bool> UpdateExternalReaderProgressAsync(Guid entryId, string currentChapter) =>
+        api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/progress", new ExternalReaderProgressRequest(currentChapter));
 
     public Task<bool> DismissExternalReaderCheckAsync(Guid entryId) =>
         api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/shelf/{entryId}/external-reader/dismiss", new { });

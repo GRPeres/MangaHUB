@@ -76,6 +76,31 @@ public sealed class ShelfService(
         return true;
     }
 
+    public async Task<bool> UpdateExternalReaderProgressAsync(Guid userId, Guid mangaEntryId, ExternalReaderProgressRequest request, CancellationToken cancellationToken)
+    {
+        var entry = await shelf.GetAsync(userId, mangaEntryId, cancellationToken);
+        var currentChapter = request.CurrentChapter.Trim();
+        if (entry is null || string.IsNullOrWhiteSpace(currentChapter))
+        {
+            return false;
+        }
+
+        var chapterChanged = !string.Equals(entry.CurrentChapter, currentChapter, StringComparison.Ordinal);
+        entry.CurrentChapter = currentChapter;
+        if (chapterChanged && entry.ReadingStatus != "done")
+        {
+            entry.IsRead = false;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        entry.LastExternalReaderVerifiedAt = now;
+        entry.ExternalReaderCheckPendingAt = null;
+        entry.UpdatedAt = now;
+        await shelf.SaveChangesAsync(cancellationToken);
+        if (usage is not null) await usage.TrackAsync(userId, UsageEventTypes.ShelfUpdated, entry.MangaEntryId, cancellationToken);
+        return true;
+    }
+
     public async Task<bool> DismissExternalReaderCheckAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken)
     {
         var entry = await shelf.GetAsync(userId, mangaEntryId, cancellationToken);
