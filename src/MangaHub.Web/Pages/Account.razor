@@ -59,7 +59,7 @@
                                   @ondragend="EndLanguageDrag">
                             <div class="mh-account-language-grip" title="Drag to change priority" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Color="Color.Secondary" /></div>
                             <div class="mh-account-language-identity">
-                                <span class="mh-account-language-rank">@((cardIndex + 1).ToString("D2"))</span>
+                                <span class="mh-account-language-rank" aria-label="Priority @(cardIndex + 1)">@((cardIndex + 1).ToString())</span>
                                 <MudText Typo="Typo.subtitle1">@LanguageLabel(language)</MudText>
                                 <span class="mh-account-language-code">@language</span>
                             </div>

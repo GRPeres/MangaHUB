@@ -5,8 +5,8 @@
 .mh-account-language-card:hover { background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent); }
 .mh-account-language-card.is-dragging { cursor: grabbing; opacity: .45; transform: scale(.98); }
 .mh-account-language-grip { align-items: center; cursor: grab; display: grid; height: 100%; justify-items: center; }
-.mh-account-language-identity { align-items: center; display: grid; gap: .55rem; grid-template-columns: 2.25rem minmax(0, 1fr) auto; min-width: 0; white-space: nowrap; }
-.mh-account-language-rank { background: var(--mud-palette-primary); border-radius: 4px; color: var(--mud-palette-primary-text); font-size: .72rem; font-weight: 800; line-height: 1; padding: .42rem .25rem; text-align: center; }
+.mh-account-language-identity { align-items: center; display: grid; gap: .55rem; grid-template-columns: 1.7rem minmax(0, 1fr) auto; min-width: 0; white-space: nowrap; }
+.mh-account-language-rank { align-items: center; background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent); border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 36%, transparent); border-radius: 999px; color: var(--mud-palette-primary); display: inline-flex; font-size: .7rem; font-weight: 800; height: 1.45rem; justify-content: center; line-height: 1; width: 1.45rem; }
 .mh-account-language-code { border: 1px solid var(--mud-palette-lines-default); border-radius: 4px; color: var(--mud-palette-text-secondary); font-family: var(--mud-typography-default-family); font-size: .75rem; font-weight: 700; padding: .22rem .4rem; white-space: nowrap; }
 .mh-account-language-identity ::deep .mud-typography-subtitle1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -14,6 +14,6 @@
     .mh-account-language-select { min-width: min(100%, 16rem); }
     .mh-account-language-custom { max-width: 8rem; }
     .mh-account-language-card { gap: .4rem; grid-template-columns: 1.55rem minmax(0, 1fr) 2rem; padding: .4rem .5rem; }
-    .mh-account-language-identity { gap: .4rem; grid-template-columns: 2rem minmax(0, 1fr) auto; }
+    .mh-account-language-identity { gap: .4rem; grid-template-columns: 1.55rem minmax(0, 1fr) auto; }
     .mh-account-language-code { font-size: .7rem; padding: .2rem .3rem; }
 }
