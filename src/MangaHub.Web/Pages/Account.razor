@@ -49,14 +49,12 @@
                     {
                         var cardIndex = index;
                         var language = preferredLanguages[cardIndex];
-                        <MudPaper Elevation="0"
-                                  Outlined="true"
-                                  Class="@($"mh-account-language-card {(draggingLanguageIndex == cardIndex ? "is-dragging" : "")}")"
-                                  draggable="true"
-                                  @ondragstart="() => BeginLanguageDrag(cardIndex)"
-                                  @ondragover:preventDefault
-                                  @ondrop="() => DropLanguage(cardIndex)"
-                                  @ondragend="EndLanguageDrag">
+                        <div class="@($"mud-paper mud-paper-outlined mh-account-language-card {(draggingLanguageIndex == cardIndex ? "is-dragging" : "")}")"
+                             draggable="true"
+                             @ondragstart="() => BeginLanguageDrag(cardIndex)"
+                             @ondragover:preventDefault
+                             @ondrop="() => DropLanguage(cardIndex)"
+                             @ondragend="EndLanguageDrag">
                             <div class="mh-account-language-grip" title="Drag to change priority" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Color="Color.Secondary" /></div>
                             <div class="mh-account-language-identity">
                                 <span class="mh-account-language-rank" aria-label="Priority @(cardIndex + 1)">@((cardIndex + 1).ToString())</span>
@@ -64,7 +62,7 @@
                                 <span class="mh-account-language-code">@language</span>
                             </div>
                             <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" Disabled="@(preferredLanguages.Count == 1)" OnClick="() => RemoveLanguage(cardIndex)" aria-label="Remove language" title="Remove language" />
-                        </MudPaper>
+                        </div>
                     }
                 </div>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@isSavingLanguage" OnClick="SavePreferredLanguage">Save language order</MudButton>
