@@ -57,15 +57,13 @@
                                   @ondragover:preventDefault
                                   @ondrop="() => DropLanguage(cardIndex)"
                                   @ondragend="EndLanguageDrag">
-                            <MudTooltip Text="Drag to change priority">
-                                <div class="mh-account-language-grip" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Color="Color.Secondary" /></div>
-                            </MudTooltip>
+                            <div class="mh-account-language-grip" title="Drag to change priority" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Color="Color.Secondary" /></div>
                             <div class="mh-account-language-identity">
                                 <span class="mh-account-language-rank">@((cardIndex + 1).ToString("D2"))</span>
                                 <MudText Typo="Typo.subtitle1">@LanguageLabel(language)</MudText>
                                 <span class="mh-account-language-code">@language</span>
                             </div>
-                            <MudTooltip Text="Remove language"><MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" Disabled="@(preferredLanguages.Count == 1)" OnClick="() => RemoveLanguage(cardIndex)" aria-label="Remove language" /></MudTooltip>
+                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" Disabled="@(preferredLanguages.Count == 1)" OnClick="() => RemoveLanguage(cardIndex)" aria-label="Remove language" title="Remove language" />
                         </MudPaper>
                     }
                 </div>
