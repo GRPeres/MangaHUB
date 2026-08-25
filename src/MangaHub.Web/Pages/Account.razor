@@ -329,7 +329,7 @@
         if (draggingLanguageIndex is not { } source || source == destination) return;
         var language = preferredLanguages[source];
         preferredLanguages.RemoveAt(source);
-        preferredLanguages.Insert(destination > source ? destination - 1 : destination, language);
+        preferredLanguages.Insert(Math.Min(destination, preferredLanguages.Count), language);
         draggingLanguageIndex = null;
     }
 

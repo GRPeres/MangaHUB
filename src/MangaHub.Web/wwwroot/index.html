@@ -109,6 +109,14 @@
                 delete window.__mangaHubExternalReaderReturnHandler;
             }
         };
+        if (!window.__mangaHubLanguageDragInitialized) {
+            document.addEventListener("dragstart", function (event) {
+                if (!event.target.closest(".mh-account-language-card") || !event.dataTransfer) return;
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", "mangahub-language-order");
+            });
+            window.__mangaHubLanguageDragInitialized = true;
+        }
         window.mangaHubSectionNavigation = {
             observe: function (element, dotNetReference) {
                 if (!element || !dotNetReference || !window.ResizeObserver) return;
@@ -311,8 +319,8 @@
     <link rel="icon" type="image/svg+xml" href="icons/book.svg" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="theme-color" content="#6d3bb6" />
-    <link rel="stylesheet" href="css/app.css?v=206" />
-    <link href="MangaHub.Web.styles.css?v=206" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css?v=207" />
+    <link href="MangaHub.Web.styles.css?v=207" rel="stylesheet" />
 </head>
 
 <body>
