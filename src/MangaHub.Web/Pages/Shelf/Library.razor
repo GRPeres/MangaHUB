@@ -733,7 +733,7 @@
         .ToList();
 
     private List<MangaEntryResponse> UntrackedEntries => VisibleEntries
-        .Where(entry => entry.IsManualReleaseCheckDue)
+        .Where(entry => entry.IsManualReleaseCheckDue && !IsReadingWithNewChapters(entry))
         .ToList();
 
     private List<string> CategoryOptions => entries

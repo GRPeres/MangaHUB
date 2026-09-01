@@ -89,7 +89,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     {
         var entries = await ListEntriesAsync(userId, null, null, preferredLanguages, manualCheckDueBefore, 0, int.MaxValue, cancellationToken);
         var newReleases = entries.Count(IsReadingWithNewChapters);
-        var untracked = entries.Count(entry => entry.IsManualReleaseCheckDue);
+        var untracked = entries.Count(entry => entry.IsManualReleaseCheckDue && !IsReadingWithNewChapters(entry));
 
         return new ShelfSectionSummaryResponse(
             newReleases + untracked,

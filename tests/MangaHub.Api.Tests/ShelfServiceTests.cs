@@ -71,7 +71,7 @@ public sealed class ShelfServiceTests
     }
 
     [Fact]
-    public async Task ListAsync_ExternalLatestChapterKeepsManualReleaseVisibleAfterVerification()
+    public async Task ListAsync_ExternalLatestChapterAppearsOnlyAsANewReleaseWhenTheWeeklyCheckIsDue()
     {
         await using var db = TestDb.Create();
         var user = new MangaUser { Username = "reader", PasswordHash = "hash" };
@@ -86,15 +86,19 @@ public sealed class ShelfServiceTests
             ReadingStatus = "reading",
             CurrentChapter = "50",
             ExternalReaderLatestChapter = "54",
-            LastExternalReaderVerifiedAt = DateTimeOffset.UtcNow
+            LastExternalReaderVerifiedAt = DateTimeOffset.UtcNow.AddDays(-8)
         });
         await db.SaveChangesAsync();
         var service = CreateShelfService(db);
 
         var updates = await service.ListAsync(user.Id, null, "updates", 0, 20, CancellationToken.None);
+        var summary = await service.GetSectionSummaryAsync(user.Id, CancellationToken.None);
 
         Assert.Equal(["External release"], updates.Select(entry => entry.Title));
-        Assert.False(updates.Single().IsManualReleaseCheckDue);
+        Assert.True(updates.Single().IsManualReleaseCheckDue);
+        Assert.Equal(1, summary.Updates);
+        Assert.Equal(1, summary.NewReleases);
+        Assert.Equal(0, summary.Untracked);
     }
 
     [Fact]
