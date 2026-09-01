@@ -176,6 +176,7 @@
     [SupplyParameterFromQuery(Name = "source")] public string? ReaderSource { get; set; }
     [SupplyParameterFromQuery(Name = "language")] public string? ReaderLanguage { get; set; }
     [SupplyParameterFromQuery(Name = "vertical")] public bool IsVerticalReader { get; set; }
+    [SupplyParameterFromQuery(Name = "page")] public int? InitialPage { get; set; }
     private int page;
     private Guid loadedChapterId;
     private Guid prefetchedChapterId;
@@ -183,6 +184,7 @@
     private bool isPreparingChapter;
     private bool isSeriesComplete;
     private bool isPageLoading;
+    private bool scrollToInitialPage;
     private ElementReference pageFrame;
     private ElementReference pageImage;
     private ElementReference verticalEnd;
@@ -224,7 +226,8 @@
         if (loadedChapterId != ChapterId)
         {
             loadedChapterId = ChapterId;
-            page = 0;
+            page = Math.Clamp(InitialPage ?? 0, 0, Math.Max(PageCount - 1, 0));
+            scrollToInitialPage = IsVerticalReader && page > 0;
             isPageLoading = false;
             loadingPreviewUrl = null;
             readerMessage = "";
@@ -251,6 +254,12 @@
                 ? new ReaderSettings(preferredLanguage)
                 : MangaHub.Web.Services.ReaderSettings.Normalize(storedSettings);
             await InvokeAsync(StateHasChanged);
+        }
+
+        if (scrollToInitialPage)
+        {
+            scrollToInitialPage = false;
+            await JS.InvokeVoidAsync("mangaHubReader.scrollVerticalPage", pageFrame, page);
         }
 
         if (IsMangaDexReader && EntryId is not null && loadedLanguageEntryId != EntryId)
@@ -409,7 +418,9 @@
                 return;
             }
 
-            Navigation.NavigateTo(completedPreparation.Launch.ReaderUrl);
+            Navigation.NavigateTo(next
+                ? completedPreparation.Launch.ReaderUrl
+                : OpenAtLastPage(completedPreparation.Launch));
         }
         finally
         {
@@ -494,6 +505,9 @@
         isPageLoading = true;
         readerMessage = "This reader page could not be loaded. Try opening the chapter again to refresh its local cache.";
     }
+
+    private static string OpenAtLastPage(ReaderLaunchResponse launch) =>
+        $"{launch.ReaderUrl}&page={Math.Max(launch.PageCount - 1, 0)}";
 
     private async Task OnPageLoaded()
     {
