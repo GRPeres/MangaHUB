@@ -34,12 +34,19 @@
         </button>
 
         <div class="mh-mobile-card-controls">
-            <div class="mh-mobile-card-control-spacer" aria-hidden="@(!HasNewChapters)">
+            <div class="mh-mobile-card-control-spacer" aria-hidden="@(!HasNewChapters && !ShowsCurrentChapterReminder)">
                 @if (HasNewChapters)
                 {
                     <div class="mh-mobile-shelf-release" aria-label="@($"{NewChapterCount} new chapters, latest {LatestChapterValue}")">
                         <span>New</span>
                         <strong>+@NewChapterCount</strong>
+                    </div>
+                }
+                else if (ShowsCurrentChapterReminder)
+                {
+                    <div class="mh-mobile-shelf-read-progress" aria-label="@($"Read through {CurrentChapterValue}")">
+                        <span>Read</span>
+                        <strong>@CurrentChapterValue</strong>
                     </div>
                 }
             </div>
