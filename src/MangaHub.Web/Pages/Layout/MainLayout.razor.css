@@ -150,3 +150,15 @@
         color: var(--mud-palette-primary);
     }
 }
+.mh-notification-list {
+    max-height: min(26rem, 55vh);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+@media (max-width: 600px) {
+    .mh-notification-list {
+        max-height: min(18rem, 40dvh);
+    }
+}
