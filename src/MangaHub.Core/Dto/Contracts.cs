@@ -24,6 +24,19 @@ public sealed record AdminIssueReportResponse(Guid Id, string Reason, string Not
 public sealed record AdminIssueDetailsResponse(Guid Id, string Kind, string SubjectType, Guid SubjectId, string Status, string Priority, string Title, string CoverUrl, string MetadataJson, string FallbackReaderUrl, string MyAnimeListId, string MangaDexId, string MangaUpdatesId, string ResolutionNote, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, List<AdminIssueReportResponse> Reports);
 public sealed record ResolveAdminIssueRequest(string FallbackReaderUrl, string ResolutionNote = "");
 public sealed record DismissAdminIssueRequest(string ResolutionNote = "");
+public sealed record ReintegrateIssueWithMetadataRequest(
+    string MyAnimeListId,
+    string Title,
+    string Authors,
+    string CoverUrl,
+    int? FirstPublishYear,
+    string Category,
+    string Description,
+    string MediaType,
+    string PublishingStatus,
+    int? ChapterCount,
+    int? VolumeCount);
+public sealed record IssueMetadataReintegrationResponse(bool MetadataAssigned, bool ReaderRestored, string Message, string MangaDexId = "", string MangaDexTitle = "");
 public sealed record OperationsOverviewResponse(int CatalogCount, int MangaDexLinkedCount, int MangaUpdatesLinkedCount, int CachedChapterCount, long CacheBytes, DateTimeOffset? LastMangaDexSyncAt, DateTimeOffset? LastMangaUpdatesSyncAt, DateTimeOffset? LastLibraryScanAt, int StaleMangaDexCount, int StaleMangaUpdatesCount, List<MaintenanceJobResponse> RecentJobs);
 public sealed record MaintenanceJobResponse(Guid Id, string Type, string Status, DateTimeOffset RequestedAt, DateTimeOffset? StartedAt, DateTimeOffset? CompletedAt, string Error);
 public sealed record QueueMaintenanceJobRequest(string Type);

@@ -143,6 +143,57 @@ public sealed class IssueReportingService(
         return match;
     }
 
+    public async Task<IssueMetadataReintegrationResponse?> ReintegrateWithSelectedMetadataAsync(
+        Guid adminUserId,
+        Guid issueId,
+        ReintegrateIssueWithMetadataRequest request,
+        CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        if (issue is null
+            || issue.Status != "open"
+            || !string.Equals(issue.Kind, AdminIssueTypes.ExternalReaderLink, StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(request.MyAnimeListId)
+            || string.IsNullOrWhiteSpace(request.Title))
+        {
+            return null;
+        }
+
+        var manga = await catalog.GetByIdAsync(issue.SubjectId, cancellationToken);
+        if (manga is null)
+        {
+            return null;
+        }
+
+        var matchingCatalogEntry = await catalog.FindByMyAnimeListIdAsync(request.MyAnimeListId.Trim(), cancellationToken);
+        if (matchingCatalogEntry is not null && matchingCatalogEntry.Id != manga.Id)
+        {
+            return new IssueMetadataReintegrationResponse(
+                false,
+                false,
+                $"MAL #{request.MyAnimeListId.Trim()} is already assigned to {matchingCatalogEntry.Title}.");
+        }
+
+        ApplyMetadata(manga, request);
+        var match = await mangaDexMatches.FindAsync(manga.MyAnimeListId, manga.Title, cancellationToken);
+        if (match is null)
+        {
+            manga.UpdatedAt = DateTimeOffset.UtcNow;
+            await catalog.SaveChangesAsync(cancellationToken);
+            return new IssueMetadataReintegrationResponse(
+                true,
+                false,
+                $"Saved MAL #{manga.MyAnimeListId}, but MangaDex did not return an automatic match. The external link remains available for repair.");
+        }
+
+        manga.MangaDexId = match.Id;
+        manga.FallbackReaderUrl = "";
+        manga.ReaderPreference = ReaderPreference.MangaHub;
+        manga.UpdatedAt = DateTimeOffset.UtcNow;
+        await CloseAsync(issue, adminUserId, "resolved", "MAL metadata assigned and MangaHub reader restored automatically.", "MangaHub reader restored", "An admin restored MangaHub reader access for", cancellationToken);
+        return new IssueMetadataReintegrationResponse(true, true, $"Linked MangaDex: {match.Title}.", match.Id, match.Title);
+    }
+
     public async Task<bool> DismissAsync(Guid adminUserId, Guid issueId, DismissAdminIssueRequest request, CancellationToken cancellationToken)
     {
         var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
@@ -185,6 +236,22 @@ public sealed class IssueReportingService(
             });
         }
         await issues.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void ApplyMetadata(MangaEntry manga, ReintegrateIssueWithMetadataRequest request)
+    {
+        manga.Title = request.Title.Trim();
+        manga.Authors = request.Authors.Trim();
+        manga.CoverUrl = request.CoverUrl.Trim();
+        manga.FirstPublishYear = request.FirstPublishYear;
+        manga.Category = request.Category.Trim();
+        manga.Description = request.Description.Trim();
+        manga.MediaType = request.MediaType.Trim();
+        manga.PublishingStatus = request.PublishingStatus.Trim();
+        manga.ChapterCount = request.ChapterCount;
+        manga.VolumeCount = request.VolumeCount;
+        manga.MetadataSource = "myanimelist";
+        manga.MyAnimeListId = request.MyAnimeListId.Trim();
     }
 
     private static bool IsHttpUrl(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)

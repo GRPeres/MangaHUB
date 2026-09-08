@@ -111,6 +111,16 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
             : Ok(match);
     }
 
+    [HttpPost("issues/{issueId:guid}/reintegrate-metadata")]
+    public async Task<IActionResult> ReintegrateWithSelectedMetadata(Guid issueId, [FromBody] ReintegrateIssueWithMetadataRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var result = await issues.ReintegrateWithSelectedMetadataAsync(user.Id, issueId, request, cancellationToken);
+        return result is null ? BadRequest("Select a valid MyAnimeList result for this open external reader issue.") : Ok(result);
+    }
+
     [HttpPost("issues/{issueId:guid}/dismiss")]
     public async Task<IActionResult> DismissIssue(Guid issueId, [FromBody] DismissAdminIssueRequest request, CancellationToken cancellationToken)
     {

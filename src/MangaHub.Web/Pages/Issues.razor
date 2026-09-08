@@ -4,6 +4,7 @@
 @using MangaHub.Web.API.Services
 @inject AuthSessionService Auth
 @inject AdminApiService AdminApi
+@inject MetadataApiService MetadataApi
 @inject MessageService Messages
 
 <PageTitle>Issues</PageTitle>
@@ -77,14 +78,58 @@ else
                 @if (IsExternalReaderLinkIssue)
                 {
                     <MudPaper Outlined="true" Class="pa-3">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap" Spacing="2">
+                        <MudStack Spacing="2">
                             <MudStack Spacing="0">
                                 <MudText Typo="Typo.subtitle2">Restore the MangaHub reader</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Uses the catalog MAL ID to find the matching MangaDex series automatically.</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Search MyAnimeList, select the correct manga, and MangaHub will try to restore its MangaDex reader.</MudText>
                             </MudStack>
-                            <MudTooltip Text="@(CanReintegrate ? "Find the MangaDex match and replace the broken external reader." : "This catalog entry needs a MAL ID before it can be matched automatically.")">
-                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoFixHigh" Disabled="@(!CanReintegrate || saving)" OnClick="ReintegrateWithMangaDexAsync">@(saving ? "Matching..." : "Restore MangaHub reader")</MudButton>
-                            </MudTooltip>
+                            <div class="mh-issue-metadata-anchor">
+                                <MangaDebouncedSearch @bind-Value="metadataQuery"
+                                                      Label="Find the correct manga on MyAnimeList"
+                                                      AriaLabel="Search MyAnimeList metadata"
+                                                      IsLoading="@isSearchingMetadata"
+                                                      Disabled="@(!IsOpen || saving)"
+                                                      OnSearch="SearchMetadataAsync" />
+                                <MudPopover Open="@(isSearchingMetadata || metadataResults.Count > 0 || !string.IsNullOrWhiteSpace(metadataMessage))"
+                                            AnchorOrigin="Origin.BottomLeft"
+                                            TransformOrigin="Origin.TopLeft"
+                                            Class="mh-issue-metadata-popover">
+                                    <MudPaper Elevation="8" Outlined="true" Class="pa-2 mh-issue-metadata-results">
+                                        @if (isSearchingMetadata)
+                                        {
+                                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center"><MudProgressCircular Indeterminate="true" Size="Size.Small" /><MudText Typo="Typo.caption">Searching MyAnimeList...</MudText></MudStack>
+                                        }
+                                        else if (metadataResults.Count > 0)
+                                        {
+                                            <MudStack Spacing="1">
+                                                @foreach (var item in metadataResults.Take(6))
+                                                {
+                                                    <MudButton Variant="Variant.Text" Color="Color.Inherit" FullWidth="true" Class="justify-start text-left" Disabled="@saving" OnClick="() => ReintegrateWithMetadataAsync(item)">
+                                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="w-100">
+                                                            @if (!string.IsNullOrWhiteSpace(item.CoverUrl)) { <img src="@item.CoverUrl" alt="" class="mh-issue-metadata-cover" /> }
+                                                            <MudStack Spacing="0" Class="flex-grow-1 overflow-hidden">
+                                                                <MudText Typo="Typo.body2" Class="text-truncate">@item.Title</MudText>
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">MAL #@item.MyAnimeListId · @item.Authors</MudText>
+                                                            </MudStack>
+                                                        </MudStack>
+                                                    </MudButton>
+                                                }
+                                            </MudStack>
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(metadataMessage))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@metadataMessage</MudText>
+                                        }
+                                    </MudPaper>
+                                </MudPopover>
+                            </div>
+                            @if (CanReintegrate)
+                            {
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap" Spacing="2">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Catalog MAL ID: @selected.MyAnimeListId</MudText>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoFixHigh" Disabled="@saving" OnClick="ReintegrateWithMangaDexAsync">@(saving ? "Matching..." : "Try current MAL ID")</MudButton>
+                                </MudStack>
+                            }
                         </MudStack>
                     </MudPaper>
                 }
@@ -104,8 +149,13 @@ else
     private string status = "open";
     private string replacementUrl = "";
     private string resolutionNote = "";
+    private string metadataQuery = "";
+    private string metadataMessage = "";
+    private List<MetadataResult> metadataResults = [];
     private bool loading = true;
     private bool saving;
+    private bool isSearchingMetadata;
+    private int metadataSearchVersion;
     private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsOpen => selected?.Status == "open";
     private bool IsExternalReaderLinkIssue => string.Equals(selected?.Kind, "external-reader-link", StringComparison.OrdinalIgnoreCase);
@@ -118,8 +168,8 @@ else
 
     protected override async Task OnInitializedAsync() { user = await Auth.GetCurrentUserAsync(); if (isAdmin) await LoadAsync(); else loading = false; }
     private async Task LoadAsync() { loading = true; try { items = await AdminApi.GetIssuesAsync(status); } finally { loading = false; } }
-    private async Task OpenIssueAsync(Guid id) { selected = await AdminApi.GetIssueAsync(id); if (selected is null) Messages.Error("Could not load this issue."); else { replacementUrl = selected.FallbackReaderUrl; resolutionNote = selected.ResolutionNote; } }
-    private void CloseIssue() => selected = null;
+    private async Task OpenIssueAsync(Guid id) { selected = await AdminApi.GetIssueAsync(id); if (selected is null) Messages.Error("Could not load this issue."); else { replacementUrl = selected.FallbackReaderUrl; resolutionNote = selected.ResolutionNote; metadataQuery = selected.Title; metadataResults = []; metadataMessage = ""; } }
+    private void CloseIssue() { selected = null; metadataResults = []; metadataMessage = ""; }
     private async Task ResolveAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ResolveIssueAsync(selected.Id, new(replacementUrl, resolutionNote))) { Messages.Success("The shared link was repaired and reporters were notified.", "Issue resolved"); CloseIssue(); await LoadAsync(); } else Messages.Error("Enter a valid replacement URL.", "Could not resolve issue"); } finally { saving = false; } }
     private async Task ReintegrateWithMangaDexAsync()
     {
@@ -137,6 +187,65 @@ else
             Messages.Success($"Linked MangaDex: {result.Value.Title}. Reporters were notified.", "MangaHub reader restored");
             CloseIssue();
             await LoadAsync();
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+    private async Task SearchMetadataAsync(string query)
+    {
+        var searchVersion = ++metadataSearchVersion;
+        metadataResults = [];
+        metadataMessage = "";
+        if (string.IsNullOrWhiteSpace(query)) return;
+
+        isSearchingMetadata = true;
+        try
+        {
+            var results = await MetadataApi.SearchAsync(query);
+            if (searchVersion != metadataSearchVersion) return;
+            metadataResults = results
+                .Where(item => string.Equals(item.Source, "myanimelist", StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(item.MyAnimeListId))
+                .ToList();
+            metadataMessage = metadataResults.Count == 0 ? "No MyAnimeList matches found." : "";
+        }
+        catch
+        {
+            if (searchVersion == metadataSearchVersion) metadataMessage = "Metadata search failed.";
+        }
+        finally
+        {
+            if (searchVersion == metadataSearchVersion) isSearchingMetadata = false;
+        }
+    }
+    private async Task ReintegrateWithMetadataAsync(MetadataResult metadata)
+    {
+        if (selected is null || !IsOpen || saving) return;
+        saving = true;
+        try
+        {
+            var request = new ReintegrateIssueWithMetadataRequest(metadata.MyAnimeListId, metadata.Title, metadata.Authors, metadata.CoverUrl,
+                metadata.FirstPublishYear, metadata.Category, metadata.Description, metadata.MediaType, metadata.PublishingStatus,
+                metadata.ChapterCount, metadata.VolumeCount);
+            var result = await AdminApi.ReintegrateIssueWithMetadataAsync(selected.Id, request);
+            if (result.Value is null)
+            {
+                Messages.Error(string.IsNullOrWhiteSpace(result.Error) ? "Could not save the selected MAL result." : result.Error, "Metadata repair failed");
+                return;
+            }
+
+            if (result.Value.ReaderRestored)
+            {
+                Messages.Success(result.Value.Message + " Reporters were notified.", "MangaHub reader restored");
+                CloseIssue();
+                await LoadAsync();
+                return;
+            }
+
+            Messages.Info(result.Value.Message, "MAL metadata saved");
+            await OpenIssueAsync(selected.Id);
         }
         finally
         {

@@ -114,6 +114,41 @@ public sealed class IssueReportingServiceTests
         Assert.Single(db.Notifications);
     }
 
+    [Fact]
+    public async Task ReintegrateWithSelectedMetadataAsync_AssignsMalMetadataAndRestoresTheReader()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry
+        {
+            Title = "Unknown external title",
+            FallbackReaderUrl = "https://old.example/title/repair",
+            ReaderPreference = ReaderPreference.External
+        };
+        var reporter = new MangaUser { Username = "reader", PasswordHash = "hash" };
+        db.MangaEntries.Add(manga);
+        db.Users.Add(reporter);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = reporter.Id, MangaEntryId = manga.Id, ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.CatalogMatches.Add(new MangaDexCatalogMatch("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Correct MAL Title"));
+        var service = CreateService(db, mangaDex);
+        var report = await service.ReportAsync(reporter.Id, new(AdminIssueTypes.ExternalReaderLink, AdminIssueTypes.CatalogManga, manga.Id, "broken"), CancellationToken.None);
+
+        var result = await service.ReintegrateWithSelectedMetadataAsync(Guid.NewGuid(), report!.IssueId,
+            new("1234", "Correct MAL Title", "Author", "https://covers.example/cover.jpg", 2024, "Manga", "Summary", "manga", "ongoing", 12, 2),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result!.MetadataAssigned);
+        Assert.True(result.ReaderRestored);
+        Assert.Equal("1234", manga.MyAnimeListId);
+        Assert.Equal("Correct MAL Title", manga.Title);
+        Assert.Equal("myanimelist", manga.MetadataSource);
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", manga.MangaDexId);
+        Assert.Empty(manga.FallbackReaderUrl);
+        Assert.Equal("resolved", db.AdminIssues.Single().Status);
+    }
+
     private static IssueReportingService CreateService(MangaHub.Infrastructure.Data.MangaHubDbContext db, FakeMangaDexSource? mangaDex = null) =>
         new(
             new AdminIssueRepository(db),

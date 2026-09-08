@@ -20,6 +20,7 @@ public sealed class AdminApiService(ApiHttpClient api)
     public Task<AdminIssueDetailsResponse?> GetIssueAsync(Guid issueId) => api.GetAsync<AdminIssueDetailsResponse>($"/api/admin/issues/{issueId}");
     public Task<bool> ResolveIssueAsync(Guid issueId, ResolveAdminIssueRequest request) => api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/admin/issues/{issueId}/resolve", request);
     public Task<ApiCallResult<MangaDexCatalogMatch>> ReintegrateIssueWithMangaDexAsync(Guid issueId) => api.SendWithResultAsync<object, MangaDexCatalogMatch>(HttpMethod.Post, $"/api/admin/issues/{issueId}/reintegrate-mangadex", new { });
+    public Task<ApiCallResult<IssueMetadataReintegrationResponse>> ReintegrateIssueWithMetadataAsync(Guid issueId, ReintegrateIssueWithMetadataRequest request) => api.SendWithResultAsync<ReintegrateIssueWithMetadataRequest, IssueMetadataReintegrationResponse>(HttpMethod.Post, $"/api/admin/issues/{issueId}/reintegrate-metadata", request);
     public Task<bool> DismissIssueAsync(Guid issueId, string note = "") => api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/admin/issues/{issueId}/dismiss", new DismissAdminIssueRequest(note));
     public Task<bool> ReopenIssueAsync(Guid issueId) => api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/admin/issues/{issueId}/reopen", new { });
 }
