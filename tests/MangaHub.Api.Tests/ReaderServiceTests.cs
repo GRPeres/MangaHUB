@@ -111,6 +111,30 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_UsesChapterZeroAsAValidPlannedSeriesStart()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Zero Start", MangaDexId = "zero-start-id" };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, ReadingStatus = "planned" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.AddRange([
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-1", "1", "First numbered chapter", 20),
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-0", "0", "Prologue", 20)
+        ]);
+        mangaDex.Pages["chapter-0"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/000.jpg")];
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var launch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Equal("0", launch.CurrentChapter);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_UsesVerticalReaderForManhwa()
     {
         await using var db = TestDb.Create();

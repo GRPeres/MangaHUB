@@ -216,7 +216,8 @@ public sealed class ReaderService(
             if (isInitialTrackedChapterSelection
                 && string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)
                 && !allowChapterJump
-                && !HasExactChapter(sourceChapter.Number, "1"))
+                && !HasExactChapter(sourceChapter.Number, "1")
+                && !HasZeroBasedSeriesStart(preferredChapters))
             {
                 throw new MangaDexChapterJumpConfirmationRequiredException(
                     "1",
@@ -628,7 +629,12 @@ public sealed class ReaderService(
     {
         if (string.IsNullOrWhiteSpace(currentChapter))
         {
-            return chapters.FirstOrDefault();
+            return chapters
+                .Select((chapter, index) => new { Chapter = chapter, Index = index, Number = ParseChapterNumber(chapter.Number) })
+                .OrderBy(item => item.Number is null ? decimal.MaxValue : item.Number.Value)
+                .ThenBy(item => item.Index)
+                .Select(item => item.Chapter)
+                .FirstOrDefault();
         }
 
         var exact = chapters.FirstOrDefault(chapter => string.Equals(chapter.Number, currentChapter, StringComparison.OrdinalIgnoreCase));
@@ -660,6 +666,9 @@ public sealed class ReaderService(
         || (ParseChapterNumber(chapterNumber) is { } parsedChapter
             && ParseChapterNumber(currentChapter) is { } parsedCurrent
             && parsedChapter == parsedCurrent);
+
+    private static bool HasZeroBasedSeriesStart(IReadOnlyList<MangaSourceChapter> chapters) =>
+        chapters.Any(chapter => HasExactChapter(chapter.Number, "0"));
 
     private static bool IsChapterJump(string currentChapter, string nextChapter) =>
         ParseChapterNumber(currentChapter) is { } current
