@@ -13,7 +13,8 @@ public sealed class ShelfService(
     CatalogRepository catalog,
     UserRepository users,
     UsageTrackingService? usage = null,
-    IOptions<MangaHubOptions>? options = null)
+    IOptions<MangaHubOptions>? options = null,
+    NotificationService? notifications = null)
 {
     private DateTimeOffset ManualCheckDueBefore => DateTimeOffset.UtcNow.AddDays(-Math.Clamp(options?.Value.ExternalReaderCheckIntervalDays ?? 7, 1, 90));
 
@@ -101,6 +102,10 @@ public sealed class ShelfService(
         entry.ExternalReaderCheckPendingAt = null;
         entry.UpdatedAt = now;
         await shelf.SaveChangesAsync(cancellationToken);
+        if (notifications is not null)
+        {
+            await notifications.MarkReleaseNotificationsReadThroughAsync(userId, entry.MangaEntryId, entry.CurrentChapter, cancellationToken);
+        }
         if (usage is not null) await usage.TrackAsync(userId, UsageEventTypes.ShelfUpdated, entry.MangaEntryId, cancellationToken);
         return true;
     }
@@ -151,6 +156,13 @@ public sealed class ShelfService(
         }
 
         await shelf.SaveChangesAsync(cancellationToken);
+        if (existingShelf.IsRead)
+        {
+            if (notifications is not null)
+            {
+                await notifications.MarkReleaseNotificationsReadThroughAsync(userId, manga.Id, existingShelf.CurrentChapter, cancellationToken);
+            }
+        }
         if (usage is not null) await usage.TrackAsync(userId, isNewShelfEntry ? UsageEventTypes.ShelfAdded : UsageEventTypes.ShelfUpdated, manga.Id, cancellationToken);
         return ApiMapping.ToMangaEntryResponse(manga, existingShelf);
     }
@@ -175,6 +187,13 @@ public sealed class ShelfService(
         }
         shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
         await shelf.SaveChangesAsync(cancellationToken);
+        if (shelfEntry.IsRead)
+        {
+            if (notifications is not null)
+            {
+                await notifications.MarkReleaseNotificationsReadThroughAsync(targetUserId, entryId, shelfEntry.CurrentChapter, cancellationToken);
+            }
+        }
         if (usage is not null) await usage.TrackAsync(targetUserId, UsageEventTypes.ShelfUpdated, entryId, cancellationToken);
         return ApiMapping.ToMangaEntryResponse(shelfEntry.MangaEntry, shelfEntry);
     }

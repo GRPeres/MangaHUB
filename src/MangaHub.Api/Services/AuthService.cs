@@ -61,6 +61,13 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
         return ApiMapping.ToUserResponse(user);
     }
 
+    public async Task<UserResponse> UpdateNotificationPreferencesAsync(MangaUser user, UpdateNotificationPreferencesRequest request, CancellationToken cancellationToken)
+    {
+        user.AutoDeleteReadNotifications = request.AutoDeleteReadNotifications;
+        await users.SaveChangesAsync(cancellationToken);
+        return ApiMapping.ToUserResponse(user);
+    }
+
     public async Task<string?> UpdateAccountAsync(MangaUser user, UpdateAccountRequest request, CancellationToken cancellationToken)
     {
         var email = NormalizeEmail(request.Email);

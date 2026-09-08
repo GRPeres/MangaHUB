@@ -66,6 +66,19 @@ public sealed class AuthSessionService(AuthApiService authApi, SessionTokenStore
         return currentUser;
     }
 
+    public async Task<UserResponse?> UpdateNotificationPreferencesAsync(bool autoDeleteReadNotifications)
+    {
+        var updated = await authApi.UpdateNotificationPreferencesAsync(autoDeleteReadNotifications);
+        if (updated is not null)
+        {
+            currentUser = updated with { SessionToken = currentUser?.SessionToken ?? "" };
+            loaded = true;
+            Changed?.Invoke();
+        }
+
+        return currentUser;
+    }
+
     public async Task<ApiCallResult<UserResponse>> UpdateAccountAsync(string email, string currentPassword, string newPassword)
     {
         var result = await authApi.UpdateAccountAsync(email, currentPassword, newPassword);

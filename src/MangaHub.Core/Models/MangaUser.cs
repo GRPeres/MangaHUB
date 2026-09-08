@@ -13,5 +13,6 @@ public sealed class MangaUser
     public string Role { get; set; } = "user";
     public string PreferredLanguage { get; set; } = "en";
     public bool UsageAnalyticsEnabled { get; set; }
+    public bool AutoDeleteReadNotifications { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

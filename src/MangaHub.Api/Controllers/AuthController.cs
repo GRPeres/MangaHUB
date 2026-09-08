@@ -149,4 +149,13 @@ public sealed class AuthController(
             ? Unauthorized()
             : Ok(await auth.UpdatePreferredLanguageAsync(user, request, cancellationToken));
     }
+
+    [HttpPut("notification-preferences")]
+    public async Task<IActionResult> UpdateNotificationPreferences([FromBody] UpdateNotificationPreferencesRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        return user is null
+            ? Unauthorized()
+            : Ok(await auth.UpdateNotificationPreferencesAsync(user, request, cancellationToken));
+    }
 }

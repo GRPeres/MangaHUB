@@ -36,6 +36,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.Property(x => x.GoogleSubject).HasMaxLength(255);
             entity.Property(x => x.Role).HasMaxLength(40);
             entity.Property(x => x.PreferredLanguage).HasMaxLength(128);
+            entity.Property(x => x.AutoDeleteReadNotifications).HasDefaultValue(true);
             entity.HasIndex(x => x.Email).IsUnique().HasFilter("\"Email\" <> ''");
             entity.HasIndex(x => x.GoogleSubject).IsUnique().HasFilter("\"GoogleSubject\" <> ''");
         });

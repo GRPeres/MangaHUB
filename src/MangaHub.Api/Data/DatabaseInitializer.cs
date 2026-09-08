@@ -22,6 +22,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "SessionInvalidBefore" timestamp with time zone NULL;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "GoogleSubject" character varying(255) NOT NULL DEFAULT '';
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "UsageAnalyticsEnabled" boolean NOT NULL DEFAULT false;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS "AutoDeleteReadNotifications" boolean NOT NULL DEFAULT true;
             ALTER TABLE users ALTER COLUMN "PreferredLanguage" TYPE character varying(128);
 
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_users_Email" ON users ("Email") WHERE "Email" <> '';

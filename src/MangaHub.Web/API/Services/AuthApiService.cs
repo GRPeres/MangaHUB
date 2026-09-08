@@ -28,5 +28,11 @@ public sealed class AuthApiService(ApiHttpClient api)
             HttpMethod.Put,
             "/auth/preferences",
             new(language));
+
+    public Task<UserResponse?> UpdateNotificationPreferencesAsync(bool autoDeleteReadNotifications) =>
+        api.SendAsync<UpdateNotificationPreferencesRequest, UserResponse>(
+            HttpMethod.Put,
+            "/auth/notification-preferences",
+            new(autoDeleteReadNotifications));
 }
 

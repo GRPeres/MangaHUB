@@ -88,6 +88,14 @@
 
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
+                <MudText Typo="Typo.h2">Notification cleanup</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Keep your notification inbox tidy by removing read notifications after the server retention period. Unread notifications are never removed automatically.</MudText>
+                <MudSwitch T="bool" Value="@(currentUser?.AutoDeleteReadNotifications ?? true)" ValueChanged="SetNotificationCleanup" Color="Color.Primary" Label="Automatically delete read notifications" Disabled="@isSavingNotificationCleanup" />
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
                 <MudText Typo="Typo.h2">Sign-in and recovery</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Recovery only activates after you verify the email link. Existing accounts can keep their current password until they choose to replace it.</MudText>
                 <MudTextField T="string" @bind-Value="accountEmail" Label="Recovery email" InputType="InputType.Email" Variant="Variant.Outlined" />
@@ -191,6 +199,7 @@
     private string newPassword = "";
     private bool isSavingAccount;
     private bool isSavingUsage;
+    private bool isSavingNotificationCleanup;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -298,6 +307,27 @@
     {
         if (!await UsageApi.DeleteAsync()) { Messages.Error("Could not delete analytics history."); return; }
         Messages.Success("Analytics history deleted. Your shelf and reading progress were not changed.");
+    }
+
+    private async Task SetNotificationCleanup(bool enabled)
+    {
+        isSavingNotificationCleanup = true;
+        try
+        {
+            var updated = await Auth.UpdateNotificationPreferencesAsync(enabled);
+            if (updated is null)
+            {
+                Messages.Error("Could not update notification cleanup.");
+                return;
+            }
+
+            currentUser = updated;
+            Messages.Success(enabled ? "Read notifications will be cleaned up automatically." : "Read notifications will stay until you clear them.");
+        }
+        finally
+        {
+            isSavingNotificationCleanup = false;
+        }
     }
 
     private void AddLanguage(string language)

@@ -10,6 +10,7 @@ builder.Services.AddHostedService<LibraryScanWorker>();
 builder.Services.AddSingleton<RemoteSyncWorker>();
 builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<RemoteSyncWorker>());
 builder.Services.AddHostedService<UsageAnalyticsWorker>();
+builder.Services.AddHostedService<NotificationCleanupWorker>();
 builder.Services.AddHostedService<MaintenanceJobWorker>();
 
 var host = builder.Build();

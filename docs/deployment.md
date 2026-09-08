@@ -116,7 +116,11 @@ MangaHub__MangaDexIdleBackfillBatchSize=1
 MangaHub__MangaDexIdleBackfillMaxChaptersPerManga=2
 MangaHub__MangaUpdatesMatchPollMinutes=15
 MangaHub__MangaUpdatesMatchRetryHours=24
+MangaHub__ReadNotificationRetentionDays=7
+MangaHub__NotificationCleanupIntervalHours=24
 ```
+
+Read-notification cleanup runs at worker startup and then at the configured interval. It removes only read notifications for accounts that enable **Automatically delete read notifications** in Account settings. The defaults retain them for seven days; unread notifications are never removed automatically.
 
 Provider request pacing is configured separately for both API and worker processes under
 `MangaHub__RemoteRequests__<Provider>__RequestsPerSecond` and

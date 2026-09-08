@@ -27,5 +27,14 @@ public sealed class NotificationRepository(MangaHubDbContext db)
         db.Notifications.Where(notification => notification.UserId == userId && notification.ReadAt != null)
             .ExecuteDeleteAsync(cancellationToken);
 
+    public Task<List<MangaHub.Core.Models.MangaNotification>> GetUnreadReleaseNotificationsThroughAsync(Guid userId, Guid mangaEntryId, decimal throughChapter, CancellationToken cancellationToken) =>
+        db.Notifications
+            .Where(notification => notification.UserId == userId
+                && notification.MangaEntryId == mangaEntryId
+                && notification.ReadAt == null
+                && notification.Type == "new-chapter"
+                && notification.ChapterNumber <= throughChapter)
+            .ToListAsync(cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 }

@@ -18,7 +18,8 @@ public sealed class ReaderService(
     UsageTrackingService? usage,
     IMangaDexChapterCache mangaDexCache,
     IOptions<MangaHubOptions> options,
-    MangaSourceRegistry sources)
+    MangaSourceRegistry sources,
+    NotificationService? notifications = null)
 {
     private const string MangaDexCacheSource = "mangadex-cache";
 
@@ -372,6 +373,10 @@ public sealed class ReaderService(
         shelfEntry.IsRead = true;
         shelfEntry.UpdatedAt = DateTimeOffset.UtcNow;
         await shelf.SaveChangesAsync(cancellationToken);
+        if (notifications is not null)
+        {
+            await notifications.MarkReleaseNotificationsReadThroughAsync(userId, entryId, shelfEntry.CurrentChapter, cancellationToken);
+        }
         if (usage is not null) await usage.TrackAsync(userId, UsageEventTypes.ChapterCompleted, entryId, chapterId, "", $"chapter-complete:{entryId}:{chapterId}", null, cancellationToken);
         return true;
     }
