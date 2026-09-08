@@ -83,6 +83,42 @@ public sealed class IssueReportingServiceTests
         Assert.Empty(db.AdminIssues);
     }
 
-    private static IssueReportingService CreateService(MangaHub.Infrastructure.Data.MangaHubDbContext db) =>
-        new(new AdminIssueRepository(db), new ShelfRepository(db), new CatalogRepository(db), new NotificationRepository(db));
+    [Fact]
+    public async Task ReintegrateWithMangaDexAsync_ReplacesTheBrokenExternalReaderAndResolvesTheIssue()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry
+        {
+            Title = "Repair Me",
+            MyAnimeListId = "1234",
+            FallbackReaderUrl = "https://old.example/title/repair",
+            ReaderPreference = global::MangaHub.Core.Models.ReaderPreference.External
+        };
+        var reporter = new MangaUser { Username = "reader", PasswordHash = "hash" };
+        db.MangaEntries.Add(manga);
+        db.Users.Add(reporter);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = reporter.Id, MangaEntryId = manga.Id, ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.CatalogMatches.Add(new MangaDexCatalogMatch("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Repair Me"));
+        var service = CreateService(db, mangaDex);
+        var report = await service.ReportAsync(reporter.Id, new(AdminIssueTypes.ExternalReaderLink, AdminIssueTypes.CatalogManga, manga.Id, "broken"), CancellationToken.None);
+
+        var match = await service.ReintegrateWithMangaDexAsync(Guid.NewGuid(), report!.IssueId, CancellationToken.None);
+
+        Assert.NotNull(match);
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", manga.MangaDexId);
+        Assert.Equal(ReaderPreference.MangaHub, manga.ReaderPreference);
+        Assert.Empty(manga.FallbackReaderUrl);
+        Assert.Equal("resolved", db.AdminIssues.Single().Status);
+        Assert.Single(db.Notifications);
+    }
+
+    private static IssueReportingService CreateService(MangaHub.Infrastructure.Data.MangaHubDbContext db, FakeMangaDexSource? mangaDex = null) =>
+        new(
+            new AdminIssueRepository(db),
+            new ShelfRepository(db),
+            new CatalogRepository(db),
+            new NotificationRepository(db),
+            new MangaDexCatalogMatchService(mangaDex ?? new FakeMangaDexSource()));
 }

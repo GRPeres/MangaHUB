@@ -10,7 +10,8 @@ public sealed class IssueReportingService(
     AdminIssueRepository issues,
     ShelfRepository shelf,
     CatalogRepository catalog,
-    NotificationRepository notifications)
+    NotificationRepository notifications,
+    MangaDexCatalogMatchService mangaDexMatches)
 {
     private static readonly HashSet<string> ExternalLinkReasons = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -110,6 +111,36 @@ public sealed class IssueReportingService(
         manga.UpdatedAt = DateTimeOffset.UtcNow;
         await CloseAsync(issue, adminUserId, "resolved", request.ResolutionNote, "External reader link repaired", "An admin repaired the external reader link for", cancellationToken);
         return true;
+    }
+
+    public async Task<MangaDexCatalogMatch?> ReintegrateWithMangaDexAsync(Guid adminUserId, Guid issueId, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        if (issue is null
+            || issue.Status != "open"
+            || !string.Equals(issue.Kind, AdminIssueTypes.ExternalReaderLink, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var manga = await catalog.GetByIdAsync(issue.SubjectId, cancellationToken);
+        if (manga is null || string.IsNullOrWhiteSpace(manga.MyAnimeListId))
+        {
+            return null;
+        }
+
+        var match = await mangaDexMatches.FindAsync(manga.MyAnimeListId, manga.Title, cancellationToken);
+        if (match is null)
+        {
+            return null;
+        }
+
+        manga.MangaDexId = match.Id;
+        manga.FallbackReaderUrl = "";
+        manga.ReaderPreference = ReaderPreference.MangaHub;
+        manga.UpdatedAt = DateTimeOffset.UtcNow;
+        await CloseAsync(issue, adminUserId, "resolved", "Reintegrated with MangaDex automatically.", "MangaHub reader restored", "An admin restored MangaHub reader access for", cancellationToken);
+        return match;
     }
 
     public async Task<bool> DismissAsync(Guid adminUserId, Guid issueId, DismissAdminIssueRequest request, CancellationToken cancellationToken)

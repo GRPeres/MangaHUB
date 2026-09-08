@@ -74,6 +74,20 @@ else
                 @if (!string.IsNullOrWhiteSpace(selected.CoverUrl)) { <img class="mh-issue-cover" src="@selected.CoverUrl" alt="" /> }
                 <MudTextField T="string" @bind-Value="replacementUrl" Label="Replacement external reader URL" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
                 <MudStack Row="true" Spacing="1" Class="flex-wrap"><MudButton Href="@GoogleSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">Google</MudButton><MudButton Href="@DuckDuckGoSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">DuckDuckGo</MudButton><MudButton Href="@MangaDexSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaDex</MudButton><MudButton Href="@MalSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MAL</MudButton><MudButton Href="@MangaUpdatesSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaUpdates</MudButton></MudStack>
+                @if (IsExternalReaderLinkIssue)
+                {
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap" Spacing="2">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.subtitle2">Restore the MangaHub reader</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Uses the catalog MAL ID to find the matching MangaDex series automatically.</MudText>
+                            </MudStack>
+                            <MudTooltip Text="@(CanReintegrate ? "Find the MangaDex match and replace the broken external reader." : "This catalog entry needs a MAL ID before it can be matched automatically.")">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoFixHigh" Disabled="@(!CanReintegrate || saving)" OnClick="ReintegrateWithMangaDexAsync">@(saving ? "Matching..." : "Restore MangaHub reader")</MudButton>
+                            </MudTooltip>
+                        </MudStack>
+                    </MudPaper>
+                }
                 <MudTextField T="string" @bind-Value="resolutionNote" Label="Resolution note" Lines="2" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
                 <MudDivider />
                 @foreach (var report in selected.Reports) { <MudPaper Outlined="true" Class="pa-2"><MudText Typo="Typo.subtitle2">@ReasonLabel(report.Reason)</MudText>@if (!string.IsNullOrWhiteSpace(report.Note)) { <MudText Typo="Typo.body2">@report.Note</MudText> }<MudText Typo="Typo.caption" Color="Color.Secondary">Reported URL: @report.SnapshotValue</MudText></MudPaper> }
@@ -94,6 +108,8 @@ else
     private bool saving;
     private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsOpen => selected?.Status == "open";
+    private bool IsExternalReaderLinkIssue => string.Equals(selected?.Kind, "external-reader-link", StringComparison.OrdinalIgnoreCase);
+    private bool CanReintegrate => IsOpen && !string.IsNullOrWhiteSpace(selected?.MyAnimeListId) && string.IsNullOrWhiteSpace(selected?.MangaDexId);
     private string GoogleSearchUrl => selected is null ? "" : SearchUrl("https://www.google.com/search?q=", selected);
     private string DuckDuckGoSearchUrl => selected is null ? "" : SearchUrl("https://duckduckgo.com/?q=", selected);
     private string MangaDexSearchUrl => selected is null ? "" : BuildMangaDexSearchUrl(selected);
@@ -105,6 +121,28 @@ else
     private async Task OpenIssueAsync(Guid id) { selected = await AdminApi.GetIssueAsync(id); if (selected is null) Messages.Error("Could not load this issue."); else { replacementUrl = selected.FallbackReaderUrl; resolutionNote = selected.ResolutionNote; } }
     private void CloseIssue() => selected = null;
     private async Task ResolveAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ResolveIssueAsync(selected.Id, new(replacementUrl, resolutionNote))) { Messages.Success("The shared link was repaired and reporters were notified.", "Issue resolved"); CloseIssue(); await LoadAsync(); } else Messages.Error("Enter a valid replacement URL.", "Could not resolve issue"); } finally { saving = false; } }
+    private async Task ReintegrateWithMangaDexAsync()
+    {
+        if (selected is null || !CanReintegrate) return;
+        saving = true;
+        try
+        {
+            var result = await AdminApi.ReintegrateIssueWithMangaDexAsync(selected.Id);
+            if (result.Value is null)
+            {
+                Messages.Warning(string.IsNullOrWhiteSpace(result.Error) ? "No automatic MangaDex match was found. Keep or repair the external link instead." : result.Error, "MangaHub reader not restored");
+                return;
+            }
+
+            Messages.Success($"Linked MangaDex: {result.Value.Title}. Reporters were notified.", "MangaHub reader restored");
+            CloseIssue();
+            await LoadAsync();
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
     private async Task DismissAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.DismissIssueAsync(selected.Id, resolutionNote)) { Messages.Info("The issue was dismissed and reporters were notified."); CloseIssue(); await LoadAsync(); } } finally { saving = false; } }
     private async Task ReopenAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ReopenIssueAsync(selected.Id)) { await OpenIssueAsync(selected.Id); await LoadAsync(); } } finally { saving = false; } }
     private static string IssueLabel(string kind) => kind == "external-reader-link" ? "External reader link" : kind;

@@ -99,6 +99,18 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         return await issues.ResolveExternalReaderLinkAsync(user.Id, issueId, request, cancellationToken) ? NoContent() : BadRequest("Enter a valid replacement URL.");
     }
 
+    [HttpPost("issues/{issueId:guid}/reintegrate-mangadex")]
+    public async Task<IActionResult> ReintegrateWithMangaDex(Guid issueId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var match = await issues.ReintegrateWithMangaDexAsync(user.Id, issueId, cancellationToken);
+        return match is null
+            ? NotFound("No automatic MangaDex match was found. Keep or replace the external link instead.")
+            : Ok(match);
+    }
+
     [HttpPost("issues/{issueId:guid}/dismiss")]
     public async Task<IActionResult> DismissIssue(Guid issueId, [FromBody] DismissAdminIssueRequest request, CancellationToken cancellationToken)
     {
