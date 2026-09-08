@@ -14,7 +14,7 @@ public sealed class OpenLibraryService(IOpenLibraryClient openLibrary)
 
         var results = await openLibrary.SearchAsync(query, cancellationToken);
         return results
-            .Select(x => new OpenLibraryResult(x.Key, x.Title, x.Authors, x.CoverUrl, x.FirstPublishYear, x.Category, x.Description))
+            .Select(x => new OpenLibraryResult(x.Key, x.Title, x.Authors, x.CoverUrl, x.FirstPublishYear, x.Category, x.Description, x.AlternateTitles))
             .ToList();
     }
 }

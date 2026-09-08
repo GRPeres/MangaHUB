@@ -50,7 +50,8 @@ public sealed class MetadataService(
                 null,
                 null,
                 item.Key,
-                ""));
+                "",
+                item.AlternateTitles ?? []));
         }
 
         return combined;

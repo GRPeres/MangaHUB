@@ -53,6 +53,10 @@
                                                         <MudStack Spacing="0" Class="flex-grow-1 overflow-hidden">
                                                             <MudText Typo="Typo.body2" Class="text-truncate">@item.Title</MudText>
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">@item.Authors @(!string.IsNullOrWhiteSpace(item.Source) ? $"- {item.Source}" : "")</MudText>
+                                                            @if (GetAlternateTitles(item).Count > 0)
+                                                            {
+                                                                <MudText Typo="Typo.caption" Color="Color.Primary" Class="mh-suggestion-alternate-titles" title="@string.Join(" · ", GetAlternateTitles(item))">Also known as: @string.Join(" · ", GetAlternateTitles(item).Take(2))</MudText>
+                                                            }
                                                         </MudStack>
                                                     </MudStack>
                                                 </MudButton>

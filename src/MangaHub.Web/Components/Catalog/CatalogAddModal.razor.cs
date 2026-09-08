@@ -341,6 +341,12 @@ public partial class CatalogAddModal
         }
     }
 
+    private static List<string> GetAlternateTitles(MetadataResult item) => (item.AlternateTitles ?? [])
+        .Where(title => !string.IsNullOrWhiteSpace(title) && !string.Equals(title, item.Title, StringComparison.OrdinalIgnoreCase))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Take(4)
+        .ToList();
+
     private static bool IsHttpUrl(string value) =>
         Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);

@@ -59,7 +59,8 @@ public sealed class MyAnimeListClient(HttpClient httpClient, IOptions<MangaHubOp
                 ReadInt(node, "num_chapters"),
                 ReadInt(node, "num_volumes"),
                 "",
-                id));
+                id,
+                ReadAlternativeTitles(node, title)));
         }
 
         return results;
@@ -67,7 +68,7 @@ public sealed class MyAnimeListClient(HttpClient httpClient, IOptions<MangaHubOp
 
     private static string BuildSearchUrl(string query)
     {
-        const string fields = "id,title,main_picture,start_date,synopsis,media_type,status,genres,authors,num_volumes,num_chapters";
+        const string fields = "id,title,alternative_titles,main_picture,start_date,synopsis,media_type,status,genres,authors,num_volumes,num_chapters";
         return $"manga?q={Uri.EscapeDataString(query)}&limit=12&nsfw=true&fields={Uri.EscapeDataString(fields)}";
     }
 
@@ -130,5 +131,35 @@ public sealed class MyAnimeListClient(HttpClient httpClient, IOptions<MangaHubOp
         var first = ReadString(node, "first_name");
         var last = ReadString(node, "last_name");
         return string.Join(" ", new[] { first, last }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+    }
+
+    private static List<string> ReadAlternativeTitles(JsonElement node, string title)
+    {
+        if (!node.TryGetProperty("alternative_titles", out var alternatives) || alternatives.ValueKind != JsonValueKind.Object)
+        {
+            return [];
+        }
+
+        var values = new List<string>();
+        foreach (var property in alternatives.EnumerateObject())
+        {
+            if (property.Value.ValueKind == JsonValueKind.String)
+            {
+                values.Add(property.Value.GetString() ?? "");
+            }
+            else if (property.Value.ValueKind == JsonValueKind.Array)
+            {
+                values.AddRange(property.Value.EnumerateArray()
+                    .Where(value => value.ValueKind == JsonValueKind.String)
+                    .Select(value => value.GetString() ?? ""));
+            }
+        }
+
+        return values
+            .Select(value => value.Trim())
+            .Where(value => !string.IsNullOrWhiteSpace(value) && !string.Equals(value, title, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
     }
 }

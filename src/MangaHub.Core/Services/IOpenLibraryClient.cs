@@ -13,6 +13,7 @@ public sealed record OpenLibrarySearchResult(
     string CoverUrl,
     int? FirstPublishYear,
     string Category,
-    string Description);
+    string Description,
+    List<string>? AlternateTitles = null);
 
 public sealed record OpenLibraryWorkDetails(string Category, string Description);

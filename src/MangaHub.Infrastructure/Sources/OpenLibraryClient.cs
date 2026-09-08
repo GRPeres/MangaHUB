@@ -7,7 +7,7 @@ public sealed class OpenLibraryClient(HttpClient httpClient) : IOpenLibraryClien
 {
     public async Task<IReadOnlyList<OpenLibrarySearchResult>> SearchAsync(string query, CancellationToken cancellationToken)
     {
-        var fields = "key,title,author_name,cover_i,first_publish_year,subject,first_sentence";
+        var fields = "key,title,title_suggest,subtitle,alternative_title,author_name,cover_i,first_publish_year,subject,first_sentence";
         var url = $"/search.json?q={Uri.EscapeDataString(query)}&fields={fields}&limit=12";
         var response = await httpClient.GetAsync(url, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -33,10 +33,11 @@ public sealed class OpenLibraryClient(HttpClient httpClient) : IOpenLibraryClien
             var description = item.TryGetProperty("first_sentence", out var sentenceElement)
                 ? ReadStringOrArray(sentenceElement)
                 : "";
+            var alternateTitles = ReadAlternativeTitles(item, title);
 
             if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(title))
             {
-                results.Add(new OpenLibrarySearchResult(key, title, authors, coverUrl, year, category, description));
+                results.Add(new OpenLibrarySearchResult(key, title, authors, coverUrl, year, category, description, alternateTitles));
             }
         }
 
@@ -104,5 +105,31 @@ public sealed class OpenLibraryClient(HttpClient httpClient) : IOpenLibraryClien
             JsonValueKind.Object when element.TryGetProperty("value", out var value) => value.GetString() ?? "",
             _ => ""
         };
+    }
+
+    private static List<string> ReadAlternativeTitles(JsonElement item, string title)
+    {
+        var values = new List<string>();
+        foreach (var name in new[] { "title_suggest", "subtitle", "alternative_title" })
+        {
+            if (!item.TryGetProperty(name, out var value)) continue;
+            if (value.ValueKind == JsonValueKind.String)
+            {
+                values.Add(value.GetString() ?? "");
+            }
+            else if (value.ValueKind == JsonValueKind.Array)
+            {
+                values.AddRange(value.EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.String)
+                    .Select(item => item.GetString() ?? ""));
+            }
+        }
+
+        return values
+            .Select(value => value.Trim())
+            .Where(value => !string.IsNullOrWhiteSpace(value) && !string.Equals(value, title, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
     }
 }

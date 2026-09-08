@@ -20,3 +20,9 @@
     max-height: min(24rem, 55vh);
     overflow-y: auto;
 }
+
+.mh-suggestion-alternate-titles {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

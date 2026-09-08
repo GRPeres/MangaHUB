@@ -15,7 +15,8 @@ public sealed record MangaSearchResult(
     string Description,
     string CoverUrl,
     string Status,
-    string Source);
+    string Source,
+    List<string>? AlternateTitles = null);
 
 public sealed record MangaSourceSeries(
     string Id,

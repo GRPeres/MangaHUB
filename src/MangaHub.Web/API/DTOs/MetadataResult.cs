@@ -14,4 +14,5 @@ public sealed record MetadataResult(
     int? ChapterCount,
     int? VolumeCount,
     string OpenLibraryKey,
-    string MyAnimeListId);
+    string MyAnimeListId,
+    List<string>? AlternateTitles = null);

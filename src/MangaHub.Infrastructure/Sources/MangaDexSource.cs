@@ -31,7 +31,10 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
             var title = ReadLocalized(attributes.GetProperty("title"));
             var description = attributes.TryGetProperty("description", out var descriptions) ? ReadLocalized(descriptions) : "";
             var status = attributes.TryGetProperty("status", out var statusElement) ? statusElement.GetString() ?? "unknown" : "unknown";
-            results.Add(new MangaSearchResult(id, title, description, "", status, Name));
+            var alternateTitles = attributes.TryGetProperty("altTitles", out var alternatives)
+                ? ReadAlternateTitles(alternatives, title)
+                : [];
+            results.Add(new MangaSearchResult(id, title, description, "", status, Name, alternateTitles));
         }
 
         return results;
@@ -232,6 +235,18 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
         var first = element.EnumerateObject().FirstOrDefault();
         return first.Value.ValueKind == JsonValueKind.String ? first.Value.GetString() ?? "" : "";
     }
+
+    private static List<string> ReadAlternateTitles(JsonElement element, string title) => element.ValueKind != JsonValueKind.Array
+        ? []
+        : element.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.Object)
+            .SelectMany(item => item.EnumerateObject())
+            .Where(property => property.Value.ValueKind == JsonValueKind.String)
+            .Select(property => property.Value.GetString()?.Trim() ?? "")
+            .Where(value => !string.IsNullOrWhiteSpace(value) && !string.Equals(value, title, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
 
     private static string ReadString(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";

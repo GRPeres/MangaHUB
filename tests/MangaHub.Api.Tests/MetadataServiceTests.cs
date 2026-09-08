@@ -27,6 +27,25 @@ public sealed class MetadataServiceTests
     }
 
     [Fact]
+    public async Task SearchAsync_PreservesAlternateTitlesFromEverySource()
+    {
+        var service = new MetadataService(
+            new FakeMyAnimeListClient([
+                new MetadataResult("myanimelist", "1", "Kaguya-sama wa Kokurasetai", "Aka Akasaka", "", 2015, "Romance", "", "manga", "finished", 281, 28, "", "1", ["Kaguya-sama: Love Is War"])
+            ]),
+            new FakeOpenLibraryClient([
+                new OpenLibrarySearchResult("/works/OL1W", "Oshi no Ko", "Aka Akasaka", "", 2020, "Drama", "", ["My Star"])
+            ]),
+            new MangaDexCatalogMatchService(new FakeMangaDexSource()),
+            new MangaUpdatesCatalogMatchService(new FakeMangaUpdatesClient()));
+
+        var results = await service.SearchAsync("kaguya", includeOpenLibrary: true, CancellationToken.None);
+
+        Assert.Equal(["Kaguya-sama: Love Is War"], results[0].AlternateTitles);
+        Assert.Equal(["My Star"], results[1].AlternateTitles);
+    }
+
+    [Fact]
     public async Task FindMangaDexMatchAsync_ReturnsTheMangaDexMatchForMalMetadata()
     {
         var mangaDex = new FakeMangaDexSource();
