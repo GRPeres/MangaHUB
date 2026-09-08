@@ -14,4 +14,11 @@ public sealed class AdminApiService(ApiHttpClient api)
     public Task<DiagnosticResult?> TestMangaDexAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/mangadex");
     public Task<OperationsOverviewResponse?> GetOperationsAsync() => api.GetAsync<OperationsOverviewResponse>("/api/admin/operations");
     public Task<MaintenanceJobResponse?> QueueMaintenanceJobAsync(string type) => api.SendAsync<object, MaintenanceJobResponse>(HttpMethod.Post, "/api/admin/operations/jobs", new { type });
+    public Task<int> GetOpenIssueCountAsync() => api.GetAsync<int>("/api/admin/issues/open-count");
+    public async Task<List<AdminIssueListItemResponse>> GetIssuesAsync(string status = "open", int offset = 0, int limit = 40) =>
+        await api.GetAsync<List<AdminIssueListItemResponse>>($"/api/admin/issues?status={Uri.EscapeDataString(status)}&offset={offset}&limit={limit}") ?? [];
+    public Task<AdminIssueDetailsResponse?> GetIssueAsync(Guid issueId) => api.GetAsync<AdminIssueDetailsResponse>($"/api/admin/issues/{issueId}");
+    public Task<bool> ResolveIssueAsync(Guid issueId, ResolveAdminIssueRequest request) => api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/admin/issues/{issueId}/resolve", request);
+    public Task<bool> DismissIssueAsync(Guid issueId, string note = "") => api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/admin/issues/{issueId}/dismiss", new DismissAdminIssueRequest(note));
+    public Task<bool> ReopenIssueAsync(Guid issueId) => api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/admin/issues/{issueId}/reopen", new { });
 }

@@ -16,6 +16,13 @@ public sealed record MangaNotificationResponse(Guid Id, Guid MangaEntryId, strin
 public sealed record WebPushSubscriptionRequest(string Endpoint, string P256dh, string Auth, string DeviceLabel = "");
 public sealed record WebPushSubscriptionResponse(Guid Id, string DeviceLabel, DateTimeOffset UpdatedAt);
 public sealed record DiagnosticResult(bool Success, string Message);
+public sealed record CreateAdminIssueReportRequest(string Kind, string SubjectType, Guid SubjectId, string Reason, string Note = "");
+public sealed record AdminIssueReportStateResponse(Guid IssueId, bool HasMyOpenReport, int ReportCount, string Status);
+public sealed record AdminIssueListItemResponse(Guid Id, string Kind, string SubjectType, Guid SubjectId, string Status, string Priority, string Title, string CoverUrl, int ReportCount, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record AdminIssueReportResponse(Guid Id, string Reason, string Note, string SnapshotValue, DateTimeOffset CreatedAt);
+public sealed record AdminIssueDetailsResponse(Guid Id, string Kind, string SubjectType, Guid SubjectId, string Status, string Priority, string Title, string CoverUrl, string MetadataJson, string FallbackReaderUrl, string MyAnimeListId, string MangaDexId, string MangaUpdatesId, string ResolutionNote, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, List<AdminIssueReportResponse> Reports);
+public sealed record ResolveAdminIssueRequest(string FallbackReaderUrl, string ResolutionNote = "");
+public sealed record DismissAdminIssueRequest(string ResolutionNote = "");
 public sealed record OperationsOverviewResponse(int CatalogCount, int MangaDexLinkedCount, int MangaUpdatesLinkedCount, int CachedChapterCount, long CacheBytes, DateTimeOffset? LastMangaDexSyncAt, DateTimeOffset? LastMangaUpdatesSyncAt, DateTimeOffset? LastLibraryScanAt, int StaleMangaDexCount, int StaleMangaUpdatesCount, List<MaintenanceJobResponse> RecentJobs);
 public sealed record MaintenanceJobResponse(Guid Id, string Type, string Status, DateTimeOffset RequestedAt, DateTimeOffset? StartedAt, DateTimeOffset? CompletedAt, string Error);
 public sealed record QueueMaintenanceJobRequest(string Type);
@@ -105,7 +112,8 @@ public sealed record ExternalReaderCheckInResponse(
     string CurrentChapter,
     string ExternalReaderLatestChapter,
     string FallbackReaderUrl,
-    DateTimeOffset OpenedAt);
+    DateTimeOffset OpenedAt,
+    bool CanReportExternalReaderLink = false);
 
 public sealed record ExternalReaderProgressRequest(string CurrentChapter, string? LatestChapter = null);
 

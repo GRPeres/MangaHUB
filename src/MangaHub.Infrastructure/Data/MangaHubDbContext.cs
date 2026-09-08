@@ -21,6 +21,8 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
     public DbSet<UsageDailySummary> UsageDailySummaries => Set<UsageDailySummary>();
     public DbSet<MaintenanceJob> MaintenanceJobs => Set<MaintenanceJob>();
+    public DbSet<AdminIssue> AdminIssues => Set<AdminIssue>();
+    public DbSet<AdminIssueReport> AdminIssueReports => Set<AdminIssueReport>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -174,6 +176,31 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.Property(x => x.Status).HasMaxLength(20);
             entity.Property(x => x.Error).HasColumnType("text");
             entity.HasIndex(x => new { x.Status, x.RequestedAt });
+        });
+
+        modelBuilder.Entity<AdminIssue>(entity =>
+        {
+            entity.ToTable("admin_issues");
+            entity.Property(x => x.Kind).HasMaxLength(80);
+            entity.Property(x => x.SubjectType).HasMaxLength(80);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.Priority).HasMaxLength(20);
+            entity.Property(x => x.TitleSnapshot).HasMaxLength(255);
+            entity.Property(x => x.MetadataJson).HasColumnType("jsonb");
+            entity.Property(x => x.ResolutionNote).HasColumnType("text");
+            entity.HasIndex(x => new { x.Kind, x.SubjectType, x.SubjectId, x.Status });
+            entity.HasIndex(x => new { x.Status, x.UpdatedAt });
+            entity.HasMany(x => x.Reports).WithOne(x => x.Issue).HasForeignKey(x => x.AdminIssueId);
+        });
+
+        modelBuilder.Entity<AdminIssueReport>(entity =>
+        {
+            entity.ToTable("admin_issue_reports");
+            entity.Property(x => x.Reason).HasMaxLength(40);
+            entity.Property(x => x.Note).HasColumnType("text");
+            entity.Property(x => x.SnapshotValue).HasColumnType("text");
+            entity.HasIndex(x => new { x.AdminIssueId, x.ReporterUserId }).IsUnique();
+            entity.HasIndex(x => new { x.ReporterUserId, x.CreatedAt });
         });
     }
 }

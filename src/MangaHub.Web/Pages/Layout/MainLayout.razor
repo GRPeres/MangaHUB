@@ -159,10 +159,23 @@
                     @if (_externalReaderDetailsOpen)
                     {
                         <MudTextField T="string" @bind-Value="_externalReaderLatestChapter" Label="Latest chapter you found" HelperText="Optional. A higher chapter keeps a +N reminder visible until you reach it." Variant="Variant.Outlined" Immediate="true" Disabled="@_savingExternalReaderProgress" />
+                        @if (_externalReaderCheckIn.CanReportExternalReaderLink && !_externalReaderLinkAlreadyReported)
+                        {
+                            <MudButton Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Filled.ReportProblem" Disabled="@_savingExternalReaderProgress" OnClick="OpenExternalReaderLinkReport">Report a problem with this link</MudButton>
+                        }
+                        else if (_externalReaderCheckIn.CanReportExternalReaderLink)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">This reader link has been reported for admin review.</MudText>
+                        }
                     }
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_savingExternalReaderProgress" OnClick="UpdateExternalReaderProgress">@(_savingExternalReaderProgress ? "Saving..." : "Save progress")</MudButton>
                 </MudStack>
             </section>
         </div>
     }
+    <ExternalReaderLinkIssueReportModal @bind-Open="_externalReaderLinkReportOpen"
+                                        MangaEntryId="@(_externalReaderCheckIn?.MangaEntryId ?? Guid.Empty)"
+                                        Title="@(_externalReaderCheckIn?.Title ?? "")"
+                                        Url="@(_externalReaderCheckIn?.FallbackReaderUrl ?? "")"
+                                        OnReported="OnExternalReaderLinkReported" />
 </div>

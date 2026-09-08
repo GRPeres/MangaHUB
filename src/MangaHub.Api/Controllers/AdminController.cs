@@ -8,7 +8,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, AdminOperationsService operations, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
+public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, AdminOperationsService operations, IssueReportingService issues, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
 {
     [HttpGet("users")]
     public async Task<IActionResult> Users(CancellationToken cancellationToken)
@@ -60,6 +60,61 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         if (user is null) return Unauthorized();
         if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
         return Ok(await operations.GetOverviewAsync(cancellationToken));
+    }
+
+    [HttpGet("issues")]
+    public async Task<IActionResult> Issues([FromQuery] string? status, [FromQuery] int offset = 0, [FromQuery] int limit = 40, CancellationToken cancellationToken = default)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return Ok(await issues.ListAsync(status, offset, limit, cancellationToken));
+    }
+
+    [HttpGet("issues/open-count")]
+    public async Task<IActionResult> OpenIssueCount(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return Ok(await issues.CountOpenAsync(cancellationToken));
+    }
+
+    [HttpGet("issues/{issueId:guid}")]
+    public async Task<IActionResult> Issue(Guid issueId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var result = await issues.GetDetailsAsync(issueId, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("issues/{issueId:guid}/resolve")]
+    public async Task<IActionResult> ResolveIssue(Guid issueId, [FromBody] ResolveAdminIssueRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return await issues.ResolveExternalReaderLinkAsync(user.Id, issueId, request, cancellationToken) ? NoContent() : BadRequest("Enter a valid replacement URL.");
+    }
+
+    [HttpPost("issues/{issueId:guid}/dismiss")]
+    public async Task<IActionResult> DismissIssue(Guid issueId, [FromBody] DismissAdminIssueRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return await issues.DismissAsync(user.Id, issueId, request, cancellationToken) ? NoContent() : NotFound();
+    }
+
+    [HttpPost("issues/{issueId:guid}/reopen")]
+    public async Task<IActionResult> ReopenIssue(Guid issueId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return await issues.ReopenAsync(user.Id, issueId, cancellationToken) ? NoContent() : NotFound();
     }
 
     [HttpPost("operations/jobs")]

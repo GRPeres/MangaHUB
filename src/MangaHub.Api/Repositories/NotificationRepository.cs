@@ -6,6 +6,7 @@ namespace MangaHub.Api.Repositories;
 
 public sealed class NotificationRepository(MangaHubDbContext db)
 {
+    public void Add(MangaHub.Core.Models.MangaNotification notification) => db.Notifications.Add(notification);
     public Task<List<MangaNotificationResponse>> ListAsync(Guid userId, CancellationToken cancellationToken) =>
         db.Notifications.AsNoTracking().Where(notification => notification.UserId == userId)
             .OrderByDescending(notification => notification.CreatedAt).Take(50)

@@ -44,7 +44,8 @@ public sealed record ExternalReaderCheckInResponse(
     string CurrentChapter,
     string ExternalReaderLatestChapter,
     string FallbackReaderUrl,
-    DateTimeOffset OpenedAt);
+    DateTimeOffset OpenedAt,
+    bool CanReportExternalReaderLink = false);
 
 public sealed record ExternalReaderProgressRequest(string CurrentChapter, string? LatestChapter = null);
 

@@ -90,6 +90,34 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "Error" text NOT NULL DEFAULT ''
             );
             CREATE INDEX IF NOT EXISTS "IX_maintenance_jobs_Status_RequestedAt" ON maintenance_jobs ("Status", "RequestedAt");
+            CREATE TABLE IF NOT EXISTS admin_issues (
+                "Id" uuid PRIMARY KEY,
+                "Kind" character varying(80) NOT NULL,
+                "SubjectType" character varying(80) NOT NULL,
+                "SubjectId" uuid NOT NULL,
+                "Status" character varying(20) NOT NULL DEFAULT 'open',
+                "Priority" character varying(20) NOT NULL DEFAULT 'normal',
+                "TitleSnapshot" character varying(255) NOT NULL,
+                "MetadataJson" jsonb NOT NULL DEFAULT '{{}}'::jsonb,
+                "CreatedAt" timestamp with time zone NOT NULL,
+                "UpdatedAt" timestamp with time zone NOT NULL,
+                "ResolvedAt" timestamp with time zone NULL,
+                "ResolvedByUserId" uuid NULL,
+                "ResolutionNote" text NOT NULL DEFAULT ''
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_admin_issues_OpenSubject" ON admin_issues ("Kind", "SubjectType", "SubjectId") WHERE "Status" = 'open';
+            CREATE INDEX IF NOT EXISTS "IX_admin_issues_Status_UpdatedAt" ON admin_issues ("Status", "UpdatedAt");
+            CREATE TABLE IF NOT EXISTS admin_issue_reports (
+                "Id" uuid PRIMARY KEY,
+                "AdminIssueId" uuid NOT NULL,
+                "ReporterUserId" uuid NOT NULL,
+                "Reason" character varying(40) NOT NULL,
+                "Note" text NOT NULL DEFAULT '',
+                "SnapshotValue" text NOT NULL DEFAULT '',
+                "CreatedAt" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_admin_issue_reports_Issue_User" ON admin_issue_reports ("AdminIssueId", "ReporterUserId");
+            CREATE INDEX IF NOT EXISTS "IX_admin_issue_reports_User_CreatedAt" ON admin_issue_reports ("ReporterUserId", "CreatedAt");
 
             UPDATE users
             SET "Role" = 'admin'

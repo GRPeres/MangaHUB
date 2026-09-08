@@ -1,0 +1,118 @@
+@page "/issues"
+@page "/admin/issues"
+@using MangaHub.Web.API.DTOs
+@using MangaHub.Web.API.Services
+@inject AuthSessionService Auth
+@inject AdminApiService AdminApi
+@inject MessageService Messages
+
+<PageTitle>Issues</PageTitle>
+
+@if (user is null)
+{
+    <MudAlert Severity="Severity.Warning">Sign in to view issues.</MudAlert>
+}
+else if (!isAdmin)
+{
+    <MudAlert Severity="Severity.Error">Admin permissions are required.</MudAlert>
+}
+else
+{
+    <MudStack Spacing="3">
+        <AdminSectionNav />
+        <section class="mh-dashboard-header">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.overline" Color="Color.Error">Admin maintenance</MudText>
+                <MudText Typo="Typo.h2">Issues</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Reader reports and future maintenance problems in one repair queue.</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="1">
+                <MudSelect T="string" @bind-Value="status" Dense="true" Variant="Variant.Outlined">
+                    <MudSelectItem T="string" Value="@("open")">Open</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("resolved")">Resolved</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("dismissed")">Dismissed</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("all")">All</MudSelectItem>
+                </MudSelect>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" aria-label="Refresh issues" />
+            </MudStack>
+        </section>
+        @if (loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (items.Count == 0)
+        {
+            <MudPaper Outlined="true" Class="pa-5"><MudText Typo="Typo.h6">No @status issues</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">The repair queue is clear.</MudText></MudPaper>
+        }
+        else
+        {
+            <MudGrid Spacing="2">
+                @foreach (var item in items)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudPaper Outlined="true" Class="pa-3 mh-issue-card">
+                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                <MudAvatar Size="Size.Medium" Color="Color.Error"><MudIcon Icon="@IssueIcon(item.Kind)" /></MudAvatar>
+                                <MudStack Spacing="0" Class="flex-grow-1"><MudText Typo="Typo.subtitle1">@item.Title</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@IssueLabel(item.Kind) · @item.ReportCount report@(item.ReportCount == 1 ? "" : "s") · @item.UpdatedAt.ToLocalTime().ToString("g")</MudText></MudStack>
+                                <MudChip T="string" Size="Size.Small" Color="@StatusColor(item.Status)">@item.Status</MudChip>
+                                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" OnClick="() => OpenIssueAsync(item.Id)" aria-label="Open issue" />
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </MudStack>
+}
+
+@if (selected is not null)
+{
+    <div class="mh-modal-backdrop" @onclick="CloseIssue">
+        <section class="mh-modal mh-issue-detail-modal" role="dialog" aria-modal="true" aria-labelledby="issue-detail-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween"><MudStack Spacing="0"><MudText id="issue-detail-title" Typo="Typo.h2">@selected.Title</MudText><MudText Typo="Typo.body2" Color="Color.Error">@IssueLabel(selected.Kind) · @selected.Reports.Count report@(selected.Reports.Count == 1 ? "" : "s")</MudText></MudStack><MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseIssue" aria-label="Close issue" /></MudStack>
+                @if (!string.IsNullOrWhiteSpace(selected.CoverUrl)) { <img class="mh-issue-cover" src="@selected.CoverUrl" alt="" /> }
+                <MudTextField T="string" @bind-Value="replacementUrl" Label="Replacement external reader URL" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
+                <MudStack Row="true" Spacing="1" Class="flex-wrap"><MudButton Href="@GoogleSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">Google</MudButton><MudButton Href="@DuckDuckGoSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">DuckDuckGo</MudButton><MudButton Href="@MangaDexSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaDex</MudButton><MudButton Href="@MalSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MAL</MudButton><MudButton Href="@MangaUpdatesSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaUpdates</MudButton></MudStack>
+                <MudTextField T="string" @bind-Value="resolutionNote" Label="Resolution note" Lines="2" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
+                <MudDivider />
+                @foreach (var report in selected.Reports) { <MudPaper Outlined="true" Class="pa-2"><MudText Typo="Typo.subtitle2">@ReasonLabel(report.Reason)</MudText>@if (!string.IsNullOrWhiteSpace(report.Note)) { <MudText Typo="Typo.body2">@report.Note</MudText> }<MudText Typo="Typo.caption" Color="Color.Secondary">Reported URL: @report.SnapshotValue</MudText></MudPaper> }
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">@if (selected.Status == "open") { <MudButton Variant="Variant.Text" Color="Color.Secondary" Disabled="@saving" OnClick="DismissAsync">Dismiss</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@saving" OnClick="ResolveAsync">@(saving ? "Saving..." : "Save repair and resolve")</MudButton> } else { <MudButton Variant="Variant.Outlined" Disabled="@saving" OnClick="ReopenAsync">Reopen</MudButton> }</MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
+
+@code {
+    private UserResponse? user;
+    private List<AdminIssueListItemResponse> items = [];
+    private AdminIssueDetailsResponse? selected;
+    private string status = "open";
+    private string replacementUrl = "";
+    private string resolutionNote = "";
+    private bool loading = true;
+    private bool saving;
+    private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private bool IsOpen => selected?.Status == "open";
+    private string GoogleSearchUrl => selected is null ? "" : SearchUrl("https://www.google.com/search?q=", selected);
+    private string DuckDuckGoSearchUrl => selected is null ? "" : SearchUrl("https://duckduckgo.com/?q=", selected);
+    private string MangaDexSearchUrl => selected is null ? "" : BuildMangaDexSearchUrl(selected);
+    private string MalSearchUrl => selected is null ? "" : BuildMalSearchUrl(selected);
+    private string MangaUpdatesSearchUrl => selected is null ? "" : BuildMangaUpdatesSearchUrl(selected);
+
+    protected override async Task OnInitializedAsync() { user = await Auth.GetCurrentUserAsync(); if (isAdmin) await LoadAsync(); else loading = false; }
+    private async Task LoadAsync() { loading = true; try { items = await AdminApi.GetIssuesAsync(status); } finally { loading = false; } }
+    private async Task OpenIssueAsync(Guid id) { selected = await AdminApi.GetIssueAsync(id); if (selected is null) Messages.Error("Could not load this issue."); else { replacementUrl = selected.FallbackReaderUrl; resolutionNote = selected.ResolutionNote; } }
+    private void CloseIssue() => selected = null;
+    private async Task ResolveAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ResolveIssueAsync(selected.Id, new(replacementUrl, resolutionNote))) { Messages.Success("The shared link was repaired and reporters were notified.", "Issue resolved"); CloseIssue(); await LoadAsync(); } else Messages.Error("Enter a valid replacement URL.", "Could not resolve issue"); } finally { saving = false; } }
+    private async Task DismissAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.DismissIssueAsync(selected.Id, resolutionNote)) { Messages.Info("The issue was dismissed and reporters were notified."); CloseIssue(); await LoadAsync(); } } finally { saving = false; } }
+    private async Task ReopenAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ReopenIssueAsync(selected.Id)) { await OpenIssueAsync(selected.Id); await LoadAsync(); } } finally { saving = false; } }
+    private static string IssueLabel(string kind) => kind == "external-reader-link" ? "External reader link" : kind;
+    private static string IssueIcon(string kind) => kind == "external-reader-link" ? Icons.Material.Filled.LinkOff : Icons.Material.Filled.ReportProblem;
+    private static Color StatusColor(string value) => value == "resolved" ? Color.Success : value == "dismissed" ? Color.Secondary : Color.Error;
+    private static string ReasonLabel(string reason) => reason switch { "wrong-manga" => "Wrong manga", "obsolete" => "Obsolete or unhelpful", "unsafe" => "Potentially unsafe", "broken" => "Broken link", _ => "Other problem" };
+    private static string SearchUrl(string baseUrl, AdminIssueDetailsResponse issue) => baseUrl + Uri.EscapeDataString(issue.Title + " manga read");
+    private static string BuildMangaDexSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MangaDexId) ? SearchUrl("https://mangadex.org/search?q=", issue) : $"https://mangadex.org/title/{issue.MangaDexId}";
+    private static string BuildMalSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MyAnimeListId) ? SearchUrl("https://myanimelist.net/manga.php?q=", issue) : $"https://myanimelist.net/manga/{issue.MyAnimeListId}";
+    private static string BuildMangaUpdatesSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MangaUpdatesId) ? SearchUrl("https://www.mangaupdates.com/search.html?search=", issue) : $"https://www.mangaupdates.com/series/{issue.MangaUpdatesId}";
+}

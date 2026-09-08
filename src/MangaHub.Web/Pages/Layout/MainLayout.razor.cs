@@ -1,6 +1,7 @@
 using MangaHub.Web.Services;
 using MangaHub.Web.API.Services;
 using MangaHub.Web.API.DTOs;
+using MangaHub.Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.JSInterop;
@@ -17,6 +18,7 @@ public partial class MainLayout : IDisposable
     [Inject] private Microsoft.JSInterop.IJSRuntime JS { get; set; } = default!;
     [Inject] private MessageService Messages { get; set; } = default!;
     [Inject] private ShelfApiService ShelfApi { get; set; } = default!;
+    [Inject] private IssueApiService Issues { get; set; } = default!;
 
     private bool _drawerExpanded;
     private bool _darkMode;
@@ -36,6 +38,8 @@ public partial class MainLayout : IDisposable
     private string _externalReaderLatestChapter = "";
     private bool _savingExternalReaderProgress;
     private bool _externalReaderDetailsOpen;
+    private bool _externalReaderLinkReportOpen;
+    private bool _externalReaderLinkAlreadyReported;
     private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
@@ -85,6 +89,7 @@ public partial class MainLayout : IDisposable
                 _externalReaderCurrentChapter = _externalReaderCheckIn.CurrentChapter;
                 _externalReaderLatestChapter = _externalReaderCheckIn.ExternalReaderLatestChapter;
                 _externalReaderDetailsOpen = false;
+                _externalReaderLinkAlreadyReported = (await Issues.GetReportStateAsync(AdminIssueTypes.ExternalReaderLink, AdminIssueTypes.CatalogManga, _externalReaderCheckIn.MangaEntryId))?.HasMyOpenReport == true;
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -248,6 +253,8 @@ public partial class MainLayout : IDisposable
     }
 
     private void ToggleExternalReaderDetails() => _externalReaderDetailsOpen = !_externalReaderDetailsOpen;
+    private void OpenExternalReaderLinkReport() => _externalReaderLinkReportOpen = true;
+    private Task OnExternalReaderLinkReported(AdminIssueReportStateResponse _) { _externalReaderLinkAlreadyReported = true; return Task.CompletedTask; }
 
     private void ToggleDrawer() => _drawerExpanded = !_drawerExpanded;
     private async Task ToggleTheme()

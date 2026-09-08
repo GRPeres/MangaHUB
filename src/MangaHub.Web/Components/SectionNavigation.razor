@@ -3,15 +3,17 @@
 <nav @ref="navigationElement" class="@NavigationClass" aria-label="@AriaLabel">
     @foreach (var item in Items)
     {
-        <MudButton Variant="@(IsActive(item) ? Variant.Filled : Variant.Outlined)"
-                   Color="@item.ButtonColor"
-                   Size="Size.Medium"
-                   StartIcon="@item.Icon"
-                   Class="@ButtonClass(item)"
-                   OnClick="@(() => SelectAsync(item.Key))"
-                   aria-current="@(IsActive(item) ? "page" : null)">
-            @item.Label
-        </MudButton>
+        <MudBadge Content="@item.Count?.ToString()" Color="Color.Error" Overlap="true" Origin="Origin.TopRight" Visible="@(item.Count is > 0)">
+            <MudButton Variant="@(IsActive(item) ? Variant.Filled : Variant.Outlined)"
+                       Color="@item.ButtonColor"
+                       Size="Size.Medium"
+                       StartIcon="@item.Icon"
+                       Class="@ButtonClass(item)"
+                       OnClick="@(() => SelectAsync(item.Key))"
+                       aria-current="@(IsActive(item) ? "page" : null)">
+                @item.Label
+            </MudButton>
+        </MudBadge>
     }
     @if (CollapseOnOverflow && isOverflowing)
     {

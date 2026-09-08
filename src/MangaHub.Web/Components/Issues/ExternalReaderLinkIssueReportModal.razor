@@ -1,0 +1,57 @@
+@using MangaHub.Web.API.DTOs
+@using MangaHub.Web.API.Services
+@using MangaHub.Core.Services
+@inject IssueApiService Issues
+@inject MessageService Messages
+
+@if (Open)
+{
+    <div class="mh-modal-backdrop" @onclick="Close">
+        <section class="mh-modal mh-issue-report-modal" role="dialog" aria-modal="true" aria-labelledby="external-link-report-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween">
+                    <MudStack Spacing="0"><MudText id="external-link-report-title" Typo="Typo.h2">Report external link</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">@Title</MudText></MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="Close" aria-label="Close link report" />
+                </MudStack>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">This flags the shared catalog link for an admin to review. Your reading progress is unchanged.</MudText>
+                <MudSelect T="string" @bind-Value="reason" Label="What is wrong?" Variant="Variant.Outlined">
+                    <MudSelectItem T="string" Value="@("broken")">The link is broken</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("wrong-manga")">It opens the wrong manga</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("obsolete")">It is obsolete or unhelpful</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("unsafe")">It looks unsafe</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("other")">Something else</MudSelectItem>
+                </MudSelect>
+                <MudTextField T="string" @bind-Value="note" Label="Optional note" Lines="3" Variant="Variant.Outlined" MaxLength="800" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Current link: @Url</MudText>
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2"><MudButton Variant="Variant.Text" OnClick="Close">Cancel</MudButton><MudButton Variant="Variant.Filled" Color="Color.Error" Disabled="@saving" OnClick="Submit">@(saving ? "Reporting..." : "Report link")</MudButton></MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public Guid MangaEntryId { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Url { get; set; } = "";
+    [Parameter] public EventCallback<AdminIssueReportStateResponse> OnReported { get; set; }
+    private string reason = "broken";
+    private string note = "";
+    private bool saving;
+    private Task Close() => OpenChanged.InvokeAsync(false);
+    private async Task Submit()
+    {
+        if (saving || MangaEntryId == Guid.Empty) return;
+        saving = true;
+        try
+        {
+            var result = await Issues.ReportAsync(new(AdminIssueTypes.ExternalReaderLink, AdminIssueTypes.CatalogManga, MangaEntryId, reason, note));
+            if (result is null) { Messages.Error("This link can no longer be reported from your shelf.", "Link report"); return; }
+            await OnReported.InvokeAsync(result);
+            Messages.Success("Thanks. An admin can now review this shared reader link.", "Link reported");
+            await Close();
+        }
+        finally { saving = false; }
+    }
+}

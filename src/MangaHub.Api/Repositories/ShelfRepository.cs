@@ -167,7 +167,8 @@ public sealed class ShelfRepository(MangaHubDbContext db)
                 entry.CurrentChapter,
                 entry.ExternalReaderLatestChapter,
                 entry.MangaEntry.FallbackReaderUrl,
-                entry.ExternalReaderCheckPendingAt!.Value))
+                entry.ExternalReaderCheckPendingAt!.Value,
+                entry.MangaEntry.MangaDexId == "" && entry.MangaEntry.FallbackReaderUrl != ""))
             .ToListAsync(cancellationToken);
 
     private static bool IsActivelyTracked(MangaEntryResponse entry) =>
