@@ -6,11 +6,13 @@ public static class AdminIssueTypes
 {
     public const string CatalogManga = "catalog-manga";
     public const string ExternalReaderLink = "external-reader-link";
+    public const string DuplicateCatalogId = "duplicate-catalog-id";
 
     private static readonly IReadOnlyDictionary<string, AdminIssueTypeDefinition> Definitions =
         new Dictionary<string, AdminIssueTypeDefinition>(StringComparer.OrdinalIgnoreCase)
         {
-            [ExternalReaderLink] = new(ExternalReaderLink, CatalogManga, "normal")
+            [ExternalReaderLink] = new(ExternalReaderLink, CatalogManga, "normal"),
+            [DuplicateCatalogId] = new(DuplicateCatalogId, CatalogManga, "high")
         };
 
     public static bool TryGet(string kind, out AdminIssueTypeDefinition definition) =>

@@ -82,10 +82,17 @@ public sealed class IssueReportingService(
             : new AdminIssueReportStateResponse(issue.Id, issue.Reports.Any(report => report.ReporterUserId == userId), issue.Reports.Count, issue.Status);
     }
 
-    public Task<List<AdminIssueListItemResponse>> ListAsync(string? status, int offset, int limit, CancellationToken cancellationToken) =>
-        issues.ListAsync(status, offset, limit, cancellationToken);
+    public async Task<List<AdminIssueListItemResponse>> ListAsync(string? status, int offset, int limit, CancellationToken cancellationToken)
+    {
+        await DiscoverDuplicateCatalogIssuesAsync(cancellationToken);
+        return await issues.ListAsync(status, offset, limit, cancellationToken);
+    }
 
-    public Task<int> CountOpenAsync(CancellationToken cancellationToken) => issues.CountOpenAsync(cancellationToken);
+    public async Task<int> CountOpenAsync(CancellationToken cancellationToken)
+    {
+        await DiscoverDuplicateCatalogIssuesAsync(cancellationToken);
+        return await issues.CountOpenAsync(cancellationToken);
+    }
 
     public async Task<AdminIssueDetailsResponse?> GetDetailsAsync(Guid issueId, CancellationToken cancellationToken)
     {
@@ -94,10 +101,14 @@ public sealed class IssueReportingService(
         var manga = issue.SubjectType == AdminIssueTypes.CatalogManga
             ? await catalog.GetByIdNoTrackingAsync(issue.SubjectId, cancellationToken)
             : null;
+        var duplicateEntries = TryReadDuplicateIdentity(issue.MetadataJson, out var duplicateIdentity)
+            ? await catalog.GetDuplicateIdentityEntriesAsync(duplicateIdentity.Provider, duplicateIdentity.Value, cancellationToken)
+            : null;
         return new AdminIssueDetailsResponse(issue.Id, issue.Kind, issue.SubjectType, issue.SubjectId, issue.Status, issue.Priority,
             issue.TitleSnapshot, manga?.CoverUrl ?? "", issue.MetadataJson, manga?.FallbackReaderUrl ?? "", manga?.MyAnimeListId ?? "", manga?.MangaDexId ?? "", manga?.MangaUpdatesId ?? "",
             issue.ResolutionNote, issue.CreatedAt, issue.UpdatedAt,
-            issue.Reports.OrderByDescending(report => report.CreatedAt).Select(report => new AdminIssueReportResponse(report.Id, report.Reason, report.Note, report.SnapshotValue, report.CreatedAt)).ToList());
+            issue.Reports.OrderByDescending(report => report.CreatedAt).Select(report => new AdminIssueReportResponse(report.Id, report.Reason, report.Note, report.SnapshotValue, report.CreatedAt)).ToList(),
+            duplicateEntries);
     }
 
     public async Task<bool> ResolveExternalReaderLinkAsync(Guid adminUserId, Guid issueId, ResolveAdminIssueRequest request, CancellationToken cancellationToken)
@@ -194,6 +205,35 @@ public sealed class IssueReportingService(
         return new IssueMetadataReintegrationResponse(true, true, $"Linked MangaDex: {match.Title}.", match.Id, match.Title);
     }
 
+    public async Task<bool> MergeDuplicateCatalogIssueAsync(Guid adminUserId, Guid issueId, MergeDuplicateCatalogIssueRequest request, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        if (issue is null
+            || issue.Status != "open"
+            || !string.Equals(issue.Kind, AdminIssueTypes.DuplicateCatalogId, StringComparison.OrdinalIgnoreCase)
+            || !TryReadDuplicateIdentity(issue.MetadataJson, out var duplicateIdentity))
+        {
+            return false;
+        }
+
+        var entries = await catalog.GetDuplicateIdentityEntriesAsync(duplicateIdentity.Provider, duplicateIdentity.Value, cancellationToken);
+        if (entries.Count < 2 || !entries.Any(entry => entry.Id == request.KeepMangaEntryId))
+        {
+            return false;
+        }
+
+        foreach (var duplicate in entries.Where(entry => entry.Id != request.KeepMangaEntryId))
+        {
+            if (!await catalog.MergeDuplicateEntriesAsync(request.KeepMangaEntryId, duplicate.Id, cancellationToken))
+            {
+                return false;
+            }
+        }
+
+        await CloseAsync(issue, adminUserId, "resolved", $"Merged duplicate {DuplicateLabel(duplicateIdentity.Provider)} ID {duplicateIdentity.Value} into the selected catalog entry.", "Duplicate catalog entries merged", "An admin merged duplicate catalog records for", cancellationToken);
+        return true;
+    }
+
     public async Task<bool> DismissAsync(Guid adminUserId, Guid issueId, DismissAdminIssueRequest request, CancellationToken cancellationToken)
     {
         var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
@@ -253,6 +293,61 @@ public sealed class IssueReportingService(
         manga.MetadataSource = "myanimelist";
         manga.MyAnimeListId = request.MyAnimeListId.Trim();
     }
+
+    private async Task DiscoverDuplicateCatalogIssuesAsync(CancellationToken cancellationToken)
+    {
+        var duplicateGroups = await catalog.FindDuplicateIdentityGroupsAsync(cancellationToken);
+        foreach (var group in duplicateGroups)
+        {
+            var subject = group.Entries.OrderBy(entry => entry.CreatedAt).First();
+            if (await issues.GetOpenAsync(AdminIssueTypes.DuplicateCatalogId, AdminIssueTypes.CatalogManga, subject.Id, cancellationToken) is not null)
+            {
+                continue;
+            }
+
+            issues.Add(new AdminIssue
+            {
+                Kind = AdminIssueTypes.DuplicateCatalogId,
+                SubjectType = AdminIssueTypes.CatalogManga,
+                SubjectId = subject.Id,
+                Priority = "high",
+                TitleSnapshot = subject.Title,
+                MetadataJson = JsonSerializer.Serialize(new DuplicateIdentityMetadata(group.Provider, group.Value))
+            });
+        }
+
+        if (duplicateGroups.Count > 0)
+        {
+            await issues.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static bool TryReadDuplicateIdentity(string metadataJson, out DuplicateIdentityMetadata identity)
+    {
+        identity = new DuplicateIdentityMetadata("", "");
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<DuplicateIdentityMetadata>(metadataJson);
+            if (parsed is null || string.IsNullOrWhiteSpace(parsed.Provider) || string.IsNullOrWhiteSpace(parsed.Value)) return false;
+            identity = parsed;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string DuplicateLabel(string provider) => provider switch
+    {
+        "myanimelist" => "MyAnimeList",
+        "mangadex" => "MangaDex",
+        "mangaupdates" => "MangaUpdates",
+        "openlibrary" => "OpenLibrary",
+        _ => provider
+    };
+
+    private sealed record DuplicateIdentityMetadata(string Provider, string Value);
 
     private static bool IsHttpUrl(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);

@@ -121,6 +121,17 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         return result is null ? BadRequest("Select a valid MyAnimeList result for this open external reader issue.") : Ok(result);
     }
 
+    [HttpPost("issues/{issueId:guid}/merge-duplicates")]
+    public async Task<IActionResult> MergeDuplicateCatalogIssue(Guid issueId, [FromBody] MergeDuplicateCatalogIssueRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return await issues.MergeDuplicateCatalogIssueAsync(user.Id, issueId, request, cancellationToken)
+            ? NoContent()
+            : BadRequest("Choose a valid duplicate catalog entry to keep.");
+    }
+
     [HttpPost("issues/{issueId:guid}/dismiss")]
     public async Task<IActionResult> DismissIssue(Guid issueId, [FromBody] DismissAdminIssueRequest request, CancellationToken cancellationToken)
     {

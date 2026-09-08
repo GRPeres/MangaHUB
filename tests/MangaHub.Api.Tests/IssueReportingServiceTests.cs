@@ -149,6 +149,40 @@ public sealed class IssueReportingServiceTests
         Assert.Equal("resolved", db.AdminIssues.Single().Status);
     }
 
+    [Fact]
+    public async Task MergeDuplicateCatalogIssueAsync_MovesShelfDataAndRemovesTheDuplicate()
+    {
+        await using var db = TestDb.Create();
+        var keep = new MangaEntry { Title = "Primary title", MyAnimeListId = "777" };
+        var remove = new MangaEntry { Title = "Duplicate title", MyAnimeListId = "777" };
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash" };
+        db.MangaEntries.AddRange(keep, remove);
+        db.Users.Add(user);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = user.Id, MangaEntryId = keep.Id, CurrentChapter = "12", ReadingStatus = "reading", IsRead = false });
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = user.Id, MangaEntryId = remove.Id, CurrentChapter = "14", ReadingStatus = "reading", IsRead = true, Notes = "Imported note" });
+        db.Notifications.Add(new MangaNotification { UserId = user.Id, MangaEntryId = remove.Id, Type = "new-chapter", ChapterNumber = 14, Language = "en", Title = "Duplicate title" });
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+
+        var listed = await service.ListAsync("open", 0, 40, CancellationToken.None);
+        var issue = Assert.Single(listed);
+        var details = await service.GetDetailsAsync(issue.Id, CancellationToken.None);
+
+        Assert.NotNull(details);
+        Assert.Equal(2, details!.DuplicateCatalogEntries!.Count);
+        var merged = await service.MergeDuplicateCatalogIssueAsync(Guid.NewGuid(), issue.Id, new(keep.Id), CancellationToken.None);
+
+        Assert.True(merged);
+        Assert.Single(db.MangaEntries);
+        var shelf = Assert.Single(db.UserMangaEntries);
+        Assert.Equal(keep.Id, shelf.MangaEntryId);
+        Assert.Equal("14", shelf.CurrentChapter);
+        Assert.True(shelf.IsRead);
+        Assert.Contains("Imported note", shelf.Notes);
+        Assert.Equal(keep.Id, Assert.Single(db.Notifications).MangaEntryId);
+        Assert.Equal("resolved", db.AdminIssues.Single().Status);
+    }
+
     private static IssueReportingService CreateService(MangaHub.Infrastructure.Data.MangaHubDbContext db, FakeMangaDexSource? mangaDex = null) =>
         new(
             new AdminIssueRepository(db),

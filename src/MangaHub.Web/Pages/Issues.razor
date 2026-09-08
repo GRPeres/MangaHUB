@@ -73,8 +73,11 @@ else
             <MudStack Spacing="3">
                 <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween"><MudStack Spacing="0"><MudText id="issue-detail-title" Typo="Typo.h2">@selected.Title</MudText><MudText Typo="Typo.body2" Color="Color.Error">@IssueLabel(selected.Kind) · @selected.Reports.Count report@(selected.Reports.Count == 1 ? "" : "s")</MudText></MudStack><MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseIssue" aria-label="Close issue" /></MudStack>
                 @if (!string.IsNullOrWhiteSpace(selected.CoverUrl)) { <img class="mh-issue-cover" src="@selected.CoverUrl" alt="" /> }
-                <MudTextField T="string" @bind-Value="replacementUrl" Label="Replacement external reader URL" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
-                <MudStack Row="true" Spacing="1" Class="flex-wrap"><MudButton Href="@GoogleSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">Google</MudButton><MudButton Href="@DuckDuckGoSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">DuckDuckGo</MudButton><MudButton Href="@MangaDexSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaDex</MudButton><MudButton Href="@MalSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MAL</MudButton><MudButton Href="@MangaUpdatesSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaUpdates</MudButton></MudStack>
+                @if (IsExternalReaderLinkIssue)
+                {
+                    <MudTextField T="string" @bind-Value="replacementUrl" Label="Replacement external reader URL" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
+                    <MudStack Row="true" Spacing="1" Class="flex-wrap"><MudButton Href="@GoogleSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">Google</MudButton><MudButton Href="@DuckDuckGoSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">DuckDuckGo</MudButton><MudButton Href="@MangaDexSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaDex</MudButton><MudButton Href="@MalSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MAL</MudButton><MudButton Href="@MangaUpdatesSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaUpdates</MudButton></MudStack>
+                }
                 @if (IsExternalReaderLinkIssue)
                 {
                     <MudPaper Outlined="true" Class="pa-3">
@@ -133,10 +136,28 @@ else
                         </MudStack>
                     </MudPaper>
                 }
+                @if (IsDuplicateCatalogIssue && selected.DuplicateCatalogEntries is { Count: > 1 } duplicates)
+                {
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudStack Spacing="0"><MudText Typo="Typo.subtitle2">Duplicate catalog identity</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Choose the record to keep. Shelf entries, progress, release state, notifications, and analytics references are moved into it before the other record is removed.</MudText></MudStack>
+                            @foreach (var duplicate in duplicates)
+                            {
+                                <MudPaper Outlined="true" Class="pa-2 mh-duplicate-entry">
+                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
+                                        @if (!string.IsNullOrWhiteSpace(duplicate.CoverUrl)) { <img src="@duplicate.CoverUrl" alt="" class="mh-duplicate-cover" /> }
+                                        <MudStack Spacing="0" Class="flex-grow-1"><MudText Typo="Typo.subtitle2">@duplicate.Title</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">MAL: @DisplayIdentifier(duplicate.MyAnimeListId) · MangaDex: @DisplayIdentifier(duplicate.MangaDexId) · MangaUpdates: @DisplayIdentifier(duplicate.MangaUpdatesId)</MudText></MudStack>
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.MergeType" Disabled="@(!IsOpen || saving)" OnClick="() => MergeDuplicatesAsync(duplicate.Id)">Keep this entry</MudButton>
+                                    </MudStack>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
                 <MudTextField T="string" @bind-Value="resolutionNote" Label="Resolution note" Lines="2" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
                 <MudDivider />
                 @foreach (var report in selected.Reports) { <MudPaper Outlined="true" Class="pa-2"><MudText Typo="Typo.subtitle2">@ReasonLabel(report.Reason)</MudText>@if (!string.IsNullOrWhiteSpace(report.Note)) { <MudText Typo="Typo.body2">@report.Note</MudText> }<MudText Typo="Typo.caption" Color="Color.Secondary">Reported URL: @report.SnapshotValue</MudText></MudPaper> }
-                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">@if (selected.Status == "open") { <MudButton Variant="Variant.Text" Color="Color.Secondary" Disabled="@saving" OnClick="DismissAsync">Dismiss</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@saving" OnClick="ResolveAsync">@(saving ? "Saving..." : "Save repair and resolve")</MudButton> } else { <MudButton Variant="Variant.Outlined" Disabled="@saving" OnClick="ReopenAsync">Reopen</MudButton> }</MudStack>
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">@if (selected.Status == "open") { <MudButton Variant="Variant.Text" Color="Color.Secondary" Disabled="@saving" OnClick="DismissAsync">Dismiss</MudButton>@if (IsExternalReaderLinkIssue) { <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@saving" OnClick="ResolveAsync">@(saving ? "Saving..." : "Save repair and resolve")</MudButton> } } else { <MudButton Variant="Variant.Outlined" Disabled="@saving" OnClick="ReopenAsync">Reopen</MudButton> }</MudStack>
             </MudStack>
         </section>
     </div>
@@ -159,6 +180,7 @@ else
     private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsOpen => selected?.Status == "open";
     private bool IsExternalReaderLinkIssue => string.Equals(selected?.Kind, "external-reader-link", StringComparison.OrdinalIgnoreCase);
+    private bool IsDuplicateCatalogIssue => string.Equals(selected?.Kind, "duplicate-catalog-id", StringComparison.OrdinalIgnoreCase);
     private bool CanReintegrate => IsOpen && !string.IsNullOrWhiteSpace(selected?.MyAnimeListId) && string.IsNullOrWhiteSpace(selected?.MangaDexId);
     private string GoogleSearchUrl => selected is null ? "" : SearchUrl("https://www.google.com/search?q=", selected);
     private string DuckDuckGoSearchUrl => selected is null ? "" : SearchUrl("https://duckduckgo.com/?q=", selected);
@@ -252,12 +274,34 @@ else
             saving = false;
         }
     }
+    private async Task MergeDuplicatesAsync(Guid keepMangaEntryId)
+    {
+        if (selected is null || !IsDuplicateCatalogIssue || !IsOpen) return;
+        saving = true;
+        try
+        {
+            if (!await AdminApi.MergeDuplicateCatalogIssueAsync(selected.Id, keepMangaEntryId))
+            {
+                Messages.Error("The duplicate records changed before they could be merged. Refresh the issue and try again.", "Could not merge duplicates");
+                return;
+            }
+
+            Messages.Success("The duplicate catalog entries were merged. Existing shelf records now point to the selected entry.", "Catalog entries merged");
+            CloseIssue();
+            await LoadAsync();
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
     private async Task DismissAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.DismissIssueAsync(selected.Id, resolutionNote)) { Messages.Info("The issue was dismissed and reporters were notified."); CloseIssue(); await LoadAsync(); } } finally { saving = false; } }
     private async Task ReopenAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ReopenIssueAsync(selected.Id)) { await OpenIssueAsync(selected.Id); await LoadAsync(); } } finally { saving = false; } }
-    private static string IssueLabel(string kind) => kind == "external-reader-link" ? "External reader link" : kind;
-    private static string IssueIcon(string kind) => kind == "external-reader-link" ? Icons.Material.Filled.LinkOff : Icons.Material.Filled.ReportProblem;
+    private static string IssueLabel(string kind) => kind switch { "external-reader-link" => "External reader link", "duplicate-catalog-id" => "Duplicate catalog ID", _ => kind };
+    private static string IssueIcon(string kind) => kind switch { "external-reader-link" => Icons.Material.Filled.LinkOff, "duplicate-catalog-id" => Icons.Material.Filled.ContentCopy, _ => Icons.Material.Filled.ReportProblem };
     private static Color StatusColor(string value) => value == "resolved" ? Color.Success : value == "dismissed" ? Color.Secondary : Color.Error;
     private static string ReasonLabel(string reason) => reason switch { "wrong-manga" => "Wrong manga", "obsolete" => "Obsolete or unhelpful", "unsafe" => "Potentially unsafe", "broken" => "Broken link", _ => "Other problem" };
+    private static string DisplayIdentifier(string value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     private static string SearchUrl(string baseUrl, AdminIssueDetailsResponse issue) => baseUrl + Uri.EscapeDataString(issue.Title + " manga read");
     private static string BuildMangaDexSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MangaDexId) ? SearchUrl("https://mangadex.org/search?q=", issue) : $"https://mangadex.org/title/{issue.MangaDexId}";
     private static string BuildMalSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MyAnimeListId) ? SearchUrl("https://myanimelist.net/manga.php?q=", issue) : $"https://myanimelist.net/manga/{issue.MyAnimeListId}";

@@ -5,3 +5,5 @@
 .mh-issue-metadata-popover { max-width: min(560px, calc(100vw - 3rem)); width: 100%; }
 .mh-issue-metadata-results { max-height: 320px; overflow-y: auto; }
 .mh-issue-metadata-cover { border-radius: 4px; height: 48px; object-fit: cover; width: 32px; }
+.mh-duplicate-entry { background-color: var(--mud-palette-background-grey); }
+.mh-duplicate-cover { border-radius: 4px; height: 56px; object-fit: cover; width: 38px; }
