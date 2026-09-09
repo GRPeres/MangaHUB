@@ -9,6 +9,26 @@ namespace MangaHub.Api.Tests;
 public sealed class IssueReportingServiceTests
 {
     [Fact]
+    public async Task Discovery_WithSharedMalAndMangaDexIds_CreatesOneIssuePerPair()
+    {
+        await using var db = TestDb.Create();
+        db.MangaEntries.AddRange(
+            new MangaEntry { Title = "First", MyAnimeListId = "178093", MangaDexId = "b6b89f54-81c1-4e7e-ae80-b4dccdd63ada" },
+            new MangaEntry { Title = "First duplicate", MyAnimeListId = "178093", MangaDexId = "b6b89f54-81c1-4e7e-ae80-b4dccdd63ada" },
+            new MangaEntry { Title = "Second", MyAnimeListId = "187686", MangaDexId = "a53f4d4e-91fb-4242-b328-637fb32d0729" },
+            new MangaEntry { Title = "Second duplicate", MyAnimeListId = "187686", MangaDexId = "a53f4d4e-91fb-4242-b328-637fb32d0729" });
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+
+        var results = await service.ListAsync("open", 0, 40, CancellationToken.None);
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(2, results.Select(issue => issue.SubjectId).Distinct().Count());
+        Assert.Equal(2, await service.CountOpenAsync(CancellationToken.None));
+        Assert.Equal(2, db.AdminIssues.Count());
+    }
+
+    [Fact]
     public void Registry_OnlyAllowsKnownIssueSubjectPairs()
     {
         Assert.True(AdminIssueTypes.Supports(AdminIssueTypes.ExternalReaderLink, AdminIssueTypes.CatalogManga));

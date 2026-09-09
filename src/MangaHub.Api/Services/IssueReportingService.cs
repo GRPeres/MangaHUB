@@ -297,9 +297,12 @@ public sealed class IssueReportingService(
     private async Task DiscoverDuplicateCatalogIssuesAsync(CancellationToken cancellationToken)
     {
         var duplicateGroups = await catalog.FindDuplicateIdentityGroupsAsync(cancellationToken);
+        var discoveredSubjects = new HashSet<Guid>();
         foreach (var group in duplicateGroups)
         {
-            var subject = group.Entries.OrderBy(entry => entry.CreatedAt).First();
+            var subject = group.Entries.OrderBy(entry => entry.CreatedAt).ThenBy(entry => entry.Id).First();
+            // Queries cannot see Added issues until SaveChanges; coalesce shared provider IDs in this batch.
+            if (!discoveredSubjects.Add(subject.Id)) continue;
             if (await issues.GetOpenAsync(AdminIssueTypes.DuplicateCatalogId, AdminIssueTypes.CatalogManga, subject.Id, cancellationToken) is not null)
             {
                 continue;
