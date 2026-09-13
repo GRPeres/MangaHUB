@@ -7,7 +7,9 @@ public partial class MangaBento
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public int Columns { get; set; } = 4;
     [Parameter] public int Gap { get; set; } = 4;
-    [Parameter] public bool AnimationEnabled { get; set; } = true;
+    // The package's IntersectionObserver can outlive a disposed WASM component during modal and page transitions.
+    // Layout remains CSS-grid based, so disabling only the entrance animation avoids those JS interop failures.
+    [Parameter] public bool AnimationEnabled { get; set; }
     [Parameter] public string Class { get; set; } = "";
     [Parameter] public int? ItemMinHeight { get; set; }
     [Parameter] public int? RowHeight { get; set; }
