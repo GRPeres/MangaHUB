@@ -4,9 +4,14 @@
 @inject IssueApiService Issues
 @inject MessageService Messages
 
-<MudTooltip Text="Report a catalog problem">
-    <MudIconButton Icon="@Icons.Material.Filled.Flag" Color="Color.Secondary" Size="Size.Small" Class="@Class" OnClick="OpenDialog" aria-label="Report a catalog problem" />
-</MudTooltip>
+<MudMenu Icon="@Icons.Material.Filled.MoreVert"
+         Color="Color.Inherit"
+         Class="@($"mh-card-report-menu {Class}")"
+         AnchorOrigin="Origin.BottomRight"
+         TransformOrigin="Origin.TopRight"
+         aria-label="More catalog actions">
+    <MudMenuItem Icon="@Icons.Material.Filled.Flag" OnClick="OpenDialog">Report a problem</MudMenuItem>
+</MudMenu>
 
 @if (open)
 {
