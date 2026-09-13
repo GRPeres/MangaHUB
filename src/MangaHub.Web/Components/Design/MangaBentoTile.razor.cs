@@ -18,6 +18,7 @@ public partial class MangaBentoTile
     private string? Role => Clickable ? "button" : null;
     private string? TabIndex => Clickable ? "0" : null;
     private string TileClass => $"mh-bento-tile mh-bento-scheme-{Scheme} {(Clickable ? "is-clickable" : "")} {Class}".Trim();
+    private string SpanStyle => $"grid-column:span {Math.Max(1, ColSpan)};grid-row:span {Math.Max(1, RowSpan)}";
 
     private async Task HandleKeyDown(KeyboardEventArgs args)
     {

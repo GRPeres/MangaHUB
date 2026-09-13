@@ -7,9 +7,6 @@ public partial class MangaBento
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public int Columns { get; set; } = 4;
     [Parameter] public int Gap { get; set; } = 4;
-    // The package's IntersectionObserver can outlive a disposed WASM component during modal and page transitions.
-    // Layout remains CSS-grid based, so disabling only the entrance animation avoids those JS interop failures.
-    [Parameter] public bool AnimationEnabled { get; set; }
     [Parameter] public string Class { get; set; } = "";
     [Parameter] public int? ItemMinHeight { get; set; }
     [Parameter] public int? RowHeight { get; set; }
@@ -20,7 +17,11 @@ public partial class MangaBento
     {
         get
         {
-            var styles = new List<string>();
+            var styles = new List<string>
+            {
+                $"--mh-bento-columns:{Math.Max(1, Columns)}",
+                $"--bzb-gap:{Math.Max(0, Gap)}px"
+            };
             if (ItemMinHeight is not null)
             {
                 styles.Add($"--mh-bento-item-min-height:{ItemMinHeight}px");

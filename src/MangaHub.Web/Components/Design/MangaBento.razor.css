@@ -9,6 +9,19 @@
     --bzb-row-height: var(--mh-bento-row-height);
 }
 
+.mh-bento-host .mh-bento-grid {
+    display: grid;
+    gap: var(--bzb-gap, 4px);
+    grid-auto-flow: row dense;
+    grid-auto-rows: var(--mh-bento-row-height, 116px);
+    grid-template-columns: repeat(var(--mh-bento-columns, 4), minmax(0, 1fr));
+}
+
+.mh-bento-host ::deep .mh-bento-item {
+    min-height: var(--mh-bento-item-min-height, 116px);
+    min-width: 0;
+}
+
 .mh-bento-host ::deep .mh-bento-grid {
     --bz-padding: 0;
     --bzb-gap: 4px;
