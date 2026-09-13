@@ -83,6 +83,7 @@ MangaHub__Email__FromAddress=<sender address>
 MangaHub__Email__FromName=MangaHub
 MangaHub__GoogleAuth__ClientId=<Google OAuth client id>
 MangaHub__GoogleAuth__ClientSecret=<Google OAuth client secret>
+MangaHub__InternalWorkerToken=<long random shared worker token>
 ```
 
 ## Account Recovery And Google Sign-In
@@ -100,11 +101,8 @@ Workers:
 ```text
 DOTNET_ENVIRONMENT=Production
 ConnectionStrings__MangaHub=Host=postgres;Database=mangahub;Username=mangahub;Password=<password>
-MangaHub__JwtSecret=<long secret>
-MangaHub__LibraryPath=/library
-MangaHub__MangaDexEnabled=true
-MangaHub__MyAnimeListClientId=<client id>
-MangaHub__MangaDexCachePath=/mangadex-cache
+MangaHub__InternalApiUrl=http://mangahub-api:8080
+MangaHub__InternalWorkerToken=<the same long random shared worker token>
 MangaHub__MangaDexMaintenanceHour=4
 MangaHub__MangaDexMaintenanceTimeZone=America/Sao_Paulo
 MangaHub__MangaDexPrefetchBatchSize=6
@@ -122,9 +120,9 @@ MangaHub__NotificationCleanupIntervalHours=24
 
 Read-notification cleanup runs at worker startup and then at the configured interval. It removes only read notifications for accounts that enable **Automatically delete read notifications** in Account settings. The defaults retain them for seven days; unread notifications are never removed automatically.
 
-Provider request pacing is configured separately for both API and worker processes under
+Provider request pacing is configured only on the API under
 `MangaHub__RemoteRequests__<Provider>__RequestsPerSecond` and
-`MangaHub__RemoteRequests__<Provider>__MaxConcurrency`. See `docs/operations.md` for defaults.
+`MangaHub__RemoteRequests__<Provider>__MaxConcurrency`. The worker schedules jobs through an authenticated internal API endpoint, so all external-provider calls share the API's single priority queue.
 
 ## Library Mount
 
@@ -140,20 +138,12 @@ Change `/mnt/storage/manga` to the actual TrueNAS manga dataset path.
 
 The admin-only MangaDex reader downloads chapters as CBZ cache files. The reader serves later page views from this local cache and does not request those pages from MangaDex again.
 
-Add the same separate writable mount to both `mangahub-api` and `mangahub-workers`; do not use the read-only `/library` mount. The API reads cached chapters, while the worker pre-downloads newly released MangaDex chapters.
+Add the separate writable mount to `mangahub-api`; do not use the read-only `/library` mount. The worker schedules cache work through the API, which performs the provider calls and writes the cache.
 
 ```yaml
 mangahub-api:
   environment:
     MangaHub__MangaDexCachePath: /mangadex-cache
-  volumes:
-    - mangadex-cache:/mangadex-cache
-
-mangahub-workers:
-  environment:
-    MangaHub__MangaDexCachePath: /mangadex-cache
-    MangaHub__MangaDexMaintenanceHour: 4
-    MangaHub__MangaDexMaintenanceTimeZone: America/Sao_Paulo
   volumes:
     - mangadex-cache:/mangadex-cache
 
@@ -165,7 +155,7 @@ For a cache visible in a TrueNAS dataset instead, use a bind mount such as `/mnt
 
 ## MangaDex Daily Maintenance
 
-The workers run MangaDex maintenance immediately when the container starts, then every day at the configured hour. This means a server that was off at 04:00 catches up as soon as it returns.
+The worker schedules MangaDex maintenance immediately when the container starts, then every day at the configured hour. The API performs it through the shared provider queue. This means a server that was off at 04:00 catches up as soon as it returns.
 
 Each run first refreshes stale MangaDex catalog metadata, then checks manga with at least one shelf entry in `reading` status. The first pre-download run records the currently known chapter as a watermark, without downloading historical chapters. Later runs cache only chapters above that watermark.
 

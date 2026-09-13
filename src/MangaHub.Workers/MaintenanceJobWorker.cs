@@ -1,11 +1,10 @@
 using MangaHub.Core.Models;
-using MangaHub.Core.Services;
 using MangaHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangaHub.Workers;
 
-public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, RemoteSyncWorker remoteSync, ILogger<MaintenanceJobWorker> logger) : BackgroundService
+public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, InternalMaintenanceApiClient maintenanceApi, ILogger<MaintenanceJobWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -30,14 +29,7 @@ public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, Remo
         await db.SaveChangesAsync(cancellationToken);
         try
         {
-            if (job.Type == "library-scan")
-            {
-                await scope.ServiceProvider.GetRequiredService<ILibraryScanner>().ScanAsync(cancellationToken);
-            }
-            else
-            {
-                await remoteSync.RunRequestedAsync(job.Type, cancellationToken);
-            }
+            await maintenanceApi.RunAsync(job.Type, cancellationToken);
             job.Status = "completed";
             job.Error = "";
         }

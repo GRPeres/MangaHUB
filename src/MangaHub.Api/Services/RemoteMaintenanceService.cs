@@ -11,93 +11,41 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using WebPush;
 
-namespace MangaHub.Workers;
+namespace MangaHub.Api.Services;
 
-public sealed class RemoteSyncWorker(
+/// <summary>
+/// Executes remote maintenance in the API process so every provider request is
+/// governed by this process's shared provider scheduler.
+/// </summary>
+public sealed class RemoteMaintenanceService(
     IServiceScopeFactory scopeFactory,
     IHttpClientFactory httpClientFactory,
     IOptions<MangaHubOptions> options,
     RemoteJobPriorityContext priorityContext,
-    ILogger<RemoteSyncWorker> logger) : BackgroundService
+    ILogger<RemoteMaintenanceService> logger)
 {
     private const string MangaDexCacheSource = "mangadex-cache";
     public async Task RunRequestedAsync(string type, CancellationToken cancellationToken)
     {
+        var priority = type switch
+        {
+            "release-sync" or "mangadex-status-sync" or "mangaupdates-sync" => RemoteJobPriority.ReleaseSync,
+            "prefetch" => RemoteJobPriority.Prefetch,
+            "mangadex-cache-cleanup" or "mangaupdates-match" => RemoteJobPriority.Maintenance,
+            "idle-backfill" => RemoteJobPriority.Backfill,
+            _ => throw new InvalidOperationException($"Unsupported remote maintenance job '{type}'.")
+        };
+
+        using var priorityScope = priorityContext.Push(priority);
         switch (type)
         {
             case "release-sync": await RunReleaseSyncAsync(cancellationToken); break;
             case "mangadex-status-sync": await RunMangaDexStatusSyncAsync(cancellationToken); break;
+            case "prefetch": await RunPrefetchAsync(cancellationToken); break;
             case "mangadex-cache-cleanup": await RunCacheRetentionAsync(cancellationToken); break;
             case "mangaupdates-sync": await RunMangaUpdatesSyncAsync(cancellationToken); break;
             case "mangaupdates-match": await RunMangaUpdatesMatchingAsync(cancellationToken); break;
-            default: throw new InvalidOperationException($"Unsupported remote maintenance job '{type}'.");
-        }
-    }
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        var nextReleaseSyncAt = DateTimeOffset.MinValue;
-        var nextPrefetchAt = DateTimeOffset.MinValue;
-        var nextMangaUpdatesSyncAt = DateTimeOffset.MinValue;
-        var nextMangaUpdatesMatchAt = DateTimeOffset.MinValue;
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            if (DateTimeOffset.UtcNow >= nextReleaseSyncAt)
-            {
-                using (priorityContext.Push(RemoteJobPriority.ReleaseSync))
-                {
-                    await RunReleaseSyncAsync(stoppingToken);
-                }
-                nextReleaseSyncAt = DateTimeOffset.UtcNow.Add(GetReleasePollDelay());
-            }
-
-            if (DateTimeOffset.UtcNow >= nextPrefetchAt)
-            {
-                using (priorityContext.Push(RemoteJobPriority.Prefetch))
-                {
-                    await RunPrefetchAsync(stoppingToken);
-                    await RunCacheRetentionAsync(stoppingToken);
-                }
-                nextPrefetchAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
-                logger.LogInformation("Next MangaDex pre-download maintenance is scheduled for {ScheduledAt}.", nextPrefetchAt);
-            }
-
-            if (DateTimeOffset.UtcNow >= nextMangaUpdatesMatchAt)
-            {
-                using (priorityContext.Push(RemoteJobPriority.Maintenance))
-                {
-                    await RunMangaUpdatesMatchingAsync(stoppingToken);
-                }
-                nextMangaUpdatesMatchAt = DateTimeOffset.UtcNow.AddMinutes(
-                    Math.Clamp(options.Value.MangaUpdatesMatchPollMinutes, 5, 720));
-            }
-
-            if (DateTimeOffset.UtcNow >= nextMangaUpdatesSyncAt)
-            {
-                using (priorityContext.Push(RemoteJobPriority.ReleaseSync))
-                {
-                    await RunMangaUpdatesSyncAsync(stoppingToken);
-                }
-                nextMangaUpdatesSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaUpdatesReleasePollMinutes, 15, 720));
-            }
-
-            var idleCheckDelay = TimeSpan.FromMinutes(Math.Clamp(options.Value.MangaDexIdleBackfillCheckMinutes, 5, 720));
-            var delay = new[]
-            {
-                nextReleaseSyncAt - DateTimeOffset.UtcNow,
-                nextPrefetchAt - DateTimeOffset.UtcNow,
-                nextMangaUpdatesSyncAt - DateTimeOffset.UtcNow,
-                nextMangaUpdatesMatchAt - DateTimeOffset.UtcNow,
-                idleCheckDelay
-            }.Min();
-            await Task.Delay(delay, stoppingToken);
-
-            if (DateTimeOffset.UtcNow < nextReleaseSyncAt && DateTimeOffset.UtcNow < nextPrefetchAt)
-            {
-                using (priorityContext.Push(RemoteJobPriority.Backfill))
-                {
-                    await RunIdleBackfillAsync(stoppingToken);
-                }
-            }
+            case "idle-backfill": await RunIdleBackfillAsync(cancellationToken); break;
         }
     }
 

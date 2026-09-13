@@ -14,6 +14,16 @@ namespace MangaHub.Infrastructure;
 
 public static class DependencyInjection
 {
+    public static IServiceCollection AddMangaHubWorkerInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<MangaHubOptions>(configuration.GetSection("MangaHub"));
+        var connectionString = configuration.GetConnectionString("MangaHub")
+            ?? configuration["DATABASE_URL"]
+            ?? "Host=localhost;Database=mangahub;Username=mangahub;Password=mangahub";
+        services.AddDbContext<MangaHubDbContext>(options => options.UseNpgsql(connectionString));
+        return services;
+    }
+
     public static IServiceCollection AddMangaHubInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<MangaHubOptions>(configuration.GetSection("MangaHub"));

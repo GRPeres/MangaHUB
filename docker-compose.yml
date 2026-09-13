@@ -22,6 +22,7 @@ services:
       MangaHub__LibraryPath: /library
       MangaHub__MangaDexCachePath: /mangadex-cache
       MangaHub__JwtSecret: ${JWT_SECRET:-change-me-before-deploying-to-a-long-random-secret}
+      MangaHub__InternalWorkerToken: ${INTERNAL_WORKER_TOKEN:-local-worker-token-change-me}
       MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
       MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:-}
       MangaHub__SessionCookieSameSite: Lax
@@ -46,11 +47,8 @@ services:
       dockerfile: src/MangaHub.Workers/Dockerfile
     environment:
       ConnectionStrings__MangaHub: Host=postgres;Database=mangahub;Username=mangahub;Password=mangahub
-      MangaHub__LibraryPath: /library
-      MangaHub__MangaDexCachePath: /mangadex-cache
-      MangaHub__JwtSecret: ${JWT_SECRET:-change-me-before-deploying-to-a-long-random-secret}
-      MangaHub__MangaDexEnabled: ${MANGADEX_ENABLED:-true}
-      MangaHub__MyAnimeListClientId: ${MYANIMELIST_CLIENT_ID:-}
+      MangaHub__InternalApiUrl: http://mangahub-api:8080
+      MangaHub__InternalWorkerToken: ${INTERNAL_WORKER_TOKEN:-local-worker-token-change-me}
       MangaHub__MangaDexMaintenanceHour: 4
       MangaHub__MangaDexMaintenanceTimeZone: America/Sao_Paulo
       MangaHub__MangaDexPrefetchBatchSize: 6
@@ -60,12 +58,11 @@ services:
       MangaHub__MangaDexIdleBackfillCheckMinutes: 60
       MangaHub__MangaDexIdleBackfillBatchSize: 1
       MangaHub__MangaDexIdleBackfillMaxChaptersPerManga: 2
-    volumes:
-      - ${HOST_LIBRARY_PATH:-./library}:/library:ro
-      - mangadex-cache:/mangadex-cache
     depends_on:
       postgres:
         condition: service_healthy
+      api:
+        condition: service_started
 
   web:
     build:

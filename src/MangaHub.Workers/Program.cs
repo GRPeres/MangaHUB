@@ -1,14 +1,17 @@
 using MangaHub.Infrastructure;
-using MangaHub.Core.Services;
 using MangaHub.Workers;
+using Microsoft.Extensions.Options;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddMangaHubInfrastructure(builder.Configuration);
-builder.Services.AddScoped<MangaUpdatesCatalogMatchService>();
-builder.Services.AddHostedService<LibraryScanWorker>();
-builder.Services.AddSingleton<RemoteSyncWorker>();
-builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<RemoteSyncWorker>());
+builder.Services.AddMangaHubWorkerInfrastructure(builder.Configuration);
+builder.Services.AddHttpClient<InternalMaintenanceApiClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<MangaHubOptions>>().Value;
+    client.BaseAddress = new Uri(options.InternalApiUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromMinutes(30);
+});
+builder.Services.AddHostedService<RemoteMaintenanceScheduleWorker>();
 builder.Services.AddHostedService<UsageAnalyticsWorker>();
 builder.Services.AddHostedService<NotificationCleanupWorker>();
 builder.Services.AddHostedService<MaintenanceJobWorker>();
