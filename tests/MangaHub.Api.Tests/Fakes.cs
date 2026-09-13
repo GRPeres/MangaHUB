@@ -39,13 +39,14 @@ internal sealed class FakeArchiveReader : IArchiveReader
 internal sealed class FakeMangaDexSource : IMangaSource, IMangaDexCatalogLookup
 {
     public string Name => "mangadex";
+    public List<MangaSearchResult> SearchResults { get; } = [];
     public List<MangaSourceChapter> Chapters { get; } = [];
     public Dictionary<string, IReadOnlyList<MangaPage>> Pages { get; } = [];
     public List<MangaDexCatalogMatch> CatalogMatches { get; } = [];
     public MangaSourceSeries? Series { get; set; }
 
     public Task<IReadOnlyList<MangaSearchResult>> SearchAsync(string query, CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<MangaSearchResult>>([]);
+        Task.FromResult<IReadOnlyList<MangaSearchResult>>(SearchResults);
 
     public Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken) =>
         Task.FromResult(Series);

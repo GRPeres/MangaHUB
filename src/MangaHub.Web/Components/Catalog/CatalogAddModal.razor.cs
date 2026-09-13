@@ -39,6 +39,7 @@ public partial class CatalogAddModal
     private string metadataMessage = "";
     private Severity metadataSeverity = Severity.Info;
     private bool isSearchingMetadata;
+    private bool hasSearchedOpenLibrary;
     private bool isMatchingMangaDex;
     private bool isSaving;
     private int metadataSearchVersion;
@@ -79,6 +80,7 @@ public partial class CatalogAddModal
         }
 
         isSearchingMetadata = true;
+        hasSearchedOpenLibrary = false;
         try
         {
             var results = await MetadataApi.SearchAsync(query);
@@ -87,16 +89,8 @@ public partial class CatalogAddModal
                 return;
             }
 
-            if (results.Count == 0)
-            {
-                results = await MetadataApi.SearchAsync(query, includeOpenLibrary: true);
-                if (searchVersion != metadataSearchVersion)
-                {
-                    return;
-                }
-            }
-
             metadataResults = results;
+            hasSearchedOpenLibrary = results.Any(item => string.Equals(item.Source, "openlibrary", StringComparison.OrdinalIgnoreCase));
             metadataSeverity = metadataResults.Count == 0 ? Severity.Warning : Severity.Success;
             metadataMessage = metadataResults.Count == 0
                 ? "No metadata matches found."
@@ -137,6 +131,14 @@ public partial class CatalogAddModal
         publishingStatus = item.PublishingStatus;
         chapterCount = item.ChapterCount;
         volumeCount = item.VolumeCount;
+        if (string.Equals(item.Source, "mangadex", StringComparison.OrdinalIgnoreCase))
+        {
+            mangaDexId = item.SourceId;
+        }
+        else if (string.Equals(item.Source, "mangaupdates", StringComparison.OrdinalIgnoreCase))
+        {
+            mangaUpdatesId = item.SourceId;
+        }
         metadataResults = [];
         metadataMessage = "";
         if (string.IsNullOrWhiteSpace(mangaUpdatesId))
@@ -338,6 +340,45 @@ public partial class CatalogAddModal
         catch
         {
             // The server repeats this lookup when saving, so a transient preview failure is harmless.
+        }
+    }
+
+    private async Task SearchOpenLibrarySuggestions()
+    {
+        var query = title.Trim();
+        if (string.IsNullOrWhiteSpace(query) || isSearchingMetadata || hasSearchedOpenLibrary)
+        {
+            return;
+        }
+
+        var searchVersion = ++metadataSearchVersion;
+        isSearchingMetadata = true;
+        try
+        {
+            var results = await MetadataApi.SearchAsync(query, includeOpenLibrary: true);
+            if (searchVersion != metadataSearchVersion)
+            {
+                return;
+            }
+
+            metadataResults = results;
+            hasSearchedOpenLibrary = true;
+            metadataMessage = results.Count == 0 ? "No metadata suggestions found." : "";
+        }
+        catch (Exception ex)
+        {
+            if (searchVersion == metadataSearchVersion)
+            {
+                metadataResults = [];
+                metadataMessage = $"Metadata search failed: {ex.Message}";
+            }
+        }
+        finally
+        {
+            if (searchVersion == metadataSearchVersion)
+            {
+                isSearchingMetadata = false;
+            }
         }
     }
 

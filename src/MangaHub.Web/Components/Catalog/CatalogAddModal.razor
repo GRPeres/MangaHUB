@@ -61,6 +61,18 @@
                                                     </MudStack>
                                                 </MudButton>
                                             }
+
+                                            @if (!hasSearchedOpenLibrary)
+                                            {
+                                                <MudButton Variant="Variant.Text"
+                                                           Color="Color.Secondary"
+                                                           StartIcon="@Icons.Material.Filled.Add"
+                                                           FullWidth="true"
+                                                           Disabled="@isSearchingMetadata"
+                                                           OnClick="SearchOpenLibrarySuggestions">
+                                                    Search OpenLibrary too
+                                                </MudButton>
+                                            }
                                         }
                                         else if (!isSearchingMetadata)
                                         {

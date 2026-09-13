@@ -34,7 +34,7 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
             var alternateTitles = attributes.TryGetProperty("altTitles", out var alternatives)
                 ? ReadAlternateTitles(alternatives, title)
                 : [];
-            results.Add(new MangaSearchResult(id, title, description, "", status, Name, alternateTitles));
+            results.Add(new MangaSearchResult(id, title, description, ReadCoverUrl(item, id), status, Name, alternateTitles));
         }
 
         return results;
@@ -247,6 +247,32 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(8)
             .ToList();
+
+    private static string ReadCoverUrl(JsonElement item, string mangaId)
+    {
+        if (!item.TryGetProperty("relationships", out var relationships) || relationships.ValueKind != JsonValueKind.Array)
+        {
+            return "";
+        }
+
+        string? fileName = null;
+        foreach (var relationship in relationships.EnumerateArray())
+        {
+            if (!relationship.TryGetProperty("type", out var type)
+                || !string.Equals(type.GetString(), "cover_art", StringComparison.OrdinalIgnoreCase)
+                || !relationship.TryGetProperty("attributes", out var attributes)
+                || !attributes.TryGetProperty("fileName", out var fileNameElement))
+            {
+                continue;
+            }
+
+            fileName = fileNameElement.GetString();
+            break;
+        }
+        return string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(mangaId)
+            ? ""
+            : $"https://uploads.mangadex.org/covers/{mangaId}/{fileName}.256.jpg";
+    }
 
     private static string ReadString(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
