@@ -891,7 +891,7 @@ html.mh-theme-dark .loading-progress circle:last-child {
     }
 }
 
-html body .mh-cover-report-button {
+html body .mh-card-report-button {
   background: color-mix(in srgb, var(--mud-palette-surface) 84%, transparent) !important;
   border: 1px solid color-mix(in srgb, var(--mud-palette-error) 38%, var(--mud-palette-divider));
   position: absolute !important;

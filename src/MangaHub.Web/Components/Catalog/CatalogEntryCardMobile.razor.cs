@@ -12,7 +12,6 @@ public partial class CatalogEntryCardMobile
     [Parameter] public EventCallback<string> OnCategoryFilter { get; set; }
 
     private bool metadataOpen;
-    private bool coverReportOpen;
     private string DisplayCoverUrl => CoverImageRules.DisplayUrl(Entry.CoverUrl);
     private bool detailsOpen;
     private bool IsMissingMyAnimeListId => string.IsNullOrWhiteSpace(Entry.MyAnimeListId);
@@ -38,7 +37,6 @@ public partial class CatalogEntryCardMobile
     private Task FilterByCategory(string category) => OnCategoryFilter.InvokeAsync(category);
     private void OpenMetadata() => metadataOpen = true;
     private void CloseMetadata() => metadataOpen = false;
-    private void OpenCoverReport() => coverReportOpen = true;
     private void ToggleDetails() => detailsOpen = !detailsOpen;
     private static string FirstNonEmpty(params string[] values) => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
     private static List<string> SplitLabels(string value) => (value ?? "").Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(label => !string.IsNullOrWhiteSpace(label)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();

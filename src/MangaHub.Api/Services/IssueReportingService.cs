@@ -21,12 +21,18 @@ public sealed class IssueReportingService(
     {
         "missing", "broken", "wrong-image", "low-quality", "other"
     };
+    private static readonly HashSet<string> CatalogMetadataReasons = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "title", "description", "category", "release-status", "other"
+    };
 
     public async Task<AdminIssueReportStateResponse?> ReportAsync(Guid userId, CreateAdminIssueReportRequest request, CancellationToken cancellationToken)
     {
         if (!AdminIssueTypes.Supports(request.Kind, request.SubjectType)) return null;
         if (string.Equals(request.Kind, AdminIssueTypes.CoverImage, StringComparison.OrdinalIgnoreCase))
             return await ReportCoverImageAsync(userId, request, cancellationToken);
+        if (string.Equals(request.Kind, AdminIssueTypes.CatalogMetadata, StringComparison.OrdinalIgnoreCase))
+            return await ReportCatalogMetadataAsync(userId, request, cancellationToken);
         if (!string.Equals(request.Kind, AdminIssueTypes.ExternalReaderLink, StringComparison.OrdinalIgnoreCase)
             || !ExternalLinkReasons.Contains(request.Reason.Trim())) return null;
 
@@ -107,6 +113,43 @@ public sealed class IssueReportingService(
                 Reason = request.Reason.Trim().ToLowerInvariant(),
                 Note = request.Note.Trim()[..Math.Min(request.Note.Trim().Length, 800)],
                 SnapshotValue = manga.CoverUrl
+            });
+            reportCount++;
+        }
+        issue.UpdatedAt = DateTimeOffset.UtcNow;
+        await issues.SaveChangesAsync(cancellationToken);
+        return new AdminIssueReportStateResponse(issue.Id, true, reportCount, issue.Status);
+    }
+
+    private async Task<AdminIssueReportStateResponse?> ReportCatalogMetadataAsync(Guid userId, CreateAdminIssueReportRequest request, CancellationToken cancellationToken)
+    {
+        if (!CatalogMetadataReasons.Contains(request.Reason.Trim())) return null;
+        var manga = await catalog.GetByIdNoTrackingAsync(request.SubjectId, cancellationToken);
+        if (manga is null) return null;
+        var issue = await issues.GetOpenAsync(AdminIssueTypes.CatalogMetadata, AdminIssueTypes.CatalogManga, manga.Id, cancellationToken);
+        if (issue is null)
+        {
+            issue = new AdminIssue
+            {
+                Kind = AdminIssueTypes.CatalogMetadata,
+                SubjectType = AdminIssueTypes.CatalogManga,
+                SubjectId = manga.Id,
+                Priority = "normal",
+                TitleSnapshot = manga.Title,
+                MetadataJson = JsonSerializer.Serialize(new { manga.MyAnimeListId, manga.MangaDexId, manga.MangaUpdatesId })
+            };
+            issues.Add(issue);
+        }
+        var alreadyReported = issue.Reports.Any(report => report.ReporterUserId == userId);
+        var reportCount = issue.Reports.Count;
+        if (!alreadyReported)
+        {
+            issues.AddReport(new AdminIssueReport
+            {
+                AdminIssueId = issue.Id,
+                ReporterUserId = userId,
+                Reason = request.Reason.Trim().ToLowerInvariant(),
+                Note = request.Note.Trim()[..Math.Min(request.Note.Trim().Length, 800)]
             });
             reportCount++;
         }

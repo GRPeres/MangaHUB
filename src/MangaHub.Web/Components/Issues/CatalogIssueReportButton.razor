@@ -1,0 +1,61 @@
+@using MangaHub.Core.Services
+@using MangaHub.Web.API.DTOs
+@using MangaHub.Web.API.Services
+@inject IssueApiService Issues
+@inject MessageService Messages
+
+<MudTooltip Text="Report a catalog problem">
+    <MudIconButton Icon="@Icons.Material.Filled.Flag" Color="Color.Secondary" Size="Size.Small" Class="@Class" OnClick="OpenDialog" aria-label="Report a catalog problem" />
+</MudTooltip>
+
+@if (open)
+{
+    <div class="mh-modal-backdrop" @onclick="Close">
+        <section class="mh-modal mh-issue-report-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-report-title" @onclick:stopPropagation="true">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween"><MudStack Spacing="0"><MudText id="catalog-report-title" Typo="Typo.h2">Report catalog problem</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">@Title</MudText></MudStack><MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="Close" aria-label="Close report" /></MudStack>
+                <MudSelect T="string" Value="@kind" ValueChanged="ChangeKind" Label="Report type" Variant="Variant.Outlined"><MudSelectItem Value="@AdminIssueTypes.CoverImage">Cover image</MudSelectItem><MudSelectItem Value="@AdminIssueTypes.CatalogMetadata">Catalog metadata</MudSelectItem></MudSelect>
+                <MudSelect T="string" @bind-Value="reason" Label="What is wrong?" Variant="Variant.Outlined">
+                    @if (kind == AdminIssueTypes.CoverImage)
+                    {
+                        <MudSelectItem Value="@("missing")">Cover is missing</MudSelectItem><MudSelectItem Value="@("broken")">Image does not load</MudSelectItem><MudSelectItem Value="@("wrong-image")">Wrong cover</MudSelectItem><MudSelectItem Value="@("low-quality")">Poor quality</MudSelectItem>
+                    }
+                    else
+                    {
+                        <MudSelectItem Value="@("title")">Wrong title</MudSelectItem><MudSelectItem Value="@("description")">Wrong description</MudSelectItem><MudSelectItem Value="@("category")">Wrong categories or format</MudSelectItem><MudSelectItem Value="@("release-status")">Wrong release status</MudSelectItem>
+                    }
+                    <MudSelectItem Value="@("other")">Something else</MudSelectItem>
+                </MudSelect>
+                <MudTextField T="string" @bind-Value="note" Label="Optional note" Lines="3" Variant="Variant.Outlined" MaxLength="800" />
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2"><MudButton Variant="Variant.Text" OnClick="Close">Cancel</MudButton><MudButton Variant="Variant.Filled" Color="Color.Error" Disabled="@saving" OnClick="Submit">@(saving ? "Reporting..." : "Send report")</MudButton></MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid MangaEntryId { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Class { get; set; } = "";
+    private bool open;
+    private bool saving;
+    private string kind = AdminIssueTypes.CoverImage;
+    private string reason = "missing";
+    private string note = "";
+    private void OpenDialog() => open = true;
+    private void ChangeKind(string value) { kind = value; reason = kind == AdminIssueTypes.CoverImage ? "missing" : "title"; }
+    private void Close() => open = false;
+    private async Task Submit()
+    {
+        if (saving || MangaEntryId == Guid.Empty) return;
+        saving = true;
+        try
+        {
+            var result = await Issues.ReportAsync(new CreateAdminIssueReportRequest(kind, AdminIssueTypes.CatalogManga, MangaEntryId, reason, note));
+            if (result is null) { Messages.Error("This catalog report could not be sent.", "Report unavailable"); return; }
+            Messages.Success("Thanks. An admin can now review this catalog report.", "Report sent");
+            Close();
+        }
+        finally { saving = false; }
+    }
+}

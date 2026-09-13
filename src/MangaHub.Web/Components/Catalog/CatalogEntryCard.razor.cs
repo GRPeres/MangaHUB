@@ -14,7 +14,6 @@ public partial class CatalogEntryCard
     [Parameter] public EventCallback<string> OnCategoryFilter { get; set; }
 
     private bool metadataOpen;
-    private bool coverReportOpen;
     private string DisplayCoverUrl => CoverImageRules.DisplayUrl(Entry.CoverUrl);
     private string SourceLabel => FirstNonEmpty(SourceName(Entry.MetadataSource), !string.IsNullOrWhiteSpace(Entry.MyAnimeListId) ? "MAL" : "", !string.IsNullOrWhiteSpace(Entry.OpenLibraryKey) ? "OpenLibrary" : "", "Manual");
     private bool IsMissingMyAnimeListId => string.IsNullOrWhiteSpace(Entry.MyAnimeListId);
@@ -113,7 +112,6 @@ public partial class CatalogEntryCard
     private string MetadataTitleId => $"catalog-metadata-{Entry.Id:N}";
     private void OpenMetadata() => metadataOpen = true;
     private void CloseMetadata() => metadataOpen = false;
-    private void OpenCoverReport() => coverReportOpen = true;
 
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";

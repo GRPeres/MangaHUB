@@ -8,7 +8,6 @@
         {
             <MudIcon Icon="@Icons.Material.Filled.MenuBook" />
         }
-        <MudTooltip Text="Report cover image"><MudIconButton Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Error" Size="Size.Small" Class="mh-cover-report-button" OnClick="OpenCoverReport" aria-label="Report cover image" /></MudTooltip>
     </div>
 
     <div class="mh-mobile-shelf-header">
@@ -69,6 +68,7 @@
                     }
                 }
                 <div class="mh-mobile-card-action"><MudTooltip Text="Edit shelf entry"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" OnClick="Edit" aria-label="Edit shelf entry" /></MudTooltip></div>
+                <div class="mh-mobile-card-action"><CatalogIssueReportButton MangaEntryId="@Entry.Id" Title="@Entry.Title" /></div>
             </div>
         </div>
 
@@ -119,5 +119,3 @@
         </section>
     </div>
 }
-
-<CoverImageIssueReportModal @bind-Open="coverReportOpen" MangaEntryId="@Entry.Id" Title="@Entry.Title" />

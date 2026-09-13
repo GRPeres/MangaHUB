@@ -11,7 +11,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.MenuBook" />
             </div>
         }
-        <MudTooltip Text="Report cover image"><MudIconButton Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Error" Size="Size.Small" Class="mh-cover-report-button" OnClick="OpenCoverReport" aria-label="Report cover image" /></MudTooltip>
+        <CatalogIssueReportButton MangaEntryId="@Entry.Id" Title="@Entry.Title" Class="mh-card-report-button" />
         <div class="mh-cover-caption">
             <span>Read from</span>
             <strong>@ReadSourceLabel</strong>
@@ -216,5 +216,3 @@
         </section>
     </div>
 }
-
-<CoverImageIssueReportModal @bind-Open="coverReportOpen" MangaEntryId="@Entry.Id" Title="@Entry.Title" />

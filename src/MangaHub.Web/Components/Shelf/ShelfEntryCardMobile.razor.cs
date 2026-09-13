@@ -19,7 +19,6 @@ public partial class ShelfEntryCardMobile
     [Parameter] public EventCallback<int?> OnScoreChanged { get; set; }
 
     private bool detailsOpen;
-    private bool coverReportOpen;
     private string DisplayCoverUrl => CoverImageRules.DisplayUrl(Entry.CoverUrl);
     private bool metadataOpen;
     private bool isSavingScore;
@@ -76,7 +75,6 @@ public partial class ShelfEntryCardMobile
     private void ToggleDetails() => detailsOpen = !detailsOpen;
     private void OpenMetadata() => metadataOpen = true;
     private void CloseMetadata() => metadataOpen = false;
-    private void OpenCoverReport() => coverReportOpen = true;
     private bool IsStarSelected(int score) => selectedScore is not null && score <= selectedScore;
 
     private async Task SetScore(int score)
