@@ -900,6 +900,11 @@ html body .mh-cover-report-button {
   z-index: 3;
 }
 
+html body .mh-mobile-catalog-cover,
+html body .mh-mobile-shelf-cover {
+  position: relative;
+}
+
 html.mh-theme-dark body .mh-row-card {
     background: var(--mud-palette-surface) !important;
 }
