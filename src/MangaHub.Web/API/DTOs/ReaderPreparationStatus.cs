@@ -16,4 +16,6 @@ public sealed record ReaderPreparationStatus(
     List<string>? AvailableLanguages = null,
     bool IsSeriesComplete = false,
     ReaderChapterMatch? ChapterMatch = null,
-    ReaderChapterJump? ChapterJump = null);
+    ReaderChapterJump? ChapterJump = null,
+    bool IsMangaDexUnavailable = false,
+    string FallbackReaderUrl = "");

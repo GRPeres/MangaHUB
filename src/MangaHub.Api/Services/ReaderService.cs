@@ -19,7 +19,8 @@ public sealed class ReaderService(
     IMangaDexChapterCache mangaDexCache,
     IOptions<MangaHubOptions> options,
     MangaSourceRegistry sources,
-    NotificationService? notifications = null)
+    NotificationService? notifications = null,
+    IssueReportingService? issues = null)
 {
     private const string MangaDexCacheSource = "mangadex-cache";
 
@@ -188,6 +189,11 @@ public sealed class ReaderService(
             var mangaDex = sources.Get("mangadex");
             progress?.Report(new ReaderPreparationProgress("Loading MangaDex chapter list", 8));
             var preferredChapters = await GetPreferredMangaDexChaptersAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
+            if (preferredChapters.Count == 0
+                && (await mangaDex.GetChaptersAsync(mangaDexId, null, cancellationToken)).Count == 0)
+            {
+                throw new MangaDexUnavailableException();
+            }
             if (isInitialTrackedChapterSelection
                 && !allowLanguageFallback
                 && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter)
@@ -422,6 +428,29 @@ public sealed class ReaderService(
         return currentNumber is null
             ? null
             : chapters.FirstOrDefault(chapter => ParseChapterNumber(chapter.Number) is { } chapterNumber && chapterNumber > currentNumber);
+    }
+
+    public async Task<string> MarkMangaDexUnavailableAsync(Guid userId, Guid entryId, CancellationToken cancellationToken)
+    {
+        var shelfEntry = await shelf.GetWithMangaAsync(userId, entryId, cancellationToken);
+        var manga = shelfEntry?.MangaEntry;
+        if (manga is null || string.IsNullOrWhiteSpace(manga.MangaDexId)) return manga?.FallbackReaderUrl ?? "";
+
+        var previousMangaDexId = manga.MangaDexId;
+        manga.MangaDexId = "";
+        manga.MangaDexLatestChapter = null;
+        manga.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
+        manga.UpdatedAt = DateTimeOffset.UtcNow;
+        if (issues is not null)
+        {
+            await issues.OpenMangaDexUnavailableIssueAsync(manga, previousMangaDexId, cancellationToken);
+        }
+        else
+        {
+            await shelf.SaveChangesAsync(cancellationToken);
+        }
+
+        return manga.FallbackReaderUrl;
     }
 
     private async Task<MangaSourceChapter?> FindNextMangaDexChapterAfterNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
@@ -743,6 +772,10 @@ public sealed class ReaderService(
             && string.Equals(series.ExternalId, GetMangaDexId(entry), StringComparison.Ordinal));
 
     public sealed class NoNextMangaDexChapterException : Exception
+    {
+    }
+
+    public sealed class MangaDexUnavailableException : Exception
     {
     }
 

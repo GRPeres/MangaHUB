@@ -115,6 +115,24 @@ public sealed class IssueReportingService(
         return new AdminIssueReportStateResponse(issue.Id, true, reportCount, issue.Status);
     }
 
+    public async Task OpenMangaDexUnavailableIssueAsync(MangaEntry manga, string previousMangaDexId, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetOpenAsync(AdminIssueTypes.ExternalReaderLink, AdminIssueTypes.CatalogManga, manga.Id, cancellationToken);
+        if (issue is null)
+        {
+            issues.Add(new AdminIssue
+            {
+                Kind = AdminIssueTypes.ExternalReaderLink,
+                SubjectType = AdminIssueTypes.CatalogManga,
+                SubjectId = manga.Id,
+                Priority = "high",
+                TitleSnapshot = manga.Title,
+                MetadataJson = JsonSerializer.Serialize(new { previousMangaDexId, fallbackReaderUrl = manga.FallbackReaderUrl, reason = "mangadex-no-chapters" })
+            });
+        }
+        await issues.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<AdminIssueReportStateResponse?> GetMyReportStateAsync(Guid userId, string kind, string subjectType, Guid subjectId, CancellationToken cancellationToken)
     {
         if (!AdminIssueTypes.Supports(kind, subjectType)) return null;

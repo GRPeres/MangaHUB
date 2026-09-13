@@ -230,6 +230,21 @@ public sealed class ReaderPreparationService(
                 Error = "No later readable MangaDex chapter is available."
             });
         }
+        catch (ReaderService.MangaDexUnavailableException)
+        {
+            using var unavailableScope = scopeFactory.CreateScope();
+            var unavailableReader = unavailableScope.ServiceProvider.GetRequiredService<ReaderService>();
+            var fallbackReaderUrl = await unavailableReader.MarkMangaDexUnavailableAsync(userId, entryId, CancellationToken.None);
+            Update(jobId, status => status with
+            {
+                Stage = "MangaDex has no readable chapters",
+                IsComplete = true,
+                IsFailed = true,
+                Error = "MangaDex has no readable chapters for this manga. It was marked untracked for review.",
+                IsMangaDexUnavailable = true,
+                FallbackReaderUrl = fallbackReaderUrl
+            });
+        }
         catch (ReaderService.MangaDexLanguageFallbackRequiredException ex)
         {
             Update(jobId, status => status with

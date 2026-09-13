@@ -560,6 +560,21 @@
                         Messages.Success("You've read every available chapter in this completed manga. It is now marked done on your shelf.", "You're done reading");
                         return;
                     }
+                    if (completedPreparation?.IsMangaDexUnavailable == true)
+                    {
+                        await Load();
+                        if (IsHttpUrl(completedPreparation.FallbackReaderUrl))
+                        {
+                            await JS.InvokeVoidAsync("mangaHubExternalReader.open", completedPreparation.FallbackReaderUrl);
+                            try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId); } catch (HttpRequestException) { }
+                            Messages.Warning("MangaDex has no readable chapters, so this manga was marked untracked. Its fallback reader was opened and an admin issue was created.", "MangaDex unavailable");
+                        }
+                        else
+                        {
+                            Messages.Warning("MangaDex has no readable chapters, so this manga was marked untracked and an admin issue was created to find an external reader.", "MangaDex unavailable");
+                        }
+                        return;
+                    }
                     if (IsNoLaterChapter(completedPreparation))
                     {
                         Messages.Warning("You've read all available chapters.", "All caught up");

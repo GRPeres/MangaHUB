@@ -111,6 +111,21 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenMangaDexHasNoChapters_ReportsUnavailable()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Unavailable", MangaDexId = "unavailable-id" };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", new FakeMangaDexSource(), new FakeMangaDexChapterCache());
+
+        await Assert.ThrowsAsync<ReaderService.MangaDexUnavailableException>(
+            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_UsesChapterZeroAsAValidPlannedSeriesStart()
     {
         await using var db = TestDb.Create();
