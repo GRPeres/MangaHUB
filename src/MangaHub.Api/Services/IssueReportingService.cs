@@ -133,6 +133,43 @@ public sealed class IssueReportingService(
         await issues.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task OpenMangaDexLanguageCoverageIssueAsync(Guid userId, MangaEntry manga, IReadOnlyList<string> preferredLanguages, IReadOnlyList<string> availableLanguages, CancellationToken cancellationToken)
+    {
+        var kind = AdminIssueTypes.MangaDexLanguageCoverage;
+        var issue = await issues.GetOpenAsync(kind, AdminIssueTypes.CatalogManga, manga.Id, cancellationToken);
+        var context = JsonSerializer.Serialize(new { preferredLanguages, availableLanguages, fallbackReaderUrl = manga.FallbackReaderUrl });
+        if (issue is null)
+        {
+            issue = new AdminIssue
+            {
+                Kind = kind,
+                SubjectType = AdminIssueTypes.CatalogManga,
+                SubjectId = manga.Id,
+                Priority = "normal",
+                TitleSnapshot = manga.Title,
+                MetadataJson = context
+            };
+            issues.Add(issue);
+        }
+        else
+        {
+            issue.MetadataJson = context;
+            issue.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        if (!issue.Reports.Any(report => report.ReporterUserId == userId))
+        {
+            issues.AddReport(new AdminIssueReport
+            {
+                AdminIssueId = issue.Id,
+                ReporterUserId = userId,
+                Reason = "language-coverage",
+                SnapshotValue = context
+            });
+        }
+        await issues.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<AdminIssueReportStateResponse?> GetMyReportStateAsync(Guid userId, string kind, string subjectType, Guid subjectId, CancellationToken cancellationToken)
     {
         if (!AdminIssueTypes.Supports(kind, subjectType)) return null;
@@ -174,7 +211,7 @@ public sealed class IssueReportingService(
     public async Task<bool> ResolveExternalReaderLinkAsync(Guid adminUserId, Guid issueId, ResolveAdminIssueRequest request, CancellationToken cancellationToken)
     {
         var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
-        if (issue is null || issue.Status != "open" || !string.Equals(issue.Kind, AdminIssueTypes.ExternalReaderLink, StringComparison.OrdinalIgnoreCase) || !IsHttpUrl(request.FallbackReaderUrl)) return false;
+        if (issue is null || issue.Status != "open" || !IsExternalReaderRepairIssue(issue.Kind) || !IsHttpUrl(request.FallbackReaderUrl)) return false;
         var manga = await catalog.GetByIdAsync(issue.SubjectId, cancellationToken);
         if (manga is null) return false;
 
@@ -422,6 +459,10 @@ public sealed class IssueReportingService(
         "openlibrary" => "OpenLibrary",
         _ => provider
     };
+
+    private static bool IsExternalReaderRepairIssue(string kind) =>
+        string.Equals(kind, AdminIssueTypes.ExternalReaderLink, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(kind, AdminIssueTypes.MangaDexLanguageCoverage, StringComparison.OrdinalIgnoreCase);
 
     private sealed record DuplicateIdentityMetadata(string Provider, string Value);
 

@@ -453,6 +453,18 @@ public sealed class ReaderService(
         return manga.FallbackReaderUrl;
     }
 
+    public async Task<string> ReportMangaDexLanguageCoverageAsync(Guid userId, Guid entryId, string preferredLanguages, IReadOnlyList<string> availableLanguages, CancellationToken cancellationToken)
+    {
+        var shelfEntry = await shelf.GetWithMangaAsync(userId, entryId, cancellationToken);
+        var manga = shelfEntry?.MangaEntry;
+        if (manga is null || string.IsNullOrWhiteSpace(manga.MangaDexId)) return manga?.FallbackReaderUrl ?? "";
+        if (issues is not null)
+        {
+            await issues.OpenMangaDexLanguageCoverageIssueAsync(userId, manga, LanguagePreferences.Parse(preferredLanguages), availableLanguages, cancellationToken);
+        }
+        return manga.FallbackReaderUrl;
+    }
+
     private async Task<MangaSourceChapter?> FindNextMangaDexChapterAfterNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
     {
         foreach (var language in preferredLanguages)

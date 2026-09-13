@@ -6,6 +6,7 @@ public static class AdminIssueTypes
 {
     public const string CatalogManga = "catalog-manga";
     public const string ExternalReaderLink = "external-reader-link";
+    public const string MangaDexLanguageCoverage = "mangadex-language-coverage";
     public const string CoverImage = "cover-image";
     public const string DuplicateCatalogId = "duplicate-catalog-id";
 
@@ -13,6 +14,7 @@ public static class AdminIssueTypes
         new Dictionary<string, AdminIssueTypeDefinition>(StringComparer.OrdinalIgnoreCase)
         {
             [ExternalReaderLink] = new(ExternalReaderLink, CatalogManga, "normal"),
+            [MangaDexLanguageCoverage] = new(MangaDexLanguageCoverage, CatalogManga, "normal"),
             [CoverImage] = new(CoverImage, CatalogManga, "normal"),
             [DuplicateCatalogId] = new(DuplicateCatalogId, CatalogManga, "high")
         };

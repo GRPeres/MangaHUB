@@ -2,6 +2,7 @@
 @using MangaHub.Web.API.Services
 @inject ReadApiService ReadApi
 @inject MangaApiService MangaApi
+@inject ShelfApiService ShelfApi
 @inject AuthSessionService Auth
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -161,6 +162,7 @@
                 </MudSelect>
                 <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="CancelLanguageFallback">Stay on this chapter</MudButton>
+                    @if (IsHttpUrl(languageFallbackExternalReaderUrl)) { <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="OpenExternalFallbackFromLanguageChoice">Read externally</MudButton> }
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ContinueInFallbackLanguage">Continue reading</MudButton>
                 </MudStack>
             </MudStack>
@@ -197,6 +199,7 @@
     private List<string> availableLanguages = [];
     private bool? languageFallbackNext;
     private List<string> fallbackLanguages = [];
+    private string languageFallbackExternalReaderUrl = "";
     private string fallbackLanguage = "";
     private string preferredLanguage = "en";
     private ReaderSettings readerSettings = new();
@@ -394,6 +397,7 @@
                     languageFallbackNext = next;
                     fallbackLanguages = completedPreparation.AvailableLanguages;
                     fallbackLanguage = fallbackLanguages[0];
+                    languageFallbackExternalReaderUrl = completedPreparation.FallbackReaderUrl;
                     return;
                 }
 
@@ -434,6 +438,7 @@
         languageFallbackNext = null;
         fallbackLanguages = [];
         fallbackLanguage = "";
+        languageFallbackExternalReaderUrl = "";
     }
 
     private async Task ContinueInFallbackLanguage()
@@ -505,6 +510,19 @@
         isPageLoading = true;
         readerMessage = "This reader page could not be loaded. Try opening the chapter again to refresh its local cache.";
     }
+
+    private async Task OpenExternalFallbackFromLanguageChoice()
+    {
+        var entryId = EntryId;
+        if (entryId is null || !IsHttpUrl(languageFallbackExternalReaderUrl)) return;
+        var url = languageFallbackExternalReaderUrl;
+        CancelLanguageFallback();
+        await JS.InvokeVoidAsync("mangaHubExternalReader.open", url);
+        try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId.Value); } catch (HttpRequestException) { }
+    }
+
+    private static bool IsHttpUrl(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     private static string OpenAtLastPage(ReaderLaunchResponse launch) =>
         $"{launch.ReaderUrl}&page={Math.Max(launch.PageCount - 1, 0)}";

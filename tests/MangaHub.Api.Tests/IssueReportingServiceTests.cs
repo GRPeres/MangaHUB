@@ -61,6 +61,28 @@ public sealed class IssueReportingServiceTests
     }
 
     [Fact]
+    public async Task MangaDexLanguageCoverage_StaysTrackedAndAggregatesUserLanguageReports()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "Language gap", MangaDexId = "mangadex-id" };
+        var firstUser = new MangaUser { Username = "first", PasswordHash = "hash" };
+        var secondUser = new MangaUser { Username = "second", PasswordHash = "hash" };
+        db.MangaEntries.Add(manga);
+        db.Users.AddRange(firstUser, secondUser);
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+
+        await service.OpenMangaDexLanguageCoverageIssueAsync(firstUser.Id, manga, ["en", "pt-br"], ["es"], CancellationToken.None);
+        await service.OpenMangaDexLanguageCoverageIssueAsync(secondUser.Id, manga, ["de"], ["es"], CancellationToken.None);
+
+        var issue = Assert.Single(db.AdminIssues);
+        Assert.Equal(AdminIssueTypes.MangaDexLanguageCoverage, issue.Kind);
+        Assert.Equal("mangadex-id", manga.MangaDexId);
+        Assert.Equal(2, db.AdminIssueReports.Count());
+        Assert.Contains("de", issue.MetadataJson);
+    }
+
+    [Fact]
     public async Task ReportAsync_MergesReportsIntoOneOpenIssue()
     {
         await using var db = TestDb.Create();

@@ -136,6 +136,7 @@
                 </MudSelect>
                 <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="CancelLanguageFallback">Stay in @LanguageLabel(PreferredLanguage)</MudButton>
+                    @if (IsHttpUrl(languageFallbackExternalReaderUrl)) { <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="OpenExternalFallbackFromLanguageChoice">Read externally</MudButton> }
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ContinueInFallbackLanguage">Continue reading</MudButton>
                 </MudStack>
             </MudStack>
@@ -249,6 +250,7 @@
     private Guid? languageFallbackEntryId;
     private List<string> fallbackLanguages = [];
     private string fallbackLanguage = "";
+    private string languageFallbackExternalReaderUrl = "";
     private Guid? chapterMatchEntryId;
     private ReaderChapterMatch? chapterMatch;
     private Guid? chapterJumpEntryId;
@@ -552,6 +554,7 @@
                         languageFallbackEntryId = entryId;
                         fallbackLanguages = completedPreparation.AvailableLanguages;
                         fallbackLanguage = fallbackLanguages[0];
+                        languageFallbackExternalReaderUrl = completedPreparation.FallbackReaderUrl;
                         return;
                     }
                     if (completedPreparation?.IsSeriesComplete == true)
@@ -664,6 +667,7 @@
     {
         languageFallbackEntryId = null;
         fallbackLanguages = [];
+        languageFallbackExternalReaderUrl = "";
     }
 
     private async Task ContinueInFallbackLanguage()
@@ -675,6 +679,15 @@
 
         CancelLanguageFallback();
         await Read(entryId, fallbackLanguage, allowLanguageFallback: true);
+    }
+
+    private async Task OpenExternalFallbackFromLanguageChoice()
+    {
+        if (languageFallbackEntryId is not { } entryId || !IsHttpUrl(languageFallbackExternalReaderUrl)) return;
+        var url = languageFallbackExternalReaderUrl;
+        CancelLanguageFallback();
+        await JS.InvokeVoidAsync("mangaHubExternalReader.open", url);
+        try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId); } catch (HttpRequestException) { }
     }
 
     private void CancelChapterMatch()

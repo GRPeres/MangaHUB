@@ -247,13 +247,17 @@ public sealed class ReaderPreparationService(
         }
         catch (ReaderService.MangaDexLanguageFallbackRequiredException ex)
         {
+            using var languageScope = scopeFactory.CreateScope();
+            var languageReader = languageScope.ServiceProvider.GetRequiredService<ReaderService>();
+            var fallbackReaderUrl = await languageReader.ReportMangaDexLanguageCoverageAsync(userId, entryId, language, ex.Languages, CancellationToken.None);
             Update(jobId, status => status with
             {
                 Stage = "A newer chapter is available in another language",
                 IsComplete = true,
                 IsFailed = true,
                 Error = "No newer chapter is available in the selected language.",
-                AvailableLanguages = ex.Languages
+                AvailableLanguages = ex.Languages,
+                FallbackReaderUrl = fallbackReaderUrl
             });
         }
         catch (ReaderService.MangaDexClosestChapterConfirmationRequiredException ex)
