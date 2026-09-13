@@ -15,6 +15,7 @@ public partial class Home : IDisposable
     [Inject] private ShelfApiService ShelfApi { get; set; } = default!;
     [Inject] private UsageApiService UsageApi { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private AppRefreshService Refreshes { get; set; } = default!;
 
     private UserResponse? currentUser;
     private bool isLoading;
@@ -37,6 +38,7 @@ public partial class Home : IDisposable
     protected override async Task OnInitializedAsync()
     {
         Auth.Changed += OnAuthChanged;
+        Refreshes.Changed += OnAppRefresh;
         currentUser = await Auth.GetCurrentUserAsync();
         await LoadDashboardAsync();
     }
@@ -130,6 +132,7 @@ public partial class Home : IDisposable
             var index = shelf.FindIndex(item => item.Id == entry.Id);
             if (index >= 0) shelf[index] = updated;
             pendingRatings.RemoveAll(item => item.Id == entry.Id);
+            Refreshes.Notify(AppRefreshScope.Shelf | AppRefreshScope.Analytics);
         }
         finally
         {
@@ -145,6 +148,26 @@ public partial class Home : IDisposable
             await LoadDashboardAsync();
             StateHasChanged();
         });
+    }
+
+    private void OnAppRefresh(AppRefreshScope scope)
+    {
+        if ((scope & (AppRefreshScope.Shelf | AppRefreshScope.Catalog | AppRefreshScope.Analytics)) == 0)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            await LoadDashboardAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        Auth.Changed -= OnAuthChanged;
+        Refreshes.Changed -= OnAppRefresh;
     }
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
@@ -169,5 +192,4 @@ public partial class Home : IDisposable
     private string PreferredLanguagesLabel => string.Join(" / ", (currentUser?.PreferredLanguage ?? "en").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(language => language.ToUpperInvariant()));
     private static string EntryMeta(CatalogMangaResponse entry) => string.Join(" · ", new[] { entry.MediaType, entry.FirstPublishYear?.ToString() }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
-    public void Dispose() => Auth.Changed -= OnAuthChanged;
 }

@@ -8,6 +8,7 @@
 @inject ShelfApiService ShelfApi
 @inject NotificationApiService Notifications
 @inject MessageService Messages
+@inject AppRefreshService Refreshes
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -95,8 +96,8 @@
 
 </MudStack>
 
-<ShelfAddModal Open="@isAddShelfOpen" OpenChanged="OnAddShelfOpenChanged" OnSaved="Load" InitialReadingStatus="@SuggestedReadingStatus" />
-<ShelfImportModal Open="@isImportShelfOpen" OpenChanged="OnImportShelfOpenChanged" OnImported="Load" />
+<ShelfAddModal Open="@isAddShelfOpen" OpenChanged="OnAddShelfOpenChanged" OnSaved="OnShelfChanged" InitialReadingStatus="@SuggestedReadingStatus" />
+<ShelfImportModal Open="@isImportShelfOpen" OpenChanged="OnImportShelfOpenChanged" OnImported="OnShelfChanged" />
 <ShelfEditModal Entry="@editingEntry" OwnerUserId="@(IsAdmin ? selectedUserId : null)" OnSaved="OnShelfEditSaved" OnClosed="CloseEdit" />
 
 <ReaderPreparingOverlay Open="@isPreparingReader"
@@ -275,6 +276,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Refreshes.Changed += OnAppRefresh;
         activeSection = RequestedSection;
         mobileSectionsExpanded = !IsPrimarySection(activeSection);
         currentUser = await Auth.GetCurrentUserAsync();
@@ -290,6 +292,7 @@
             if (NotificationId is not null)
             {
                 await Notifications.MarkReadAsync(NotificationId.Value);
+                Refreshes.Notify(AppRefreshScope.Notifications | AppRefreshScope.Analytics);
             }
             await Read(NotificationEntryId.Value, NotificationLanguage, allowLanguageFallback: true, allowChapterJump: true, requestedChapter: NotificationChapter);
         }
@@ -486,6 +489,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        Refreshes.Changed -= OnAppRefresh;
         try
         {
             await JS.InvokeVoidAsync("mangaHubProgressiveLoad.unobserve", loadMoreSentinel);
@@ -634,7 +638,26 @@
     private async Task OnShelfEditSaved(string text)
     {
         Messages.Success(text);
+        await OnShelfChanged();
+    }
+
+    private async Task OnShelfChanged()
+    {
         await Load();
+    }
+
+    private void OnAppRefresh(AppRefreshScope scope)
+    {
+        if ((scope & AppRefreshScope.Shelf) == 0)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            await Load();
+            StateHasChanged();
+        });
     }
 
     private async Task UpdateScore(MangaEntryResponse entry, int? score)

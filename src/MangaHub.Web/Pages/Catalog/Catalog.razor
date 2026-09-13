@@ -5,6 +5,7 @@
 @inject CatalogApiService CatalogApi
 @inject SeriesApiService SeriesApi
 @inject IJSRuntime JS
+@inject AppRefreshService Refreshes
 @implements IAsyncDisposable
 
 <PageTitle>Catalog</PageTitle>
@@ -192,6 +193,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Refreshes.Changed += OnAppRefresh;
         currentUser = await Auth.GetCurrentUserAsync(forceRefresh: true);
         selectedLanguage = (currentUser?.PreferredLanguage ?? "en").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? "en";
         if (!IsAdmin)
@@ -257,6 +259,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        Refreshes.Changed -= OnAppRefresh;
         try
         {
             await JS.InvokeVoidAsync("mangaHubProgressiveLoad.unobserve", loadMoreSentinel);
@@ -349,6 +352,21 @@
         messageSeverity = Severity.Success;
         message = $"Updated catalog metadata for {updated.Title}.";
         await LoadCatalog();
+        Refreshes.Notify(AppRefreshScope.Catalog | AppRefreshScope.Shelf);
+    }
+
+    private void OnAppRefresh(AppRefreshScope scope)
+    {
+        if ((scope & AppRefreshScope.Catalog) == 0)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            await LoadCatalog();
+            StateHasChanged();
+        });
     }
 
     private async Task RefreshCatalogEntry(CatalogMangaResponse updated)

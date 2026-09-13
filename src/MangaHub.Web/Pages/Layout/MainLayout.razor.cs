@@ -19,6 +19,7 @@ public partial class MainLayout : IDisposable
     [Inject] private MessageService Messages { get; set; } = default!;
     [Inject] private ShelfApiService ShelfApi { get; set; } = default!;
     [Inject] private IssueApiService Issues { get; set; } = default!;
+    [Inject] private AppRefreshService Refreshes { get; set; } = default!;
 
     private bool _drawerExpanded;
     private bool _darkMode;
@@ -51,6 +52,7 @@ public partial class MainLayout : IDisposable
     {
         Auth.Changed += OnAuthChanged;
         Auth.LoginRequested += OnLoginRequested;
+        Refreshes.Changed += OnAppRefresh;
         Navigation.LocationChanged += OnLocationChanged;
         _darkMode = await ThemePreference.GetDarkModeAsync() ?? false;
         _currentUser = await Auth.GetCurrentUserAsync();
@@ -182,6 +184,7 @@ public partial class MainLayout : IDisposable
                 _externalReaderCurrentChapter = "";
                 _externalReaderLatestChapter = "";
                 await CheckExternalReaderCheckInsAsync();
+                Refreshes.Notify(AppRefreshScope.Shelf | AppRefreshScope.Analytics);
                 return;
             }
         }
@@ -217,6 +220,7 @@ public partial class MainLayout : IDisposable
                 _externalReaderCurrentChapter = "";
                 _externalReaderLatestChapter = "";
                 await CheckExternalReaderCheckInsAsync();
+                Refreshes.Notify(AppRefreshScope.Shelf | AppRefreshScope.Analytics);
                 return;
             }
 
@@ -380,6 +384,16 @@ public partial class MainLayout : IDisposable
         _ = InvokeAsync(StateHasChanged);
     }
 
+    private void OnAppRefresh(AppRefreshScope scope)
+    {
+        if ((scope & AppRefreshScope.Notifications) != 0)
+        {
+            _ = LoadNotificationsAsync();
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
     private async Task LoadNotificationsAsync()
     {
         if (_currentUser is null)
@@ -412,6 +426,7 @@ public partial class MainLayout : IDisposable
         {
             await Notifications.MarkReadAsync(notification.Id);
             await LoadNotificationsAsync();
+            Refreshes.Notify(AppRefreshScope.Notifications | AppRefreshScope.Analytics);
         }
         if (string.Equals(notification.Type, "new-chapter", StringComparison.OrdinalIgnoreCase)
             && notification.MangaEntryId != Guid.Empty)
@@ -427,6 +442,7 @@ public partial class MainLayout : IDisposable
     {
         await Notifications.MarkAllReadAsync();
         await LoadNotificationsAsync();
+        Refreshes.Notify(AppRefreshScope.Notifications);
     }
 
     private async Task ClearReadNotifications()
@@ -434,6 +450,7 @@ public partial class MainLayout : IDisposable
         if (await Notifications.ClearReadAsync())
         {
             await LoadNotificationsAsync();
+            Refreshes.Notify(AppRefreshScope.Notifications);
         }
     }
 
@@ -525,6 +542,7 @@ public partial class MainLayout : IDisposable
     {
         Auth.Changed -= OnAuthChanged;
         Auth.LoginRequested -= OnLoginRequested;
+        Refreshes.Changed -= OnAppRefresh;
         Navigation.LocationChanged -= OnLocationChanged;
         _externalReaderReturnReference?.Dispose();
         _ = JS.InvokeVoidAsync("mangaHubExternalReader.disconnectReturn");

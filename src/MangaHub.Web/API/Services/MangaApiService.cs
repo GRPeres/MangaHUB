@@ -1,6 +1,8 @@
+using MangaHub.Web.Services;
+
 namespace MangaHub.Web.API.Services;
 
-public sealed class MangaApiService(ApiHttpClient api)
+public sealed class MangaApiService(ApiHttpClient api, AppRefreshService refreshes)
 {
     public async Task<List<MangaEntryResponse>> GetMangaEntriesAsync(string? status = null, Guid? userId = null, int offset = 0, int limit = 500, string? section = null)
     {
@@ -81,11 +83,18 @@ public sealed class MangaApiService(ApiHttpClient api)
             $"/api/manga/{entryId}/mangadex-reader/prefetch-next?afterCachedChapterId={currentCachedChapterId}&language={Uri.EscapeDataString(language)}",
             new { });
 
-    public async Task<bool> MarkCurrentChapterReadAsync(Guid entryId, Guid chapterId) =>
-        await api.SendAsync<object, bool>(
+    public async Task<bool> MarkCurrentChapterReadAsync(Guid entryId, Guid chapterId)
+    {
+        var marked = await api.SendAsync<object, bool>(
             HttpMethod.Post,
             $"/api/manga/{entryId}/reader/current-chapter-read/{chapterId}",
             new { });
+        if (marked)
+        {
+            refreshes.Notify(AppRefreshScope.Shelf | AppRefreshScope.Notifications | AppRefreshScope.Analytics);
+        }
+        return marked;
+    }
 
     public async Task<ReaderPreparationStatus?> GetMangaDexPreparationAsync(Guid jobId) =>
         await api.GetAsync<ReaderPreparationStatus>($"/api/manga/mangadex-reader/jobs/{jobId}");

@@ -21,6 +21,7 @@ builder.Services.AddScoped<SessionTokenStore>();
 builder.Services.AddScoped<ThemePreferenceService>();
 builder.Services.AddScoped<ReaderSettingsService>();
 builder.Services.AddScoped<MessageService>();
+builder.Services.AddScoped<AppRefreshService>();
 builder.Services.AddScoped<ApiHttpClient>();
 builder.Services.AddScoped<AuthApiService>();
 builder.Services.AddScoped<AuthSessionService>();
