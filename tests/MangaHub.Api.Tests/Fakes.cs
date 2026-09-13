@@ -99,6 +99,12 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
         CachedChapterIds.Remove(chapterId);
         return Task.CompletedTask;
     }
+
+    public Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken) =>
+        Task.FromResult(CachedChapterIds.Remove(chapterId));
+
+    public Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken) =>
+        Task.FromResult(false);
 }
 
 internal sealed class FakeMangaUpdatesClient : IMangaUpdatesClient

@@ -20,25 +20,32 @@ public sealed class MangaDexChapterCache(
         CancellationToken cancellationToken,
         IProgress<ReaderPreparationProgress>? progress = null)
     {
-        if (pages.Count == 0)
-        {
-            throw new InvalidOperationException("MangaDex did not provide any readable pages for this chapter.");
-        }
+        var (relativePath, activePath) = GetArchivePath(mangaDexId, chapterId);
+        var archivedPath = GetArchivedPath(mangaDexId, chapterId);
 
-        var (relativePath, archivePath) = GetArchivePath(mangaDexId, chapterId);
-
-        Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
-        var downloadLock = DownloadLocks.GetOrAdd(archivePath, _ => new SemaphoreSlim(1, 1));
+        Directory.CreateDirectory(Path.GetDirectoryName(activePath)!);
+        var downloadLock = DownloadLocks.GetOrAdd(activePath, _ => new SemaphoreSlim(1, 1));
         await downloadLock.WaitAsync(cancellationToken);
         try
         {
-            if (File.Exists(archivePath))
+            if (File.Exists(activePath))
             {
                 progress?.Report(new ReaderPreparationProgress("Using the cached local chapter", 100));
-                return await ReadCachedArchiveAsync(archivePath, relativePath, cancellationToken);
+                return await ReadCachedArchiveAsync(activePath, relativePath, cancellationToken);
+            }
+            if (File.Exists(archivedPath))
+            {
+                progress?.Report(new ReaderPreparationProgress("Restoring the archived local chapter", 12));
+                File.Move(archivedPath, activePath);
+                progress?.Report(new ReaderPreparationProgress("Using the restored local chapter", 100));
+                return await ReadCachedArchiveAsync(activePath, relativePath, cancellationToken);
+            }
+            if (pages.Count == 0)
+            {
+                throw new InvalidOperationException("MangaDex did not provide any readable pages for this chapter.");
             }
 
-            var temporaryPath = $"{archivePath}.{Guid.NewGuid():N}.tmp";
+            var temporaryPath = $"{activePath}.{Guid.NewGuid():N}.tmp";
             try
             {
                 await using (var output = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
@@ -79,7 +86,7 @@ public sealed class MangaDexChapterCache(
                 }
 
                 progress?.Report(new ReaderPreparationProgress("Building the local reader file", 95, pages.Count, pages.Count));
-                File.Move(temporaryPath, archivePath);
+                File.Move(temporaryPath, activePath);
             }
             catch
             {
@@ -90,7 +97,7 @@ public sealed class MangaDexChapterCache(
                 throw;
             }
 
-            var cached = await ReadCachedArchiveAsync(archivePath, relativePath, cancellationToken);
+            var cached = await ReadCachedArchiveAsync(activePath, relativePath, cancellationToken);
             progress?.Report(new ReaderPreparationProgress("Local chapter is ready", 100, cached.PageCount, cached.PageCount));
             return cached with { WasCached = false };
         }
@@ -143,16 +150,74 @@ public sealed class MangaDexChapterCache(
 
     public async Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
     {
-        var (_, archivePath) = GetArchivePath(mangaDexId, chapterId);
-        var downloadLock = DownloadLocks.GetOrAdd(archivePath, _ => new SemaphoreSlim(1, 1));
+        var (_, activePath) = GetArchivePath(mangaDexId, chapterId);
+        var archivePath = GetArchivedPath(mangaDexId, chapterId);
+        var downloadLock = DownloadLocks.GetOrAdd(activePath, _ => new SemaphoreSlim(1, 1));
         await downloadLock.WaitAsync(cancellationToken);
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (File.Exists(activePath))
+            {
+                File.Delete(activePath);
+            }
             if (File.Exists(archivePath))
             {
                 File.Delete(archivePath);
             }
+        }
+        finally
+        {
+            downloadLock.Release();
+        }
+    }
+
+    public async Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
+    {
+        var (_, activePath) = GetArchivePath(mangaDexId, chapterId);
+        var archivePath = GetArchivedPath(mangaDexId, chapterId);
+        var downloadLock = DownloadLocks.GetOrAdd(activePath, _ => new SemaphoreSlim(1, 1));
+        await downloadLock.WaitAsync(cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!File.Exists(activePath))
+            {
+                return false;
+            }
+
+            EnsureSyncthingArchiveIgnoreRule();
+            Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
+            File.Move(activePath, archivePath, overwrite: true);
+            return true;
+        }
+        finally
+        {
+            downloadLock.Release();
+        }
+    }
+
+    public async Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
+    {
+        var (_, activePath) = GetArchivePath(mangaDexId, chapterId);
+        var archivePath = GetArchivedPath(mangaDexId, chapterId);
+        var downloadLock = DownloadLocks.GetOrAdd(activePath, _ => new SemaphoreSlim(1, 1));
+        await downloadLock.WaitAsync(cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (File.Exists(activePath))
+            {
+                return true;
+            }
+            if (!File.Exists(archivePath))
+            {
+                return false;
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(activePath)!);
+            File.Move(archivePath, activePath);
+            return true;
         }
         finally
         {
@@ -171,6 +236,48 @@ public sealed class MangaDexChapterCache(
         }
 
         return (relativePath, archivePath);
+    }
+
+    private string GetArchivedPath(string mangaDexId, string chapterId)
+    {
+        var cacheRoot = Path.GetFullPath(options.Value.MangaDexCachePath);
+        var archivePath = Path.GetFullPath(Path.Combine(
+            cacheRoot,
+            "archive",
+            "mangadex",
+            SafePathSegment(mangaDexId),
+            $"{SafePathSegment(chapterId)}.cbz"));
+        if (!archivePath.StartsWith(cacheRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The MangaDex archive path is invalid.");
+        }
+
+        return archivePath;
+    }
+
+    private void EnsureSyncthingArchiveIgnoreRule()
+    {
+        var ignoreFile = Path.Combine(Path.GetFullPath(options.Value.MangaDexCachePath), ".stignore");
+        const string archiveRule = "/archive";
+        try
+        {
+            var lines = File.Exists(ignoreFile) ? File.ReadAllLines(ignoreFile) : [];
+            if (lines.Any(line => string.Equals(line.Trim(), archiveRule, StringComparison.Ordinal)))
+            {
+                return;
+            }
+
+            File.AppendAllText(ignoreFile,
+                $"{(lines.Length == 0 ? "" : Environment.NewLine)}// MangaHub archived CBZ files stay on the server.{Environment.NewLine}{archiveRule}{Environment.NewLine}");
+        }
+        catch (IOException)
+        {
+            // The archive remains usable even when the cache root is not a Syncthing folder.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // A read-only cache cannot archive chapters, but preserve normal reader behavior.
+        }
     }
 
     private static async Task<MangaDexCachedChapter> ReadCachedArchiveAsync(string archivePath, string relativePath, CancellationToken cancellationToken)

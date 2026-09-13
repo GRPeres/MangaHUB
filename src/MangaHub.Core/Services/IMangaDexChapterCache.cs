@@ -18,6 +18,10 @@ public interface IMangaDexChapterCache
         CancellationToken cancellationToken);
 
     Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken);
+
+    Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken);
+
+    Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken);
 }
 
 public sealed record MangaDexCachedChapter(string RelativePath, int PageCount, string FileHash, bool WasCached);

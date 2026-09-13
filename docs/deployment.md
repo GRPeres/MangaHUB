@@ -153,6 +153,8 @@ volumes:
 
 For a cache visible in a TrueNAS dataset instead, use a bind mount such as `/mnt/Shared/NAS/MangaHubMangaDexCache:/mangadex-cache`. Keep this cache separate from the original manga library: it is derived reader data, not your owned-library mount.
 
+MangaHub keeps recent reader chapters in `mangadex/`, which is the portion Syncthing can mirror to a phone. Cache retention moves older CBZ files to `archive/mangadex/` instead of deleting them. The reader restores an archived chapter before it asks MangaDex to download anything. When retention first archives a chapter, MangaHub adds `/archive` to the cache root's `.stignore`, keeping that server-side archive out of Syncthing while preserving it on the TrueNAS dataset.
+
 ## MangaDex Daily Maintenance
 
 The worker schedules MangaDex maintenance immediately when the container starts, then every day at the configured hour. The API performs it through the shared provider queue. This means a server that was off at 04:00 catches up as soon as it returns.

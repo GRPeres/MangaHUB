@@ -417,7 +417,7 @@ public sealed class RemoteMaintenanceService(
                 .Include(series => series.Chapters)
                 .Where(series => series.Source == MangaDexCacheSource)
                 .ToListAsync(cancellationToken);
-            var deleted = 0;
+            var archived = 0;
 
             foreach (var cached in cachedSeries)
             {
@@ -432,18 +432,14 @@ public sealed class RemoteMaintenanceService(
                         continue;
                     }
 
-                    await cache.DeleteAsync(cached.ExternalId, chapter.SourceId, cancellationToken);
-                    db.Chapters.Remove(chapter);
-                    deleted++;
+                    if (await cache.ArchiveAsync(cached.ExternalId, chapter.SourceId, cancellationToken))
+                    {
+                        archived++;
+                    }
                 }
             }
 
-            if (deleted > 0)
-            {
-                await db.SaveChangesAsync(cancellationToken);
-            }
-
-            logger.LogInformation("MangaDex cache retention removed {DeletedCount} cached chapters; active readers retain chapters from their earliest current chapter onward.", deleted);
+            logger.LogInformation("MangaDex cache retention archived {ArchivedCount} cached chapters; active readers retain chapters from their earliest current chapter onward.", archived);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
