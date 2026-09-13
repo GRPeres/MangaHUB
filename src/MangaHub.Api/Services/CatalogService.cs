@@ -22,6 +22,7 @@ public sealed class CatalogService(
         var details = await TryGetOpenLibraryDetailsAsync(entry.OpenLibraryKey, cancellationToken);
         var readerLinks = await ResolveReaderLinksAsync(entry, cancellationToken);
         var mangaUpdatesId = await ResolveMangaUpdatesIdAsync(entry.MangaUpdatesId, entry.Title, entry.MediaType, entry.FirstPublishYear, cancellationToken);
+        await EnsureUniqueExternalIdsAsync(readerLinks.MangaDexId, mangaUpdatesId, null, cancellationToken);
 
         var manga = new MangaEntry
         {
@@ -74,15 +75,18 @@ public sealed class CatalogService(
         manga.ChapterCount = entry.ChapterCount;
         manga.VolumeCount = entry.VolumeCount;
         var readerLinks = await ResolveReaderLinksAsync(entry, cancellationToken);
-        manga.MangaDexId = readerLinks.MangaDexId;
-        manga.FallbackReaderUrl = readerLinks.FallbackReaderUrl;
-        manga.ReaderPreference = NormalizeReaderPreference(entry.ReaderPreference);
-        manga.MangaUpdatesId = await ResolveMangaUpdatesIdAsync(
+        var mangaUpdatesId = await ResolveMangaUpdatesIdAsync(
             entry.MangaUpdatesId,
             manga.Title,
             manga.MediaType,
             manga.FirstPublishYear,
             cancellationToken);
+        await EnsureUniqueExternalIdsAsync(readerLinks.MangaDexId, mangaUpdatesId, manga.Id, cancellationToken);
+
+        manga.MangaDexId = readerLinks.MangaDexId;
+        manga.FallbackReaderUrl = readerLinks.FallbackReaderUrl;
+        manga.ReaderPreference = NormalizeReaderPreference(entry.ReaderPreference);
+        manga.MangaUpdatesId = mangaUpdatesId;
         manga.MangaUpdatesLastMatchAttemptAt = DateTimeOffset.UtcNow;
         manga.LocalSeriesId = entry.LocalSeriesId;
         manga.UpdatedAt = DateTimeOffset.UtcNow;
@@ -147,6 +151,31 @@ public sealed class CatalogService(
         return match?.Id ?? "";
     }
 
+    private async Task EnsureUniqueExternalIdsAsync(
+        string mangaDexId,
+        string mangaUpdatesId,
+        Guid? currentEntryId,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(mangaDexId))
+        {
+            var existing = await catalog.FindByMangaDexIdAsync(mangaDexId, cancellationToken);
+            if (existing is not null && existing.Id != currentEntryId)
+            {
+                throw new CatalogDuplicateIdentityException("MangaDex", mangaDexId, existing.Title);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(mangaUpdatesId))
+        {
+            var existing = await catalog.FindByMangaUpdatesIdAsync(mangaUpdatesId, cancellationToken);
+            if (existing is not null && existing.Id != currentEntryId)
+            {
+                throw new CatalogDuplicateIdentityException("MangaUpdates", mangaUpdatesId, existing.Title);
+            }
+        }
+    }
+
     private static string NormalizeMangaDexId(string value)
     {
         var trimmed = value.Trim();
@@ -163,3 +192,6 @@ public sealed class CatalogService(
 
     private sealed record ReaderLinks(string MangaDexId, string FallbackReaderUrl);
 }
+
+public sealed class CatalogDuplicateIdentityException(string provider, string id, string existingTitle)
+    : InvalidOperationException($"A catalog manga using this {provider} ID already exists: '{existingTitle}' ({id}). Review the existing entry or resolve it from Admin Issues.");

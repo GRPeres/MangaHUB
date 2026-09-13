@@ -38,6 +38,10 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
             var created = await catalog.CreateAsync(user.Id, request, cancellationToken);
             return Created($"/api/catalog/{created.Id}", created);
         }
+        catch (CatalogDuplicateIdentityException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "Duplicate catalog identity", detail: ex.Message);
+        }
         catch (DbUpdateException ex)
         {
             logger.LogError(ex, "Catalog create failed while storing '{Title}' for {Username}.", request.Title, user.Username);
@@ -59,8 +63,15 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
             return Problem(statusCode: StatusCodes.Status403Forbidden, title: "Catalog admin permission required", detail: $"The active API session belongs to '{user.Username}' with role '{user.Role}'.");
         }
 
-        var updated = await catalog.UpdateAsync(user.Id, entryId, request, cancellationToken);
-        return updated is null ? NotFound() : Ok(updated);
+        try
+        {
+            var updated = await catalog.UpdateAsync(user.Id, entryId, request, cancellationToken);
+            return updated is null ? NotFound() : Ok(updated);
+        }
+        catch (CatalogDuplicateIdentityException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "Duplicate catalog identity", detail: ex.Message);
+        }
     }
 
     [HttpGet("{entryId:guid}/mangadex-cache")]

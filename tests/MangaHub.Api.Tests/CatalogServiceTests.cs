@@ -96,6 +96,38 @@ public sealed class CatalogServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_RejectsAnExistingMangaDexId()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+        await service.CreateAsync(Guid.NewGuid(), Request(title: "First", mangaDexId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), CancellationToken.None);
+
+        var exception = await Assert.ThrowsAsync<CatalogDuplicateIdentityException>(() =>
+            service.CreateAsync(Guid.NewGuid(), Request(title: "Second", mangaDexId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), CancellationToken.None));
+
+        Assert.Contains("MangaDex", exception.Message);
+        Assert.Contains("First", exception.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RejectsAnotherEntriesMangaUpdatesId()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+        var first = await service.CreateAsync(Guid.NewGuid(), Request(title: "First", mangaDexId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), CancellationToken.None);
+        var second = await service.CreateAsync(Guid.NewGuid(), Request(title: "Second", mangaDexId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), CancellationToken.None);
+        var firstEntity = await db.MangaEntries.FindAsync([first.Id]);
+        firstEntity!.MangaUpdatesId = "123";
+        await db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<CatalogDuplicateIdentityException>(() =>
+            service.UpdateAsync(Guid.NewGuid(), second.Id, Request(title: "Second", mangaDexId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", mangaUpdatesId: "123"), CancellationToken.None));
+
+        Assert.Contains("MangaUpdates", exception.Message);
+        Assert.Contains("First", exception.Message);
+    }
+
+    [Fact]
     public async Task CreateAsync_StoresTheDedicatedFallbackReaderUrl()
     {
         await using var db = TestDb.Create();
@@ -144,7 +176,8 @@ public sealed class CatalogServiceTests
         string fallbackReaderUrl = "",
         string readerPreference = "mangahub",
         string metadataSource = "manual",
-        string myAnimeListId = "") =>
+        string myAnimeListId = "",
+        string mangaUpdatesId = "") =>
         new(
             Title: title,
             Authors: "Kentaro Miura",
@@ -164,7 +197,8 @@ public sealed class CatalogServiceTests
             ChapterCount: null,
             VolumeCount: null,
             FallbackReaderUrl: fallbackReaderUrl,
-            ReaderPreference: readerPreference);
+            ReaderPreference: readerPreference,
+            MangaUpdatesId: mangaUpdatesId);
 
     private sealed class FakeOpenLibrary(OpenLibraryWorkDetails? details) : IOpenLibraryClient
     {
