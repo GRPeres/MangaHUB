@@ -20,4 +20,13 @@ public sealed class MetadataApiService(ApiHttpClient api)
         var url = $"/api/metadata/mangaupdates-match?title={Uri.EscapeDataString(title)}&mediaType={Uri.EscapeDataString(mediaType)}&firstPublishYear={Uri.EscapeDataString(year)}";
         return api.GetAsync<MangaUpdatesSearchResult>(url);
     }
+
+    public Task<MangaDexCatalogMatch?> FindMangaDexTitleMatchAsync(string title) =>
+        api.GetAsync<MangaDexCatalogMatch>($"/api/metadata/mangadex-title-match?title={Uri.EscapeDataString(title)}");
+
+    public Task<MetadataResult?> GetMangaDexMetadataAsync(string mangaDexId) =>
+        api.GetAsync<MetadataResult>($"/api/metadata/mangadex/{Uri.EscapeDataString(mangaDexId)}");
+
+    public Task<MetadataResult?> GetMangaUpdatesMetadataAsync(string mangaUpdatesId) =>
+        api.GetAsync<MetadataResult>($"/api/metadata/mangaupdates/{Uri.EscapeDataString(mangaUpdatesId)}");
 }

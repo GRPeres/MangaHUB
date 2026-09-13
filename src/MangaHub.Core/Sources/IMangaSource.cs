@@ -24,7 +24,10 @@ public sealed record MangaSourceSeries(
     string Description,
     string CoverUrl,
     string Status,
-    string Source);
+    string Source,
+    int? FirstPublishYear = null,
+    string Category = "",
+    List<string>? AlternateTitles = null);
 
 public sealed record MangaSourceChapter(
     string Id,

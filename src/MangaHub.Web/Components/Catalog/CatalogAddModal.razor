@@ -114,7 +114,13 @@
                         <MudTextField T="string" @bind-Value="coverUrl" Label="Cover image URL" Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudTextField T="string" @bind-Value="mangaDexId" Label="MangaDex ID" Variant="Variant.Outlined" Disabled="@isMatchingMangaDex" />
+                        <MudTextField T="string"
+                                      @bind-Value="mangaDexId"
+                                      Label="MangaDex ID"
+                                      HelperText="Enter an ID to fill available MangaDex metadata."
+                                      Variant="Variant.Outlined"
+                                      Disabled="@(isMatchingMangaDex || isLoadingMangaDexMetadata)"
+                                      OnBlur="LoadMangaDexMetadata" />
                     </MudItem>
                     <MudItem xs="12" md="6">
                         <MudTextField T="string" @bind-Value="fallbackReaderUrl" Label="Fallback reader URL" Variant="Variant.Outlined" />
@@ -127,7 +133,13 @@
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudTextField T="string" @bind-Value="mangaUpdatesId" Label="MangaUpdates ID" Variant="Variant.Outlined" />
+                        <MudTextField T="string"
+                                      @bind-Value="mangaUpdatesId"
+                                      Label="MangaUpdates ID"
+                                      HelperText="Enter an ID to fill available MangaUpdates metadata."
+                                      Variant="Variant.Outlined"
+                                      Disabled="@isLoadingMangaUpdatesMetadata"
+                                      OnBlur="LoadMangaUpdatesMetadata" />
                     </MudItem>
                     <MudItem xs="12" md="6">
                         <MudSelect T="string" @bind-Value="localSeriesIdText" Label="Local scanned series" Variant="Variant.Outlined">

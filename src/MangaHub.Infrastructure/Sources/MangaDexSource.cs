@@ -69,9 +69,14 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
             idElement.GetString() ?? id,
             attributes.TryGetProperty("title", out var titles) ? ReadLocalized(titles) : "",
             attributes.TryGetProperty("description", out var descriptions) ? ReadLocalized(descriptions) : "",
-            "",
+            ReadCoverUrl(item, idElement.GetString() ?? id),
             ReadString(attributes, "status"),
-            Name);
+            Name,
+            ReadInt(attributes, "year"),
+            ReadTags(attributes),
+            attributes.TryGetProperty("altTitles", out var alternatives)
+                ? ReadAlternateTitles(alternatives, attributes.TryGetProperty("title", out var titleElement) ? ReadLocalized(titleElement) : "")
+                : []);
         cache.Set(cacheKey, series, TimeSpan.FromMinutes(Math.Max(1, options.Value.MangaDexReaderCacheMinutes)));
         return series;
     }
@@ -274,10 +279,31 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
             : $"https://uploads.mangadex.org/covers/{mangaId}/{fileName}.256.jpg";
     }
 
+    private static string ReadTags(JsonElement attributes)
+    {
+        if (!attributes.TryGetProperty("tags", out var tags) || tags.ValueKind != JsonValueKind.Array)
+        {
+            return "";
+        }
+
+        return string.Join(", ", tags.EnumerateArray()
+            .Where(tag => tag.TryGetProperty("attributes", out _))
+            .Select(tag => tag.GetProperty("attributes"))
+            .Where(tag => tag.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.Object)
+            .Select(tag => ReadLocalized(tag.GetProperty("name")))
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(4));
+    }
+
     private static string ReadString(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
 
     private static int? ReadInt(JsonElement element, string property) =>
-        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) ? number : null;
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number)
+            ? number
+            : element.TryGetProperty(property, out value) && value.ValueKind == JsonValueKind.String && int.TryParse(value.GetString(), out number)
+                ? number
+                : null;
 
 }

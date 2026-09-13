@@ -28,4 +28,25 @@ public sealed class MetadataController(MetadataService metadata) : ControllerBas
         var match = await metadata.FindMangaUpdatesMatchAsync(title, mediaType, firstPublishYear, cancellationToken);
         return match is null ? NoContent() : Ok(match);
     }
+
+    [HttpGet("mangadex-title-match")]
+    public async Task<IActionResult> FindMangaDexTitleMatch([FromQuery] string title, CancellationToken cancellationToken)
+    {
+        var match = await metadata.FindMangaDexTitleMatchAsync(title, cancellationToken);
+        return match is null ? NoContent() : Ok(match);
+    }
+
+    [HttpGet("mangadex/{mangaDexId}")]
+    public async Task<IActionResult> GetMangaDexMetadata(string mangaDexId, CancellationToken cancellationToken)
+    {
+        var result = await metadata.GetMangaDexMetadataAsync(mangaDexId, cancellationToken);
+        return result is null ? NoContent() : Ok(result);
+    }
+
+    [HttpGet("mangaupdates/{mangaUpdatesId}")]
+    public async Task<IActionResult> GetMangaUpdatesMetadata(string mangaUpdatesId, CancellationToken cancellationToken)
+    {
+        var result = await metadata.GetMangaUpdatesMetadataAsync(mangaUpdatesId, cancellationToken);
+        return result is null ? NoContent() : Ok(result);
+    }
 }

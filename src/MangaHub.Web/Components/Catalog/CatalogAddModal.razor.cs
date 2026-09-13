@@ -1,6 +1,7 @@
 using MangaHub.Web.API.DTOs;
 using MangaHub.Web.API.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
 
 namespace MangaHub.Web.Components.Catalog;
@@ -41,6 +42,8 @@ public partial class CatalogAddModal
     private bool isSearchingMetadata;
     private bool hasSearchedOpenLibrary;
     private bool isMatchingMangaDex;
+    private bool isLoadingMangaDexMetadata;
+    private bool isLoadingMangaUpdatesMetadata;
     private bool isSaving;
     private int metadataSearchVersion;
     private List<MetadataResult> metadataResults = [];
@@ -342,6 +345,128 @@ public partial class CatalogAddModal
             // The server repeats this lookup when saving, so a transient preview failure is harmless.
         }
     }
+
+    private async Task LoadMangaDexMetadata(FocusEventArgs _)
+    {
+        var requestedId = mangaDexId.Trim();
+        if (string.IsNullOrWhiteSpace(requestedId) || isLoadingMangaDexMetadata)
+        {
+            return;
+        }
+
+        isLoadingMangaDexMetadata = true;
+        messageSeverity = Severity.Info;
+        message = "Loading metadata from MangaDex...";
+        try
+        {
+            var metadata = await MetadataApi.GetMangaDexMetadataAsync(requestedId);
+            if (metadata is null)
+            {
+                messageSeverity = Severity.Warning;
+                message = "MangaDex could not find that ID. Your form values were not changed.";
+                return;
+            }
+
+            FillBlankMetadata(metadata);
+            mangaDexId = metadata.SourceId;
+            if (string.IsNullOrWhiteSpace(mangaUpdatesId))
+            {
+                await MatchMangaUpdatesAsync();
+            }
+
+            messageSeverity = Severity.Success;
+            message = $"Filled available fields from MangaDex: {metadata.Title}.";
+        }
+        catch
+        {
+            messageSeverity = Severity.Warning;
+            message = "MangaDex metadata could not be loaded. Your form values were not changed.";
+        }
+        finally
+        {
+            isLoadingMangaDexMetadata = false;
+        }
+    }
+
+    private async Task LoadMangaUpdatesMetadata(FocusEventArgs _)
+    {
+        var requestedId = mangaUpdatesId.Trim();
+        if (string.IsNullOrWhiteSpace(requestedId) || isLoadingMangaUpdatesMetadata)
+        {
+            return;
+        }
+
+        isLoadingMangaUpdatesMetadata = true;
+        messageSeverity = Severity.Info;
+        message = "Loading metadata from MangaUpdates...";
+        try
+        {
+            var metadata = await MetadataApi.GetMangaUpdatesMetadataAsync(requestedId);
+            if (metadata is null)
+            {
+                messageSeverity = Severity.Warning;
+                message = "MangaUpdates could not find that ID. Your form values were not changed.";
+                return;
+            }
+
+            FillBlankMetadata(metadata);
+            mangaUpdatesId = metadata.SourceId;
+            if (string.IsNullOrWhiteSpace(mangaDexId))
+            {
+                await MatchMangaDexByTitleAsync();
+            }
+
+            messageSeverity = Severity.Success;
+            message = $"Filled available fields from MangaUpdates: {metadata.Title}.";
+        }
+        catch
+        {
+            messageSeverity = Severity.Warning;
+            message = "MangaUpdates metadata could not be loaded. Your form values were not changed.";
+        }
+        finally
+        {
+            isLoadingMangaUpdatesMetadata = false;
+        }
+    }
+
+    private void FillBlankMetadata(MetadataResult item)
+    {
+        title = FirstNonEmpty(title, item.Title);
+        authors = FirstNonEmpty(authors, item.Authors);
+        category = FirstNonEmpty(category, item.Category);
+        description = FirstNonEmpty(description, item.Description);
+        coverUrl = FirstNonEmpty(coverUrl, item.CoverUrl);
+        metadataSource = FirstNonEmpty(metadataSource, item.Source);
+        myAnimeListId = FirstNonEmpty(myAnimeListId, item.MyAnimeListId);
+        openLibraryKey = FirstNonEmpty(openLibraryKey, item.OpenLibraryKey);
+        mediaType = FirstNonEmpty(mediaType, item.MediaType);
+        publishingStatus = FirstNonEmpty(publishingStatus, item.PublishingStatus);
+        firstPublishYear ??= item.FirstPublishYear;
+        chapterCount ??= item.ChapterCount;
+        volumeCount ??= item.VolumeCount;
+    }
+
+    private async Task MatchMangaDexByTitleAsync()
+    {
+        if (string.IsNullOrWhiteSpace(title)) return;
+
+        try
+        {
+            var match = await MetadataApi.FindMangaDexTitleMatchAsync(title);
+            if (match is not null)
+            {
+                mangaDexId = match.Id;
+            }
+        }
+        catch
+        {
+            // A later save can still use a manually entered MangaDex ID.
+        }
+    }
+
+    private static string FirstNonEmpty(string currentValue, string sourceValue) =>
+        string.IsNullOrWhiteSpace(currentValue) ? sourceValue.Trim() : currentValue;
 
     private async Task SearchOpenLibrarySuggestions()
     {

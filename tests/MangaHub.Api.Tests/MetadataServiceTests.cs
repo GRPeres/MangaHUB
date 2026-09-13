@@ -102,6 +102,43 @@ public sealed class MetadataServiceTests
         Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", match!.Id);
     }
 
+    [Fact]
+    public async Task GetMangaDexMetadataAsync_ReturnsDirectSeriesMetadata()
+    {
+        var mangaDex = new FakeMangaDexSource
+        {
+            Series = new MangaSourceSeries(
+                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Berserk", "Dark fantasy", "https://cover.example/berserk.jpg", "ongoing", "mangadex", 1989, "Action", ["Berserk: The Prototype"])
+        };
+        var service = CreateService(new FakeMyAnimeListClient([]), new FakeOpenLibraryClient([]), mangaDex, new FakeMangaUpdatesClient());
+
+        var result = await service.GetMangaDexMetadataAsync(mangaDex.Series.Id, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("mangadex", result!.Source);
+        Assert.Equal("Berserk", result.Title);
+        Assert.Equal("Dark fantasy", result.Description);
+        Assert.Equal("https://cover.example/berserk.jpg", result.CoverUrl);
+        Assert.Equal(1989, result.FirstPublishYear);
+    }
+
+    [Fact]
+    public async Task GetMangaUpdatesMetadataAsync_EnrichesDirectSeriesWithSearchData()
+    {
+        var mangaUpdates = new FakeMangaUpdatesClient();
+        mangaUpdates.Details["123"] = new MangaUpdatesSeriesDetails("123", "Berserk", 382, "Ongoing", false);
+        mangaUpdates.SearchResults.Add(new MangaUpdatesSearchResult("123", "Berserk", "Manga", 1989, ["Berserk: The Prototype"]));
+        var service = CreateService(new FakeMyAnimeListClient([]), new FakeOpenLibraryClient([]), new FakeMangaDexSource(), mangaUpdates);
+
+        var result = await service.GetMangaUpdatesMetadataAsync("123", CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("mangaupdates", result!.Source);
+        Assert.Equal("Manga", result.Category);
+        Assert.Equal("Ongoing", result.PublishingStatus);
+        Assert.Equal(1989, result.FirstPublishYear);
+    }
+
     private static MetadataService CreateService(
         IMyAnimeListClient myAnimeList,
         IOpenLibraryClient openLibrary,

@@ -1,6 +1,7 @@
 using MangaHub.Core.Dto;
 using MangaHub.Core.Services;
 using MangaHub.Core.Sources;
+using MangaHub.Api.Common;
 
 namespace MangaHub.Api.Services;
 
@@ -127,6 +128,61 @@ public sealed class MetadataService(
 
     public Task<MangaUpdatesSearchResult?> FindMangaUpdatesMatchAsync(string title, string mediaType, int? firstPublishYear, CancellationToken cancellationToken) =>
         mangaUpdatesMatches.FindAsync(title, mediaType, firstPublishYear, cancellationToken);
+
+    public async Task<MangaDexCatalogMatch?> FindMangaDexTitleMatchAsync(string title, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return null;
+        var exactMatch = (await SearchMangaDexAsync(title, cancellationToken))
+            .FirstOrDefault(result => string.Equals(NormalizeTitle(result.Title), NormalizeTitle(title), StringComparison.OrdinalIgnoreCase));
+        return exactMatch is null ? null : new MangaDexCatalogMatch(exactMatch.SourceId, exactMatch.Title);
+    }
+
+    public async Task<MetadataResult?> GetMangaDexMetadataAsync(string mangaDexId, CancellationToken cancellationToken)
+    {
+        var source = sources.FirstOrDefault(item => string.Equals(item.Name, "mangadex", StringComparison.OrdinalIgnoreCase));
+        var normalizedId = TextRules.ExtractMangaDexId(mangaDexId);
+        if (source is null || string.IsNullOrWhiteSpace(normalizedId)) return null;
+
+        try
+        {
+            var series = await source.GetSeriesAsync(normalizedId, cancellationToken);
+            return series is null ? null : new MetadataResult(
+                "mangadex", series.Id, series.Title, "", series.CoverUrl, series.FirstPublishYear, series.Category, series.Description,
+                "", series.Status, null, null, "", "", series.AlternateTitles ?? []);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    public async Task<MetadataResult?> GetMangaUpdatesMetadataAsync(string mangaUpdatesId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(mangaUpdatesId)) return null;
+
+        try
+        {
+            var details = await mangaUpdates.GetSeriesAsync(mangaUpdatesId.Trim(), cancellationToken);
+            if (details is null) return null;
+            var match = (await mangaUpdates.SearchSeriesAsync(details.Title, cancellationToken))
+                .FirstOrDefault(item => string.Equals(item.Id, details.Id, StringComparison.OrdinalIgnoreCase));
+            return new MetadataResult(
+                "mangaupdates", details.Id, details.Title, "", "", match?.Year, match?.Type ?? "", "",
+                match?.Type ?? "", details.Status, null, null, "", "", match?.AlternativeTitles?.ToList() ?? []);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
 
     private static string NormalizeTitle(string title)
     {
