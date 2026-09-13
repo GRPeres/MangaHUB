@@ -65,7 +65,7 @@ public sealed class MetadataServiceTests
 
         Assert.Equal("mangadex", result.Source);
         Assert.Equal("mangadex-id", result.SourceId);
-        Assert.Equal("https://cover.example/cover.jpg", result.CoverUrl);
+        Assert.Empty(result.CoverUrl);
         Assert.Equal(["Alternate name"], result.AlternateTitles);
         Assert.Equal("openlibrary", results[1].Source);
     }
@@ -118,7 +118,7 @@ public sealed class MetadataServiceTests
         Assert.Equal("mangadex", result!.Source);
         Assert.Equal("Berserk", result.Title);
         Assert.Equal("Dark fantasy", result.Description);
-        Assert.Equal("https://cover.example/berserk.jpg", result.CoverUrl);
+        Assert.Empty(result.CoverUrl);
         Assert.Equal(1989, result.FirstPublishYear);
     }
 

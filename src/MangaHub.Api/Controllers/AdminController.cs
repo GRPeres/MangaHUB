@@ -99,6 +99,15 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         return await issues.ResolveExternalReaderLinkAsync(user.Id, issueId, request, cancellationToken) ? NoContent() : BadRequest("Enter a valid replacement URL.");
     }
 
+    [HttpPost("issues/{issueId:guid}/resolve-cover")]
+    public async Task<IActionResult> ResolveCoverIssue(Guid issueId, [FromBody] ResolveCoverImageIssueRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return await issues.ResolveCoverImageAsync(user.Id, issueId, request, cancellationToken) ? NoContent() : BadRequest("Enter a valid image URL, or leave it blank to remove the cover.");
+    }
+
     [HttpPost("issues/{issueId:guid}/reintegrate-mangadex")]
     public async Task<IActionResult> ReintegrateWithMangaDex(Guid issueId, CancellationToken cancellationToken)
     {

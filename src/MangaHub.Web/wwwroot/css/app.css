@@ -891,6 +891,15 @@ html.mh-theme-dark .loading-progress circle:last-child {
     }
 }
 
+html body .mh-cover-report-button {
+  background: color-mix(in srgb, var(--mud-palette-surface) 84%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--mud-palette-error) 38%, var(--mud-palette-divider));
+  position: absolute !important;
+  right: .45rem;
+  top: .45rem;
+  z-index: 3;
+}
+
 html.mh-theme-dark body .mh-row-card {
     background: var(--mud-palette-surface) !important;
 }

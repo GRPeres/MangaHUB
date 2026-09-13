@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using MangaHub.Web.API.DTOs;
+using MangaHub.Web.Components.Design;
 using MudBlazor;
 using System.Globalization;
 
@@ -18,6 +19,8 @@ public partial class ShelfEntryCard
     [Parameter] public EventCallback<int?> OnScoreChanged { get; set; }
 
     private bool metadataOpen;
+    private bool coverReportOpen;
+    private string DisplayCoverUrl => CoverImageRules.DisplayUrl(Entry.CoverUrl);
     private bool isSavingScore;
     private int? selectedScore;
     private string StatusLabel => string.IsNullOrWhiteSpace(Entry.ReadingStatus) ? "planned" : Entry.ReadingStatus;
@@ -184,6 +187,7 @@ public partial class ShelfEntryCard
     private string MetadataTitleId => $"shelf-metadata-{Entry.Id:N}";
     private void OpenMetadata() => metadataOpen = true;
     private void CloseMetadata() => metadataOpen = false;
+    private void OpenCoverReport() => coverReportOpen = true;
 
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";

@@ -1,13 +1,14 @@
 <MudCard Elevation="0" Outlined="true" Class="@CardClass">
-    <div class="mh-mobile-shelf-cover" aria-hidden="true">
-        @if (!string.IsNullOrWhiteSpace(Entry.CoverUrl))
+    <div class="mh-mobile-shelf-cover">
+        @if (!string.IsNullOrWhiteSpace(DisplayCoverUrl))
         {
-            <img src="@Entry.CoverUrl" alt="" class="mh-mobile-shelf-cover-image" loading="lazy" decoding="async" />
+            <img src="@DisplayCoverUrl" alt="" class="mh-mobile-shelf-cover-image" loading="lazy" decoding="async" />
         }
         else
         {
             <MudIcon Icon="@Icons.Material.Filled.MenuBook" />
         }
+        <MudTooltip Text="Report cover image"><MudIconButton Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Error" Size="Size.Small" Class="mh-cover-report-button" OnClick="OpenCoverReport" aria-label="Report cover image" /></MudTooltip>
     </div>
 
     <div class="mh-mobile-shelf-header">
@@ -118,3 +119,5 @@
         </section>
     </div>
 }
+
+<CoverImageIssueReportModal @bind-Open="coverReportOpen" MangaEntryId="@Entry.Id" Title="@Entry.Title" />

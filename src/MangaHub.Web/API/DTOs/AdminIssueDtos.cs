@@ -7,6 +7,7 @@ public sealed record AdminIssueReportResponse(Guid Id, string Reason, string Not
 public sealed record DuplicateCatalogMangaResponse(Guid Id, string Title, string CoverUrl, string MyAnimeListId, string MangaDexId, string MangaUpdatesId, string OpenLibraryKey, DateTimeOffset CreatedAt);
 public sealed record AdminIssueDetailsResponse(Guid Id, string Kind, string SubjectType, Guid SubjectId, string Status, string Priority, string Title, string CoverUrl, string MetadataJson, string FallbackReaderUrl, string MyAnimeListId, string MangaDexId, string MangaUpdatesId, string ResolutionNote, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, List<AdminIssueReportResponse> Reports, List<DuplicateCatalogMangaResponse>? DuplicateCatalogEntries = null);
 public sealed record ResolveAdminIssueRequest(string FallbackReaderUrl, string ResolutionNote = "");
+public sealed record ResolveCoverImageIssueRequest(string CoverUrl, string ResolutionNote = "");
 public sealed record DismissAdminIssueRequest(string ResolutionNote = "");
 public sealed record MergeDuplicateCatalogIssueRequest(Guid KeepMangaEntryId);
 public sealed record ReintegrateIssueWithMetadataRequest(

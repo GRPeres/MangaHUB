@@ -32,8 +32,32 @@ public sealed class IssueReportingServiceTests
     public void Registry_OnlyAllowsKnownIssueSubjectPairs()
     {
         Assert.True(AdminIssueTypes.Supports(AdminIssueTypes.ExternalReaderLink, AdminIssueTypes.CatalogManga));
+        Assert.True(AdminIssueTypes.Supports(AdminIssueTypes.CoverImage, AdminIssueTypes.CatalogManga));
         Assert.False(AdminIssueTypes.Supports(AdminIssueTypes.ExternalReaderLink, "shelf-entry"));
         Assert.False(AdminIssueTypes.Supports("unknown", AdminIssueTypes.CatalogManga));
+    }
+
+    [Fact]
+    public async Task CoverImageReport_MergesAndCanBeRepaired()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "No cover", CoverUrl = "https://old.example/cover.jpg" };
+        var firstUser = new MangaUser { Username = "first", PasswordHash = "hash" };
+        var secondUser = new MangaUser { Username = "second", PasswordHash = "hash" };
+        db.MangaEntries.Add(manga);
+        db.Users.AddRange(firstUser, secondUser);
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+
+        var first = await service.ReportAsync(firstUser.Id, new(AdminIssueTypes.CoverImage, AdminIssueTypes.CatalogManga, manga.Id, "wrong-image"), CancellationToken.None);
+        var second = await service.ReportAsync(secondUser.Id, new(AdminIssueTypes.CoverImage, AdminIssueTypes.CatalogManga, manga.Id, "broken"), CancellationToken.None);
+        var repaired = await service.ResolveCoverImageAsync(Guid.NewGuid(), first!.IssueId, new("https://new.example/cover.jpg", "Updated cover"), CancellationToken.None);
+
+        Assert.Equal(first.IssueId, second!.IssueId);
+        Assert.True(repaired);
+        Assert.Equal("https://new.example/cover.jpg", manga.CoverUrl);
+        Assert.Equal("resolved", Assert.Single(db.AdminIssues).Status);
+        Assert.Equal(2, db.Notifications.Count());
     }
 
     [Fact]

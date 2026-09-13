@@ -55,7 +55,7 @@ public sealed class MetadataService(
             if (source is null) return [];
             var results = await source.SearchAsync(query, cancellationToken);
             return results.Select(item => new MetadataResult(
-                "mangadex", item.Id, item.Title, "", item.CoverUrl, null, "", item.Description,
+                "mangadex", item.Id, item.Title, "", "", null, "", item.Description,
                 "", item.Status, null, null, "", "", item.AlternateTitles ?? [])).ToList();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -146,8 +146,10 @@ public sealed class MetadataService(
         try
         {
             var series = await source.GetSeriesAsync(normalizedId, cancellationToken);
-            return series is null ? null : new MetadataResult(
-                "mangadex", series.Id, series.Title, "", series.CoverUrl, series.FirstPublishYear, series.Category, series.Description,
+            if (series is null) return null;
+            var fallbackCover = await FindFallbackCoverAsync(series.Title, cancellationToken);
+            return new MetadataResult(
+                "mangadex", series.Id, series.Title, "", fallbackCover, series.FirstPublishYear, series.Category, series.Description,
                 "", series.Status, null, null, "", "", series.AlternateTitles ?? []);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -191,4 +193,34 @@ public sealed class MetadataService(
             .ToArray();
         return new string(chars);
     }
+
+    private async Task<string> FindFallbackCoverAsync(string title, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var normalizedTitle = NormalizeTitle(title);
+            var malCover = (await myAnimeList.SearchMangaAsync(title, cancellationToken))
+                .OrderBy(item => string.Equals(NormalizeTitle(item.Title), normalizedTitle, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .Select(item => item.CoverUrl)
+                .FirstOrDefault(IsUsableCoverUrl);
+            if (!string.IsNullOrWhiteSpace(malCover)) return malCover;
+
+            return (await openLibrary.SearchAsync(title, cancellationToken))
+                .OrderBy(item => string.Equals(NormalizeTitle(item.Title), normalizedTitle, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .Select(item => item.CoverUrl)
+                .FirstOrDefault(IsUsableCoverUrl) ?? "";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
+        {
+            return "";
+        }
+    }
+
+    private static bool IsUsableCoverUrl(string url) => !string.IsNullOrWhiteSpace(url)
+        && Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && !uri.Host.EndsWith("mangadex.org", StringComparison.OrdinalIgnoreCase);
 }

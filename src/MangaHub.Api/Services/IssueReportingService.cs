@@ -17,15 +17,18 @@ public sealed class IssueReportingService(
     {
         "broken", "wrong-manga", "obsolete", "unsafe", "other"
     };
+    private static readonly HashSet<string> CoverImageReasons = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "missing", "broken", "wrong-image", "low-quality", "other"
+    };
 
     public async Task<AdminIssueReportStateResponse?> ReportAsync(Guid userId, CreateAdminIssueReportRequest request, CancellationToken cancellationToken)
     {
-        if (!AdminIssueTypes.Supports(request.Kind, request.SubjectType)
-            || !string.Equals(request.Kind, AdminIssueTypes.ExternalReaderLink, StringComparison.OrdinalIgnoreCase)
-            || !ExternalLinkReasons.Contains(request.Reason.Trim()))
-        {
-            return null;
-        }
+        if (!AdminIssueTypes.Supports(request.Kind, request.SubjectType)) return null;
+        if (string.Equals(request.Kind, AdminIssueTypes.CoverImage, StringComparison.OrdinalIgnoreCase))
+            return await ReportCoverImageAsync(userId, request, cancellationToken);
+        if (!string.Equals(request.Kind, AdminIssueTypes.ExternalReaderLink, StringComparison.OrdinalIgnoreCase)
+            || !ExternalLinkReasons.Contains(request.Reason.Trim())) return null;
 
         var shelfEntry = await shelf.GetWithMangaAsync(userId, request.SubjectId, cancellationToken);
         if (shelfEntry?.MangaEntry is null
@@ -68,6 +71,45 @@ public sealed class IssueReportingService(
             reportCount++;
         }
 
+        issue.UpdatedAt = DateTimeOffset.UtcNow;
+        await issues.SaveChangesAsync(cancellationToken);
+        return new AdminIssueReportStateResponse(issue.Id, true, reportCount, issue.Status);
+    }
+
+    private async Task<AdminIssueReportStateResponse?> ReportCoverImageAsync(Guid userId, CreateAdminIssueReportRequest request, CancellationToken cancellationToken)
+    {
+        if (!CoverImageReasons.Contains(request.Reason.Trim())) return null;
+        var manga = await catalog.GetByIdNoTrackingAsync(request.SubjectId, cancellationToken);
+        if (manga is null) return null;
+        var issue = await issues.GetOpenAsync(AdminIssueTypes.CoverImage, AdminIssueTypes.CatalogManga, manga.Id, cancellationToken);
+        if (issue is null)
+        {
+            issue = new AdminIssue
+            {
+                Kind = AdminIssueTypes.CoverImage,
+                SubjectType = AdminIssueTypes.CatalogManga,
+                SubjectId = manga.Id,
+                Priority = "normal",
+                TitleSnapshot = manga.Title,
+                MetadataJson = JsonSerializer.Serialize(new { coverUrl = manga.CoverUrl })
+            };
+            issues.Add(issue);
+        }
+
+        var alreadyReported = issue.Reports.Any(report => report.ReporterUserId == userId);
+        var reportCount = issue.Reports.Count;
+        if (!alreadyReported)
+        {
+            issues.AddReport(new AdminIssueReport
+            {
+                AdminIssueId = issue.Id,
+                ReporterUserId = userId,
+                Reason = request.Reason.Trim().ToLowerInvariant(),
+                Note = request.Note.Trim()[..Math.Min(request.Note.Trim().Length, 800)],
+                SnapshotValue = manga.CoverUrl
+            });
+            reportCount++;
+        }
         issue.UpdatedAt = DateTimeOffset.UtcNow;
         await issues.SaveChangesAsync(cancellationToken);
         return new AdminIssueReportStateResponse(issue.Id, true, reportCount, issue.Status);
@@ -121,6 +163,19 @@ public sealed class IssueReportingService(
         manga.FallbackReaderUrl = request.FallbackReaderUrl.Trim();
         manga.UpdatedAt = DateTimeOffset.UtcNow;
         await CloseAsync(issue, adminUserId, "resolved", request.ResolutionNote, "External reader link repaired", "An admin repaired the external reader link for", cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> ResolveCoverImageAsync(Guid adminUserId, Guid issueId, ResolveCoverImageIssueRequest request, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        if (issue is null || issue.Status != "open" || !string.Equals(issue.Kind, AdminIssueTypes.CoverImage, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.IsNullOrWhiteSpace(request.CoverUrl) && !IsHttpUrl(request.CoverUrl)) return false;
+        var manga = await catalog.GetByIdAsync(issue.SubjectId, cancellationToken);
+        if (manga is null) return false;
+        manga.CoverUrl = request.CoverUrl.Trim();
+        manga.UpdatedAt = DateTimeOffset.UtcNow;
+        await CloseAsync(issue, adminUserId, "resolved", request.ResolutionNote, "Cover image updated", "An admin updated the cover image for", cancellationToken);
         return true;
     }
 
