@@ -893,12 +893,12 @@ html.mh-theme-dark .loading-progress circle:last-child {
 
 html body .mh-card-report-menu {
   align-items: center;
-  background: color-mix(in srgb, var(--mud-palette-surface) 84%, transparent) !important;
-  border: 1px solid color-mix(in srgb, var(--mud-palette-error) 38%, var(--mud-palette-divider));
-  border-radius: 999px;
+  background: transparent !important;
+  border: 0;
+  border-radius: 50%;
   display: inline-flex;
+  left: .45rem;
   position: absolute !important;
-  right: .45rem;
   top: .45rem;
   z-index: 3;
 }
@@ -1179,13 +1179,18 @@ html body .mh-mobile-catalog-card {
         position: static !important;
     }
 
+    html body .mh-mobile-card-action:has(.mh-card-report-menu) {
+        margin-left: -.15rem !important;
+        width: 1.35rem !important;
+    }
+
     html body .mh-mobile-card-action .mh-card-report-menu .mud-icon-button,
     html body .mh-mobile-card-action .mh-card-report-menu.mud-icon-button {
-        height: 1.85rem !important;
-        min-height: 1.85rem !important;
-        min-width: 1.85rem !important;
+        height: 1.35rem !important;
+        min-height: 1.35rem !important;
+        min-width: 1.35rem !important;
         padding: 0 !important;
-        width: 1.85rem !important;
+        width: 1.35rem !important;
     }
 
     html body .mh-mobile-shelf-release {
