@@ -2,6 +2,11 @@ using MangaHub.Api.Repositories;
 using MangaHub.Api.Services;
 using MangaHub.Core.Dto;
 using MangaHub.Core.Services;
+using MangaHub.Core.Sources;
+using MangaHub.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace MangaHub.Api.Tests;
 
@@ -36,7 +41,7 @@ public sealed class CatalogServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_MyAnimeListMetadataFindsMatchingMangaDexEntry()
+    public async Task CreateAsync_QueuesBackgroundIdentityEnrichment()
     {
         await using var db = TestDb.Create();
         var mangaDex = new FakeMangaDexSource();
@@ -48,7 +53,20 @@ public sealed class CatalogServiceTests
             Request(metadataSource: "myanimelist", myAnimeListId: "2"),
             CancellationToken.None);
 
-        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", created.MangaDexId);
+        Assert.Equal("", created.MangaDexId);
+        Assert.Contains(await db.MaintenanceJobs.ToListAsync(), job => job.Type == CatalogIdentityEnrichmentService.JobType && job.Status == "queued");
+    }
+
+    [Fact]
+    public async Task CreateAsync_CoalescesConcurrentIdentityEnrichmentRequests()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+
+        await service.CreateAsync(Guid.NewGuid(), Request(title: "Berserk"), CancellationToken.None);
+        await service.CreateAsync(Guid.NewGuid(), Request(title: "Vagabond"), CancellationToken.None);
+
+        Assert.Single(await db.MaintenanceJobs.Where(job => job.Type == CatalogIdentityEnrichmentService.JobType).ToListAsync());
     }
 
     [Fact]
@@ -83,16 +101,50 @@ public sealed class CatalogServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_AutomaticallyBindsAnExactMangaUpdatesTitleMatch()
+    public async Task IdentityEnrichment_FillsMissingIdsWithoutOverwritingManualValues()
     {
         await using var db = TestDb.Create();
         var mangaUpdates = new FakeMangaUpdatesClient();
         mangaUpdates.SearchResults.Add(new MangaUpdatesSearchResult("123", "Berserk", "Manga", 1989, []));
-        var service = CreateService(db, new FakeOpenLibrary(null), mangaUpdates: mangaUpdates);
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.CatalogMatches.Add(new MangaDexCatalogMatch("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Berserk"));
+        var service = CreateService(db, new FakeOpenLibrary(null), mangaDex, mangaUpdates);
+
+        var created = await service.CreateAsync(Guid.NewGuid(), Request(metadataSource: "myanimelist", myAnimeListId: "2"), CancellationToken.None);
+        var enrichment = CreateEnrichment(db, mangaDex, mangaUpdates);
+        await enrichment.RunAsync(CancellationToken.None);
+
+        var enriched = await db.MangaEntries.FindAsync([created.Id]);
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", enriched!.MangaDexId);
+        Assert.Equal("123", enriched.MangaUpdatesId);
+
+        enriched.MangaDexId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+        enriched.MangaUpdatesId = "456";
+        enriched.MangaDexLastMatchAttemptAt = null;
+        enriched.MangaUpdatesLastMatchAttemptAt = null;
+        await db.SaveChangesAsync();
+
+        await enrichment.RunAsync(CancellationToken.None);
+
+        Assert.Equal("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", enriched.MangaDexId);
+        Assert.Equal("456", enriched.MangaUpdatesId);
+    }
+
+    [Fact]
+    public async Task IdentityEnrichment_UsesAnExactMangaDexTitleWhenMalIdIsMissing()
+    {
+        await using var db = TestDb.Create();
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.SearchResults.Add(new MangaSearchResult(
+            "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Berserk", "", "", "ongoing", "mangadex"));
+        var mangaUpdates = new FakeMangaUpdatesClient();
+        var service = CreateService(db, new FakeOpenLibrary(null), mangaDex, mangaUpdates);
 
         var created = await service.CreateAsync(Guid.NewGuid(), Request(), CancellationToken.None);
+        await CreateEnrichment(db, mangaDex, mangaUpdates).RunAsync(CancellationToken.None);
 
-        Assert.Equal("123", created.MangaUpdatesId);
+        var enriched = await db.MangaEntries.FindAsync([created.Id]);
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", enriched!.MangaDexId);
     }
 
     [Fact]
@@ -162,12 +214,26 @@ public sealed class CatalogServiceTests
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         IOpenLibraryClient openLibrary,
         FakeMangaDexSource? mangaDex = null,
-        FakeMangaUpdatesClient? mangaUpdates = null) =>
+        FakeMangaUpdatesClient? mangaUpdates = null)
+    {
+        var resolvedMangaDex = mangaDex ?? new FakeMangaDexSource();
+        var resolvedMangaUpdates = mangaUpdates ?? new FakeMangaUpdatesClient();
+        var catalog = new CatalogRepository(db);
+        return new CatalogService(catalog, openLibrary, CreateEnrichment(db, resolvedMangaDex, resolvedMangaUpdates));
+    }
+
+    private static CatalogIdentityEnrichmentService CreateEnrichment(
+        MangaHub.Infrastructure.Data.MangaHubDbContext db,
+        FakeMangaDexSource mangaDex,
+        FakeMangaUpdatesClient mangaUpdates) =>
         new(
+            db,
             new CatalogRepository(db),
-            openLibrary,
-            new MangaDexCatalogMatchService(mangaDex ?? new FakeMangaDexSource()),
-            new MangaUpdatesCatalogMatchService(mangaUpdates ?? new FakeMangaUpdatesClient()));
+            new MangaDexCatalogMatchService(mangaDex),
+            new MangaDexTitleMatchService([mangaDex]),
+            new MangaUpdatesCatalogMatchService(mangaUpdates),
+            Options.Create(new MangaHubOptions()),
+            NullLogger<CatalogIdentityEnrichmentService>.Instance);
 
     private static MangaEntryRequest Request(
         string title = "Berserk",

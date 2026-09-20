@@ -163,6 +163,8 @@ Each run first refreshes stale MangaDex catalog metadata, then checks manga with
 
 The defaults are intentionally conservative: 50 metadata checks per run, up to 6 reading manga, at most 3 chapters per manga, and a 5-second pause between chapter downloads. Increase the batch values only after observing MangaDex usage and container performance.
 
+Catalog saves never wait for optional MangaDex or MangaUpdates ID matching. Each save queues a durable catalog-ID enrichment job, while the worker also retries unbound IDs at the `MangaHub__MangaUpdatesMatchPollMinutes` interval. A source with no match is retried after `MangaHub__MangaUpdatesMatchRetryHours`; manually saved IDs are never overwritten by this process.
+
 While the authenticated site has been idle for 30 minutes, the worker also performs a tiny historical backfill every hour. It uses the highest recorded current chapter for each shelf manga and works backwards through missing cached chapters. Its defaults are one manga, two chapters, and a 10-second pause, and it pauses again immediately when site activity resumes. This backfill includes any shelf entry with a recorded current chapter, so paused or completed manga can be warmed too.
 
 ## Historical DuckDNS Deploy

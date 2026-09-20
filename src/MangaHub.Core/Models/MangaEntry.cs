@@ -25,6 +25,7 @@ public sealed class MangaEntry
     public decimal? MangaDexLastPrefetchedChapter { get; set; }
     public DateTimeOffset? MangaDexLastPrefetchedAt { get; set; }
     public DateTimeOffset? MangaDexLastBackfilledAt { get; set; }
+    public DateTimeOffset? MangaDexLastMatchAttemptAt { get; set; }
     public string MangaUpdatesId { get; set; } = "";
     public decimal? MangaUpdatesLatestChapter { get; set; }
     public string MangaUpdatesStatus { get; set; } = "";

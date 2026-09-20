@@ -10,8 +10,7 @@ namespace MangaHub.Api.Services;
 public sealed class CatalogService(
     CatalogRepository catalog,
     IOpenLibraryClient openLibrary,
-    MangaDexCatalogMatchService mangaDexMatches,
-    MangaUpdatesCatalogMatchService mangaUpdatesMatches,
+    CatalogIdentityEnrichmentService identityEnrichment,
     UsageTrackingService? usage = null)
 {
     public Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? query, string preferredLanguage, int offset, int limit, CancellationToken cancellationToken) =>
@@ -20,8 +19,8 @@ public sealed class CatalogService(
     public async Task<CatalogMangaResponse> CreateAsync(Guid currentUserId, MangaEntryRequest entry, CancellationToken cancellationToken)
     {
         var details = await TryGetOpenLibraryDetailsAsync(entry.OpenLibraryKey, cancellationToken);
-        var readerLinks = await ResolveReaderLinksAsync(entry, cancellationToken);
-        var mangaUpdatesId = await ResolveMangaUpdatesIdAsync(entry.MangaUpdatesId, entry.Title, entry.MediaType, entry.FirstPublishYear, cancellationToken);
+        var readerLinks = ResolveReaderLinks(entry);
+        var mangaUpdatesId = entry.MangaUpdatesId.Trim();
         await EnsureUniqueExternalIdsAsync(readerLinks.MangaDexId, mangaUpdatesId, null, cancellationToken);
 
         var manga = new MangaEntry
@@ -44,11 +43,11 @@ public sealed class CatalogService(
             FallbackReaderUrl = readerLinks.FallbackReaderUrl,
             ReaderPreference = NormalizeReaderPreference(entry.ReaderPreference),
             MangaUpdatesId = mangaUpdatesId,
-            MangaUpdatesLastMatchAttemptAt = DateTimeOffset.UtcNow,
             LocalSeriesId = entry.LocalSeriesId
         };
 
         await catalog.AddAsync(manga, cancellationToken);
+        await identityEnrichment.QueueAsync(currentUserId, cancellationToken);
         if (usage is not null) await usage.TrackAsync(currentUserId, UsageEventTypes.CatalogCreated, manga.Id, cancellationToken);
         return ApiMapping.ToCatalogMangaResponse(manga, false);
     }
@@ -74,42 +73,30 @@ public sealed class CatalogService(
         manga.PublishingStatus = entry.PublishingStatus.Trim();
         manga.ChapterCount = entry.ChapterCount;
         manga.VolumeCount = entry.VolumeCount;
-        var readerLinks = await ResolveReaderLinksAsync(entry, cancellationToken);
-        var mangaUpdatesId = await ResolveMangaUpdatesIdAsync(
-            entry.MangaUpdatesId,
-            manga.Title,
-            manga.MediaType,
-            manga.FirstPublishYear,
-            cancellationToken);
+        var readerLinks = ResolveReaderLinks(entry);
+        var mangaUpdatesId = entry.MangaUpdatesId.Trim();
         await EnsureUniqueExternalIdsAsync(readerLinks.MangaDexId, mangaUpdatesId, manga.Id, cancellationToken);
 
         manga.MangaDexId = readerLinks.MangaDexId;
         manga.FallbackReaderUrl = readerLinks.FallbackReaderUrl;
         manga.ReaderPreference = NormalizeReaderPreference(entry.ReaderPreference);
         manga.MangaUpdatesId = mangaUpdatesId;
-        manga.MangaUpdatesLastMatchAttemptAt = DateTimeOffset.UtcNow;
+        manga.MangaDexLastMatchAttemptAt = string.IsNullOrWhiteSpace(manga.MangaDexId) ? null : manga.MangaDexLastMatchAttemptAt;
+        manga.MangaUpdatesLastMatchAttemptAt = string.IsNullOrWhiteSpace(manga.MangaUpdatesId) ? null : manga.MangaUpdatesLastMatchAttemptAt;
         manga.LocalSeriesId = entry.LocalSeriesId;
         manga.UpdatedAt = DateTimeOffset.UtcNow;
 
         await catalog.SaveChangesAsync(cancellationToken);
+        await identityEnrichment.QueueAsync(currentUserId, cancellationToken);
         if (usage is not null) await usage.TrackAsync(currentUserId, UsageEventTypes.CatalogUpdated, manga.Id, cancellationToken);
         var isInShelf = await catalog.IsInUserShelfAsync(currentUserId, manga.Id, cancellationToken);
         return ApiMapping.ToCatalogMangaResponse(manga, isInShelf);
     }
 
-    private async Task<ReaderLinks> ResolveReaderLinksAsync(MangaEntryRequest entry, CancellationToken cancellationToken)
+    private static ReaderLinks ResolveReaderLinks(MangaEntryRequest entry)
     {
         var mangaDexId = NormalizeMangaDexId(entry.MangaDexId);
         var fallbackReaderUrl = entry.FallbackReaderUrl.Trim();
-        if (!string.IsNullOrWhiteSpace(mangaDexId)
-            || !string.Equals(entry.MetadataSource, "myanimelist", StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrWhiteSpace(entry.MyAnimeListId))
-        {
-            return new ReaderLinks(mangaDexId, fallbackReaderUrl);
-        }
-
-        var match = await mangaDexMatches.FindAsync(entry.MyAnimeListId, entry.Title, cancellationToken);
-        mangaDexId = match?.Id ?? "";
         return new ReaderLinks(mangaDexId, fallbackReaderUrl);
     }
 
@@ -133,22 +120,6 @@ public sealed class CatalogService(
             // OpenLibrary enriches a save but must not be allowed to block a manual catalog entry.
             return null;
         }
-    }
-
-    private async Task<string> ResolveMangaUpdatesIdAsync(
-        string requestedId,
-        string title,
-        string mediaType,
-        int? firstPublishYear,
-        CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(requestedId))
-        {
-            return requestedId.Trim();
-        }
-
-        var match = await mangaUpdatesMatches.FindAsync(title, mediaType, firstPublishYear, cancellationToken);
-        return match?.Id ?? "";
     }
 
     private async Task EnsureUniqueExternalIdsAsync(

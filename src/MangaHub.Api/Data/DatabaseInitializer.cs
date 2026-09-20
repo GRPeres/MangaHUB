@@ -154,6 +154,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "MangaDexLastPrefetchedChapter" numeric(10,3) NULL,
                 "MangaDexLastPrefetchedAt" timestamp with time zone NULL,
                 "MangaDexLastBackfilledAt" timestamp with time zone NULL,
+                "MangaDexLastMatchAttemptAt" timestamp with time zone NULL,
                 "MangaUpdatesId" character varying(32) NOT NULL DEFAULT '',
                 "MangaUpdatesLatestChapter" numeric(10,3) NULL,
                 "MangaUpdatesStatus" text NOT NULL DEFAULT '',
@@ -184,6 +185,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastBackfilledAt" timestamp with time zone NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastMatchAttemptAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaUpdatesId" character varying(32) NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaUpdatesLatestChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaUpdatesStatus" text NOT NULL DEFAULT '';
@@ -205,6 +207,18 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             UPDATE manga_entries
             SET "MangaUpdatesLastMatchAttemptAt" = NULL
             WHERE "MangaUpdatesId" = ''
+              AND EXISTS (SELECT 1 FROM first_apply);
+
+            WITH first_apply AS (
+                INSERT INTO app_migrations ("Name")
+                VALUES ('catalog-id-enrichment-v1')
+                ON CONFLICT ("Name") DO NOTHING
+                RETURNING "Name"
+            )
+            UPDATE manga_entries
+            SET "MangaDexLastMatchAttemptAt" = CASE WHEN "MangaDexId" = '' THEN NULL ELSE "MangaDexLastMatchAttemptAt" END,
+                "MangaUpdatesLastMatchAttemptAt" = CASE WHEN "MangaUpdatesId" = '' THEN NULL ELSE "MangaUpdatesLastMatchAttemptAt" END
+            WHERE ("MangaDexId" = '' OR "MangaUpdatesId" = '')
               AND EXISTS (SELECT 1 FROM first_apply);
 
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "UserId" uuid NULL;
@@ -315,6 +329,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastSyncedAt" ON manga_entries ("MangaDexLastSyncedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastPrefetchedAt" ON manga_entries ("MangaDexLastPrefetchedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastBackfilledAt" ON manga_entries ("MangaDexLastBackfilledAt");
+            CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastMatchAttemptAt" ON manga_entries ("MangaDexLastMatchAttemptAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesId" ON manga_entries ("MangaUpdatesId");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesLastSyncedAt" ON manga_entries ("MangaUpdatesLastSyncedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaUpdatesLastMatchAttemptAt" ON manga_entries ("MangaUpdatesLastMatchAttemptAt");

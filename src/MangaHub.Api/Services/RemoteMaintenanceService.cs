@@ -31,7 +31,7 @@ public sealed class RemoteMaintenanceService(
         {
             "release-sync" or "mangadex-status-sync" or "mangaupdates-sync" => RemoteJobPriority.ReleaseSync,
             "prefetch" => RemoteJobPriority.Prefetch,
-            "mangadex-cache-cleanup" or "mangaupdates-match" => RemoteJobPriority.Maintenance,
+            "mangadex-cache-cleanup" or "mangaupdates-match" or CatalogIdentityEnrichmentService.JobType => RemoteJobPriority.Maintenance,
             "idle-backfill" => RemoteJobPriority.Backfill,
             _ => throw new InvalidOperationException($"Unsupported remote maintenance job '{type}'.")
         };
@@ -45,7 +45,26 @@ public sealed class RemoteMaintenanceService(
             case "mangadex-cache-cleanup": await RunCacheRetentionAsync(cancellationToken); break;
             case "mangaupdates-sync": await RunMangaUpdatesSyncAsync(cancellationToken); break;
             case "mangaupdates-match": await RunMangaUpdatesMatchingAsync(cancellationToken); break;
+            case CatalogIdentityEnrichmentService.JobType: await RunCatalogIdentityEnrichmentAsync(cancellationToken); break;
             case "idle-backfill": await RunIdleBackfillAsync(cancellationToken); break;
+        }
+    }
+
+    private async Task RunCatalogIdentityEnrichmentAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var enrichment = scope.ServiceProvider.GetRequiredService<CatalogIdentityEnrichmentService>();
+            await enrichment.RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Catalog identity enrichment run failed.");
         }
     }
 

@@ -33,7 +33,7 @@ public sealed class RemoteMaintenanceScheduleWorker(
             }
             if (now >= nextMangaUpdatesMatchAt)
             {
-                await DispatchAsync("mangaupdates-match", stoppingToken);
+                await DispatchAsync("catalog-id-enrichment", stoppingToken);
                 nextMangaUpdatesMatchAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaUpdatesMatchPollMinutes, 5, 720));
             }
             if (now >= nextMangaUpdatesSyncAt)
