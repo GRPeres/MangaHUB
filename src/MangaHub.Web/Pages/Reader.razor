@@ -112,14 +112,14 @@
                             }
                         </MudSelect>
                     }
-                    <MudSelect T="string" Value="@readerSettings.ImageQuality" ValueChanged="SwitchImageQuality" Dense="true" Label="Image quality" Variant="Variant.Outlined">
-                        <MudSelectItem T="string" Value="@("original")">Original</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("data-saver")">Data Saver</MudSelectItem>
-                    </MudSelect>
                     else
                     {
                         <MudText Typo="Typo.body2">Chapter language: @LanguageLabel(ActiveLanguage)</MudText>
                     }
+                    <MudSelect T="string" Value="@readerSettings.ImageQuality" ValueChanged="SwitchImageQuality" Dense="true" Label="Image quality" Variant="Variant.Outlined">
+                        <MudSelectItem T="string" Value="@("original")">Original</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("data-saver")">Data Saver</MudSelectItem>
+                    </MudSelect>
                     <MudSelect T="int" Value="@readerSettings.PreloadPageCount" ValueChanged="SetPreloadPageCountAsync" Dense="true" Label="Page preload" Variant="Variant.Outlined">
                         <MudSelectItem T="int" Value="0">Off</MudSelectItem>
                         <MudSelectItem T="int" Value="1">Low (1 page)</MudSelectItem>
