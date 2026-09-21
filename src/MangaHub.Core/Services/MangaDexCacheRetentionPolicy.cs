@@ -28,4 +28,19 @@ public static class MangaDexCacheRetentionPolicy
             .Replace(',', '.');
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
     }
+
+    public static decimal? FindEarliestRecordedChapter(IEnumerable<string?> chapters)
+    {
+        decimal? earliest = null;
+        foreach (var chapter in chapters)
+        {
+            var parsed = ParseChapterNumber(chapter);
+            if (parsed is not null && (earliest is null || parsed.Value < earliest.Value))
+            {
+                earliest = parsed.Value;
+            }
+        }
+
+        return earliest;
+    }
 }

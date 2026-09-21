@@ -428,9 +428,15 @@ public sealed class RemoteMaintenanceService(
 
             var earliestActiveChapterByMangaDexId = activeProgress
                 .GroupBy(item => item.MangaDexId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    MangaDexId = group.Key,
+                    EarliestChapter = MangaDexCacheRetentionPolicy.FindEarliestRecordedChapter(group.Select(item => item.CurrentChapter))
+                })
+                .Where(group => group.EarliestChapter is not null)
                 .ToDictionary(
-                    group => group.Key,
-                    group => group.Select(item => MangaDexCacheRetentionPolicy.ParseChapterNumber(item.CurrentChapter) ?? 0m).Min(),
+                    group => group.MangaDexId,
+                    group => group.EarliestChapter!.Value,
                     StringComparer.OrdinalIgnoreCase);
 
             var cachedSeries = await db.Series

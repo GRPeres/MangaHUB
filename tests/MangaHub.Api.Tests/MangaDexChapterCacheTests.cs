@@ -77,6 +77,45 @@ public sealed class MangaDexChapterCacheTests
         }
     }
 
+    [Fact]
+    public async Task ArchiveAsync_MovesDataSaverChapterOutOfTheSyncedCacheAndCanRestoreIt()
+    {
+        var cacheRoot = Path.Combine(Path.GetTempPath(), $"mangahub-cache-{Guid.NewGuid():N}");
+        var cache = new MangaDexChapterCache(
+            new FakeHttpClientFactory(new HttpClient(new ImageHandler())),
+            Options.Create(new MangaHubOptions { MangaDexCachePath = cacheRoot }));
+        var pages = new List<MangaPage>
+        {
+            new(0, "https://uploads.mangadex.org/data-saver/hash/001.jpg")
+        };
+
+        try
+        {
+            var cached = await cache.EnsureCachedAsync("manga-id", "chapter-id", pages, CancellationToken.None, imageQuality: "data-saver");
+            var activePath = Path.Combine(cacheRoot, cached.RelativePath);
+            var archivePath = Path.Combine(cacheRoot, "archive", "mangadex", "data-saver", "manga-id", "chapter-id.cbz");
+
+            Assert.Equal(Path.Combine("mangadex", "data-saver", "manga-id", "chapter-id.cbz"), cached.RelativePath);
+            Assert.True(File.Exists(activePath));
+
+            Assert.True(await cache.ArchiveAsync("manga-id", "chapter-id", CancellationToken.None, "data-saver"));
+            Assert.False(File.Exists(activePath));
+            Assert.True(File.Exists(archivePath));
+            Assert.Contains("/archive", await File.ReadAllTextAsync(Path.Combine(cacheRoot, ".stignore")));
+
+            Assert.True(await cache.RestoreArchivedAsync("manga-id", "chapter-id", CancellationToken.None, "data-saver"));
+            Assert.True(File.Exists(activePath));
+            Assert.False(File.Exists(archivePath));
+        }
+        finally
+        {
+            if (Directory.Exists(cacheRoot))
+            {
+                Directory.Delete(cacheRoot, recursive: true);
+            }
+        }
+    }
+
     private sealed class ImageHandler : HttpMessageHandler
     {
         public int RequestCount { get; private set; }

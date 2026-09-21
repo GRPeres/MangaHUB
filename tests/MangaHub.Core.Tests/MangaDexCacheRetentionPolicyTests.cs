@@ -25,4 +25,20 @@ public sealed class MangaDexCacheRetentionPolicyTests
     {
         Assert.Equal(expected, MangaDexCacheRetentionPolicy.ShouldRetain("chapter-id", chapter, 24));
     }
+
+    [Fact]
+    public void FindEarliestRecordedChapter_IgnoresBlankOrInvalidProgress()
+    {
+        var earliest = MangaDexCacheRetentionPolicy.FindEarliestRecordedChapter(["", "not started", "24", "31.5"]);
+
+        Assert.Equal(24, earliest);
+    }
+
+    [Fact]
+    public void FindEarliestRecordedChapter_ReturnsNullWhenNoProgressWasRecorded()
+    {
+        var earliest = MangaDexCacheRetentionPolicy.FindEarliestRecordedChapter(["", "not started"]);
+
+        Assert.Null(earliest);
+    }
 }
