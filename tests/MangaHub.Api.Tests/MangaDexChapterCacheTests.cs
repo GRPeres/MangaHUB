@@ -81,8 +81,9 @@ public sealed class MangaDexChapterCacheTests
     public async Task ArchiveAsync_MovesDataSaverChapterOutOfTheSyncedCacheAndCanRestoreIt()
     {
         var cacheRoot = Path.Combine(Path.GetTempPath(), $"mangahub-cache-{Guid.NewGuid():N}");
+        var handler = new ImageHandler();
         var cache = new MangaDexChapterCache(
-            new FakeHttpClientFactory(new HttpClient(new ImageHandler())),
+            new FakeHttpClientFactory(new HttpClient(handler)),
             Options.Create(new MangaHubOptions { MangaDexCachePath = cacheRoot }));
         var pages = new List<MangaPage>
         {
@@ -103,7 +104,9 @@ public sealed class MangaDexChapterCacheTests
             Assert.True(File.Exists(archivePath));
             Assert.Contains("/archive", await File.ReadAllTextAsync(Path.Combine(cacheRoot, ".stignore")));
 
-            Assert.True(await cache.RestoreArchivedAsync("manga-id", "chapter-id", CancellationToken.None, "data-saver"));
+            var restored = await cache.EnsureCachedAsync("manga-id", "chapter-id", [], CancellationToken.None, imageQuality: "data-saver");
+            Assert.True(restored.WasCached);
+            Assert.Equal(1, handler.RequestCount);
             Assert.True(File.Exists(activePath));
             Assert.False(File.Exists(archivePath));
         }

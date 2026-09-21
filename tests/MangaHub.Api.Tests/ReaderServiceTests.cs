@@ -126,6 +126,53 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenMangaDexHasNoNextChapter_UsesTheIndexedDataSaverArchive()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Archived", MangaDexId = "archived-id" };
+        var cachedSeries = new MangaSeries { Title = entry.Title, Source = "mangadex-cache", ExternalId = entry.MangaDexId };
+        var cachedChapter = new MangaChapter
+        {
+            Series = cachedSeries,
+            SourceId = "archived-chapter-2",
+            ChapterNumber = "2",
+            Language = "en",
+            ImageQuality = "data-saver",
+            PageCount = 18
+        };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(cachedSeries);
+        db.Chapters.Add(cachedChapter);
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = userId,
+            MangaEntry = entry,
+            CurrentChapter = "1",
+            IsRead = true,
+            ReadingStatus = "reading"
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", new FakeMangaDexSource());
+
+        var launch = await service.PrepareMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            null,
+            null,
+            "en",
+            allowLanguageFallback: false,
+            allowChapterJump: false,
+            CancellationToken.None,
+            imageQuality: "data-saver");
+
+        Assert.NotNull(launch);
+        Assert.Equal("2", launch.CurrentChapter);
+        Assert.Contains(cachedChapter.Id.ToString(), launch.ReaderUrl);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_UsesChapterZeroAsAValidPlannedSeriesStart()
     {
         await using var db = TestDb.Create();

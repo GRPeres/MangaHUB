@@ -32,6 +32,7 @@ public sealed class MangaDexChapterCache(
         {
             if (File.Exists(activePath))
             {
+                RemoveArchivedDuplicate(archivedPath);
                 progress?.Report(new ReaderPreparationProgress("Using the cached local chapter", 100));
                 return await ReadCachedArchiveAsync(activePath, relativePath, cancellationToken);
             }
@@ -210,6 +211,7 @@ public sealed class MangaDexChapterCache(
             cancellationToken.ThrowIfCancellationRequested();
             if (File.Exists(activePath))
             {
+                RemoveArchivedDuplicate(archivePath);
                 return true;
             }
             if (!File.Exists(archivePath))
@@ -310,6 +312,14 @@ public sealed class MangaDexChapterCache(
         }
 
         return segment;
+    }
+
+    private static void RemoveArchivedDuplicate(string archivedPath)
+    {
+        if (File.Exists(archivedPath))
+        {
+            File.Delete(archivedPath);
+        }
     }
 
     private static string NormalizeQuality(string? imageQuality) =>

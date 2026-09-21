@@ -157,21 +157,28 @@ public sealed class ReaderService(
             sourceChapter = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
             if (sourceChapter is null)
             {
-                var availableLanguages = await FindAvailableLanguagesAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
-                if (!allowLanguageFallback && availableLanguages.Count > 0)
+                cachedChapter = FindAdjacentCachedChapter(cachedSeries, shelfEntry.CurrentChapter, preferredLanguages, next: true, quality);
+                if (cachedChapter is null)
                 {
-                    throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
+                    var availableLanguages = await FindAvailableLanguagesAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
+                    if (!allowLanguageFallback && availableLanguages.Count > 0)
+                    {
+                        throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
+                    }
+
+                    await RecordCompletedMangaDexChapterAsync(entry, shelfEntry.CurrentChapter, cancellationToken);
+                    if (await IsPublishingCompleteAsync(entry, cancellationToken))
+                    {
+                        await MarkShelfEntryDoneAsync(shelfEntry, cancellationToken);
+                        throw new MangaCompletedException();
+                    }
+                    throw new NoNextMangaDexChapterException();
                 }
-                await RecordCompletedMangaDexChapterAsync(entry, shelfEntry.CurrentChapter, cancellationToken);
-                if (await IsPublishingCompleteAsync(entry, cancellationToken))
-                {
-                    await MarkShelfEntryDoneAsync(shelfEntry, cancellationToken);
-                    throw new MangaCompletedException();
-                }
-                throw new NoNextMangaDexChapterException();
             }
 
-            if (!allowChapterJump && IsChapterJump(shelfEntry.CurrentChapter, sourceChapter.Number))
+            if (sourceChapter is not null
+                && !allowChapterJump
+                && IsChapterJump(shelfEntry.CurrentChapter, sourceChapter.Number))
             {
                 throw new MangaDexChapterJumpConfirmationRequiredException(
                     shelfEntry.CurrentChapter,
@@ -180,7 +187,10 @@ public sealed class ReaderService(
                     await FindCloserNextChapterLanguagesAsync(mangaDexId, shelfEntry.CurrentChapter, sourceChapter.Number, preferredLanguages, cancellationToken));
             }
 
-            cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id && chapter.ImageQuality == quality);
+            if (sourceChapter is not null)
+            {
+                cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id && chapter.ImageQuality == quality);
+            }
         }
         else if (cachedSeries is not null && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
         {
@@ -213,7 +223,11 @@ public sealed class ReaderService(
             if (preferredChapters.Count == 0
                 && (await mangaDex.GetChaptersAsync(mangaDexId, null, cancellationToken)).Count == 0)
             {
-                throw new MangaDexUnavailableException();
+                cachedChapter = FindCachedChapterForRemoteMiss(cachedSeries, shelfEntry, requestedChapter, preferredLanguages, quality);
+                if (cachedChapter is null)
+                {
+                    throw new MangaDexUnavailableException();
+                }
             }
             if (isInitialTrackedChapterSelection
                 && !allowLanguageFallback
@@ -236,11 +250,20 @@ public sealed class ReaderService(
                 : preferredChapters.FirstOrDefault(chapter => HasExactChapter(chapter.Number, requestedChapter));
             if (sourceChapter is null)
             {
-                return null;
+                cachedChapter ??= FindCachedChapterForRemoteMiss(cachedSeries, shelfEntry, requestedChapter, preferredLanguages, quality);
+                if (cachedChapter is null)
+                {
+                    return null;
+                }
+
+                goto CachedChapterResolved;
             }
 
-            cachedChapter ??= cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id && chapter.ImageQuality == quality);
+            cachedChapter ??= sourceChapter is null
+                ? null
+                : cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id && chapter.ImageQuality == quality);
             if (isInitialTrackedChapterSelection
+                && sourceChapter is not null
                 && string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)
                 && !allowChapterJump
                 && !HasExactChapter(sourceChapter.Number, "1")
@@ -253,6 +276,7 @@ public sealed class ReaderService(
                     await FindCloserNextChapterLanguagesAsync(mangaDexId, "1", sourceChapter.Number, preferredLanguages, cancellationToken));
             }
             if (isInitialTrackedChapterSelection
+                && sourceChapter is not null
                 && !allowLanguageFallback
                 && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter)
                 && !HasExactChapter(sourceChapter.Number, shelfEntry.CurrentChapter))
@@ -264,7 +288,7 @@ public sealed class ReaderService(
             }
 
             progress?.Report(new ReaderPreparationProgress("Loading the MangaDex page list", 20));
-            var pages = await mangaDex.GetPagesAsync(sourceChapter.Id, cancellationToken, quality);
+            var pages = await mangaDex.GetPagesAsync(sourceChapter!.Id, cancellationToken, quality);
             var cachedArchive = await mangaDexCache.EnsureCachedAsync(mangaDexId, sourceChapter.Id, pages, cancellationToken, progress, quality);
             cachedSeries ??= CreateCachedSeries(entry, mangaDexId);
             if (isNewCachedSeries)
@@ -298,6 +322,12 @@ public sealed class ReaderService(
                 cachedChapter.PageCount = cachedArchive.PageCount;
                 cachedChapter.FileHash = cachedArchive.FileHash;
             }
+        }
+
+    CachedChapterResolved:
+        if (cachedChapter is null)
+        {
+            return null;
         }
 
         var resolvedLanguage = NormalizeLanguage(cachedChapter.Language);
@@ -761,6 +791,43 @@ public sealed class ReaderService(
         return next
             ? candidates.OrderBy(item => item.Number).ThenBy(item => LanguagePreferences.IndexOf(preferredLanguages, item.Chapter.Language)).Select(item => item.Chapter).FirstOrDefault()
             : candidates.OrderByDescending(item => item.Number).ThenBy(item => LanguagePreferences.IndexOf(preferredLanguages, item.Chapter.Language)).Select(item => item.Chapter).FirstOrDefault();
+    }
+
+    private static MangaChapter? FindCachedChapterForRemoteMiss(
+        MangaSeries? cachedSeries,
+        UserMangaEntry shelfEntry,
+        string? requestedChapter,
+        IReadOnlyList<string> preferredLanguages,
+        string imageQuality)
+    {
+        if (cachedSeries is null)
+        {
+            return null;
+        }
+
+        if (shelfEntry.IsRead && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
+        {
+            return FindAdjacentCachedChapter(cachedSeries, shelfEntry.CurrentChapter, preferredLanguages, next: true, imageQuality);
+        }
+
+        var targetChapter = string.IsNullOrWhiteSpace(requestedChapter) ? shelfEntry.CurrentChapter : requestedChapter;
+        var candidates = cachedSeries.Chapters
+            .Where(chapter => string.Equals(chapter.ImageQuality, imageQuality, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(targetChapter))
+        {
+            return candidates
+                .Where(chapter => HasExactChapter(chapter.ChapterNumber, targetChapter))
+                .OrderBy(chapter => LanguagePreferences.IndexOf(preferredLanguages, chapter.Language))
+                .ThenBy(chapter => chapter.CreatedAt)
+                .FirstOrDefault();
+        }
+
+        return candidates
+            .OrderBy(chapter => LanguagePreferences.IndexOf(preferredLanguages, chapter.Language))
+            .ThenBy(chapter => ParseChapterNumber(chapter.ChapterNumber))
+            .ThenBy(chapter => chapter.CreatedAt)
+            .FirstOrDefault();
     }
 
     private static decimal? ParseChapterNumber(string value)
