@@ -105,7 +105,7 @@
                     <MudText Typo="Typo.subtitle2">Reader settings</MudText>
                     @if (availableLanguages.Count > 1)
                     {
-                        <MudSelect T="string" Value="@ActiveLanguage" ValueChanged="SwitchLanguage" Dense="true" Label="Chapter language" Variant="Variant.Outlined" Class="reader-language-select">
+                        <MudSelect T="string" Value="@ActiveLanguage" ValueChanged="SwitchLanguage" Dense="true" Label="Chapter language" Variant="Variant.Outlined" PopoverClass="reader-language-popover">
                             @foreach (var language in availableLanguages)
                             {
                                 <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>

@@ -293,10 +293,10 @@ a {
     padding: .75rem;
 }
 
-.reader-settings-menu .mud-popover,
-.reader-settings-menu .mud-list {
-    max-height: min(48vh, 22rem);
+.reader-language-popover .mud-list {
+    max-height: min(48vh, 20rem);
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .reader {
