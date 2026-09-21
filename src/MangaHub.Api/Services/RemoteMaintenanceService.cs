@@ -419,6 +419,7 @@ public sealed class RemoteMaintenanceService(
             using var scope = scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
             var cache = scope.ServiceProvider.GetRequiredService<IMangaDexChapterCache>();
+            var mangaDex = scope.ServiceProvider.GetRequiredService<MangaSourceRegistry>().Get("mangadex");
             var activeProgress = await db.UserMangaEntries
                 .Where(shelf => (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
                     && shelf.MangaEntry!.MangaDexId != "")
@@ -444,21 +445,58 @@ public sealed class RemoteMaintenanceService(
                 var retainFrom = earliestActiveChapterByMangaDexId.ContainsKey(cached.ExternalId)
                     ? earliestActiveChapter
                     : (decimal?)null;
-                foreach (var chapter in cached.Chapters.ToList())
+                foreach (var chapterGroup in cached.Chapters.ToList().GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
                 {
+                    var chapter = chapterGroup.First();
                     if (MangaDexCacheRetentionPolicy.ShouldRetain(chapter.SourceId, chapter.ChapterNumber, retainFrom))
                     {
                         continue;
                     }
 
-                    if (await cache.ArchiveAsync(cached.ExternalId, chapter.SourceId, cancellationToken))
+                    var dataSaver = chapterGroup.FirstOrDefault(item => string.Equals(item.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase));
+                    if (dataSaver is null)
                     {
-                        archived++;
+                        try
+                        {
+                            var pages = await mangaDex.GetPagesAsync(chapter.SourceId, cancellationToken, "data-saver");
+                            var archive = await cache.EnsureCachedAsync(cached.ExternalId, chapter.SourceId, pages, cancellationToken, imageQuality: "data-saver");
+                            dataSaver = new MangaChapter
+                            {
+                                SeriesId = cached.Id,
+                                SourceId = chapter.SourceId,
+                                ChapterNumber = chapter.ChapterNumber,
+                                Language = chapter.Language,
+                                ImageQuality = "data-saver",
+                                Title = chapter.Title,
+                                PageCount = archive.PageCount,
+                                FileHash = archive.FileHash
+                            };
+                            db.Chapters.Add(dataSaver);
+                            await db.SaveChangesAsync(cancellationToken);
+                        }
+                        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or IOException)
+                        {
+                            logger.LogWarning(ex, "Could not create a Data Saver archive variant for {MangaDexId} chapter {ChapterId}; preserving the active original.", cached.ExternalId, chapter.SourceId);
+                            continue;
+                        }
                     }
+
+                    if (!await cache.ArchiveAsync(cached.ExternalId, chapter.SourceId, cancellationToken, "data-saver"))
+                    {
+                        continue;
+                    }
+
+                    foreach (var original in chapterGroup.Where(item => !string.Equals(item.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        await cache.DeleteAsync(cached.ExternalId, original.SourceId, cancellationToken, original.ImageQuality);
+                        db.Chapters.Remove(original);
+                    }
+                    await db.SaveChangesAsync(cancellationToken);
+                    archived++;
                 }
             }
 
-            logger.LogInformation("MangaDex cache retention archived {ArchivedCount} cached chapters; active readers retain chapters from their earliest current chapter onward.", archived);
+            logger.LogInformation("MangaDex cache retention archived {ArchivedCount} Data Saver chapters; active readers retain chapters from their earliest current chapter onward.", archived);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
