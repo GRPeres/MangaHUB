@@ -18,10 +18,12 @@ public sealed class MangaDexChapterCache(
         string chapterId,
         IReadOnlyList<MangaPage> pages,
         CancellationToken cancellationToken,
-        IProgress<ReaderPreparationProgress>? progress = null)
+        IProgress<ReaderPreparationProgress>? progress = null,
+        string imageQuality = "original")
     {
-        var (relativePath, activePath) = GetArchivePath(mangaDexId, chapterId);
-        var archivedPath = GetArchivedPath(mangaDexId, chapterId);
+        var quality = NormalizeQuality(imageQuality);
+        var (relativePath, activePath) = GetArchivePath(mangaDexId, chapterId, quality);
+        var archivedPath = GetArchivedPath(mangaDexId, chapterId, quality);
 
         Directory.CreateDirectory(Path.GetDirectoryName(activePath)!);
         var downloadLock = DownloadLocks.GetOrAdd(activePath, _ => new SemaphoreSlim(1, 1));
@@ -148,10 +150,10 @@ public sealed class MangaDexChapterCache(
         }
     }
 
-    public async Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
+    public async Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original")
     {
-        var (_, activePath) = GetArchivePath(mangaDexId, chapterId);
-        var archivePath = GetArchivedPath(mangaDexId, chapterId);
+        var (_, activePath) = GetArchivePath(mangaDexId, chapterId, imageQuality);
+        var archivePath = GetArchivedPath(mangaDexId, chapterId, imageQuality);
         var downloadLock = DownloadLocks.GetOrAdd(activePath, _ => new SemaphoreSlim(1, 1));
         await downloadLock.WaitAsync(cancellationToken);
         try
@@ -172,10 +174,10 @@ public sealed class MangaDexChapterCache(
         }
     }
 
-    public async Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
+    public async Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original")
     {
-        var (_, activePath) = GetArchivePath(mangaDexId, chapterId);
-        var archivePath = GetArchivedPath(mangaDexId, chapterId);
+        var (_, activePath) = GetArchivePath(mangaDexId, chapterId, imageQuality);
+        var archivePath = GetArchivedPath(mangaDexId, chapterId, imageQuality);
         var downloadLock = DownloadLocks.GetOrAdd(activePath, _ => new SemaphoreSlim(1, 1));
         await downloadLock.WaitAsync(cancellationToken);
         try
@@ -197,10 +199,10 @@ public sealed class MangaDexChapterCache(
         }
     }
 
-    public async Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
+    public async Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original")
     {
-        var (_, activePath) = GetArchivePath(mangaDexId, chapterId);
-        var archivePath = GetArchivedPath(mangaDexId, chapterId);
+        var (_, activePath) = GetArchivePath(mangaDexId, chapterId, imageQuality);
+        var archivePath = GetArchivedPath(mangaDexId, chapterId, imageQuality);
         var downloadLock = DownloadLocks.GetOrAdd(activePath, _ => new SemaphoreSlim(1, 1));
         await downloadLock.WaitAsync(cancellationToken);
         try
@@ -225,9 +227,10 @@ public sealed class MangaDexChapterCache(
         }
     }
 
-    private (string RelativePath, string ArchivePath) GetArchivePath(string mangaDexId, string chapterId)
+    private (string RelativePath, string ArchivePath) GetArchivePath(string mangaDexId, string chapterId, string imageQuality = "original")
     {
-        var relativePath = Path.Combine("mangadex", SafePathSegment(mangaDexId), $"{SafePathSegment(chapterId)}.cbz");
+        var qualityFolder = NormalizeQuality(imageQuality) == "original" ? "" : "data-saver";
+        var relativePath = Path.Combine("mangadex", qualityFolder, SafePathSegment(mangaDexId), $"{SafePathSegment(chapterId)}.cbz");
         var cacheRoot = Path.GetFullPath(options.Value.MangaDexCachePath);
         var archivePath = Path.GetFullPath(Path.Combine(cacheRoot, relativePath));
         if (!archivePath.StartsWith(cacheRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
@@ -238,13 +241,14 @@ public sealed class MangaDexChapterCache(
         return (relativePath, archivePath);
     }
 
-    private string GetArchivedPath(string mangaDexId, string chapterId)
+    private string GetArchivedPath(string mangaDexId, string chapterId, string imageQuality = "original")
     {
         var cacheRoot = Path.GetFullPath(options.Value.MangaDexCachePath);
         var archivePath = Path.GetFullPath(Path.Combine(
             cacheRoot,
             "archive",
             "mangadex",
+            NormalizeQuality(imageQuality) == "original" ? "" : "data-saver",
             SafePathSegment(mangaDexId),
             $"{SafePathSegment(chapterId)}.cbz"));
         if (!archivePath.StartsWith(cacheRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
@@ -307,6 +311,9 @@ public sealed class MangaDexChapterCache(
 
         return segment;
     }
+
+    private static string NormalizeQuality(string? imageQuality) =>
+        string.Equals(imageQuality, "data-saver", StringComparison.OrdinalIgnoreCase) ? "data-saver" : "original";
 
     private static bool IsMangaDexImageUrl(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri)

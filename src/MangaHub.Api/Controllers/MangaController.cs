@@ -67,6 +67,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
         [FromQuery] Guid? beforeCachedChapterId,
         CancellationToken cancellationToken,
         [FromQuery] string? language = null,
+        [FromQuery] string? imageQuality = null,
         [FromQuery] bool allowLanguageFallback = false,
         [FromQuery] bool allowChapterJump = false,
         [FromQuery] string? requestedChapter = null)
@@ -81,7 +82,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        return Accepted(preparations.Start(user.Id, entryId, afterCachedChapterId, beforeCachedChapterId, language ?? user.PreferredLanguage, allowLanguageFallback, allowChapterJump, requestedChapter));
+        return Accepted(preparations.Start(user.Id, entryId, afterCachedChapterId, beforeCachedChapterId, language ?? user.PreferredLanguage, allowLanguageFallback, allowChapterJump, requestedChapter, imageQuality ?? "original"));
     }
 
     [HttpGet("{entryId:guid}/mangadex-reader/languages")]

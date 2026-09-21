@@ -9,7 +9,8 @@ public interface IMangaDexChapterCache
         string chapterId,
         IReadOnlyList<MangaPage> pages,
         CancellationToken cancellationToken,
-        IProgress<ReaderPreparationProgress>? progress = null);
+        IProgress<ReaderPreparationProgress>? progress = null,
+        string imageQuality = "original");
 
     Task<MangaDexCachedChapter> ImportAsync(
         string mangaDexId,
@@ -17,11 +18,11 @@ public interface IMangaDexChapterCache
         Stream content,
         CancellationToken cancellationToken);
 
-    Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken);
+    Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original");
 
-    Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken);
+    Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original");
 
-    Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken);
+    Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original");
 }
 
 public sealed record MangaDexCachedChapter(string RelativePath, int PageCount, string FileHash, bool WasCached);

@@ -60,7 +60,7 @@ internal sealed class FakeMangaDexSource : IMangaSource, IMangaDexCatalogLookup
                 ? Chapters
                 : Chapters.Where(chapter => string.Equals(chapter.Language, language, StringComparison.OrdinalIgnoreCase)).ToList());
 
-    public Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken) =>
+    public Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken, string imageQuality = "original") =>
         Task.FromResult(Pages.TryGetValue(chapterId, out var pages) ? pages : (IReadOnlyList<MangaPage>)[]);
 }
 
@@ -73,7 +73,8 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
         string chapterId,
         IReadOnlyList<MangaPage> pages,
         CancellationToken cancellationToken,
-        IProgress<ReaderPreparationProgress>? progress = null)
+        IProgress<ReaderPreparationProgress>? progress = null,
+        string imageQuality = "original")
     {
         CachedChapterIds.Add(chapterId);
         progress?.Report(new ReaderPreparationProgress("Local chapter is ready", 100, pages.Count, pages.Count));
@@ -94,16 +95,16 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
             false));
     }
 
-    public Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
+    public Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original")
     {
         CachedChapterIds.Remove(chapterId);
         return Task.CompletedTask;
     }
 
-    public Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken) =>
+    public Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original") =>
         Task.FromResult(CachedChapterIds.Remove(chapterId));
 
-    public Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken) =>
+    public Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original") =>
         Task.FromResult(false);
 }
 

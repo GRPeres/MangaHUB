@@ -2,11 +2,12 @@ using Microsoft.JSInterop;
 
 namespace MangaHub.Web.Services;
 
-public sealed record ReaderSettings(string PreferredLanguage = "en", int PreloadPageCount = 3)
+public sealed record ReaderSettings(string PreferredLanguage = "en", int PreloadPageCount = 3, string ImageQuality = "original")
 {
     public static ReaderSettings Normalize(ReaderSettings? settings) => new(
         string.IsNullOrWhiteSpace(settings?.PreferredLanguage) ? "en" : settings.PreferredLanguage,
-        settings?.PreloadPageCount is 0 or 1 or 3 or 5 ? settings.PreloadPageCount : 3);
+        settings?.PreloadPageCount is 0 or 1 or 3 or 5 ? settings.PreloadPageCount : 3,
+        string.Equals(settings?.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase) ? "data-saver" : "original");
 }
 
 public sealed class ReaderSettingsService(IJSRuntime js)

@@ -105,13 +105,17 @@
                     <MudText Typo="Typo.subtitle2">Reader settings</MudText>
                     @if (availableLanguages.Count > 1)
                     {
-                        <MudSelect T="string" Value="@ActiveLanguage" ValueChanged="SwitchLanguage" Dense="true" Label="Chapter language" Variant="Variant.Outlined">
+                        <MudSelect T="string" Value="@ActiveLanguage" ValueChanged="SwitchLanguage" Dense="true" Label="Chapter language" Variant="Variant.Outlined" Class="reader-language-select">
                             @foreach (var language in availableLanguages)
                             {
                                 <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>
                             }
                         </MudSelect>
                     }
+                    <MudSelect T="string" Value="@readerSettings.ImageQuality" ValueChanged="SwitchImageQuality" Dense="true" Label="Image quality" Variant="Variant.Outlined">
+                        <MudSelectItem T="string" Value="@("original")">Original</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("data-saver")">Data Saver</MudSelectItem>
+                    </MudSelect>
                     else
                     {
                         <MudText Typo="Typo.body2">Chapter language: @LanguageLabel(ActiveLanguage)</MudText>
@@ -177,6 +181,7 @@
     [SupplyParameterFromQuery(Name = "chapter")] public string? CurrentChapter { get; set; }
     [SupplyParameterFromQuery(Name = "source")] public string? ReaderSource { get; set; }
     [SupplyParameterFromQuery(Name = "language")] public string? ReaderLanguage { get; set; }
+    [SupplyParameterFromQuery(Name = "quality")] public string? ReaderImageQuality { get; set; }
     [SupplyParameterFromQuery(Name = "vertical")] public bool IsVerticalReader { get; set; }
     [SupplyParameterFromQuery(Name = "page")] public int? InitialPage { get; set; }
     private int page;
@@ -220,6 +225,7 @@
         || (string.IsNullOrWhiteSpace(ReaderSource) && EntryId is not null);
     private bool CanPrepareAdjacentChapter => IsMangaDexReader && EntryId is not null;
     private string ActiveLanguage => string.IsNullOrWhiteSpace(ReaderLanguage) ? readerSettings.PreferredLanguage : ReaderLanguage;
+    private string ActiveImageQuality => string.IsNullOrWhiteSpace(ReaderImageQuality) ? readerSettings.ImageQuality : ReaderImageQuality;
     private bool PreviousDisabled => isPreparingChapter || (page <= 0 && !CanPrepareAdjacentChapter);
     private bool NextDisabled => isPreparingChapter || (page >= PageCount - 1 && !CanPrepareAdjacentChapter);
     private string ChapterLabel => string.IsNullOrWhiteSpace(CurrentChapter) ? "Chapter" : $"Chapter {CurrentChapter}";
@@ -318,7 +324,7 @@
         isPreparingChapter = true;
         try
         {
-            readerPreparation = await MangaApi.StartMangaDexPreparationAsync(EntryId.Value, language: language, allowLanguageFallback: true);
+            readerPreparation = await MangaApi.StartMangaDexPreparationAsync(EntryId.Value, language: language, imageQuality: ActiveImageQuality, allowLanguageFallback: true);
             var completed = readerPreparation is null ? null : await WaitForReaderPreparationAsync(readerPreparation.JobId);
             if (completed?.Launch is not null)
             {
@@ -333,6 +339,22 @@
             isPreparingChapter = false;
             readerPreparation = null;
         }
+    }
+
+    private async Task SwitchImageQuality(string imageQuality)
+    {
+        if (!CanPrepareAdjacentChapter || EntryId is null || string.Equals(imageQuality, ActiveImageQuality, StringComparison.OrdinalIgnoreCase)) return;
+        readerSettings = MangaHub.Web.Services.ReaderSettings.Normalize(readerSettings with { ImageQuality = imageQuality });
+        await ReaderSettings.SetAsync(readerSettings);
+        isPreparingChapter = true;
+        try
+        {
+            readerPreparation = await MangaApi.StartMangaDexPreparationAsync(EntryId.Value, language: ActiveLanguage, imageQuality: readerSettings.ImageQuality, allowLanguageFallback: true);
+            var completed = readerPreparation is null ? null : await WaitForReaderPreparationAsync(readerPreparation.JobId);
+            if (completed?.Launch is not null) Navigation.NavigateTo(completed.Launch.ReaderUrl);
+            else Messages.Error(completed?.Error ?? "Could not prepare this image quality.", "Chapter unavailable");
+        }
+        finally { isPreparingChapter = false; readerPreparation = null; }
     }
 
     private static string LanguageLabel(string code) => code.ToLowerInvariant() switch

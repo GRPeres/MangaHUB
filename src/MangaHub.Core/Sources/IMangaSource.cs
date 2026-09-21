@@ -6,7 +6,7 @@ public interface IMangaSource
     Task<IReadOnlyList<MangaSearchResult>> SearchAsync(string query, CancellationToken cancellationToken);
     Task<MangaSourceSeries?> GetSeriesAsync(string id, CancellationToken cancellationToken);
     Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken);
-    Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken, string imageQuality = "original");
 }
 
 public sealed record MangaSearchResult(

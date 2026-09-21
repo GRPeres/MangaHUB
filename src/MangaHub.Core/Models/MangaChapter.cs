@@ -6,6 +6,7 @@ public sealed class MangaChapter
     public Guid SeriesId { get; set; }
     public string ChapterNumber { get; set; } = "";
     public string Language { get; set; } = "en";
+    public string ImageQuality { get; set; } = "original";
     public string Title { get; set; } = "";
     public required string SourceId { get; set; }
     public int PageCount { get; set; }

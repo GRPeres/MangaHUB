@@ -191,14 +191,15 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
         return uniqueChapters;
     }
 
-    public async Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken, string imageQuality = "original")
     {
         if (!options.Value.MangaDexEnabled || string.IsNullOrWhiteSpace(chapterId))
         {
             return [];
         }
 
-        var cacheKey = $"mangadex:reader:pages:{chapterId}";
+        var dataSaver = string.Equals(imageQuality, "data-saver", StringComparison.OrdinalIgnoreCase);
+        var cacheKey = $"mangadex:reader:pages:{chapterId}:{(dataSaver ? "data-saver" : "data")}";
         if (cache.TryGetValue(cacheKey, out IReadOnlyList<MangaPage>? cached) && cached is not null)
         {
             return cached;
@@ -213,7 +214,7 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
         if (string.IsNullOrWhiteSpace(baseUrl)
             || !document.RootElement.TryGetProperty("chapter", out var chapter)
             || string.IsNullOrWhiteSpace(ReadString(chapter, "hash"))
-            || !chapter.TryGetProperty("data", out var files)
+            || !chapter.TryGetProperty(dataSaver ? "dataSaver" : "data", out var files)
             || files.ValueKind != JsonValueKind.Array)
         {
             return [];
@@ -221,7 +222,7 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
 
         var hash = ReadString(chapter, "hash");
         var pages = files.EnumerateArray()
-            .Select((file, index) => new MangaPage(index, $"{baseUrl}/data/{Uri.EscapeDataString(hash)}/{Uri.EscapeDataString(file.GetString() ?? string.Empty)}"))
+            .Select((file, index) => new MangaPage(index, $"{baseUrl}/{(dataSaver ? "data-saver" : "data")}/{Uri.EscapeDataString(hash)}/{Uri.EscapeDataString(file.GetString() ?? string.Empty)}"))
             .Where(page => !page.Url.EndsWith("/", StringComparison.Ordinal))
             .ToList();
 

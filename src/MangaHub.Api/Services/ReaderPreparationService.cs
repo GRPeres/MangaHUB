@@ -21,7 +21,8 @@ public sealed class ReaderPreparationService(
         string language,
         bool allowLanguageFallback,
         bool allowChapterJump,
-        string? requestedChapter = null)
+        string? requestedChapter = null,
+        string imageQuality = "original")
     {
         RemoveExpiredJobs();
 
@@ -42,6 +43,7 @@ public sealed class ReaderPreparationService(
                 allowLanguageFallback,
                 allowChapterJump,
                 requestedChapter,
+                imageQuality,
                 prefetch));
         }
         else
@@ -56,6 +58,7 @@ public sealed class ReaderPreparationService(
                 allowLanguageFallback,
                 allowChapterJump,
                 requestedChapter,
+                imageQuality,
                 RemoteJobPriority.UserBlocking));
         }
         return status;
@@ -111,6 +114,7 @@ public sealed class ReaderPreparationService(
         bool allowLanguageFallback,
         bool allowChapterJump,
         string? requestedChapter,
+        string imageQuality,
         ReaderPrefetchOperation prefetch)
     {
         while (!prefetch.Completion.IsCompleted)
@@ -142,6 +146,7 @@ public sealed class ReaderPreparationService(
             allowLanguageFallback,
             allowChapterJump,
             requestedChapter,
+            imageQuality,
             RemoteJobPriority.UserBlocking);
     }
 
@@ -155,6 +160,7 @@ public sealed class ReaderPreparationService(
         bool allowLanguageFallback,
         bool allowChapterJump,
         string? requestedChapter,
+        string imageQuality,
         RemoteJobPriority priority)
     {
         using var priorityScope = priorityContext.Push(priority);
@@ -182,7 +188,8 @@ public sealed class ReaderPreparationService(
                 allowChapterJump,
                 CancellationToken.None,
                 progress,
-                requestedChapter: requestedChapter);
+                requestedChapter: requestedChapter,
+                imageQuality: imageQuality);
 
             if (launch is null)
             {

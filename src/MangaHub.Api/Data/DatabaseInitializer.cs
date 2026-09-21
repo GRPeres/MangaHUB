@@ -301,6 +301,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "LastExternalReaderVerifiedAt" timestamp with time zone NULL;
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "ExternalReaderCheckPendingAt" timestamp with time zone NULL;
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "Language" character varying(16) NOT NULL DEFAULT 'en';
+            ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "ImageQuality" character varying(20) NOT NULL DEFAULT 'original';
 
             INSERT INTO user_manga_entries ("Id", "UserId", "MangaEntryId", "ReadingStatus", "Notes", "CreatedAt", "UpdatedAt")
             SELECT gen_random_uuid(),
@@ -338,6 +339,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_LastExternalReaderVerifiedAt" ON user_manga_entries ("UserId", "LastExternalReaderVerifiedAt");
             CREATE INDEX IF NOT EXISTS "IX_user_manga_entries_UserId_ExternalReaderCheckPendingAt" ON user_manga_entries ("UserId", "ExternalReaderCheckPendingAt");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_mangadex_language_latest_chapters_MangaEntryId_Language" ON mangadex_language_latest_chapters ("MangaEntryId", "Language");
+            DROP INDEX IF EXISTS "IX_chapters_SeriesId_SourceId";
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_chapters_SeriesId_SourceId_ImageQuality" ON chapters ("SeriesId", "SourceId", "ImageQuality");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_notifications_UserId_MangaEntryId_Type_ChapterNumber_Language" ON notifications ("UserId", "MangaEntryId", "Type", "ChapterNumber", "Language");
             CREATE INDEX IF NOT EXISTS "IX_notifications_UserId_ReadAt_CreatedAt" ON notifications ("UserId", "ReadAt", "CreatedAt");
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_web_push_subscriptions_Endpoint" ON web_push_subscriptions ("Endpoint");

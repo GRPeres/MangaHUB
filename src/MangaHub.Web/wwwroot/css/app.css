@@ -293,6 +293,12 @@ a {
     padding: .75rem;
 }
 
+.reader-settings-menu .mud-popover,
+.reader-settings-menu .mud-list {
+    max-height: min(48vh, 22rem);
+    overflow-y: auto;
+}
+
 .reader {
     box-sizing: border-box;
     container-type: size;

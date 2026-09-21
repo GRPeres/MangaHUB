@@ -15,6 +15,6 @@ public sealed class LocalMangaSource : IMangaSource
     public Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MangaSourceChapter>>([]);
 
-    public Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken) =>
+    public Task<IReadOnlyList<MangaPage>> GetPagesAsync(string chapterId, CancellationToken cancellationToken, string imageQuality = "original") =>
         Task.FromResult<IReadOnlyList<MangaPage>>([]);
 }

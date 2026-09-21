@@ -43,6 +43,7 @@ public sealed class MangaApiService(ApiHttpClient api, AppRefreshService refresh
         Guid? afterCachedChapterId = null,
         Guid? beforeCachedChapterId = null,
         string language = "en",
+        string imageQuality = "original",
         bool allowLanguageFallback = false,
         bool allowChapterJump = false,
         string? requestedChapter = null)
@@ -57,6 +58,7 @@ public sealed class MangaApiService(ApiHttpClient api, AppRefreshService refresh
             queryValues.Add($"beforeCachedChapterId={beforeCachedChapterId}");
         }
         queryValues.Add($"language={Uri.EscapeDataString(language)}");
+        queryValues.Add($"imageQuality={Uri.EscapeDataString(imageQuality)}");
         if (allowLanguageFallback)
         {
             queryValues.Add("allowLanguageFallback=true");
