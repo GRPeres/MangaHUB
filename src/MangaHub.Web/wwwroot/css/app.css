@@ -1158,6 +1158,11 @@ html body .mh-mobile-catalog-card {
         min-height: 0 !important;
     }
 
+    html body .mh-mobile-shelf-description .mh-mobile-shelf-stat,
+    html body .mh-mobile-catalog-description .mh-mobile-catalog-stat {
+        justify-content: flex-start !important;
+    }
+
     html body .mh-mobile-shelf-tags,
     html body .mh-mobile-catalog-tags {
         margin-top: auto !important;
