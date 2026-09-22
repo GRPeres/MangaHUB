@@ -197,6 +197,40 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_SkipsZeroPageOfficialChapterAndUsesTheNextPreferredLanguage()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Publisher edition", MangaDexId = "publisher-edition-id" };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, ReadingStatus = "planned" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.AddRange([
+            new MangaHub.Core.Sources.MangaSourceChapter("official-en", "1", "Official publisher entry", 0, "en"),
+            new MangaHub.Core.Sources.MangaSourceChapter("scan-pt", "1", "Capitulo 1", 20, "pt-br")
+        ]);
+        mangaDex.Pages["scan-pt"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/001.jpg")];
+        var cache = new FakeMangaDexChapterCache();
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, cache);
+
+        var launch = await service.PrepareMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            null,
+            null,
+            "en,pt-br",
+            allowLanguageFallback: false,
+            allowChapterJump: false,
+            CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Equal("1", launch.CurrentChapter);
+        Assert.Equal(["scan-pt"], cache.CachedChapterIds);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_UsesVerticalReaderForManhwa()
     {
         await using var db = TestDb.Create();

@@ -164,12 +164,19 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
                     continue;
                 }
 
+                var pageCount = ReadInt(attributes, "pages") ?? 0;
+                if (pageCount <= 0)
+                {
+                    // Official/external MangaDex feed entries have no image pages to cache.
+                    continue;
+                }
+
                 var number = ReadString(attributes, "chapter");
                 chapters.Add(new MangaSourceChapter(
                     id,
                     string.IsNullOrWhiteSpace(number) ? "Extra" : number,
                     ReadString(attributes, "title"),
-                    ReadInt(attributes, "pages") ?? 0,
+                    pageCount,
                     ReadString(attributes, "translatedLanguage")));
             }
 

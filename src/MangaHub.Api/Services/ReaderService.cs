@@ -630,7 +630,14 @@ public sealed class ReaderService(
         IReadOnlyList<MangaSourceChapter>? firstAvailable = null;
         foreach (var language in preferredLanguages)
         {
-            var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken);
+            var chapters = (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken))
+                .Where(chapter => chapter.PageCount > 0)
+                .ToList();
+            if (chapters.Count == 0)
+            {
+                continue;
+            }
+
             firstAvailable ??= chapters;
             if (string.IsNullOrWhiteSpace(currentChapterNumber) || HasExactChapter(chapters, currentChapterNumber)) return chapters;
         }
