@@ -195,6 +195,7 @@ public sealed class ReaderService(
         else if (cachedSeries is not null && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
         {
             cachedChapter = cachedSeries.Chapters
+                .Where(chapter => LanguagePreferences.Contains(preferredLanguages, chapter.Language))
                 .OrderBy(chapter => LanguagePreferences.IndexOf(preferredLanguages, chapter.Language))
                 .ThenBy(chapter => chapter.CreatedAt)
                 .FirstOrDefault(chapter => chapter.ImageQuality == quality && HasExactChapter(chapter.ChapterNumber, shelfEntry.CurrentChapter));
@@ -792,6 +793,7 @@ public sealed class ReaderService(
 
         var candidates = cachedSeries.Chapters
             .Where(chapter => string.Equals(chapter.ImageQuality, imageQuality, StringComparison.OrdinalIgnoreCase))
+            .Where(chapter => LanguagePreferences.Contains(preferredLanguages, chapter.Language))
             .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.ChapterNumber) })
             .Where(item => item.Number is not null && (next ? item.Number > currentNumber : item.Number < currentNumber));
 
@@ -819,7 +821,8 @@ public sealed class ReaderService(
 
         var targetChapter = string.IsNullOrWhiteSpace(requestedChapter) ? shelfEntry.CurrentChapter : requestedChapter;
         var candidates = cachedSeries.Chapters
-            .Where(chapter => string.Equals(chapter.ImageQuality, imageQuality, StringComparison.OrdinalIgnoreCase));
+            .Where(chapter => string.Equals(chapter.ImageQuality, imageQuality, StringComparison.OrdinalIgnoreCase))
+            .Where(chapter => LanguagePreferences.Contains(preferredLanguages, chapter.Language));
 
         if (!string.IsNullOrWhiteSpace(targetChapter))
         {

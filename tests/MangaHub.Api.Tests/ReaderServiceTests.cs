@@ -173,6 +173,53 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_NextChapterDoesNotUseCachedLanguageOutsidePreferences()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Preferred languages", MangaDexId = "preferred-language-id" };
+        var cachedSeries = new MangaSeries { Title = entry.Title, Source = "mangadex-cache", ExternalId = entry.MangaDexId };
+        var currentChapter = new MangaChapter
+        {
+            Series = cachedSeries, SourceId = "chapter-1-en", ChapterNumber = "1", Language = "en", PageCount = 20
+        };
+        var cachedFrenchChapter = new MangaChapter
+        {
+            Series = cachedSeries, SourceId = "chapter-2-fr", ChapterNumber = "2", Language = "fr", PageCount = 20
+        };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(cachedSeries);
+        db.Chapters.AddRange(currentChapter, cachedFrenchChapter);
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = userId, MangaEntry = entry, CurrentChapter = "1", ReadingStatus = "reading"
+        });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-2-pt", "2", "Capitulo 2", 20, "pt-br"));
+        mangaDex.Pages["chapter-2-pt"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/002.jpg")];
+        var cache = new FakeMangaDexChapterCache();
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, cache);
+
+        var launch = await service.PrepareMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            currentChapter.Id,
+            null,
+            "en,pt-br",
+            allowLanguageFallback: false,
+            allowChapterJump: false,
+            CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Equal("2", launch.CurrentChapter);
+        Assert.Contains("language=pt-br", launch.ReaderUrl);
+        Assert.Equal(["chapter-2-pt"], cache.CachedChapterIds);
+        Assert.DoesNotContain(cachedFrenchChapter.Id.ToString(), launch.ReaderUrl);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_UsesChapterZeroAsAValidPlannedSeriesStart()
     {
         await using var db = TestDb.Create();

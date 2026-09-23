@@ -224,7 +224,12 @@
     private bool IsMangaDexReader => string.Equals(ReaderSource, "mangadex", StringComparison.OrdinalIgnoreCase)
         || (string.IsNullOrWhiteSpace(ReaderSource) && EntryId is not null);
     private bool CanPrepareAdjacentChapter => IsMangaDexReader && EntryId is not null;
-    private string ActiveLanguage => string.IsNullOrWhiteSpace(ReaderLanguage) ? readerSettings.PreferredLanguage : ReaderLanguage;
+    // The URL identifies the language of the chapter on screen. Adjacent chapter lookups
+    // still use the account's ordered language list so they can fall through to its next choice.
+    private string ActiveLanguage => string.IsNullOrWhiteSpace(ReaderLanguage) ? PrimaryPreferredLanguage : ReaderLanguage;
+    private string PrimaryPreferredLanguage => preferredLanguage
+        .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .FirstOrDefault() ?? "en";
     private string ActiveImageQuality => string.IsNullOrWhiteSpace(ReaderImageQuality) ? readerSettings.ImageQuality : ReaderImageQuality;
     private bool PreviousDisabled => isPreparingChapter || (page <= 0 && !CanPrepareAdjacentChapter);
     private bool NextDisabled => isPreparingChapter || (page >= PageCount - 1 && !CanPrepareAdjacentChapter);
@@ -286,7 +291,7 @@
         prefetchedChapterId = ChapterId;
         try
         {
-            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId, ActiveLanguage);
+            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId, preferredLanguage);
         }
         catch (HttpRequestException)
         {
@@ -319,12 +324,14 @@
             return;
         }
 
-        readerSettings = readerSettings with { PreferredLanguage = language };
-        await ReaderSettings.SetAsync(readerSettings);
         isPreparingChapter = true;
         try
         {
-            readerPreparation = await MangaApi.StartMangaDexPreparationAsync(EntryId.Value, language: language, imageQuality: ActiveImageQuality, allowLanguageFallback: true);
+            readerPreparation = await MangaApi.StartMangaDexPreparationAsync(
+                EntryId.Value,
+                language: language,
+                imageQuality: ActiveImageQuality,
+                requestedChapter: CurrentChapter);
             var completed = readerPreparation is null ? null : await WaitForReaderPreparationAsync(readerPreparation.JobId);
             if (completed?.Launch is not null)
             {
@@ -349,7 +356,11 @@
         isPreparingChapter = true;
         try
         {
-            readerPreparation = await MangaApi.StartMangaDexPreparationAsync(EntryId.Value, language: ActiveLanguage, imageQuality: readerSettings.ImageQuality, allowLanguageFallback: true);
+            readerPreparation = await MangaApi.StartMangaDexPreparationAsync(
+                EntryId.Value,
+                language: ActiveLanguage,
+                imageQuality: readerSettings.ImageQuality,
+                requestedChapter: CurrentChapter);
             var completed = readerPreparation is null ? null : await WaitForReaderPreparationAsync(readerPreparation.JobId);
             if (completed?.Launch is not null) Navigation.NavigateTo(completed.Launch.ReaderUrl);
             else Messages.Error(completed?.Error ?? "Could not prepare this image quality.", "Chapter unavailable");
@@ -396,7 +407,7 @@
                 EntryId.Value,
                 afterCachedChapterId: next ? ChapterId : null,
                 beforeCachedChapterId: next ? null : ChapterId,
-                language: language ?? ActiveLanguage,
+                language: language ?? preferredLanguage,
                 allowLanguageFallback: allowLanguageFallback,
                 allowChapterJump: allowChapterJump);
             if (readerPreparation is null)
