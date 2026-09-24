@@ -13,7 +13,8 @@
     display: grid;
     gap: var(--bzb-gap, 4px);
     grid-auto-flow: row dense;
-    grid-auto-rows: var(--mh-bento-row-height, 116px);
+    /* RowHeight is a visual floor; content must always be allowed to expand it. */
+    grid-auto-rows: minmax(var(--mh-bento-row-height, 116px), max-content);
     grid-template-columns: repeat(var(--mh-bento-columns, 4), minmax(0, 1fr));
 }
 
