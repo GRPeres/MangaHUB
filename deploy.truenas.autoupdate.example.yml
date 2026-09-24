@@ -115,10 +115,79 @@ services:
       - |
         set -eu
         mkdir -p /backups
+
+        verify_database="mangahub_backup_verify"
+
+        cleanup_verify_database() {
+          psql -h postgres -U mangahub -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$$verify_database' AND pid <> pg_backend_pid();" >/dev/null 2>&1 || true
+          psql -h postgres -U mangahub -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$$verify_database\";" >/dev/null 2>&1 || true
+        }
+
+        verify_dump() {
+          dump_file="$$1"
+          marker="$$dump_file.verified"
+          failure_marker="$$dump_file.failed"
+          rm -f "$$marker" "$$failure_marker"
+          cleanup_verify_database
+
+          if ! psql -h postgres -U mangahub -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$$verify_database\";" >/dev/null; then
+            echo "Backup verification failed: could not create $$verify_database" >&2
+            touch "$$failure_marker"
+            return
+          fi
+
+          if ! pg_restore -h postgres -U mangahub -d "$$verify_database" --exit-on-error --no-owner --no-privileges "$$dump_file"; then
+            echo "Backup verification failed: restore failed for $$dump_file" >&2
+            touch "$$failure_marker"
+            cleanup_verify_database
+            return
+          fi
+
+          # PostgreSQL 16 adds a random \restrict token to plain dump output. It is not schema,
+          # so remove it before comparing the two otherwise-identical schemas.
+          pg_dump -h postgres -U mangahub -d mangahub --schema-only --no-owner --no-privileges | sed '/^\\restrict /d; /^\\unrestrict /d' > /tmp/live-schema.sql
+          pg_dump -h postgres -U mangahub -d "$$verify_database" --schema-only --no-owner --no-privileges | sed '/^\\restrict /d; /^\\unrestrict /d' > /tmp/restored-schema.sql
+          if ! cmp -s /tmp/live-schema.sql /tmp/restored-schema.sql; then
+            echo "Backup verification warning: restored schema differs from the live database" >&2
+            touch "$$failure_marker"
+            cleanup_verify_database
+            return
+          fi
+
+          table_mismatch=0
+          tables="$$(psql -h postgres -U mangahub -d mangahub -At -v ON_ERROR_STOP=1 -c \"SELECT quote_ident(schemaname) || '.' || quote_ident(tablename) FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;\")"
+          for table in $$tables; do
+            live_count="$$(psql -h postgres -U mangahub -d mangahub -At -v ON_ERROR_STOP=1 -c \"SELECT count(*) FROM $$table;\")"
+            restored_count="$$(psql -h postgres -U mangahub -d \"$$verify_database\" -At -v ON_ERROR_STOP=1 -c \"SELECT count(*) FROM $$table;\")"
+            if [ "$$live_count" != "$$restored_count" ]; then
+              echo "Backup verification warning: $$table has $$live_count live rows and $$restored_count restored rows" >&2
+              table_mismatch=1
+            fi
+          done
+
+          cleanup_verify_database
+          if [ "$$table_mismatch" -eq 0 ]; then
+            printf 'verified_at=%s\ndump=%s\n' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$(basename "$$dump_file")" > "$$marker"
+            echo "Backup verification passed: $$dump_file"
+          else
+            touch "$$failure_marker"
+          fi
+        }
+
+        prune_backups() {
+          (ls -1t /backups/mangahub-*.dump 2>/dev/null || true) | awk 'NR > 7' | while IFS= read -r expired; do
+            rm -f "$$expired" "$$expired.verified" "$$expired.failed"
+          done
+        }
+
         while true; do
           file="/backups/mangahub-$$(date +%Y%m%d-%H%M%S).dump"
-          pg_dump -h postgres -U mangahub -d mangahub -Fc -f "$$file"
-          find /backups -type f -name 'mangahub-*.dump' -mtime +30 -delete
+          temporary_file="$$file.partial"
+          rm -f "$$temporary_file"
+          pg_dump -h postgres -U mangahub -d mangahub -Fc -f "$$temporary_file"
+          mv "$$temporary_file" "$$file"
+          verify_dump "$$file"
+          prune_backups
           sleep 86400
         done
     volumes:

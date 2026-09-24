@@ -31,7 +31,7 @@ cloudflared
   named Cloudflare Tunnel to mangahub-web:80
 
 postgres-backup
-  pg_dump sidecar to NAS share
+  pg_dump sidecar to NAS share; restores each dump into a disposable database for validation
 ```
 
 ## Project Responsibilities

@@ -94,7 +94,7 @@ Current production target:
 - worker container
 - Blazor/nginx web container
 - cloudflared named tunnel container
-- Postgres backup sidecar dumping to `/mnt/Shared/NAS/MangaHUBBackups`
+- Postgres backup sidecar dumping to `/mnt/Shared/NAS/MangaHUBBackups`, retaining seven dumps and restore-validating each one in a disposable database
 
 Current fixed public URL:
 
