@@ -18,13 +18,17 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
         var recentJobs = await db.MaintenanceJobs.AsNoTracking().OrderByDescending(job => job.RequestedAt).Take(12)
             .Select(job => new MaintenanceJobResponse(job.Id, job.Type, job.Status, job.RequestedAt, job.StartedAt, job.CompletedAt, job.Error)).ToListAsync(cancellationToken);
         var cacheRoot = options.Value.MangaDexCachePath;
-        var (cachedChapters, cacheBytes) = GetCacheUsage(cacheRoot);
+        var cacheUsage = GetCacheUsage(cacheRoot);
         return new OperationsOverviewResponse(
             await entries.CountAsync(cancellationToken),
             await entries.CountAsync(entry => entry.MangaDexId != "", cancellationToken),
             await entries.CountAsync(entry => entry.MangaUpdatesId != "", cancellationToken),
-            cachedChapters,
-            cacheBytes,
+            cacheUsage.TotalChapters,
+            cacheUsage.TotalBytes,
+            cacheUsage.ActiveChapters,
+            cacheUsage.ActiveBytes,
+            cacheUsage.ArchivedChapters,
+            cacheUsage.ArchivedBytes,
             await entries.MaxAsync(entry => entry.MangaDexLastSyncedAt, cancellationToken),
             await entries.MaxAsync(entry => entry.MangaUpdatesLastSyncedAt, cancellationToken),
             await db.MaintenanceJobs.AsNoTracking().Where(job => job.Type == "library-scan" && job.Status == "completed").OrderByDescending(job => job.CompletedAt).Select(job => job.CompletedAt).FirstOrDefaultAsync(cancellationToken),
@@ -47,15 +51,44 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
 
     private static MaintenanceJobResponse ToResponse(MaintenanceJob job) => new(job.Id, job.Type, job.Status, job.RequestedAt, job.StartedAt, job.CompletedAt, job.Error);
 
-    private static (int Chapters, long Bytes) GetCacheUsage(string root)
+    private static CacheUsage GetCacheUsage(string root)
     {
         try
         {
-            if (!Directory.Exists(root)) return (0, 0);
-            var files = Directory.EnumerateFiles(root, "*.cbz", SearchOption.AllDirectories).Select(path => new FileInfo(path)).ToList();
-            return (files.Count, files.Sum(file => file.Length));
+            if (!Directory.Exists(root)) return new CacheUsage();
+
+            var archiveRoot = Path.GetFullPath(Path.Combine(root, "archive")) + Path.DirectorySeparatorChar;
+            var files = Directory.EnumerateFiles(root, "*.cbz", SearchOption.AllDirectories)
+                .Select(path => new FileInfo(path));
+            var usage = new CacheUsage();
+
+            foreach (var file in files)
+            {
+                if (Path.GetFullPath(file.FullName).StartsWith(archiveRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    usage.ArchivedChapters++;
+                    usage.ArchivedBytes += file.Length;
+                }
+                else
+                {
+                    usage.ActiveChapters++;
+                    usage.ActiveBytes += file.Length;
+                }
+            }
+
+            return usage;
         }
-        catch (IOException) { return (0, 0); }
-        catch (UnauthorizedAccessException) { return (0, 0); }
+        catch (IOException) { return new CacheUsage(); }
+        catch (UnauthorizedAccessException) { return new CacheUsage(); }
+    }
+
+    private sealed class CacheUsage
+    {
+        public int ActiveChapters { get; set; }
+        public long ActiveBytes { get; set; }
+        public int ArchivedChapters { get; set; }
+        public long ArchivedBytes { get; set; }
+        public int TotalChapters => ActiveChapters + ArchivedChapters;
+        public long TotalBytes => ActiveBytes + ArchivedBytes;
     }
 }
