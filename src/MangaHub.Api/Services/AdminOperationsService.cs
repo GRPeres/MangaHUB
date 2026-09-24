@@ -9,14 +9,14 @@ namespace MangaHub.Api.Services;
 
 public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaHubOptions> options)
 {
-    private static readonly HashSet<string> AllowedJobTypes = ["release-sync", "mangadex-status-sync", "mangadex-cache-cleanup", "mangaupdates-sync", CatalogIdentityEnrichmentService.JobType, "library-scan"];
+    private static readonly HashSet<string> AllowedJobTypes = ["release-sync", "mangadex-status-sync", "prefetch", "mangadex-cache-cleanup", "mangaupdates-sync", CatalogIdentityEnrichmentService.JobType, "library-scan", "idle-backfill"];
 
     public async Task<OperationsOverviewResponse> GetOverviewAsync(CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
         var entries = db.MangaEntries.AsNoTracking();
         var recentJobs = await db.MaintenanceJobs.AsNoTracking().OrderByDescending(job => job.RequestedAt).Take(12)
-            .Select(job => new MaintenanceJobResponse(job.Id, job.Type, job.Status, job.RequestedAt, job.StartedAt, job.CompletedAt, job.Error)).ToListAsync(cancellationToken);
+            .Select(job => new MaintenanceJobResponse(job.Id, job.Type, job.Trigger, job.Status, job.RequestedAt, job.StartedAt, job.CompletedAt, job.Error)).ToListAsync(cancellationToken);
         var cacheRoot = options.Value.MangaDexCachePath;
         var cacheUsage = GetCacheUsage(cacheRoot);
         return new OperationsOverviewResponse(
@@ -39,17 +39,33 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
 
     public async Task<MaintenanceJobResponse?> QueueAsync(Guid requestedByUserId, string type, CancellationToken cancellationToken)
     {
+        return await QueueAsync(requestedByUserId, type, "manual", cancellationToken);
+    }
+
+    public Task<List<MaintenanceJobResponse>> ListHistoryAsync(int offset, int limit, CancellationToken cancellationToken) =>
+        db.MaintenanceJobs.AsNoTracking()
+            .OrderByDescending(job => job.RequestedAt)
+            .Skip(Math.Max(0, offset))
+            .Take(Math.Clamp(limit, 1, 100))
+            .Select(job => new MaintenanceJobResponse(job.Id, job.Type, job.Trigger, job.Status, job.RequestedAt, job.StartedAt, job.CompletedAt, job.Error))
+            .ToListAsync(cancellationToken);
+
+    public Task<MaintenanceJobResponse?> QueueAutomaticAsync(string type, string trigger, CancellationToken cancellationToken) =>
+        QueueAsync(Guid.Empty, type, trigger, cancellationToken);
+
+    private async Task<MaintenanceJobResponse?> QueueAsync(Guid requestedByUserId, string type, string trigger, CancellationToken cancellationToken)
+    {
         var normalized = type.Trim().ToLowerInvariant();
         if (!AllowedJobTypes.Contains(normalized)) return null;
         var existing = await db.MaintenanceJobs.FirstOrDefaultAsync(job => job.Type == normalized && (job.Status == "queued" || job.Status == "running"), cancellationToken);
         if (existing is not null) return ToResponse(existing);
-        var job = new MaintenanceJob { Type = normalized, RequestedByUserId = requestedByUserId };
+        var job = new MaintenanceJob { Type = normalized, Trigger = trigger, RequestedByUserId = requestedByUserId };
         db.MaintenanceJobs.Add(job);
         await db.SaveChangesAsync(cancellationToken);
         return ToResponse(job);
     }
 
-    private static MaintenanceJobResponse ToResponse(MaintenanceJob job) => new(job.Id, job.Type, job.Status, job.RequestedAt, job.StartedAt, job.CompletedAt, job.Error);
+    private static MaintenanceJobResponse ToResponse(MaintenanceJob job) => new(job.Id, job.Type, job.Trigger, job.Status, job.RequestedAt, job.StartedAt, job.CompletedAt, job.Error);
 
     private static CacheUsage GetCacheUsage(string root)
     {

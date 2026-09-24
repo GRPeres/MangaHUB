@@ -83,6 +83,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE TABLE IF NOT EXISTS maintenance_jobs (
                 "Id" uuid PRIMARY KEY,
                 "Type" character varying(80) NOT NULL,
+                "Trigger" character varying(20) NOT NULL DEFAULT 'manual',
                 "Status" character varying(20) NOT NULL,
                 "RequestedByUserId" uuid NOT NULL,
                 "RequestedAt" timestamp with time zone NOT NULL,
@@ -90,7 +91,9 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "CompletedAt" timestamp with time zone NULL,
                 "Error" text NOT NULL DEFAULT ''
             );
+            ALTER TABLE maintenance_jobs ADD COLUMN IF NOT EXISTS "Trigger" character varying(20) NOT NULL DEFAULT 'manual';
             CREATE INDEX IF NOT EXISTS "IX_maintenance_jobs_Status_RequestedAt" ON maintenance_jobs ("Status", "RequestedAt");
+            CREATE INDEX IF NOT EXISTS "IX_maintenance_jobs_Type_Status_CompletedAt" ON maintenance_jobs ("Type", "Status", "CompletedAt");
             CREATE TABLE IF NOT EXISTS admin_issues (
                 "Id" uuid PRIMARY KEY,
                 "Kind" character varying(80) NOT NULL,

@@ -82,6 +82,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<AdminOperationsService>();
+builder.Services.AddScoped<MaintenanceWatchdogService>();
 builder.Services.AddScoped<RemoteMaintenanceService>();
 builder.Services.AddScoped<OpenLibraryService>();
 builder.Services.AddScoped<MangaDexCatalogMatchService>();

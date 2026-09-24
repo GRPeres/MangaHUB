@@ -175,6 +175,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
         {
             entity.ToTable("maintenance_jobs");
             entity.Property(x => x.Type).HasMaxLength(80);
+            entity.Property(x => x.Trigger).HasMaxLength(20);
             entity.Property(x => x.Status).HasMaxLength(20);
             entity.Property(x => x.Error).HasColumnType("text");
             entity.HasIndex(x => new { x.Status, x.RequestedAt });

@@ -51,16 +51,20 @@ else if (overview is not null)
             <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="soft" CornerIcon="@Icons.Material.Filled.History">
                 <div class="mh-operation-jobs">
                     <MudText Typo="Typo.overline">Recent worker jobs</MudText>
-                    @if (overview.RecentJobs.Count == 0)
+                    @if (historyJobs.Count == 0)
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No manual jobs have been requested yet.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No maintenance jobs have run yet.</MudText>
                     }
                     else
                     {
-                        @foreach (var job in overview.RecentJobs)
+                        @foreach (var job in historyJobs)
                         {
-                            <div class="mh-operation-job"><MudStack Spacing="0"><MudText Typo="Typo.subtitle2">@JobLabel(job.Type)</MudText><MudText Typo="Typo.caption">@FormatDate(job.RequestedAt)</MudText></MudStack><MudChip T="string" Size="Size.Small" Color="@JobColor(job.Status)">@job.Status</MudChip></div>
+                            <div class="mh-operation-job"><MudStack Spacing="0"><MudText Typo="Typo.subtitle2">@JobLabel(job.Type)</MudText><MudText Typo="Typo.caption">@FormatDate(job.RequestedAt) · @JobTriggerLabel(job.Trigger)</MudText></MudStack><MudChip T="string" Size="Size.Small" Color="@JobColor(job.Status)">@job.Status</MudChip></div>
                             @if (!string.IsNullOrWhiteSpace(job.Error)) { <MudText Typo="Typo.caption" Color="Color.Error">@job.Error</MudText> }
+                        }
+                        @if (hasMoreHistory)
+                        {
+                            <MudButton Variant="Variant.Text" Disabled="@isLoadingMoreHistory" OnClick="LoadMoreHistoryAsync">@(isLoadingMoreHistory ? "Loading history..." : "Show older runs")</MudButton>
                         }
                     }
                 </div>
@@ -72,11 +76,15 @@ else if (overview is not null)
 @code {
     private UserResponse? user;
     private OperationsOverviewResponse? overview;
+    private List<MaintenanceJobResponse> historyJobs = [];
     private bool isLoading = true;
     private bool isQueueing;
+    private bool isLoadingMoreHistory;
+    private bool hasMoreHistory;
     private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     protected override async Task OnInitializedAsync() { user = await Auth.GetCurrentUserAsync(); if (isAdmin) await LoadAsync(); else isLoading = false; }
-    private async Task LoadAsync() { isLoading = true; try { overview = await AdminApi.GetOperationsAsync(); if (overview is null) Messages.Error("Could not load operations."); } finally { isLoading = false; } }
+    private async Task LoadAsync() { isLoading = true; try { overview = await AdminApi.GetOperationsAsync(); if (overview is null) { Messages.Error("Could not load operations."); return; } historyJobs = overview.RecentJobs; hasMoreHistory = historyJobs.Count > 0; } finally { isLoading = false; } }
+    private async Task LoadMoreHistoryAsync() { if (isLoadingMoreHistory) return; isLoadingMoreHistory = true; try { var older = await AdminApi.GetMaintenanceHistoryAsync(historyJobs.Count); historyJobs.AddRange(older); hasMoreHistory = older.Count == 25; } finally { isLoadingMoreHistory = false; } }
     private async Task QueueAsync(string type) { isQueueing = true; try { var job = await AdminApi.QueueMaintenanceJobAsync(type); if (job is null) { Messages.Error("Could not queue maintenance."); return; } Messages.Success($"{JobLabel(job.Type)} is {job.Status}."); await LoadAsync(); } finally { isQueueing = false; } }
     private static string FormatBytes(long bytes)
     {
@@ -87,5 +95,6 @@ else if (overview is not null)
     }
     private static string FormatDate(DateTimeOffset? value) => value?.ToLocalTime().ToString("g") ?? "Not yet";
     private static string JobLabel(string type) => type switch { "release-sync" => "MangaDex release refresh", "mangadex-status-sync" => "MangaDex status and shelf repair", "mangadex-cache-cleanup" => "MangaDex cache cleanup", "mangaupdates-sync" => "MangaUpdates refresh", "catalog-id-enrichment" => "Catalog ID matching", "library-scan" => "Local library scan", _ => type };
+    private static string JobTriggerLabel(string trigger) => trigger switch { "scheduled" => "automatic schedule", "watchdog" => "watchdog retry", _ => "manual" };
     private static Color JobColor(string status) => status switch { "completed" => Color.Success, "failed" => Color.Error, "running" => Color.Warning, _ => Color.Info };
 }

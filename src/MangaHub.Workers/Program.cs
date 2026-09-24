@@ -12,6 +12,7 @@ builder.Services.AddHttpClient<InternalMaintenanceApiClient>((serviceProvider, c
     client.Timeout = TimeSpan.FromMinutes(30);
 });
 builder.Services.AddHostedService<RemoteMaintenanceScheduleWorker>();
+builder.Services.AddHostedService<MaintenanceWatchdogWorker>();
 builder.Services.AddHostedService<UsageAnalyticsWorker>();
 builder.Services.AddHostedService<NotificationCleanupWorker>();
 builder.Services.AddHostedService<MaintenanceJobWorker>();

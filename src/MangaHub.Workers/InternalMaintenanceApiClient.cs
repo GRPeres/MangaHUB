@@ -8,7 +8,16 @@ namespace MangaHub.Workers;
 /// </summary>
 public sealed class InternalMaintenanceApiClient(HttpClient httpClient, IOptions<MangaHubOptions> options)
 {
+    public Task QueueAsync(string type, CancellationToken cancellationToken) => SendAsync(HttpMethod.Post, $"internal/maintenance/{Uri.EscapeDataString(type)}/queue", cancellationToken);
+
+    public Task RunWatchdogAsync(CancellationToken cancellationToken) => SendAsync(HttpMethod.Post, "internal/maintenance/watchdog", cancellationToken);
+
     public async Task RunAsync(string type, CancellationToken cancellationToken)
+    {
+        await SendAsync(HttpMethod.Post, $"internal/maintenance/{Uri.EscapeDataString(type)}", cancellationToken);
+    }
+
+    private async Task SendAsync(HttpMethod method, string path, CancellationToken cancellationToken)
     {
         var token = options.Value.InternalWorkerToken;
         if (string.IsNullOrWhiteSpace(token))
@@ -16,7 +25,7 @@ public sealed class InternalMaintenanceApiClient(HttpClient httpClient, IOptions
             throw new InvalidOperationException("MangaHub:InternalWorkerToken must be configured for worker dispatch.");
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"internal/maintenance/{Uri.EscapeDataString(type)}");
+        using var request = new HttpRequestMessage(method, path);
         request.Headers.Add("X-MangaHub-Worker-Token", token);
         using var response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();

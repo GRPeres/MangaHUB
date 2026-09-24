@@ -62,6 +62,15 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         return Ok(await operations.GetOverviewAsync(cancellationToken));
     }
 
+    [HttpGet("operations/jobs")]
+    public async Task<IActionResult> OperationHistory([FromQuery] int offset = 0, [FromQuery] int limit = 25, CancellationToken cancellationToken = default)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return Ok(await operations.ListHistoryAsync(offset, limit, cancellationToken));
+    }
+
     [HttpGet("issues")]
     public async Task<IActionResult> Issues([FromQuery] string? status, [FromQuery] int offset = 0, [FromQuery] int limit = 40, CancellationToken cancellationToken = default)
     {

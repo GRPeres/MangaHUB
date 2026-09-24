@@ -25,36 +25,36 @@ public sealed class RemoteMaintenanceScheduleWorker(
             var now = DateTimeOffset.UtcNow;
             if (now >= nextReleaseSyncAt)
             {
-                StartScheduledJob("release-sync", token => DispatchAsync("release-sync", token), stoppingToken);
+                StartScheduledJob("release-sync", token => QueueAsync("release-sync", token), stoppingToken);
                 nextReleaseSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaDexReleasePollMinutes, 15, 720));
             }
             if (now >= nextPrefetchAt)
             {
                 StartScheduledJob("daily-cache-maintenance", async token =>
                 {
-                    await DispatchAsync("prefetch", token);
-                    await DispatchAsync("mangadex-cache-cleanup", token);
+                    await QueueAsync("prefetch", token);
+                    await QueueAsync("mangadex-cache-cleanup", token);
                 }, stoppingToken);
                 nextPrefetchAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
             }
             if (now >= nextMangaUpdatesMatchAt)
             {
-                StartScheduledJob("catalog-id-enrichment", token => DispatchAsync("catalog-id-enrichment", token), stoppingToken);
+                StartScheduledJob("catalog-id-enrichment", token => QueueAsync("catalog-id-enrichment", token), stoppingToken);
                 nextMangaUpdatesMatchAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaUpdatesMatchPollMinutes, 5, 720));
             }
             if (now >= nextMangaUpdatesSyncAt)
             {
-                StartScheduledJob("mangaupdates-sync", token => DispatchAsync("mangaupdates-sync", token), stoppingToken);
+                StartScheduledJob("mangaupdates-sync", token => QueueAsync("mangaupdates-sync", token), stoppingToken);
                 nextMangaUpdatesSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaUpdatesReleasePollMinutes, 15, 720));
             }
             if (now >= nextLibraryScanAt)
             {
-                StartScheduledJob("library-scan", token => DispatchAsync("library-scan", token), stoppingToken);
+                StartScheduledJob("library-scan", token => QueueAsync("library-scan", token), stoppingToken);
                 nextLibraryScanAt = DateTimeOffset.UtcNow.AddHours(1);
             }
             if (now >= nextIdleBackfillAt)
             {
-                StartScheduledJob("idle-backfill", token => DispatchAsync("idle-backfill", token), stoppingToken);
+                StartScheduledJob("idle-backfill", token => QueueAsync("idle-backfill", token), stoppingToken);
                 nextIdleBackfillAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaDexIdleBackfillCheckMinutes, 5, 720));
             }
 
@@ -94,11 +94,11 @@ public sealed class RemoteMaintenanceScheduleWorker(
         }
     }
 
-    private async Task DispatchAsync(string type, CancellationToken cancellationToken)
+    private async Task QueueAsync(string type, CancellationToken cancellationToken)
     {
         try
         {
-            await maintenanceApi.RunAsync(type, cancellationToken);
+            await maintenanceApi.QueueAsync(type, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -106,7 +106,7 @@ public sealed class RemoteMaintenanceScheduleWorker(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Could not dispatch scheduled maintenance job {Type}; it will retry on the next schedule.", type);
+            logger.LogWarning(ex, "Could not queue scheduled maintenance job {Type}; it will retry on the next schedule.", type);
         }
     }
 

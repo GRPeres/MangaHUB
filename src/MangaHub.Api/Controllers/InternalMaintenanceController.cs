@@ -11,10 +11,37 @@ namespace MangaHub.Api.Controllers;
 [ApiController]
 [Route("internal/maintenance")]
 public sealed class InternalMaintenanceController(
+    AdminOperationsService operations,
+    MaintenanceWatchdogService watchdog,
     RemoteMaintenanceService remoteMaintenance,
     ILibraryScanner libraryScanner,
     IOptions<MangaHubOptions> options) : ControllerBase
 {
+    [HttpPost("{type}/queue")]
+    public async Task<IActionResult> Queue(string type, [FromQuery] string trigger = "scheduled", CancellationToken cancellationToken = default)
+    {
+        if (!HasValidWorkerToken())
+        {
+            return Unauthorized();
+        }
+
+        var normalizedTrigger = string.Equals(trigger, "watchdog", StringComparison.OrdinalIgnoreCase) ? "watchdog" : "scheduled";
+        var job = await operations.QueueAutomaticAsync(type, normalizedTrigger, cancellationToken);
+        return job is null ? BadRequest() : Accepted();
+    }
+
+    [HttpPost("watchdog")]
+    public async Task<IActionResult> RunWatchdog(CancellationToken cancellationToken)
+    {
+        if (!HasValidWorkerToken())
+        {
+            return Unauthorized();
+        }
+
+        await watchdog.CheckAsync(cancellationToken);
+        return NoContent();
+    }
+
     [HttpPost("{type}")]
     public async Task<IActionResult> Run(string type, CancellationToken cancellationToken)
     {

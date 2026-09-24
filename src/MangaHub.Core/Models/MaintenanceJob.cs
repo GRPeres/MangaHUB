@@ -4,6 +4,7 @@ public sealed class MaintenanceJob
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Type { get; set; } = "";
+    public string Trigger { get; set; } = "manual";
     public string Status { get; set; } = "queued";
     public Guid RequestedByUserId { get; set; }
     public DateTimeOffset RequestedAt { get; set; } = DateTimeOffset.UtcNow;
