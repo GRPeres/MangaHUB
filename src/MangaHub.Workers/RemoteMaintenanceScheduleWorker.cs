@@ -8,6 +8,9 @@ public sealed class RemoteMaintenanceScheduleWorker(
     IOptions<MangaHubOptions> options,
     ILogger<RemoteMaintenanceScheduleWorker> logger) : BackgroundService
 {
+    private readonly object scheduledJobLock = new();
+    private readonly Dictionary<string, Task> runningScheduledJobs = new(StringComparer.Ordinal);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var nextReleaseSyncAt = DateTimeOffset.MinValue;
@@ -22,37 +25,72 @@ public sealed class RemoteMaintenanceScheduleWorker(
             var now = DateTimeOffset.UtcNow;
             if (now >= nextReleaseSyncAt)
             {
-                await DispatchAsync("release-sync", stoppingToken);
+                StartScheduledJob("release-sync", token => DispatchAsync("release-sync", token), stoppingToken);
                 nextReleaseSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaDexReleasePollMinutes, 15, 720));
             }
             if (now >= nextPrefetchAt)
             {
-                await DispatchAsync("prefetch", stoppingToken);
-                await DispatchAsync("mangadex-cache-cleanup", stoppingToken);
+                StartScheduledJob("daily-cache-maintenance", async token =>
+                {
+                    await DispatchAsync("prefetch", token);
+                    await DispatchAsync("mangadex-cache-cleanup", token);
+                }, stoppingToken);
                 nextPrefetchAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
             }
             if (now >= nextMangaUpdatesMatchAt)
             {
-                await DispatchAsync("catalog-id-enrichment", stoppingToken);
+                StartScheduledJob("catalog-id-enrichment", token => DispatchAsync("catalog-id-enrichment", token), stoppingToken);
                 nextMangaUpdatesMatchAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaUpdatesMatchPollMinutes, 5, 720));
             }
             if (now >= nextMangaUpdatesSyncAt)
             {
-                await DispatchAsync("mangaupdates-sync", stoppingToken);
+                StartScheduledJob("mangaupdates-sync", token => DispatchAsync("mangaupdates-sync", token), stoppingToken);
                 nextMangaUpdatesSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaUpdatesReleasePollMinutes, 15, 720));
             }
             if (now >= nextLibraryScanAt)
             {
-                await DispatchAsync("library-scan", stoppingToken);
+                StartScheduledJob("library-scan", token => DispatchAsync("library-scan", token), stoppingToken);
                 nextLibraryScanAt = DateTimeOffset.UtcNow.AddHours(1);
             }
             if (now >= nextIdleBackfillAt)
             {
-                await DispatchAsync("idle-backfill", stoppingToken);
+                StartScheduledJob("idle-backfill", token => DispatchAsync("idle-backfill", token), stoppingToken);
                 nextIdleBackfillAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaDexIdleBackfillCheckMinutes, 5, 720));
             }
 
             await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+        }
+    }
+
+    private void StartScheduledJob(string name, Func<CancellationToken, Task> operation, CancellationToken stoppingToken)
+    {
+        lock (scheduledJobLock)
+        {
+            if (runningScheduledJobs.TryGetValue(name, out var existingJob) && !existingJob.IsCompleted)
+            {
+                logger.LogInformation("Scheduled maintenance job {Name} is still running; skipping overlapping dispatch.", name);
+                return;
+            }
+
+            logger.LogInformation("Starting scheduled maintenance job {Name}.", name);
+            runningScheduledJobs[name] = RunScheduledJobAsync(name, operation, stoppingToken);
+        }
+    }
+
+    private async Task RunScheduledJobAsync(string name, Func<CancellationToken, Task> operation, CancellationToken stoppingToken)
+    {
+        try
+        {
+            await operation(stoppingToken);
+            logger.LogInformation("Scheduled maintenance job {Name} completed.", name);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            logger.LogInformation("Scheduled maintenance job {Name} was cancelled during shutdown.", name);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Scheduled maintenance job {Name} failed.", name);
         }
     }
 
