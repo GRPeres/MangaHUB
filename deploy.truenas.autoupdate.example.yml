@@ -167,7 +167,7 @@ services:
           psql -h postgres -U mangahub -d postgres -c "DROP DATABASE IF EXISTS \"$$verify_database\";" >/dev/null 2>&1 || true
 
           ls -1t /backups/mangahub-*.dump 2>/dev/null > /tmp/backup-dumps || true
-          sed -n '8,$p' /tmp/backup-dumps | while IFS= read -r expired; do
+          sed -n '8,$$p' /tmp/backup-dumps | while IFS= read -r expired; do
             rm -f "$$expired" "$$expired.verified" "$$expired.failed"
           done
           sleep 86400
