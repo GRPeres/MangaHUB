@@ -47,7 +47,14 @@
         </MudStack>
     </MudStack>
 
-    @if (VisibleEntries.Count == 0 && !hasMoreEntries)
+    @if (isInitialLoading)
+    {
+        <MudStack Spacing="2" Class="mh-shelf-initial-loading">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Loading your shelf...</MudText>
+        </MudStack>
+    }
+    else if (VisibleEntries.Count == 0 && !hasMoreEntries)
     {
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@EmptySectionMessage</MudAlert>
     }
@@ -226,6 +233,9 @@
     private bool hasMoreEntries;
     private bool isLoadingEntries;
     private bool isSavingOfflineSnapshot;
+    private bool isInitialLoading = true;
+    private bool offlineSnapshotDirty = true;
+    private int loadVersion;
     private ElementReference loadMoreSentinel;
     private DotNetObjectReference<Library>? progressiveLoadReference;
     private List<UserAdminResponse> users = [];
@@ -280,21 +290,52 @@
         activeSection = RequestedSection;
         mobileSectionsExpanded = !IsPrimarySection(activeSection);
         currentUser = await Auth.GetCurrentUserAsync();
+        selectedUserId = currentUser?.Id;
+        hasInitialized = true;
+        _ = InitializeShelfAsync();
         if (IsAdmin)
         {
-            users = await AdminApi.GetUsersAsync();
-            selectedUserId = currentUser?.Id;
+            _ = LoadAdminUsersAsync();
         }
-        hasInitialized = true;
-        await Load();
-        if (NotificationEntryId is not null && !string.IsNullOrWhiteSpace(NotificationChapter))
+    }
+
+    private async Task InitializeShelfAsync()
+    {
+        try
         {
-            if (NotificationId is not null)
+            await Load(refreshOfflineSnapshot: true);
+            await InvokeAsync(StateHasChanged);
+            if (NotificationEntryId is not null && !string.IsNullOrWhiteSpace(NotificationChapter))
             {
-                await Notifications.MarkReadAsync(NotificationId.Value);
-                Refreshes.Notify(AppRefreshScope.Notifications | AppRefreshScope.Analytics);
+                if (NotificationId is not null)
+                {
+                    await Notifications.MarkReadAsync(NotificationId.Value);
+                    Refreshes.Notify(AppRefreshScope.Notifications | AppRefreshScope.Analytics);
+                }
+                await Read(NotificationEntryId.Value, NotificationLanguage, allowLanguageFallback: true, allowChapterJump: true, requestedChapter: NotificationChapter);
             }
-            await Read(NotificationEntryId.Value, NotificationLanguage, allowLanguageFallback: true, allowChapterJump: true, requestedChapter: NotificationChapter);
+        }
+        catch
+        {
+            Messages.Error("Could not load the shelf. Refresh the page to try again.");
+        }
+        finally
+        {
+            isInitialLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadAdminUsersAsync()
+    {
+        try
+        {
+            users = await AdminApi.GetUsersAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // The Shelf remains usable while the optional owner filter retries on a later render.
         }
     }
 
@@ -373,12 +414,19 @@
         filtersOpen = false;
     }
 
-    private async Task Load()
+    private async Task Load(bool refreshOfflineSnapshot = false)
     {
+        var currentLoadVersion = ++loadVersion;
         entries = [];
         hasMoreEntries = true;
-        await RefreshSectionSummaryAsync();
+        if (refreshOfflineSnapshot)
+        {
+            offlineSnapshotDirty = true;
+        }
+
+        var sectionSummaryTask = RefreshSectionSummaryAsync(currentLoadVersion);
         await LoadMoreEntries();
+        _ = ObserveSectionSummaryAsync(sectionSummaryTask, currentLoadVersion);
         _ = SaveOfflineSnapshotAsync();
         CloseEdit();
     }
@@ -403,10 +451,30 @@
         }
     }
 
-    private async Task RefreshSectionSummaryAsync()
+    private async Task RefreshSectionSummaryAsync(int currentLoadVersion)
     {
-        sectionSummary = await MangaApi.GetShelfSectionSummaryAsync(IsAdmin ? selectedUserId : null)
+        var summary = await MangaApi.GetShelfSectionSummaryAsync(IsAdmin ? selectedUserId : null)
             ?? new ShelfSectionSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        if (currentLoadVersion == loadVersion)
+        {
+            sectionSummary = summary;
+        }
+    }
+
+    private async Task ObserveSectionSummaryAsync(Task summaryTask, int currentLoadVersion)
+    {
+        try
+        {
+            await summaryTask;
+            if (currentLoadVersion == loadVersion)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // A delayed navigation count is non-critical; the next refresh retries it.
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -429,7 +497,7 @@
 
     private async Task SaveOfflineSnapshotAsync()
     {
-        if (isSavingOfflineSnapshot || currentUser is null || (IsAdmin && selectedUserId is not null && selectedUserId != currentUser.Id))
+        if (isSavingOfflineSnapshot || !offlineSnapshotDirty || currentUser is null || (IsAdmin && selectedUserId is not null && selectedUserId != currentUser.Id))
         {
             return;
         }
@@ -437,31 +505,38 @@
         isSavingOfflineSnapshot = true;
         try
         {
-            var snapshotEntries = new List<MangaEntryResponse>();
-            const int snapshotPageSize = 500;
-            for (var offset = 0; ; offset += snapshotPageSize)
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            while (offlineSnapshotDirty)
             {
-                var page = await MangaApi.GetMangaEntriesAsync(
-                    userId: currentUser.Id,
-                    offset: offset,
-                    limit: snapshotPageSize,
-                    section: "all");
-                snapshotEntries.AddRange(page);
-                if (page.Count < snapshotPageSize)
+                offlineSnapshotDirty = false;
+                var snapshotEntries = new List<MangaEntryResponse>();
+                const int snapshotPageSize = 500;
+                for (var offset = 0; ; offset += snapshotPageSize)
                 {
-                    break;
+                    var page = await MangaApi.GetMangaEntriesAsync(
+                        userId: currentUser.Id,
+                        offset: offset,
+                        limit: snapshotPageSize,
+                        section: "all");
+                    snapshotEntries.AddRange(page);
+                    if (page.Count < snapshotPageSize)
+                    {
+                        break;
+                    }
                 }
-            }
 
-            await JS.InvokeVoidAsync("mangaHubOfflineShelf.save", currentUser.Id.ToString(), snapshotEntries);
+                await JS.InvokeVoidAsync("mangaHubOfflineShelf.save", currentUser.Id.ToString(), snapshotEntries);
+            }
         }
         catch (JSDisconnectedException)
         {
             // The browser is gone; the next successful Shelf load will refresh the local snapshot.
+            offlineSnapshotDirty = true;
         }
         catch
         {
             // Offline support is best-effort and must not interfere with the active Shelf view.
+            offlineSnapshotDirty = true;
         }
         finally
         {
@@ -643,7 +718,7 @@
 
     private async Task OnShelfChanged()
     {
-        await Load();
+        await Load(refreshOfflineSnapshot: true);
     }
 
     private void OnAppRefresh(AppRefreshScope scope)
@@ -655,7 +730,7 @@
 
         _ = InvokeAsync(async () =>
         {
-            await Load();
+            await Load(refreshOfflineSnapshot: true);
             StateHasChanged();
         });
     }
@@ -681,6 +756,8 @@
         if (index >= 0)
         {
             entries[index] = updated;
+            offlineSnapshotDirty = true;
+            _ = SaveOfflineSnapshotAsync();
         }
     }
 
