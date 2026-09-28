@@ -106,9 +106,12 @@ ConnectionStrings__MangaHub=Host=postgres;Database=mangahub;Username=mangahub;Pa
 MangaHub__InternalApiUrl=http://mangahub-api:8080
 MangaHub__InternalWorkerToken=<the same long random shared worker token>
 MangaHub__InternalMaintenanceRequestTimeoutMinutes=720
+MangaHub__MaintenanceJobMaxConcurrency=2
 MangaHub__MangaDexMaintenanceHour=4
 MangaHub__MangaDexMaintenanceTimeZone=America/Sao_Paulo
 MangaHub__MangaDexCacheRetentionGraceDays=7
+MangaHub__MangaDexCacheRetentionBatchSize=24
+MangaHub__MangaDexCacheRetentionPollMinutes=120
 MangaHub__MangaDexArchiveIntegritySampleSize=5
 MangaHub__MangaDexUpdatePrefetchBatchSize=50
 MangaHub__MangaDexIdleBackfillEnabled=true
@@ -121,6 +124,8 @@ MangaHub__MangaUpdatesMatchRetryHours=24
 MangaHub__ReadNotificationRetentionDays=7
 MangaHub__NotificationCleanupIntervalHours=24
 ```
+
+Maintenance jobs run with two worker slots by default. MangaDex jobs share one protected lane so cache cleanup, release sync, prefetch, and archive validation cannot overlap; unrelated jobs may use the second slot. Cache retention processes up to 24 chapters every two hours by default, rather than holding the queue for a full cache sweep.
 
 Read-notification cleanup runs at worker startup and then at the configured interval. It removes only read notifications for accounts that enable **Automatically delete read notifications** in Account settings. The defaults retain them for seven days; unread notifications are never removed automatically.
 

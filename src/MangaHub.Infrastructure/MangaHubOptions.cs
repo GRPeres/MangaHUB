@@ -8,6 +8,7 @@ public sealed class MangaHubOptions
     public string InternalWorkerToken { get; set; } = "";
     public string InternalApiUrl { get; set; } = "http://mangahub-api:8080";
     public int InternalMaintenanceRequestTimeoutMinutes { get; set; } = 720;
+    public int MaintenanceJobMaxConcurrency { get; set; } = 2;
     public int JwtExpiresMinutes { get; set; } = 60 * 24 * 7;
     public bool SessionCookieSecure { get; set; }
     public string SessionCookieSameSite { get; set; } = "Lax";
@@ -27,6 +28,8 @@ public sealed class MangaHubOptions
     public int MangaDexIdleBackfillMaxChaptersPerManga { get; set; } = 2;
     public bool MangaDexCacheRetentionEnabled { get; set; } = true;
     public int MangaDexCacheRetentionGraceDays { get; set; } = 7;
+    public int MangaDexCacheRetentionBatchSize { get; set; } = 24;
+    public int MangaDexCacheRetentionPollMinutes { get; set; } = 120;
     public int MangaDexArchiveFallbackMaxWidth { get; set; } = 1200;
     public int MangaDexArchiveFallbackJpegQuality { get; set; } = 70;
     public int MangaDexArchiveIntegritySampleSize { get; set; } = 5;

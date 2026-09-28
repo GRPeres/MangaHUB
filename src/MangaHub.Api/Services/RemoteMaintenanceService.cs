@@ -447,7 +447,10 @@ public sealed class RemoteMaintenanceService(
                 .Include(series => series.Chapters)
                 .Where(series => series.Source == MangaDexCacheSource)
                 .ToListAsync(cancellationToken);
+            var batchSize = Math.Clamp(options.Value.MangaDexCacheRetentionBatchSize, 1, 100);
             var archived = 0;
+            var considered = 0;
+            var batchLimitReached = false;
 
             foreach (var cached in cachedSeries)
             {
@@ -457,6 +460,12 @@ public sealed class RemoteMaintenanceService(
                     : (decimal?)null;
                 foreach (var chapterGroup in cached.Chapters.ToList().GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
                 {
+                    if (considered >= batchSize)
+                    {
+                        batchLimitReached = true;
+                        break;
+                    }
+
                     var chapter = chapterGroup.First();
                     var lastAccessedAt = chapterGroup.Max(item => item.LastAccessedAt ?? item.CreatedAt);
                     if (MangaDexCacheRetentionPolicy.ShouldRetain(
@@ -469,6 +478,8 @@ public sealed class RemoteMaintenanceService(
                     {
                         continue;
                     }
+
+                    considered++;
 
                     var dataSaver = chapterGroup.FirstOrDefault(item => string.Equals(item.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase));
                     if (dataSaver is null)
@@ -521,9 +532,19 @@ public sealed class RemoteMaintenanceService(
                     await db.SaveChangesAsync(cancellationToken);
                     archived++;
                 }
+
+                if (batchLimitReached)
+                {
+                    break;
+                }
             }
 
-            logger.LogInformation("MangaDex cache retention archived {ArchivedCount} Data Saver chapters; active readers retain chapters from their earliest current chapter onward.", archived);
+            logger.LogInformation(
+                "MangaDex cache retention archived {ArchivedCount} of {ConsideredCount} considered chapters (batch limit {BatchSize}, more work pending: {BatchLimitReached}); active readers retain chapters from their earliest current chapter onward.",
+                archived,
+                considered,
+                batchSize,
+                batchLimitReached);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

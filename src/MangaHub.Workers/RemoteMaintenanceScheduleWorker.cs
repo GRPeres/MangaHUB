@@ -35,12 +35,12 @@ public sealed class RemoteMaintenanceScheduleWorker(
             }
             if (now >= nextCacheCleanupAt)
             {
-                StartScheduledJob("daily-cache-maintenance", async token =>
+                StartScheduledJob("cache-maintenance", async token =>
                 {
                     await QueueAsync("mangadex-cache-cleanup", token);
                     await QueueAsync("mangadex-archive-integrity-check", token);
                 }, stoppingToken);
-                nextCacheCleanupAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
+                nextCacheCleanupAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaDexCacheRetentionPollMinutes, 30, 720));
             }
             if (now >= nextMangaUpdatesMatchAt)
             {
@@ -115,30 +115,4 @@ public sealed class RemoteMaintenanceScheduleWorker(
         }
     }
 
-    private TimeSpan GetDelayUntilNextMaintenance()
-    {
-        TimeZoneInfo timeZone;
-        try
-        {
-            timeZone = TimeZoneInfo.FindSystemTimeZoneById(options.Value.MangaDexMaintenanceTimeZone);
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            logger.LogWarning("MangaDex maintenance timezone {TimeZone} was not found. Falling back to UTC.", options.Value.MangaDexMaintenanceTimeZone);
-            timeZone = TimeZoneInfo.Utc;
-        }
-        catch (InvalidTimeZoneException)
-        {
-            logger.LogWarning("MangaDex maintenance timezone {TimeZone} is invalid. Falling back to UTC.", options.Value.MangaDexMaintenanceTimeZone);
-            timeZone = TimeZoneInfo.Utc;
-        }
-        var localNow = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
-        var localTarget = new DateTimeOffset(localNow.Year, localNow.Month, localNow.Day,
-            Math.Clamp(options.Value.MangaDexMaintenanceHour, 0, 23), 0, 0, localNow.Offset);
-        if (localTarget <= localNow)
-        {
-            localTarget = localTarget.AddDays(1);
-        }
-        return localTarget.ToUniversalTime() - DateTimeOffset.UtcNow;
-    }
 }

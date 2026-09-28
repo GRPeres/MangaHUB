@@ -1,56 +1,126 @@
 using MangaHub.Core.Models;
+using MangaHub.Infrastructure;
 using MangaHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace MangaHub.Workers;
 
-public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, InternalMaintenanceApiClient maintenanceApi, ILogger<MaintenanceJobWorker> logger) : BackgroundService
+public sealed class MaintenanceJobWorker(
+    IServiceScopeFactory scopeFactory,
+    InternalMaintenanceApiClient maintenanceApi,
+    IOptions<MangaHubOptions> options,
+    ILogger<MaintenanceJobWorker> logger) : BackgroundService
 {
+    private readonly Dictionary<Guid, RunningJob> runningJobs = [];
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await RecoverInterruptedJobsAsync(stoppingToken);
 
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(20));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
         do
         {
-            try { await RunQueuedJobsAsync(stoppingToken); }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
-            catch (Exception ex) { logger.LogWarning(ex, "Maintenance queue check failed; it will retry shortly."); }
+            try
+            {
+                RemoveCompletedJobs();
+                await StartQueuedJobsAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Maintenance queue check failed; it will retry shortly.");
+            }
         }
         while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
-    private async Task RunQueuedJobsAsync(CancellationToken cancellationToken)
+    private async Task StartQueuedJobsAsync(CancellationToken cancellationToken)
+    {
+        var maxConcurrency = Math.Clamp(options.Value.MaintenanceJobMaxConcurrency, 1, 4);
+        while (runningJobs.Count < maxConcurrency)
+        {
+            var claim = await TryClaimNextQueuedJobAsync(cancellationToken);
+            if (claim is null)
+            {
+                return;
+            }
+
+            var task = RunClaimedJobAsync(claim, cancellationToken);
+            runningJobs.Add(claim.Id, new RunningJob(claim.Type, task));
+        }
+    }
+
+    private async Task<ClaimedJob?> TryClaimNextQueuedJobAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
-        var job = await db.MaintenanceJobs.OrderBy(item => item.RequestedAt).FirstOrDefaultAsync(item => item.Status == "queued", cancellationToken);
-        if (job is null) return;
+        var mangaDexLaneBusy = runningJobs.Values.Any(job => UsesMangaDexLane(job.Type));
+        var queuedJobs = await db.MaintenanceJobs
+            .Where(job => job.Status == "queued")
+            .OrderBy(job => job.RequestedAt)
+            .Take(20)
+            .ToListAsync(cancellationToken);
+        var job = queuedJobs.FirstOrDefault(candidate => !UsesMangaDexLane(candidate.Type) || !mangaDexLaneBusy);
+        if (job is null)
+        {
+            return null;
+        }
+
         job.Status = "running";
         job.StartedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        return new ClaimedJob(job.Id, job.Type);
+    }
+
+    private async Task RunClaimedJobAsync(ClaimedJob claim, CancellationToken cancellationToken)
+    {
+        var status = "completed";
+        var error = "";
         try
         {
-            await maintenanceApi.RunAsync(job.Type, cancellationToken);
-            job.Status = "completed";
-            job.Error = "";
+            await maintenanceApi.RunAsync(claim.Type, cancellationToken);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            logger.LogError("Maintenance job {JobId} ({Type}) timed out or was canceled.", job.Id, job.Type);
-            job.Status = "failed";
-            job.Error = "The internal maintenance request timed out or was canceled.";
+            // Leave the job running. Startup recovery records the interruption and queues a retry.
+            return;
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogError("Maintenance job {JobId} ({Type}) timed out or was canceled.", claim.Id, claim.Type);
+            status = "failed";
+            error = "The internal maintenance request timed out or was canceled.";
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Maintenance job {JobId} ({Type}) failed.", job.Id, job.Type);
-            job.Status = "failed";
-            job.Error = ex.Message.Length <= 500 ? ex.Message : ex.Message[..500];
+            logger.LogError(ex, "Maintenance job {JobId} ({Type}) failed.", claim.Id, claim.Type);
+            status = "failed";
+            error = ex.Message.Length <= 500 ? ex.Message : ex.Message[..500];
         }
-        finally
+
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+        var job = await db.MaintenanceJobs.FirstOrDefaultAsync(item => item.Id == claim.Id, CancellationToken.None);
+        if (job is null || job.Status != "running")
         {
-            job.CompletedAt = DateTimeOffset.UtcNow;
-            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        job.Status = status;
+        job.Error = error;
+        job.CompletedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private void RemoveCompletedJobs()
+    {
+        foreach (var job in runningJobs.Where(item => item.Value.Task.IsCompleted).Select(item => item.Key).ToList())
+        {
+            runningJobs.Remove(job);
         }
     }
 
@@ -61,7 +131,10 @@ public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, Inte
         var interrupted = await db.MaintenanceJobs
             .Where(job => job.Status == "running")
             .ToListAsync(cancellationToken);
-        if (interrupted.Count == 0) return;
+        if (interrupted.Count == 0)
+        {
+            return;
+        }
 
         foreach (var job in interrupted)
         {
@@ -79,4 +152,15 @@ public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, Inte
         await db.SaveChangesAsync(cancellationToken);
         logger.LogWarning("Marked {Count} interrupted maintenance jobs as failed and queued recovery retries.", interrupted.Count);
     }
+
+    private static bool UsesMangaDexLane(string type) => type is
+        "release-sync" or
+        "mangadex-status-sync" or
+        "prefetch" or
+        "mangadex-cache-cleanup" or
+        "mangadex-archive-integrity-check" or
+        "idle-backfill";
+
+    private sealed record ClaimedJob(Guid Id, string Type);
+    private sealed record RunningJob(string Type, Task Task);
 }
