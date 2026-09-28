@@ -55,7 +55,14 @@
             </MudAlert>
         }
 
-        @if (FilteredCatalog.Count == 0 && !hasMoreCatalog)
+        @if (isInitialLoading)
+        {
+            <MudStack Spacing="2" Class="mh-catalog-initial-loading">
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Loading the catalog...</MudText>
+            </MudStack>
+        }
+        else if (FilteredCatalog.Count == 0 && !hasMoreCatalog)
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No catalog entries matched this search.</MudAlert>
         }
@@ -171,6 +178,9 @@
     private const int PageSize = 24;
     private bool hasMoreCatalog;
     private bool isLoadingCatalog;
+    private bool isInitialLoading = true;
+    private bool hasLoadedLocalSeries;
+    private Task? localSeriesLoadTask;
     private ElementReference loadMoreSentinel;
     private DotNetObjectReference<Catalog>? progressiveLoadReference;
     private List<SeriesResponse> localSeries = [];
@@ -201,8 +211,51 @@
             return;
         }
 
-        localSeries = await SeriesApi.GetSeriesAsync();
-        await LoadCatalog();
+        _ = InitializeCatalogAsync();
+        _ = LoadLocalSeriesAsync();
+    }
+
+    private async Task InitializeCatalogAsync()
+    {
+        try
+        {
+            await LoadCatalog();
+        }
+        catch
+        {
+            messageSeverity = Severity.Error;
+            message = "Could not load the catalog. Refresh the page to try again.";
+        }
+        finally
+        {
+            isInitialLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadLocalSeriesAsync()
+    {
+        if (hasLoadedLocalSeries)
+        {
+            return;
+        }
+
+        await (localSeriesLoadTask ??= LoadLocalSeriesCoreAsync());
+    }
+
+    private async Task LoadLocalSeriesCoreAsync()
+    {
+        try
+        {
+            localSeries = await SeriesApi.GetSeriesAsync();
+            hasLoadedLocalSeries = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Local bindings are an optional editor aid and must not delay catalog browsing.
+            localSeriesLoadTask = null;
+        }
     }
 
     private async Task LoadCatalog()
@@ -284,10 +337,14 @@
         message = FilteredCatalog.Count == 0 ? "No catalog entries matched your search." : $"Found {FilteredCatalog.Count} catalog entries.";
     }
 
-    private void OpenAddCatalog()
+    private async Task OpenAddCatalog()
     {
         editingEntry = null;
         isCatalogModalOpen = true;
+        if (!hasLoadedLocalSeries)
+        {
+            await LoadLocalSeriesAsync();
+        }
     }
     private void OpenImportCatalog() => isImportCatalogOpen = true;
     private void OpenFilters() => filtersOpen = true;
