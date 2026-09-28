@@ -62,6 +62,15 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         return Ok(await operations.GetOverviewAsync(cancellationToken));
     }
 
+    [HttpGet("catalog/count")]
+    public async Task<IActionResult> CatalogCount(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return Ok(await db.MangaEntries.CountAsync(cancellationToken));
+    }
+
     [HttpGet("operations/jobs")]
     public async Task<IActionResult> OperationHistory([FromQuery] int offset = 0, [FromQuery] int limit = 25, [FromQuery] string? type = null, [FromQuery] string? status = null, [FromQuery] string? trigger = null, CancellationToken cancellationToken = default)
     {

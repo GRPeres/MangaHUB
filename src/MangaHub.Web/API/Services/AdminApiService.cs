@@ -13,6 +13,7 @@ public sealed class AdminApiService(ApiHttpClient api)
     public Task<DiagnosticResult?> TestDatabaseAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/database");
     public Task<DiagnosticResult?> TestMangaDexAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/mangadex");
     public Task<OperationsOverviewResponse?> GetOperationsAsync() => api.GetAsync<OperationsOverviewResponse>("/api/admin/operations");
+    public Task<int> GetCatalogCountAsync() => api.GetAsync<int>("/api/admin/catalog/count");
     public async Task<List<MaintenanceJobResponse>> GetMaintenanceHistoryAsync(int offset, int limit = 25, string? type = null, string? status = null, string? trigger = null)
     {
         var filters = new[]

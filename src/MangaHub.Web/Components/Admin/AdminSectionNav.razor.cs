@@ -10,11 +10,12 @@ public partial class AdminSectionNav
     [Inject] private AdminApiService AdminApi { get; set; } = default!;
 
     private int _openIssueCount;
+    private int _catalogCount;
 
     private string CurrentRoute => Navigation.ToBaseRelativePath(Navigation.Uri).Trim('/');
     private IReadOnlyList<SectionNavigationItem> Sections =>
     [
-        new("catalog", "Catalog", Icons.Material.Filled.Inventory2),
+        new("catalog", "Catalog", Icons.Material.Filled.Inventory2, Count: _catalogCount),
         new("issues", "Issues", Icons.Material.Filled.ReportProblem, Color.Error, Count: _openIssueCount),
         new("operations", "Operations", Icons.Material.Filled.SettingsSuggest)
     ];
@@ -26,8 +27,14 @@ public partial class AdminSectionNav
         _ => "catalog"
     };
 
-    protected override async Task OnInitializedAsync() =>
-        _openIssueCount = await AdminApi.GetOpenIssueCountAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        var catalogCount = AdminApi.GetCatalogCountAsync();
+        var issueCount = AdminApi.GetOpenIssueCountAsync();
+        await Task.WhenAll(catalogCount, issueCount);
+        _catalogCount = await catalogCount;
+        _openIssueCount = await issueCount;
+    }
 
     private Task SelectSection(string section)
     {
