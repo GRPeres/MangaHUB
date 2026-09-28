@@ -12,5 +12,6 @@ public sealed class MangaChapter
     public int PageCount { get; set; }
     public string FileHash { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? LastAccessedAt { get; set; }
     public MangaSeries? Series { get; set; }
 }

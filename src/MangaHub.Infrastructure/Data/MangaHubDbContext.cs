@@ -21,6 +21,7 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
     public DbSet<UsageDailySummary> UsageDailySummaries => Set<UsageDailySummary>();
     public DbSet<MaintenanceJob> MaintenanceJobs => Set<MaintenanceJob>();
+    public DbSet<ArchiveRecoveryEvent> ArchiveRecoveryEvents => Set<ArchiveRecoveryEvent>();
     public DbSet<AdminIssue> AdminIssues => Set<AdminIssue>();
     public DbSet<AdminIssueReport> AdminIssueReports => Set<AdminIssueReport>();
 
@@ -132,6 +133,15 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
             entity.Property(x => x.ImageQuality).HasMaxLength(20);
             entity.Property(x => x.Language).HasMaxLength(16);
             entity.HasOne(x => x.Series).WithMany(x => x.Chapters).HasForeignKey(x => x.SeriesId);
+        });
+
+        modelBuilder.Entity<ArchiveRecoveryEvent>(entity =>
+        {
+            entity.ToTable("archive_recovery_events");
+            entity.Property(x => x.MangaDexId).HasMaxLength(80);
+            entity.Property(x => x.ChapterSourceId).HasMaxLength(100);
+            entity.Property(x => x.Action).HasMaxLength(30);
+            entity.HasIndex(x => new { x.Action, x.OccurredAt });
         });
 
         modelBuilder.Entity<ReadingProgress>(entity =>

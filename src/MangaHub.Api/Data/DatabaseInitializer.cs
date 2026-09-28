@@ -305,6 +305,16 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "ExternalReaderCheckPendingAt" timestamp with time zone NULL;
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "Language" character varying(16) NOT NULL DEFAULT 'en';
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "ImageQuality" character varying(20) NOT NULL DEFAULT 'original';
+            ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "LastAccessedAt" timestamp with time zone NULL;
+
+            CREATE TABLE IF NOT EXISTS archive_recovery_events (
+                "Id" uuid PRIMARY KEY,
+                "MangaDexId" character varying(80) NOT NULL,
+                "ChapterSourceId" character varying(100) NOT NULL,
+                "Action" character varying(30) NOT NULL,
+                "OccurredAt" timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS "IX_archive_recovery_events_Action_OccurredAt" ON archive_recovery_events ("Action", "OccurredAt");
 
             INSERT INTO user_manga_entries ("Id", "UserId", "MangaEntryId", "ReadingStatus", "Notes", "CreatedAt", "UpdatedAt")
             SELECT gen_random_uuid(),

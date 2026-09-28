@@ -1,4 +1,7 @@
 using System.Globalization;
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
@@ -31,7 +34,7 @@ public sealed class RemoteMaintenanceService(
         {
             "release-sync" or "mangadex-status-sync" or "mangaupdates-sync" => RemoteJobPriority.ReleaseSync,
             "prefetch" => RemoteJobPriority.Prefetch,
-            "mangadex-cache-cleanup" or "mangaupdates-match" or CatalogIdentityEnrichmentService.JobType => RemoteJobPriority.Maintenance,
+            "mangadex-cache-cleanup" or "mangadex-archive-integrity-check" or "mangaupdates-match" or CatalogIdentityEnrichmentService.JobType => RemoteJobPriority.Maintenance,
             "idle-backfill" => RemoteJobPriority.Backfill,
             _ => throw new InvalidOperationException($"Unsupported remote maintenance job '{type}'.")
         };
@@ -43,6 +46,7 @@ public sealed class RemoteMaintenanceService(
             case "mangadex-status-sync": await RunMangaDexStatusSyncAsync(cancellationToken); break;
             case "prefetch": await RunPrefetchAsync(cancellationToken); break;
             case "mangadex-cache-cleanup": await RunCacheRetentionAsync(cancellationToken); break;
+            case "mangadex-archive-integrity-check": await RunArchiveIntegrityCheckAsync(cancellationToken); break;
             case "mangaupdates-sync": await RunMangaUpdatesSyncAsync(cancellationToken); break;
             case "mangaupdates-match": await RunMangaUpdatesMatchingAsync(cancellationToken); break;
             case CatalogIdentityEnrichmentService.JobType: await RunCatalogIdentityEnrichmentAsync(cancellationToken); break;
@@ -454,7 +458,14 @@ public sealed class RemoteMaintenanceService(
                 foreach (var chapterGroup in cached.Chapters.ToList().GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
                 {
                     var chapter = chapterGroup.First();
-                    if (MangaDexCacheRetentionPolicy.ShouldRetain(chapter.SourceId, chapter.ChapterNumber, retainFrom))
+                    var lastAccessedAt = chapterGroup.Max(item => item.LastAccessedAt ?? item.CreatedAt);
+                    if (MangaDexCacheRetentionPolicy.ShouldRetain(
+                        chapter.SourceId,
+                        chapter.ChapterNumber,
+                        retainFrom,
+                        lastAccessedAt,
+                        DateTimeOffset.UtcNow,
+                        options.Value.MangaDexCacheRetentionGraceDays))
                     {
                         continue;
                     }
@@ -512,6 +523,97 @@ public sealed class RemoteMaintenanceService(
         {
             logger.LogWarning(ex, "MangaDex cache retention could not finish; it will retry at the next maintenance run.");
         }
+    }
+
+    private async Task RunArchiveIntegrityCheckAsync(CancellationToken cancellationToken)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+        var sampleSize = Math.Clamp(options.Value.MangaDexArchiveIntegritySampleSize, 1, 50);
+        var chapters = await db.Chapters
+            .Include(chapter => chapter.Series)
+            .Where(chapter => chapter.Series!.Source == MangaDexCacheSource
+                && string.Equals(chapter.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(chapter => chapter.Id)
+            .ToListAsync(cancellationToken);
+        if (chapters.Count == 0)
+        {
+            logger.LogInformation("MangaDex archive integrity check skipped because no Data Saver chapters are recorded.");
+            return;
+        }
+
+        var offset = (DateTimeOffset.UtcNow.DayOfYear * sampleSize) % chapters.Count;
+        var candidates = chapters.Skip(offset).Concat(chapters.Take(offset));
+        var verified = 0;
+        var corrupt = 0;
+        var root = Path.GetFullPath(options.Value.MangaDexCachePath);
+
+        foreach (var chapter in candidates)
+        {
+            if (verified >= sampleSize) break;
+            cancellationToken.ThrowIfCancellationRequested();
+            var series = chapter.Series;
+            if (series is null) continue;
+
+            var path = Path.GetFullPath(Path.Combine(root, "archive", "mangadex", "data-saver", series.ExternalId, $"{chapter.SourceId}.cbz"));
+            if (!path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
+            {
+                // This chapter may currently be restored to active cache; it is not an archive failure.
+                continue;
+            }
+
+            verified++;
+            try
+            {
+                await ValidateArchiveAsync(path, chapter.PageCount, cancellationToken);
+            }
+            catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+            {
+                corrupt++;
+                await OpenArchiveIntegrityIssueAsync(db, series, chapter, ex.Message, cancellationToken);
+                logger.LogError(ex, "Archived MangaDex chapter failed integrity validation: {MangaDexId}/{ChapterId}.", series.ExternalId, chapter.SourceId);
+            }
+        }
+
+        logger.LogInformation("MangaDex archive integrity validated {CheckedCount} Data Saver CBZ files; {CorruptCount} require attention.", verified, corrupt);
+    }
+
+    private static async Task ValidateArchiveAsync(string path, int expectedPageCount, CancellationToken cancellationToken)
+    {
+        using var archive = ZipFile.OpenRead(path);
+        var pages = archive.Entries.Where(entry => !string.IsNullOrWhiteSpace(entry.Name)).ToList();
+        if (pages.Count == 0 || pages.Count != expectedPageCount)
+        {
+            throw new InvalidDataException($"Expected {expectedPageCount} readable pages but found {pages.Count}.");
+        }
+
+        foreach (var page in pages)
+        {
+            await using var stream = page.Open();
+            await stream.CopyToAsync(Stream.Null, cancellationToken);
+        }
+    }
+
+    private static async Task OpenArchiveIntegrityIssueAsync(MangaHubDbContext db, MangaSeries series, MangaChapter chapter, string error, CancellationToken cancellationToken)
+    {
+        var subjectId = new Guid(MD5.HashData(Encoding.UTF8.GetBytes($"mangahub-archive:{series.ExternalId}:{chapter.SourceId}")));
+        var exists = await db.AdminIssues.AnyAsync(issue => issue.Kind == AdminIssueTypes.ArchiveIntegrity
+            && issue.SubjectType == AdminIssueTypes.MaintenanceTask
+            && issue.SubjectId == subjectId
+            && issue.Status == "open", cancellationToken);
+        if (exists) return;
+
+        db.AdminIssues.Add(new AdminIssue
+        {
+            Kind = AdminIssueTypes.ArchiveIntegrity,
+            SubjectType = AdminIssueTypes.MaintenanceTask,
+            SubjectId = subjectId,
+            Priority = "high",
+            TitleSnapshot = $"Archived chapter failed validation: {series.Title} Ch. {chapter.ChapterNumber}",
+            MetadataJson = JsonSerializer.Serialize(new { series.ExternalId, chapter.SourceId, chapter.ChapterNumber, chapter.Language, Error = error }),
+            ResolutionNote = "Restore or re-download this chapter from the catalog cache manager, then resolve this issue."
+        });
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static bool IsMangaDexOngoing(string? status) =>

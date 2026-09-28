@@ -34,6 +34,18 @@ else if (overview is not null)
             <MangaBentoTile Scheme="primary" CornerIcon="@Icons.Material.Filled.Storage" ItemClass="mh-operations-stat-item"><div class="mh-operation-stat"><MudText Typo="Typo.overline">Storage</MudText><MudText Typo="Typo.h3">@overview.CachedChapterCount</MudText><MudText Typo="Typo.caption">@FormatBytes(overview.CacheBytes) local</MudText></div></MangaBentoTile>
             <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.CloudSync" ItemClass="mh-operations-stat-item"><div class="mh-operation-stat"><MudText Typo="Typo.overline">MangaDex</MudText><MudText Typo="Typo.h3">@overview.StaleMangaDexCount</MudText><MudText Typo="Typo.caption">stale · @FormatDate(overview.LastMangaDexSyncAt)</MudText></div></MangaBentoTile>
             <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.Update" ItemClass="mh-operations-stat-item"><div class="mh-operation-stat"><MudText Typo="Typo.overline">MangaUpdates</MudText><MudText Typo="Typo.h3">@overview.StaleMangaUpdatesCount</MudText><MudText Typo="Typo.caption">stale · @FormatDate(overview.LastMangaUpdatesSyncAt)</MudText></div></MangaBentoTile>
+            <MangaBentoTile ColSpan="4" Scheme="primary" CornerIcon="@Icons.Material.Filled.Storage" ItemClass="mh-operations-storage-item">
+                <div class="mh-operation-storage-policy">
+                    <MudText Typo="Typo.overline">Storage policy</MudText>
+                    <div class="mh-operation-storage-grid">
+                        <div><MudText Typo="Typo.caption">Active cache</MudText><MudText Typo="Typo.h6">@FormatBytes(overview.ActiveCacheBytes)</MudText><MudText Typo="Typo.caption">@overview.ActiveCachedChapterCount chapters</MudText></div>
+                        <div><MudText Typo="Typo.caption">Archive</MudText><MudText Typo="Typo.h6">@FormatBytes(overview.ArchivedCacheBytes)</MudText><MudText Typo="Typo.caption">@overview.ArchivedChapterCount chapters</MudText></div>
+                        <div><MudText Typo="Typo.caption">Original / Data Saver</MudText><MudText Typo="Typo.h6">@overview.OriginalCachedChapterCount / @overview.DataSaverCachedChapterCount</MudText><MudText Typo="Typo.caption">@FormatBytes(overview.OriginalCacheBytes) / @FormatBytes(overview.DataSaverCacheBytes)</MudText></div>
+                        <div><MudText Typo="Typo.caption">Projected active reclaim</MudText><MudText Typo="Typo.h6">@FormatBytes(overview.ReclaimableActiveBytes)</MudText><MudText Typo="Typo.caption">@overview.ReclaimableActiveChapterCount chapters · 7-day grace</MudText></div>
+                        <div><MudText Typo="Typo.caption">Archive recovery · 30 days</MudText><MudText Typo="Typo.h6">@overview.ArchiveRestoreCountLast30Days restored</MudText><MudText Typo="Typo.caption">@overview.ArchiveRedownloadCountLast30Days re-downloaded</MudText></div>
+                    </div>
+                </div>
+            </MangaBentoTile>
             <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="ink" CornerIcon="@Icons.Material.Filled.PlaylistPlay" ItemClass="mh-operations-actions-item">
                 <div class="mh-operation-jobs">
                     <MudText Typo="Typo.overline">Run maintenance</MudText>
@@ -42,6 +54,7 @@ else if (overview is not null)
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Sync" Disabled="@isQueueing" OnClick='@(() => QueueAsync("release-sync"))'>Refresh MangaDex releases</MudButton>
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.RestartAlt" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangadex-status-sync"))'>Refresh MangaDex statuses and repair shelves</MudButton>
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.DeleteSweep" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangadex-cache-cleanup"))'>Trim read MangaDex cache</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.FactCheck" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangadex-archive-integrity-check"))'>Verify archived CBZ samples</MudButton>
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Update" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangaupdates-sync"))'>Refresh MangaUpdates</MudButton>
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Link" Disabled="@isQueueing" OnClick='@(() => QueueAsync("catalog-id-enrichment"))'>Fill missing MangaDex and MangaUpdates IDs</MudButton>
                         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Folder" Disabled="@isQueueing" OnClick='@(() => QueueAsync("library-scan"))'>Scan local library</MudButton>
@@ -103,6 +116,7 @@ else if (overview is not null)
         ("mangadex-status-sync", "MangaDex status repair"),
         ("prefetch", "Update prefetch"),
         ("mangadex-cache-cleanup", "Cache cleanup"),
+        ("mangadex-archive-integrity-check", "Archive integrity check"),
         ("mangaupdates-sync", "MangaUpdates refresh"),
         ("catalog-id-enrichment", "Catalog ID matching"),
         ("library-scan", "Local library scan"),
@@ -122,7 +136,7 @@ else if (overview is not null)
         return $"{bytes / 1024d / 1024d / 1024d:0.##} GB";
     }
     private static string FormatDate(DateTimeOffset? value) => value?.ToLocalTime().ToString("g") ?? "Not yet";
-    private static string JobLabel(string type) => type switch { "release-sync" => "MangaDex release refresh", "mangadex-status-sync" => "MangaDex status and shelf repair", "prefetch" => "Update prefetch", "mangadex-cache-cleanup" => "MangaDex cache cleanup", "mangaupdates-sync" => "MangaUpdates refresh", "catalog-id-enrichment" => "Catalog ID matching", "library-scan" => "Local library scan", "idle-backfill" => "Idle backfill", _ => type };
+    private static string JobLabel(string type) => type switch { "release-sync" => "MangaDex release refresh", "mangadex-status-sync" => "MangaDex status and shelf repair", "prefetch" => "Update prefetch", "mangadex-cache-cleanup" => "MangaDex cache cleanup", "mangadex-archive-integrity-check" => "Archive integrity check", "mangaupdates-sync" => "MangaUpdates refresh", "catalog-id-enrichment" => "Catalog ID matching", "library-scan" => "Local library scan", "idle-backfill" => "Idle backfill", _ => type };
     private static string JobTriggerLabel(string trigger) => trigger switch { "scheduled" => "automatic schedule", "watchdog" => "watchdog retry", _ => "manual" };
     private static Color JobColor(string status) => status switch { "completed" => Color.Success, "failed" => Color.Error, "running" => Color.Warning, _ => Color.Info };
 }

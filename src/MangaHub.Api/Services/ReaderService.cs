@@ -20,7 +20,8 @@ public sealed class ReaderService(
     IOptions<MangaHubOptions> options,
     MangaSourceRegistry sources,
     NotificationService? notifications = null,
-    IssueReportingService? issues = null)
+    IssueReportingService? issues = null,
+    ArchiveRecoveryTelemetryService? archiveTelemetry = null)
 {
     private const string MangaDexCacheSource = "mangadex-cache";
 
@@ -201,11 +202,17 @@ public sealed class ReaderService(
                 .FirstOrDefault(chapter => chapter.ImageQuality == quality && HasExactChapter(chapter.ChapterNumber, shelfEntry.CurrentChapter));
         }
 
+        var recoveringArchivedChapter = false;
         if (cachedChapter is not null && !HasReadableCachedArchive(cachedChapter, mangaDexId))
         {
             progress?.Report(new ReaderPreparationProgress("Restoring the archived local chapter", 12));
-            if (!await mangaDexCache.RestoreArchivedAsync(mangaDexId, cachedChapter.SourceId, cancellationToken, quality))
+            if (await mangaDexCache.RestoreArchivedAsync(mangaDexId, cachedChapter.SourceId, cancellationToken, quality))
             {
+                await RecordArchiveRecoveryAsync(mangaDexId, cachedChapter.SourceId, "restored", cancellationToken);
+            }
+            else
+            {
+                recoveringArchivedChapter = true;
                 progress?.Report(new ReaderPreparationProgress("Refreshing an unreadable local chapter", 12));
                 await mangaDexCache.DeleteAsync(mangaDexId, cachedChapter.SourceId, cancellationToken, quality);
                 cachedChapter = null;
@@ -291,6 +298,10 @@ public sealed class ReaderService(
             progress?.Report(new ReaderPreparationProgress("Loading the MangaDex page list", 20));
             var pages = await mangaDex.GetPagesAsync(sourceChapter!.Id, cancellationToken, quality);
             var cachedArchive = await mangaDexCache.EnsureCachedAsync(mangaDexId, sourceChapter.Id, pages, cancellationToken, progress, quality);
+            if (recoveringArchivedChapter)
+            {
+                await RecordArchiveRecoveryAsync(mangaDexId, sourceChapter.Id, "redownloaded", cancellationToken);
+            }
             cachedSeries ??= CreateCachedSeries(entry, mangaDexId);
             if (isNewCachedSeries)
             {
@@ -330,6 +341,8 @@ public sealed class ReaderService(
         {
             return null;
         }
+
+        cachedChapter.LastAccessedAt = DateTimeOffset.UtcNow;
 
         var resolvedLanguage = NormalizeLanguage(cachedChapter.Language);
         if (isInitialTrackedChapterSelection
@@ -891,6 +904,9 @@ public sealed class ReaderService(
             return false;
         }
     }
+
+    private Task RecordArchiveRecoveryAsync(string mangaDexId, string chapterSourceId, string action, CancellationToken cancellationToken) =>
+        archiveTelemetry?.RecordAsync(mangaDexId, chapterSourceId, action, cancellationToken) ?? Task.CompletedTask;
 
     private static string GetMangaDexId(MangaEntry entry) => entry.MangaDexId;
 

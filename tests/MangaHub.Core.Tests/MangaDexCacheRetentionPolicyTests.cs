@@ -16,6 +16,20 @@ public sealed class MangaDexCacheRetentionPolicyTests
         Assert.False(MangaDexCacheRetentionPolicy.ShouldRetain("chapter-1", "1", null));
     }
 
+    [Fact]
+    public void ShouldRetain_KeepsRecentlyAccessedChapterDuringGracePeriod()
+    {
+        var now = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero);
+
+        var retained = MangaDexCacheRetentionPolicy.ShouldRetain(
+            "chapter-1", "1", null, now.AddDays(-6), now, 7);
+        var expired = MangaDexCacheRetentionPolicy.ShouldRetain(
+            "chapter-1", "1", null, now.AddDays(-8), now, 7);
+
+        Assert.True(retained);
+        Assert.False(expired);
+    }
+
     [Theory]
     [InlineData("23", false)]
     [InlineData("24", true)]

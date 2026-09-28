@@ -5,8 +5,22 @@ namespace MangaHub.Core.Services;
 public static class MangaDexCacheRetentionPolicy
 {
     public static bool ShouldRetain(string sourceId, string chapterNumber, decimal? earliestActiveChapter)
+        => ShouldRetain(sourceId, chapterNumber, earliestActiveChapter, null, DateTimeOffset.UtcNow, 0);
+
+    public static bool ShouldRetain(
+        string sourceId,
+        string chapterNumber,
+        decimal? earliestActiveChapter,
+        DateTimeOffset? lastAccessedAt,
+        DateTimeOffset now,
+        int graceDays)
     {
         if (sourceId.StartsWith("manual-", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (lastAccessedAt is not null && lastAccessedAt.Value >= now.AddDays(-Math.Clamp(graceDays, 0, 90)))
         {
             return true;
         }

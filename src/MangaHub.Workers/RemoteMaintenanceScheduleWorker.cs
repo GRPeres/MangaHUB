@@ -35,7 +35,11 @@ public sealed class RemoteMaintenanceScheduleWorker(
             }
             if (now >= nextCacheCleanupAt)
             {
-                StartScheduledJob("mangadex-cache-cleanup", token => QueueAsync("mangadex-cache-cleanup", token), stoppingToken);
+                StartScheduledJob("daily-cache-maintenance", async token =>
+                {
+                    await QueueAsync("mangadex-cache-cleanup", token);
+                    await QueueAsync("mangadex-archive-integrity-check", token);
+                }, stoppingToken);
                 nextCacheCleanupAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
             }
             if (now >= nextMangaUpdatesMatchAt)
