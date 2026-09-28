@@ -111,47 +111,6 @@ public sealed class MangaDexChapterCache(
         }
     }
 
-    public async Task<MangaDexCachedChapter> ImportAsync(
-        string mangaDexId,
-        string chapterId,
-        Stream content,
-        CancellationToken cancellationToken)
-    {
-        var (relativePath, archivePath) = GetArchivePath(mangaDexId, chapterId);
-        Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
-        var downloadLock = DownloadLocks.GetOrAdd(archivePath, _ => new SemaphoreSlim(1, 1));
-        await downloadLock.WaitAsync(cancellationToken);
-        try
-        {
-            var temporaryPath = $"{archivePath}.{Guid.NewGuid():N}.tmp";
-            try
-            {
-                await using (var output = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                {
-                    await content.CopyToAsync(output, cancellationToken);
-                }
-
-                _ = await ReadCachedArchiveAsync(temporaryPath, relativePath, cancellationToken);
-                File.Move(temporaryPath, archivePath, overwrite: true);
-            }
-            catch
-            {
-                if (File.Exists(temporaryPath))
-                {
-                    File.Delete(temporaryPath);
-                }
-                throw;
-            }
-
-            var cached = await ReadCachedArchiveAsync(archivePath, relativePath, cancellationToken);
-            return cached with { WasCached = false };
-        }
-        finally
-        {
-            downloadLock.Release();
-        }
-    }
-
     public async Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original")
     {
         var (_, activePath) = GetArchivePath(mangaDexId, chapterId, imageQuality);

@@ -86,16 +86,6 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
             false));
     }
 
-    public Task<MangaDexCachedChapter> ImportAsync(string mangaDexId, string chapterId, Stream content, CancellationToken cancellationToken)
-    {
-        CachedChapterIds.Add(chapterId);
-        return Task.FromResult(new MangaDexCachedChapter(
-            Path.Combine("mangadex", mangaDexId, $"{chapterId}.cbz"),
-            1,
-            $"hash-{chapterId}",
-            false));
-    }
-
     public Task<MangaDexCachedChapter> CreateDataSaverFromOriginalAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
     {
         DataSaverConversions.Add(chapterId);

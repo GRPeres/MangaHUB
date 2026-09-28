@@ -12,12 +12,6 @@ public interface IMangaDexChapterCache
         IProgress<ReaderPreparationProgress>? progress = null,
         string imageQuality = "original");
 
-    Task<MangaDexCachedChapter> ImportAsync(
-        string mangaDexId,
-        string chapterId,
-        Stream content,
-        CancellationToken cancellationToken);
-
     Task DeleteAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original");
 
     Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original");

@@ -22,23 +22,12 @@
                 }
 
                 <MudGrid Spacing="2">
-                    <MudItem xs="12" md="6">
+                    <MudItem xs="12">
                         <MudPaper Class="pa-3" Elevation="0" Outlined="true">
                             <MudStack Spacing="2">
                                 <MudText Typo="Typo.h3">Fetch chapter in @Language</MudText>
                                 <MudTextField T="string" @bind-Value="chapterToDownload" Label="MangaDex chapter number" Variant="Variant.Outlined" />
                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudDownload" Disabled="@isWorking" OnClick="DownloadChapter">Download to cache</MudButton>
-                            </MudStack>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudPaper Class="pa-3" Elevation="0" Outlined="true">
-                            <MudStack Spacing="2">
-                                <MudText Typo="Typo.h3">Import @Language CBZ</MudText>
-                                <MudTextField T="string" @bind-Value="manualChapterNumber" Label="Chapter number" Variant="Variant.Outlined" />
-                                <MudTextField T="string" @bind-Value="manualChapterTitle" Label="Chapter title (optional)" Variant="Variant.Outlined" />
-                                <InputFile OnChange="SelectFile" accept=".cbz,application/zip" />
-                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.UploadFile" Disabled="@(isWorking || selectedFile is null)" OnClick="ImportChapter">Import into cache</MudButton>
                             </MudStack>
                         </MudPaper>
                     </MudItem>

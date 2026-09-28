@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Components.Forms;
 using MangaHub.Web.Services;
 
 namespace MangaHub.Web.API.Services;
@@ -39,20 +38,6 @@ public sealed class CatalogApiService(ApiHttpClient api, AppRefreshService refre
             HttpMethod.Post,
             $"/api/catalog/{entryId}/mangadex-cache/download",
             new CacheMangaDexChapterRequest(chapterNumber, language));
-        NotifyCatalogMutation(result is not null);
-        return result;
-    }
-
-    public async Task<MangaDexCacheResponse?> ImportMangaDexChapterAsync(Guid entryId, string chapterNumber, string title, string language, IBrowserFile file)
-    {
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(chapterNumber), "chapterNumber");
-        content.Add(new StringContent(title), "title");
-        content.Add(new StringContent(language), "language");
-        var fileContent = new StreamContent(file.OpenReadStream(1024L * 1024 * 1024));
-        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType ?? "application/vnd.comicbook+zip");
-        content.Add(fileContent, "file", file.Name);
-        var result = await api.SendMultipartAsync<MangaDexCacheResponse>($"/api/catalog/{entryId}/mangadex-cache/import", content);
         NotifyCatalogMutation(result is not null);
         return result;
     }

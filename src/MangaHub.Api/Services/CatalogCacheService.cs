@@ -74,25 +74,6 @@ public sealed class CatalogCacheService(
         return await ListAsync(entryId, preferredLanguage, cancellationToken);
     }
 
-    public async Task<MangaDexCacheResponse?> ImportAsync(Guid entryId, string chapterNumber, string? title, string? language, IFormFile file, CancellationToken cancellationToken)
-    {
-        var entry = await catalog.GetByIdAsync(entryId, cancellationToken);
-        var mangaDexId = entry is null ? "" : GetMangaDexId(entry);
-        if (string.IsNullOrWhiteSpace(mangaDexId)
-            || string.IsNullOrWhiteSpace(chapterNumber)
-            || file.Length == 0
-            || !file.FileName.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        var selectedLanguage = string.IsNullOrWhiteSpace(language) ? "manual" : language.Trim().ToLowerInvariant();
-        var manualChapter = new MangaSourceChapter($"manual-{Guid.NewGuid():N}", chapterNumber.Trim(), title?.Trim() ?? "", 0, selectedLanguage);
-        await using var content = file.OpenReadStream();
-        await CacheChapterAsync(entry!, mangaDexId, manualChapter, cancellationToken, content);
-        return await ListAsync(entryId, selectedLanguage, cancellationToken);
-    }
-
     public async Task<MangaDexCacheResponse?> UpdateAsync(Guid entryId, Guid chapterId, UpdateCachedMangaDexChapterRequest request, CancellationToken cancellationToken)
     {
         var entry = await catalog.GetByIdAsync(entryId, cancellationToken);
@@ -137,8 +118,7 @@ public sealed class CatalogCacheService(
         MangaEntry entry,
         string mangaDexId,
         MangaSourceChapter chapter,
-        CancellationToken cancellationToken,
-        Stream? importedContent = null)
+        CancellationToken cancellationToken)
     {
         var cachedSeries = await series.GetBySourceAndExternalIdAsync(CacheSource, mangaDexId, cancellationToken);
         if (cachedSeries is null)
@@ -147,9 +127,11 @@ public sealed class CatalogCacheService(
             series.AddSeries(cachedSeries);
         }
 
-        var archive = importedContent is null
-            ? await cache.EnsureCachedAsync(mangaDexId, chapter.Id, await sources.Get("mangadex").GetPagesAsync(chapter.Id, cancellationToken), cancellationToken)
-            : await cache.ImportAsync(mangaDexId, chapter.Id, importedContent, cancellationToken);
+        var archive = await cache.EnsureCachedAsync(
+            mangaDexId,
+            chapter.Id,
+            await sources.Get("mangadex").GetPagesAsync(chapter.Id, cancellationToken),
+            cancellationToken);
         var cachedChapter = cachedSeries.Chapters.FirstOrDefault(item => item.SourceId == chapter.Id);
         if (cachedChapter is null)
         {
