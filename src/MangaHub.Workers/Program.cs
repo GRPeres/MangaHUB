@@ -9,7 +9,7 @@ builder.Services.AddHttpClient<InternalMaintenanceApiClient>((serviceProvider, c
 {
     var options = serviceProvider.GetRequiredService<IOptions<MangaHubOptions>>().Value;
     client.BaseAddress = new Uri(options.InternalApiUrl.TrimEnd('/') + "/");
-    client.Timeout = TimeSpan.FromMinutes(30);
+    client.Timeout = TimeSpan.FromMinutes(Math.Clamp(options.InternalMaintenanceRequestTimeoutMinutes, 30, 720));
 });
 builder.Services.AddHostedService<RemoteMaintenanceScheduleWorker>();
 builder.Services.AddHostedService<MaintenanceWatchdogWorker>();

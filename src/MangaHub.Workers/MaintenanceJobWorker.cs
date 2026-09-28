@@ -8,6 +8,8 @@ public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, Inte
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await RecoverInterruptedJobsAsync(stoppingToken);
+
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(20));
         do
         {
@@ -33,7 +35,13 @@ public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, Inte
             job.Status = "completed";
             job.Error = "";
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogError("Maintenance job {JobId} ({Type}) timed out or was canceled.", job.Id, job.Type);
+            job.Status = "failed";
+            job.Error = "The internal maintenance request timed out or was canceled.";
+        }
+        catch (Exception ex)
         {
             logger.LogError(ex, "Maintenance job {JobId} ({Type}) failed.", job.Id, job.Type);
             job.Status = "failed";
@@ -44,5 +52,26 @@ public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, Inte
             job.CompletedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    private async Task RecoverInterruptedJobsAsync(CancellationToken cancellationToken)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+        var interrupted = await db.MaintenanceJobs
+            .Where(job => job.Status == "running")
+            .ToListAsync(cancellationToken);
+        if (interrupted.Count == 0) return;
+
+        foreach (var job in interrupted)
+        {
+            job.Status = "queued";
+            job.StartedAt = null;
+            job.CompletedAt = null;
+            job.Error = "Recovered after the worker restarted before the job completed.";
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogWarning("Requeued {Count} maintenance jobs interrupted by a worker restart.", interrupted.Count);
     }
 }

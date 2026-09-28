@@ -7,6 +7,7 @@ public sealed class MangaHubOptions
     public string JwtSecret { get; set; } = "change-me-before-deploying-to-a-long-random-secret";
     public string InternalWorkerToken { get; set; } = "";
     public string InternalApiUrl { get; set; } = "http://mangahub-api:8080";
+    public int InternalMaintenanceRequestTimeoutMinutes { get; set; } = 720;
     public int JwtExpiresMinutes { get; set; } = 60 * 24 * 7;
     public bool SessionCookieSecure { get; set; }
     public string SessionCookieSameSite { get; set; } = "Lax";

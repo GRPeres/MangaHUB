@@ -103,6 +103,7 @@ DOTNET_ENVIRONMENT=Production
 ConnectionStrings__MangaHub=Host=postgres;Database=mangahub;Username=mangahub;Password=<password>
 MangaHub__InternalApiUrl=http://mangahub-api:8080
 MangaHub__InternalWorkerToken=<the same long random shared worker token>
+MangaHub__InternalMaintenanceRequestTimeoutMinutes=720
 MangaHub__MangaDexMaintenanceHour=4
 MangaHub__MangaDexMaintenanceTimeZone=America/Sao_Paulo
 MangaHub__MangaDexCacheRetentionGraceDays=7
