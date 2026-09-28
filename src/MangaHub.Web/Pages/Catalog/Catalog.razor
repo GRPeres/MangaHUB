@@ -294,7 +294,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!hasMoreCatalog)
+        if (isInitialLoading || !hasMoreCatalog)
         {
             return;
         }

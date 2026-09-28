@@ -47,18 +47,11 @@
         </MudStack>
     </MudStack>
 
-    @if (isInitialLoading)
-    {
-        <MudStack Spacing="2" Class="mh-shelf-initial-loading">
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Loading your shelf...</MudText>
-        </MudStack>
-    }
-    else if (VisibleEntries.Count == 0 && !hasMoreEntries)
+    @if (!isInitialLoading && VisibleEntries.Count == 0 && !hasMoreEntries)
     {
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@EmptySectionMessage</MudAlert>
     }
-    else
+    else if (!isInitialLoading)
     {
         <MudStack Spacing="2">
             @if (IsUpdatesSection && NewReleaseEntries.Count > 0)
@@ -546,7 +539,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!hasMoreEntries)
+        if (isInitialLoading || !hasMoreEntries)
         {
             return;
         }
