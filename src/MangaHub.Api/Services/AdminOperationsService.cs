@@ -42,13 +42,20 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
         return await QueueAsync(requestedByUserId, type, "manual", cancellationToken);
     }
 
-    public Task<List<MaintenanceJobResponse>> ListHistoryAsync(int offset, int limit, CancellationToken cancellationToken) =>
-        db.MaintenanceJobs.AsNoTracking()
+    public Task<List<MaintenanceJobResponse>> ListHistoryAsync(int offset, int limit, string? type, string? status, string? trigger, CancellationToken cancellationToken)
+    {
+        var query = db.MaintenanceJobs.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(type)) query = query.Where(job => job.Type == type.Trim().ToLowerInvariant());
+        if (!string.IsNullOrWhiteSpace(status)) query = query.Where(job => job.Status == status.Trim().ToLowerInvariant());
+        if (!string.IsNullOrWhiteSpace(trigger)) query = query.Where(job => job.Trigger == trigger.Trim().ToLowerInvariant());
+
+        return query
             .OrderByDescending(job => job.RequestedAt)
             .Skip(Math.Max(0, offset))
             .Take(Math.Clamp(limit, 1, 100))
             .Select(job => new MaintenanceJobResponse(job.Id, job.Type, job.Trigger, job.Status, job.RequestedAt, job.StartedAt, job.CompletedAt, job.Error))
             .ToListAsync(cancellationToken);
+    }
 
     public Task<MaintenanceJobResponse?> QueueAutomaticAsync(string type, string trigger, CancellationToken cancellationToken) =>
         QueueAsync(Guid.Empty, type, trigger, cancellationToken);

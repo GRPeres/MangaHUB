@@ -13,8 +13,18 @@ public sealed class AdminApiService(ApiHttpClient api)
     public Task<DiagnosticResult?> TestDatabaseAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/database");
     public Task<DiagnosticResult?> TestMangaDexAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/mangadex");
     public Task<OperationsOverviewResponse?> GetOperationsAsync() => api.GetAsync<OperationsOverviewResponse>("/api/admin/operations");
-    public async Task<List<MaintenanceJobResponse>> GetMaintenanceHistoryAsync(int offset, int limit = 25) =>
-        await api.GetAsync<List<MaintenanceJobResponse>>($"/api/admin/operations/jobs?offset={Math.Max(0, offset)}&limit={Math.Clamp(limit, 1, 100)}") ?? [];
+    public async Task<List<MaintenanceJobResponse>> GetMaintenanceHistoryAsync(int offset, int limit = 25, string? type = null, string? status = null, string? trigger = null)
+    {
+        var filters = new[]
+        {
+            $"offset={Math.Max(0, offset)}",
+            $"limit={Math.Clamp(limit, 1, 100)}",
+            string.IsNullOrWhiteSpace(type) ? "" : $"type={Uri.EscapeDataString(type)}",
+            string.IsNullOrWhiteSpace(status) ? "" : $"status={Uri.EscapeDataString(status)}",
+            string.IsNullOrWhiteSpace(trigger) ? "" : $"trigger={Uri.EscapeDataString(trigger)}"
+        };
+        return await api.GetAsync<List<MaintenanceJobResponse>>($"/api/admin/operations/jobs?{string.Join("&", filters.Where(filter => filter.Length > 0))}") ?? [];
+    }
     public Task<MaintenanceJobResponse?> QueueMaintenanceJobAsync(string type) => api.SendAsync<object, MaintenanceJobResponse>(HttpMethod.Post, "/api/admin/operations/jobs", new { type });
     public Task<int> GetOpenIssueCountAsync() => api.GetAsync<int>("/api/admin/issues/open-count");
     public async Task<List<AdminIssueListItemResponse>> GetIssuesAsync(string status = "open", int offset = 0, int limit = 40) =>

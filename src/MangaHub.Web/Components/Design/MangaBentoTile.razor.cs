@@ -11,6 +11,7 @@ public partial class MangaBentoTile
     [Parameter] public string Scheme { get; set; } = "primary";
     [Parameter] public string CornerIcon { get; set; } = "";
     [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string ItemClass { get; set; } = "";
     [Parameter] public string AriaLabel { get; set; } = "";
     [Parameter] public EventCallback OnClick { get; set; }
 

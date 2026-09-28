@@ -10,7 +10,12 @@
 .mh-operation-jobs { display: flex; flex-direction: column; gap: .7rem; height: 100%; }
 .mh-operation-stat { justify-content: flex-end; }
 .mh-operation-job { align-items: center; border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 75%, transparent); display: flex; justify-content: space-between; padding-top: .5rem; }
+.mh-operation-history-filters { display: grid; gap: .45rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 @media (max-width: 640px) {
     ::deep .mh-operations-bento { --mh-bento-item-min-height: 116px; --mh-bento-row-height: 116px; }
+    ::deep .mh-operations-bento .mh-operations-stat-item { grid-column: span 2 !important; }
+    ::deep .mh-operations-bento .mh-operations-actions-item,
+    ::deep .mh-operations-bento .mh-operations-history-item { grid-column: span 4 !important; }
+    .mh-operation-history-filters { grid-template-columns: 1fr; }
 }
