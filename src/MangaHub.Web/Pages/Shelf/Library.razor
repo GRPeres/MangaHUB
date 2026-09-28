@@ -883,10 +883,11 @@
         .Where(section => ShouldShowSection(section.Key))
         .Select(section => new SectionNavigationItem(
             section.Key,
-            $"{section.Label} ({SectionCount(section.Key)})",
+            section.Label,
             section.Icon,
             section.Key == "updates" ? Color.Error : Color.Primary,
-            IsPrimarySection(section.Key)))
+            IsPrimarySection(section.Key),
+            SectionCount(section.Key)))
         .ToList();
 
     private int SectionCount(string section) => section switch
