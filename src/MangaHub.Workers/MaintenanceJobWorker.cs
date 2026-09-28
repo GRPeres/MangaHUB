@@ -65,13 +65,18 @@ public sealed class MaintenanceJobWorker(IServiceScopeFactory scopeFactory, Inte
 
         foreach (var job in interrupted)
         {
-            job.Status = "queued";
-            job.StartedAt = null;
-            job.CompletedAt = null;
-            job.Error = "Recovered after the worker restarted before the job completed.";
+            job.Status = "failed";
+            job.CompletedAt = DateTimeOffset.UtcNow;
+            job.Error = "Interrupted by a worker restart before the job completed. A recovery retry was queued.";
+            db.MaintenanceJobs.Add(new MaintenanceJob
+            {
+                Type = job.Type,
+                Trigger = "recovery",
+                RequestedAt = DateTimeOffset.UtcNow
+            });
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        logger.LogWarning("Requeued {Count} maintenance jobs interrupted by a worker restart.", interrupted.Count);
+        logger.LogWarning("Marked {Count} interrupted maintenance jobs as failed and queued recovery retries.", interrupted.Count);
     }
 }
