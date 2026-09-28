@@ -22,6 +22,8 @@ public interface IMangaDexChapterCache
 
     Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original");
 
+    Task<MangaDexCachedChapter> CreateDataSaverFromOriginalAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken);
+
     Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original");
 }
 

@@ -295,12 +295,33 @@ public sealed class ReaderService(
                     NormalizeLanguage(sourceChapter.Language));
             }
 
-            progress?.Report(new ReaderPreparationProgress("Loading the MangaDex page list", 20));
-            var pages = await mangaDex.GetPagesAsync(sourceChapter!.Id, cancellationToken, quality);
-            var cachedArchive = await mangaDexCache.EnsureCachedAsync(mangaDexId, sourceChapter.Id, pages, cancellationToken, progress, quality);
+            var selectedSourceChapter = sourceChapter!;
+            MangaDexCachedChapter? cachedArchive = null;
+            var originalCachedChapter = string.Equals(quality, "data-saver", StringComparison.OrdinalIgnoreCase)
+                ? cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == selectedSourceChapter.Id && chapter.ImageQuality == "original")
+                : null;
+            if (originalCachedChapter is not null)
+            {
+                try
+                {
+                    progress?.Report(new ReaderPreparationProgress("Creating a Data Saver copy from the local chapter", 20));
+                    cachedArchive = await mangaDexCache.CreateDataSaverFromOriginalAsync(mangaDexId, selectedSourceChapter.Id, cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Fall through to MangaDex Data Saver when a local original cannot be converted.
+                }
+            }
+
+            if (cachedArchive is null)
+            {
+                progress?.Report(new ReaderPreparationProgress("Loading the MangaDex page list", 20));
+                var pages = await mangaDex.GetPagesAsync(selectedSourceChapter.Id, cancellationToken, quality);
+                cachedArchive = await mangaDexCache.EnsureCachedAsync(mangaDexId, selectedSourceChapter.Id, pages, cancellationToken, progress, quality);
+            }
             if (recoveringArchivedChapter)
             {
-                await RecordArchiveRecoveryAsync(mangaDexId, sourceChapter.Id, "redownloaded", cancellationToken);
+                await RecordArchiveRecoveryAsync(mangaDexId, selectedSourceChapter.Id, "redownloaded", cancellationToken);
             }
             cachedSeries ??= CreateCachedSeries(entry, mangaDexId);
             if (isNewCachedSeries)
@@ -308,17 +329,17 @@ public sealed class ReaderService(
                 series.AddSeries(cachedSeries);
             }
 
-            cachedChapter = cachedSeries.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id && chapter.ImageQuality == quality);
+            cachedChapter = cachedSeries.Chapters.FirstOrDefault(chapter => chapter.SourceId == selectedSourceChapter.Id && chapter.ImageQuality == quality);
             if (cachedChapter is null)
             {
                 cachedChapter = new MangaChapter
                 {
                     Series = cachedSeries,
-                    ChapterNumber = sourceChapter.Number,
-                    Language = sourceChapter.Language,
+                    ChapterNumber = selectedSourceChapter.Number,
+                    Language = selectedSourceChapter.Language,
                     ImageQuality = quality,
-                    Title = sourceChapter.Title,
-                    SourceId = sourceChapter.Id,
+                    Title = selectedSourceChapter.Title,
+                    SourceId = selectedSourceChapter.Id,
                     PageCount = cachedArchive.PageCount,
                     FileHash = cachedArchive.FileHash
                 };
@@ -327,10 +348,10 @@ public sealed class ReaderService(
             }
             else
             {
-                cachedChapter.ChapterNumber = sourceChapter.Number;
-                cachedChapter.Language = sourceChapter.Language;
+                cachedChapter.ChapterNumber = selectedSourceChapter.Number;
+                cachedChapter.Language = selectedSourceChapter.Language;
                 cachedChapter.ImageQuality = quality;
-                cachedChapter.Title = sourceChapter.Title;
+                cachedChapter.Title = selectedSourceChapter.Title;
                 cachedChapter.PageCount = cachedArchive.PageCount;
                 cachedChapter.FileHash = cachedArchive.FileHash;
             }

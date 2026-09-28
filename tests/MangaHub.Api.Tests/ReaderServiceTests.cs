@@ -111,6 +111,47 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_DataSaverUsesCachedOriginalBeforeRequestingMangaDex()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Cached quality", MangaDexId = "cached-quality-id" };
+        var cachedSeries = new MangaSeries { Title = entry.Title, Source = "mangadex-cache", ExternalId = entry.MangaDexId };
+        cachedSeries.Chapters.Add(new MangaChapter
+        {
+            SourceId = "chapter-1",
+            ChapterNumber = "1",
+            Language = "en",
+            ImageQuality = "original",
+            PageCount = 20
+        });
+        db.MangaEntries.Add(entry);
+        db.Series.Add(cachedSeries);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "1", ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-1", "1", "Beginning", 20));
+        var cache = new FakeMangaDexChapterCache();
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, cache);
+
+        var launch = await service.PrepareMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            null,
+            null,
+            "en",
+            allowLanguageFallback: false,
+            allowChapterJump: false,
+            CancellationToken.None,
+            imageQuality: "data-saver");
+
+        Assert.NotNull(launch);
+        Assert.Equal(["chapter-1"], cache.DataSaverConversions);
+        Assert.Empty(cache.CachedChapterIds);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_WhenMangaDexHasNoChapters_ReportsUnavailable()
     {
         await using var db = TestDb.Create();

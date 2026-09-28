@@ -67,6 +67,7 @@ internal sealed class FakeMangaDexSource : IMangaSource, IMangaDexCatalogLookup
 internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
 {
     public List<string> CachedChapterIds { get; } = [];
+    public List<string> DataSaverConversions { get; } = [];
 
     public Task<MangaDexCachedChapter> EnsureCachedAsync(
         string mangaDexId,
@@ -92,6 +93,16 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
             Path.Combine("mangadex", mangaDexId, $"{chapterId}.cbz"),
             1,
             $"hash-{chapterId}",
+            false));
+    }
+
+    public Task<MangaDexCachedChapter> CreateDataSaverFromOriginalAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
+    {
+        DataSaverConversions.Add(chapterId);
+        return Task.FromResult(new MangaDexCachedChapter(
+            Path.Combine("mangadex", "data-saver", mangaDexId, $"{chapterId}.cbz"),
+            1,
+            $"data-saver-hash-{chapterId}",
             false));
     }
 

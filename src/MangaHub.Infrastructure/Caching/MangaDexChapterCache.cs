@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using ImageMagick;
 using MangaHub.Core.Services;
 using MangaHub.Core.Sources;
 using Microsoft.Extensions.Options;
@@ -197,6 +198,83 @@ public sealed class MangaDexChapterCache(
         finally
         {
             downloadLock.Release();
+        }
+    }
+
+    public async Task<MangaDexCachedChapter> CreateDataSaverFromOriginalAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken)
+    {
+        var (_, originalPath) = GetArchivePath(mangaDexId, chapterId, "original");
+        var (relativePath, dataSaverPath) = GetArchivePath(mangaDexId, chapterId, "data-saver");
+        var archivedOriginalPath = GetArchivedPath(mangaDexId, chapterId, "original");
+        var sourcePath = File.Exists(originalPath) ? originalPath : archivedOriginalPath;
+        if (!File.Exists(sourcePath))
+        {
+            throw new FileNotFoundException("The original chapter is not available for local Data Saver conversion.", originalPath);
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(dataSaverPath)!);
+        var conversionLock = DownloadLocks.GetOrAdd(dataSaverPath, _ => new SemaphoreSlim(1, 1));
+        await conversionLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (File.Exists(dataSaverPath))
+            {
+                return await ReadCachedArchiveAsync(dataSaverPath, relativePath, cancellationToken);
+            }
+
+            var temporaryPath = $"{dataSaverPath}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                using (var source = ZipFile.OpenRead(sourcePath))
+                await using (var output = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                using (var target = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: false))
+                {
+                    var pages = source.Entries
+                        .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
+                        .OrderBy(entry => entry.FullName, StringComparer.Ordinal)
+                        .ToList();
+                    if (pages.Count == 0)
+                    {
+                        throw new InvalidOperationException("The original CBZ archive does not contain any readable pages.");
+                    }
+
+                    for (var index = 0; index < pages.Count; index++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await using var pageStream = pages[index].Open();
+                        using var page = new MagickImage(pageStream);
+                        page.AutoOrient();
+                        page.Strip();
+                        if (page.Width > (uint)Math.Clamp(options.Value.MangaDexArchiveFallbackMaxWidth, 480, 2400))
+                        {
+                            page.Resize((uint)Math.Clamp(options.Value.MangaDexArchiveFallbackMaxWidth, 480, 2400), 0);
+                        }
+                        page.Format = MagickFormat.Jpeg;
+                        page.Quality = (uint)Math.Clamp(options.Value.MangaDexArchiveFallbackJpegQuality, 40, 90);
+
+                        var entry = target.CreateEntry($"{index + 1:D4}.jpg", CompressionLevel.Fastest);
+                        await using var entryStream = entry.Open();
+                        page.Write(entryStream);
+                    }
+                }
+
+                File.Move(temporaryPath, dataSaverPath);
+            }
+            catch
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+                throw;
+            }
+
+            var cached = await ReadCachedArchiveAsync(dataSaverPath, relativePath, cancellationToken);
+            return cached with { WasCached = false };
+        }
+        finally
+        {
+            conversionLock.Release();
         }
     }
 

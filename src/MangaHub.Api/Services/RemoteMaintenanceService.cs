@@ -473,29 +473,39 @@ public sealed class RemoteMaintenanceService(
                     var dataSaver = chapterGroup.FirstOrDefault(item => string.Equals(item.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase));
                     if (dataSaver is null)
                     {
+                        MangaDexCachedChapter archive;
                         try
                         {
                             var pages = await mangaDex.GetPagesAsync(chapter.SourceId, cancellationToken, "data-saver");
-                            var archive = await cache.EnsureCachedAsync(cached.ExternalId, chapter.SourceId, pages, cancellationToken, imageQuality: "data-saver");
-                            dataSaver = new MangaChapter
-                            {
-                                SeriesId = cached.Id,
-                                SourceId = chapter.SourceId,
-                                ChapterNumber = chapter.ChapterNumber,
-                                Language = chapter.Language,
-                                ImageQuality = "data-saver",
-                                Title = chapter.Title,
-                                PageCount = archive.PageCount,
-                                FileHash = archive.FileHash
-                            };
-                            db.Chapters.Add(dataSaver);
-                            await db.SaveChangesAsync(cancellationToken);
+                            archive = await cache.EnsureCachedAsync(cached.ExternalId, chapter.SourceId, pages, cancellationToken, imageQuality: "data-saver");
                         }
                         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or IOException)
                         {
-                            logger.LogWarning(ex, "Could not create a Data Saver archive variant for {MangaDexId} chapter {ChapterId}; preserving the active original.", cached.ExternalId, chapter.SourceId);
-                            continue;
+                            try
+                            {
+                                logger.LogWarning(ex, "MangaDex Data Saver was unavailable for {MangaDexId} chapter {ChapterId}; creating a local archive fallback.", cached.ExternalId, chapter.SourceId);
+                                archive = await cache.CreateDataSaverFromOriginalAsync(cached.ExternalId, chapter.SourceId, cancellationToken);
+                            }
+                            catch (Exception fallbackException) when (fallbackException is not OperationCanceledException)
+                            {
+                                logger.LogWarning(fallbackException, "Could not create a local Data Saver archive fallback for {MangaDexId} chapter {ChapterId}; preserving the active original.", cached.ExternalId, chapter.SourceId);
+                                continue;
+                            }
                         }
+
+                        dataSaver = new MangaChapter
+                        {
+                            SeriesId = cached.Id,
+                            SourceId = chapter.SourceId,
+                            ChapterNumber = chapter.ChapterNumber,
+                            Language = chapter.Language,
+                            ImageQuality = "data-saver",
+                            Title = chapter.Title,
+                            PageCount = archive.PageCount,
+                            FileHash = archive.FileHash
+                        };
+                        db.Chapters.Add(dataSaver);
+                        await db.SaveChangesAsync(cancellationToken);
                     }
 
                     if (!await cache.ArchiveAsync(cached.ExternalId, chapter.SourceId, cancellationToken, "data-saver"))

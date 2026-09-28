@@ -27,6 +27,8 @@ public sealed class MangaHubOptions
     public int MangaDexIdleBackfillMaxChaptersPerManga { get; set; } = 2;
     public bool MangaDexCacheRetentionEnabled { get; set; } = true;
     public int MangaDexCacheRetentionGraceDays { get; set; } = 7;
+    public int MangaDexArchiveFallbackMaxWidth { get; set; } = 1200;
+    public int MangaDexArchiveFallbackJpegQuality { get; set; } = 70;
     public int MangaDexArchiveIntegritySampleSize { get; set; } = 5;
     public int MangaDexReaderCacheMinutes { get; set; } = 15;
     public int MangaDexReaderMaxChapters { get; set; } = 1000;
