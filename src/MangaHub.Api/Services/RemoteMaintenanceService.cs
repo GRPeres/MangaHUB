@@ -28,7 +28,7 @@ public sealed class RemoteMaintenanceService(
     ILogger<RemoteMaintenanceService> logger)
 {
     private const string MangaDexCacheSource = "mangadex-cache";
-    public async Task RunRequestedAsync(string type, CancellationToken cancellationToken)
+    public async Task<MaintenanceRunResult> RunRequestedAsync(string type, CancellationToken cancellationToken)
     {
         var priority = type switch
         {
@@ -40,18 +40,21 @@ public sealed class RemoteMaintenanceService(
         };
 
         using var priorityScope = priorityContext.Push(priority);
+        var shouldContinue = false;
         switch (type)
         {
             case "release-sync": await RunReleaseSyncAsync(cancellationToken); break;
             case "mangadex-status-sync": await RunMangaDexStatusSyncAsync(cancellationToken); break;
             case "prefetch": await RunPrefetchAsync(cancellationToken); break;
-            case "mangadex-cache-cleanup": await RunCacheRetentionAsync(cancellationToken); break;
+            case "mangadex-cache-cleanup": shouldContinue = await RunCacheRetentionAsync(cancellationToken); break;
             case "mangadex-archive-integrity-check": await RunArchiveIntegrityCheckAsync(cancellationToken); break;
             case "mangaupdates-sync": await RunMangaUpdatesSyncAsync(cancellationToken); break;
             case "mangaupdates-match": await RunMangaUpdatesMatchingAsync(cancellationToken); break;
             case CatalogIdentityEnrichmentService.JobType: await RunCatalogIdentityEnrichmentAsync(cancellationToken); break;
             case "idle-backfill": await RunIdleBackfillAsync(cancellationToken); break;
         }
+
+        return new MaintenanceRunResult(shouldContinue);
     }
 
     private async Task RunCatalogIdentityEnrichmentAsync(CancellationToken cancellationToken)
@@ -411,11 +414,11 @@ public sealed class RemoteMaintenanceService(
             paused);
     }
 
-    private async Task RunCacheRetentionAsync(CancellationToken cancellationToken)
+    private async Task<bool> RunCacheRetentionAsync(CancellationToken cancellationToken)
     {
         if (!options.Value.MangaDexCacheRetentionEnabled)
         {
-            return;
+            return false;
         }
 
         try
@@ -545,6 +548,7 @@ public sealed class RemoteMaintenanceService(
                 considered,
                 batchSize,
                 batchLimitReached);
+            return batchLimitReached;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -553,6 +557,7 @@ public sealed class RemoteMaintenanceService(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "MangaDex cache retention could not finish; it will retry at the next maintenance run.");
+            return false;
         }
     }
 

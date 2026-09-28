@@ -73,7 +73,7 @@ else if (overview is not null)
                             <MudSelectItem Value="@("completed")">Completed</MudSelectItem><MudSelectItem Value="@("running")">Running</MudSelectItem><MudSelectItem Value="@("queued")">Queued</MudSelectItem><MudSelectItem Value="@("failed")">Failed</MudSelectItem>
                         </MudSelect>
                         <MudSelect T="string" Label="Started by" Dense="true" Variant="Variant.Outlined" Clearable="true" @bind-Value="historyTrigger" @bind-Value:after="ReloadHistoryAsync">
-                            <MudSelectItem Value="@("scheduled")">Schedule</MudSelectItem><MudSelectItem Value="@("watchdog")">Watchdog</MudSelectItem><MudSelectItem Value="@("recovery")">Recovery</MudSelectItem><MudSelectItem Value="@("manual")">Manual</MudSelectItem>
+                            <MudSelectItem Value="@("scheduled")">Schedule</MudSelectItem><MudSelectItem Value="@("continuation")">Continuation</MudSelectItem><MudSelectItem Value="@("watchdog")">Watchdog</MudSelectItem><MudSelectItem Value="@("recovery")">Recovery</MudSelectItem><MudSelectItem Value="@("manual")">Manual</MudSelectItem>
                         </MudSelect>
                     </div>
                     @if (historyJobs.Count == 0)
@@ -139,6 +139,6 @@ else if (overview is not null)
     }
     private static string FormatDate(DateTimeOffset? value) => value?.ToLocalTime().ToString("g") ?? "Not yet";
     private static string JobLabel(string type) => type switch { "release-sync" => "MangaDex release refresh", "mangadex-status-sync" => "MangaDex status and shelf repair", "prefetch" => "Update prefetch", "mangadex-cache-cleanup" => "MangaDex cache cleanup", "mangadex-archive-integrity-check" => "Archive integrity check", "mangaupdates-sync" => "MangaUpdates refresh", "catalog-id-enrichment" => "Catalog ID matching", "library-scan" => "Local library scan", "idle-backfill" => "Idle backfill", _ => type };
-    private static string JobTriggerLabel(string trigger) => trigger switch { "scheduled" => "automatic schedule", "watchdog" => "watchdog retry", "recovery" => "recovery retry", _ => "manual" };
+    private static string JobTriggerLabel(string trigger) => trigger switch { "scheduled" => "automatic schedule", "continuation" => "cleanup continuation", "watchdog" => "watchdog retry", "recovery" => "recovery retry", _ => "manual" };
     private static Color JobColor(string status) => status switch { "completed" => Color.Success, "failed" => Color.Error, "running" => Color.Warning, _ => Color.Info };
 }

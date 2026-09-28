@@ -53,11 +53,11 @@ public sealed class InternalMaintenanceController(
         if (string.Equals(type, "library-scan", StringComparison.OrdinalIgnoreCase))
         {
             await libraryScanner.ScanAsync(cancellationToken);
-            return NoContent();
+            return Ok(new MaintenanceRunResult());
         }
 
-        await remoteMaintenance.RunRequestedAsync(type.Trim().ToLowerInvariant(), cancellationToken);
-        return NoContent();
+        var result = await remoteMaintenance.RunRequestedAsync(type.Trim().ToLowerInvariant(), cancellationToken);
+        return Ok(result);
     }
 
     private bool HasValidWorkerToken()

@@ -1,4 +1,5 @@
 using MangaHub.Core.Models;
+using MangaHub.Core.Services;
 using MangaHub.Infrastructure;
 using MangaHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -80,9 +81,10 @@ public sealed class MaintenanceJobWorker(
     {
         var status = "completed";
         var error = "";
+        var result = new MaintenanceRunResult();
         try
         {
-            await maintenanceApi.RunAsync(claim.Type, cancellationToken);
+            result = await maintenanceApi.RunAsync(claim.Type, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -113,6 +115,25 @@ public sealed class MaintenanceJobWorker(
         job.Status = status;
         job.Error = error;
         job.CompletedAt = DateTimeOffset.UtcNow;
+        if (status == "completed"
+            && result.ShouldContinue
+            && string.Equals(claim.Type, "mangadex-cache-cleanup", StringComparison.Ordinal))
+        {
+            var continuationAlreadyQueued = await db.MaintenanceJobs.AnyAsync(item =>
+                item.Id != claim.Id
+                && item.Type == claim.Type
+                && (item.Status == "queued" || item.Status == "running"), CancellationToken.None);
+            if (!continuationAlreadyQueued)
+            {
+                db.MaintenanceJobs.Add(new MaintenanceJob
+                {
+                    Type = claim.Type,
+                    Trigger = "continuation",
+                    RequestedAt = DateTimeOffset.UtcNow
+                });
+                logger.LogInformation("Cache cleanup batch {JobId} yielded with more work; queued a continuation.", claim.Id);
+            }
+        }
         await db.SaveChangesAsync(CancellationToken.None);
     }
 

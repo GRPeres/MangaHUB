@@ -25,7 +25,7 @@ public sealed class RemoteMaintenanceScheduleWorker(
             var now = DateTimeOffset.UtcNow;
             if (now >= nextReleaseSyncAt)
             {
-                // The durable job runner is FIFO, so queue the release refresh before selecting Update chapters to pre-cache.
+                // The MangaDex lane preserves this order before selecting Update chapters to pre-cache.
                 StartScheduledJob("release-sync-and-prefetch", async token =>
                 {
                     await QueueAsync("release-sync", token);
@@ -40,7 +40,7 @@ public sealed class RemoteMaintenanceScheduleWorker(
                     await QueueAsync("mangadex-cache-cleanup", token);
                     await QueueAsync("mangadex-archive-integrity-check", token);
                 }, stoppingToken);
-                nextCacheCleanupAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaDexCacheRetentionPollMinutes, 30, 720));
+                nextCacheCleanupAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
             }
             if (now >= nextMangaUpdatesMatchAt)
             {
@@ -113,6 +113,35 @@ public sealed class RemoteMaintenanceScheduleWorker(
         {
             logger.LogWarning(ex, "Could not queue scheduled maintenance job {Type}; it will retry on the next schedule.", type);
         }
+    }
+
+    private TimeSpan GetDelayUntilNextMaintenance()
+    {
+        TimeZoneInfo timeZone;
+        try
+        {
+            timeZone = TimeZoneInfo.FindSystemTimeZoneById(options.Value.MangaDexMaintenanceTimeZone);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            logger.LogWarning("MangaDex maintenance timezone {TimeZone} was not found. Falling back to UTC.", options.Value.MangaDexMaintenanceTimeZone);
+            timeZone = TimeZoneInfo.Utc;
+        }
+        catch (InvalidTimeZoneException)
+        {
+            logger.LogWarning("MangaDex maintenance timezone {TimeZone} is invalid. Falling back to UTC.", options.Value.MangaDexMaintenanceTimeZone);
+            timeZone = TimeZoneInfo.Utc;
+        }
+
+        var localNow = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
+        var localTarget = new DateTimeOffset(localNow.Year, localNow.Month, localNow.Day,
+            Math.Clamp(options.Value.MangaDexMaintenanceHour, 0, 23), 0, 0, localNow.Offset);
+        if (localTarget <= localNow)
+        {
+            localTarget = localTarget.AddDays(1);
+        }
+
+        return localTarget.ToUniversalTime() - DateTimeOffset.UtcNow;
     }
 
 }

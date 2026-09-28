@@ -1,5 +1,7 @@
 using MangaHub.Infrastructure;
+using MangaHub.Core.Services;
 using Microsoft.Extensions.Options;
+using System.Net.Http.Json;
 
 namespace MangaHub.Workers;
 
@@ -12,9 +14,20 @@ public sealed class InternalMaintenanceApiClient(HttpClient httpClient, IOptions
 
     public Task RunWatchdogAsync(CancellationToken cancellationToken) => SendAsync(HttpMethod.Post, "internal/maintenance/watchdog", cancellationToken);
 
-    public async Task RunAsync(string type, CancellationToken cancellationToken)
+    public async Task<MaintenanceRunResult> RunAsync(string type, CancellationToken cancellationToken)
     {
-        await SendAsync(HttpMethod.Post, $"internal/maintenance/{Uri.EscapeDataString(type)}", cancellationToken);
+        var token = options.Value.InternalWorkerToken;
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new InvalidOperationException("MangaHub:InternalWorkerToken must be configured for worker dispatch.");
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"internal/maintenance/{Uri.EscapeDataString(type)}");
+        request.Headers.Add("X-MangaHub-Worker-Token", token);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<MaintenanceRunResult>(cancellationToken: cancellationToken)
+            ?? new MaintenanceRunResult();
     }
 
     private async Task SendAsync(HttpMethod method, string path, CancellationToken cancellationToken)
