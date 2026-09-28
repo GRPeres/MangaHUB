@@ -17,8 +17,8 @@ public sealed class MangaHubOptions
     public int MangaDexSyncMaxBatchSize { get; set; } = 1000;
     public int MangaDexMaintenanceHour { get; set; } = 4;
     public string MangaDexMaintenanceTimeZone { get; set; } = "America/Sao_Paulo";
-    public int MangaDexPrefetchBatchSize { get; set; } = 6;
-    public int MangaDexPrefetchMaxChaptersPerManga { get; set; } = 3;
+    // Update prefetch protects the first chapter a reader is likely to open; the reader fills later chapters on demand.
+    public int MangaDexUpdatePrefetchBatchSize { get; set; } = 50;
     public bool MangaDexIdleBackfillEnabled { get; set; } = true;
     public int MangaDexIdleMinutes { get; set; } = 30;
     public int MangaDexIdleBackfillCheckMinutes { get; set; } = 60;

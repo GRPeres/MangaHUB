@@ -607,59 +607,69 @@ public sealed class RemoteMaintenanceService(
         var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
         var mangaDex = scope.ServiceProvider.GetRequiredService<MangaSourceRegistry>().Get("mangadex");
         var cache = scope.ServiceProvider.GetRequiredService<IMangaDexChapterCache>();
-        var batchSize = Math.Clamp(options.Value.MangaDexPrefetchBatchSize, 1, 25);
-        var perMangaLimit = Math.Clamp(options.Value.MangaDexPrefetchMaxChaptersPerManga, 1, 10);
-
-        var entries = await db.MangaEntries
-            .Where(entry => entry.MangaDexId != ""
-                && db.UserMangaEntries.Any(shelf => shelf.MangaEntryId == entry.Id
-                    && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")))
-            .OrderBy(entry => entry.MangaDexLastPrefetchedAt ?? DateTimeOffset.MinValue)
-            .ThenBy(entry => entry.Title)
-            .Take(batchSize)
+        var batchSize = Math.Clamp(options.Value.MangaDexUpdatePrefetchBatchSize, 1, 100);
+        var candidates = await (
+            from shelf in db.UserMangaEntries
+            join user in db.Users on shelf.UserId equals user.Id
+            join entry in db.MangaEntries on shelf.MangaEntryId equals entry.Id
+            where entry.MangaDexId != ""
+                && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
+                && shelf.CurrentChapter != ""
+            select new UpdatePrefetchCandidate(entry, shelf.CurrentChapter, shelf.IsRead, user.PreferredLanguage))
             .ToListAsync(cancellationToken);
 
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        var mangaEntryIds = candidates.Select(candidate => candidate.Entry.Id).Distinct().ToArray();
+        var latestChapters = await db.MangaDexLanguageLatestChapters
+            .Where(latest => mangaEntryIds.Contains(latest.MangaEntryId))
+            .ToListAsync(cancellationToken);
+
+        var updateCandidates = candidates
+            .Where(candidate => IsShelfUpdateCandidate(candidate, latestChapters))
+            .GroupBy(candidate => candidate.Entry.Id)
+            .OrderBy(group => group.Key)
+            .Take(batchSize)
+            .ToList();
+
         var downloaded = 0;
-        var baselined = 0;
-        foreach (var entry in entries)
+        foreach (var entryCandidates in updateCandidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var entry = entryCandidates.First().Entry;
             try
             {
-                var numberedChapters = GetPreferredNumberedChapters(
-                    await mangaDex.GetChaptersAsync(entry.MangaDexId, null, cancellationToken));
-
-                if (entry.MangaDexLastPrefetchedChapter is null)
-                {
-                    entry.MangaDexLastPrefetchedChapter = numberedChapters.Count == 0 ? null : numberedChapters[^1].Number;
-                    entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
-                    await db.SaveChangesAsync(cancellationToken);
-                    baselined++;
-                    continue;
-                }
-
-                var pending = numberedChapters
-                    .Where(item => item.Number > entry.MangaDexLastPrefetchedChapter.Value)
-                    .Take(perMangaLimit)
+                var sourceChapters = await mangaDex.GetChaptersAsync(entry.MangaDexId, null, cancellationToken);
+                var nextReadableChapters = entryCandidates
+                    .Select(candidate => FindNextReadableUpdateChapter(sourceChapters, candidate.CurrentChapter, candidate.IsRead, LanguagePreferences.Parse(candidate.PreferredLanguage)))
+                    .Where(chapter => chapter is not null)
+                    .Select(chapter => chapter!)
+                    .GroupBy(chapter => chapter.Id, StringComparer.Ordinal)
+                    .Select(group => group.First())
                     .ToList();
-                if (pending.Count == 0)
+                if (nextReadableChapters.Count == 0)
                 {
-                    entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
-                    await db.SaveChangesAsync(cancellationToken);
                     continue;
                 }
 
                 var cacheSeries = await GetOrCreateCachedSeriesAsync(db, entry, cancellationToken);
-
-                foreach (var item in pending)
+                foreach (var chapter in nextReadableChapters)
                 {
-                    await CacheChapterAsync(db, cache, mangaDex, entry, cacheSeries, item.Chapter, cancellationToken);
+                    if (cacheSeries.Chapters.Any(cached => cached.SourceId == chapter.Id
+                        && string.Equals(cached.ImageQuality, "original", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
 
-                    entry.MangaDexLastPrefetchedChapter = item.Number;
-                    entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
-                    await db.SaveChangesAsync(cancellationToken);
+                    await CacheChapterAsync(db, cache, mangaDex, entry, cacheSeries, chapter, cancellationToken);
                     downloaded++;
                 }
+
+                entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
+                await db.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException or IOException)
             {
@@ -668,10 +678,9 @@ public sealed class RemoteMaintenanceService(
         }
 
         logger.LogInformation(
-            "MangaDex pre-download baselined {BaselineCount} manga and cached {ChapterCount} new chapters across {MangaCount} reading manga.",
-            baselined,
+            "MangaDex update prefetch cached {ChapterCount} next readable chapters across {MangaCount} manga with shelf updates.",
             downloaded,
-            entries.Count);
+            updateCandidates.Count);
     }
 
     private async Task RunIdleBackfillAsync(CancellationToken cancellationToken)
@@ -808,11 +817,13 @@ public sealed class RemoteMaintenanceService(
         MangaEntry entry,
         MangaSeries cacheSeries,
         MangaSourceChapter sourceChapter,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string imageQuality = "original")
     {
-        var pages = await mangaDex.GetPagesAsync(sourceChapter.Id, cancellationToken);
-        var archive = await cache.EnsureCachedAsync(entry.MangaDexId, sourceChapter.Id, pages, cancellationToken);
-        var cachedChapter = cacheSeries.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id);
+        var pages = await mangaDex.GetPagesAsync(sourceChapter.Id, cancellationToken, imageQuality);
+        var archive = await cache.EnsureCachedAsync(entry.MangaDexId, sourceChapter.Id, pages, cancellationToken, imageQuality: imageQuality);
+        var cachedChapter = cacheSeries.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id
+            && string.Equals(chapter.ImageQuality, imageQuality, StringComparison.OrdinalIgnoreCase));
         if (cachedChapter is null)
         {
             cachedChapter = new MangaChapter
@@ -823,7 +834,8 @@ public sealed class RemoteMaintenanceService(
                 Title = sourceChapter.Title,
                 SourceId = sourceChapter.Id,
                 PageCount = archive.PageCount,
-                FileHash = archive.FileHash
+                FileHash = archive.FileHash,
+                ImageQuality = imageQuality
             };
             cacheSeries.Chapters.Add(cachedChapter);
             db.Chapters.Add(cachedChapter);
@@ -835,6 +847,7 @@ public sealed class RemoteMaintenanceService(
         cachedChapter.Title = sourceChapter.Title;
         cachedChapter.PageCount = archive.PageCount;
         cachedChapter.FileHash = archive.FileHash;
+        cachedChapter.ImageQuality = imageQuality;
     }
 
     private TimeSpan GetDelayUntilNextMaintenance()
@@ -906,6 +919,95 @@ public sealed class RemoteMaintenanceService(
                 Number: group.Key))
             .OrderBy(item => item.Number)
             .ToList();
+
+    private static bool IsShelfUpdateCandidate(UpdatePrefetchCandidate candidate, IReadOnlyList<MangaDexLanguageLatestChapter> latestChapters)
+    {
+        var currentChapter = ParseChapterNumber(candidate.CurrentChapter);
+        if (currentChapter is null)
+        {
+            return false;
+        }
+
+        var languages = LanguagePreferences.Parse(candidate.PreferredLanguage);
+        return latestChapters
+            .Where(latest => latest.MangaEntryId == candidate.Entry.Id)
+            .Where(latest => LanguagePreferences.Contains(languages, latest.Language))
+            .Any(latest => latest.LatestChapter > currentChapter.Value
+                || (latest.LatestChapter == currentChapter.Value && !candidate.IsRead));
+    }
+
+    private static MangaSourceChapter? FindNextReadableUpdateChapter(
+        IReadOnlyList<MangaSourceChapter> chapters,
+        string currentChapter,
+        bool isRead,
+        IReadOnlyList<string> preferredLanguages)
+    {
+        var currentNumber = ParseChapterNumber(currentChapter);
+        if (currentNumber is null)
+        {
+            return null;
+        }
+
+        var readableChapters = chapters
+            .Where(chapter => chapter.PageCount > 0)
+            .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
+            .Where(item => item.Number is not null)
+            .ToList();
+
+        if (!isRead)
+        {
+            // Match the reader: an exact chapter in any preferred language wins over a fallback chapter.
+            foreach (var language in preferredLanguages)
+            {
+                var exact = readableChapters
+                    .Where(item => string.Equals(item.Chapter.Language, language, StringComparison.OrdinalIgnoreCase))
+                    .FirstOrDefault(item => item.Number == currentNumber.Value);
+                if (exact is not null)
+                {
+                    return exact.Chapter;
+                }
+            }
+
+            foreach (var language in preferredLanguages)
+            {
+                var fallback = readableChapters
+                    .Where(item => string.Equals(item.Chapter.Language, language, StringComparison.OrdinalIgnoreCase))
+                    .Where(item => item.Number >= currentNumber.Value)
+                    .OrderBy(item => item.Number)
+                    .Select(item => item.Chapter)
+                    .FirstOrDefault();
+                if (fallback is not null)
+                {
+                    return fallback;
+                }
+            }
+
+            return null;
+        }
+
+        // For an already completed chapter, retain the account's language tier before chapter proximity.
+        foreach (var language in preferredLanguages)
+        {
+            var next = readableChapters
+                .Where(item => string.Equals(item.Chapter.Language, language, StringComparison.OrdinalIgnoreCase))
+                .Where(item => item.Number > currentNumber.Value)
+                .OrderBy(item => item.Number)
+                .Select(item => item.Chapter)
+                .FirstOrDefault();
+            if (next is not null)
+            {
+                return next;
+            }
+        }
+
+        return null;
+    }
+
+    private sealed record UpdatePrefetchCandidate(
+        MangaEntry Entry,
+        string CurrentChapter,
+        bool IsRead,
+        string PreferredLanguage);
 
     private static decimal? ParseChapterNumber(string value)
     {

@@ -14,7 +14,7 @@ public sealed class RemoteMaintenanceScheduleWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var nextReleaseSyncAt = DateTimeOffset.MinValue;
-        var nextPrefetchAt = DateTimeOffset.MinValue;
+        var nextCacheCleanupAt = DateTimeOffset.MinValue;
         var nextMangaUpdatesSyncAt = DateTimeOffset.MinValue;
         var nextMangaUpdatesMatchAt = DateTimeOffset.MinValue;
         var nextLibraryScanAt = DateTimeOffset.MinValue;
@@ -25,17 +25,18 @@ public sealed class RemoteMaintenanceScheduleWorker(
             var now = DateTimeOffset.UtcNow;
             if (now >= nextReleaseSyncAt)
             {
-                StartScheduledJob("release-sync", token => QueueAsync("release-sync", token), stoppingToken);
+                // The durable job runner is FIFO, so queue the release refresh before selecting Update chapters to pre-cache.
+                StartScheduledJob("release-sync-and-prefetch", async token =>
+                {
+                    await QueueAsync("release-sync", token);
+                    await QueueAsync("prefetch", token);
+                }, stoppingToken);
                 nextReleaseSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaDexReleasePollMinutes, 15, 720));
             }
-            if (now >= nextPrefetchAt)
+            if (now >= nextCacheCleanupAt)
             {
-                StartScheduledJob("daily-cache-maintenance", async token =>
-                {
-                    await QueueAsync("prefetch", token);
-                    await QueueAsync("mangadex-cache-cleanup", token);
-                }, stoppingToken);
-                nextPrefetchAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
+                StartScheduledJob("mangadex-cache-cleanup", token => QueueAsync("mangadex-cache-cleanup", token), stoppingToken);
+                nextCacheCleanupAt = DateTimeOffset.UtcNow.Add(GetDelayUntilNextMaintenance());
             }
             if (now >= nextMangaUpdatesMatchAt)
             {

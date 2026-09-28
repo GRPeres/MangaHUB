@@ -69,7 +69,7 @@ public sealed class MaintenanceWatchdogService(
         if (value.MangaDexEnabled)
         {
             yield return new("release-sync", TimeSpan.FromMinutes(Math.Clamp(value.MangaDexReleasePollMinutes, 15, 720)));
-            yield return new("prefetch", TimeSpan.FromHours(24));
+            yield return new("prefetch", TimeSpan.FromMinutes(Math.Clamp(value.MangaDexReleasePollMinutes, 15, 720)));
             if (value.MangaDexCacheRetentionEnabled) yield return new("mangadex-cache-cleanup", TimeSpan.FromHours(24));
             if (value.MangaDexIdleBackfillEnabled) yield return new("idle-backfill", TimeSpan.FromMinutes(Math.Clamp(value.MangaDexIdleBackfillCheckMinutes, 5, 720)));
         }
