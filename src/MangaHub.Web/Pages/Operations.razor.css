@@ -1,4 +1,14 @@
 .mh-operations-loading { min-height: 50vh; }
+.mh-operations-header {
+    align-items: end;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding: .5rem 0 1.25rem;
+}
+.mh-operations-header > :first-child { min-width: 0; }
+::deep .mh-operations-refresh-mobile { display: none; }
 
 ::deep .mh-operations-bento {
     --bzb-gap: 4px;
@@ -31,4 +41,10 @@
     .mh-operation-stat { gap: .1rem; justify-content: center; }
     .mh-operation-history-filters { grid-template-columns: 1fr; }
     .mh-operation-storage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+    .mh-operations-header { align-items: start; gap: .5rem; padding-bottom: .8rem; }
+    ::deep .mh-operations-refresh-desktop { display: none; }
+    ::deep .mh-operations-refresh-mobile { display: inline-flex; flex: 0 0 auto; margin-top: .25rem; }
 }

@@ -25,9 +25,10 @@ else if (overview is not null)
     <div class="mh-operations-page">
         <MudStack Spacing="3">
             <AdminSectionNav />
-            <section class="mh-dashboard-header">
+            <section class="mh-operations-header">
                 <MudStack Spacing="1"><MudText Typo="Typo.overline" Color="Color.Secondary">Admin maintenance</MudText><MudText Typo="Typo.h2">Operations</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Storage, source freshness, and worker requests in one place.</MudText></MudStack>
-                <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">Refresh</MudButton>
+                <MudButton Class="mh-operations-refresh-desktop" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">Refresh</MudButton>
+                <MudIconButton Class="mh-operations-refresh-mobile" Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" OnClick="LoadAsync" aria-label="Refresh operations" />
             </section>
 
             <MangaBento Columns="4" Class="mh-operations-bento">
