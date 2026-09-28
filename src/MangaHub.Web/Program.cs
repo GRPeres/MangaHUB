@@ -27,6 +27,7 @@ builder.Services.AddScoped<AuthApiService>();
 builder.Services.AddScoped<AuthSessionService>();
 builder.Services.AddScoped<AdminApiService>();
 builder.Services.AddScoped<CatalogApiService>();
+builder.Services.AddScoped<DashboardApiService>();
 builder.Services.AddScoped<OpenLibraryApiService>();
 builder.Services.AddScoped<MetadataApiService>();
 builder.Services.AddScoped<MangaApiService>();

@@ -145,6 +145,30 @@ public sealed record ShelfSectionSummaryResponse(
     int Done,
     int Dropped,
     int All);
+
+public sealed record HomeDashboardMangaResponse(
+    Guid Id,
+    string Title,
+    string CoverUrl,
+    string ReadingStatus,
+    string CurrentChapter,
+    int? Score,
+    string Category,
+    string Summary,
+    string Notes,
+    string MediaType,
+    int? FirstPublishYear,
+    decimal? MangaDexPreferredLanguageLatestChapter,
+    bool IsRead);
+
+public sealed record HomeDashboardResponse(
+    HomeDashboardMangaResponse? ContinueReading,
+    int NewReleaseCount,
+    List<HomeDashboardMangaResponse> NewReleases,
+    int PlannedCount,
+    List<HomeDashboardMangaResponse> Recommendations,
+    List<HomeDashboardMangaResponse> PendingRatings);
+
 public sealed record CatalogMangaResponse(
     Guid Id,
     string Title,

@@ -70,6 +70,7 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddScoped<DatabaseInitializer>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<CatalogRepository>();
+builder.Services.AddScoped<DashboardRepository>();
 builder.Services.AddScoped<ShelfRepository>();
 builder.Services.AddScoped<SeriesRepository>();
 builder.Services.AddScoped<ProgressRepository>();
@@ -92,6 +93,7 @@ builder.Services.AddScoped<MangaUpdatesCatalogMatchService>();
 builder.Services.AddScoped<CatalogIdentityEnrichmentService>();
 builder.Services.AddScoped<MetadataService>();
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<ShelfService>();
 builder.Services.AddScoped<ShelfExportService>();
 builder.Services.AddScoped<LibraryService>();

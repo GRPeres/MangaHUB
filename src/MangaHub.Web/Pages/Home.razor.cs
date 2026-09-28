@@ -10,8 +10,7 @@ namespace MangaHub.Web.Pages;
 public partial class Home : IDisposable
 {
     [Inject] private AuthSessionService Auth { get; set; } = default!;
-    [Inject] private MangaApiService MangaApi { get; set; } = default!;
-    [Inject] private CatalogApiService CatalogApi { get; set; } = default!;
+    [Inject] private DashboardApiService DashboardApi { get; set; } = default!;
     [Inject] private ShelfApiService ShelfApi { get; set; } = default!;
     [Inject] private UsageApiService UsageApi { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
@@ -19,13 +18,7 @@ public partial class Home : IDisposable
 
     private UserResponse? currentUser;
     private bool isLoading;
-    private List<MangaEntryResponse> shelf = [];
-    private List<CatalogMangaResponse> catalog = [];
-    private List<MangaEntryResponse> newReleases = [];
-    private List<MangaEntryResponse> planned = [];
-    private MangaEntryResponse? continueReading;
-    private List<CatalogMangaResponse> recommendations = [];
-    private List<MangaEntryResponse> pendingRatings = [];
+    private HomeDashboardResponse? dashboard;
     private HashSet<Guid> savingRatings = [];
     private UsageDashboardResponse? usageDashboard;
     private string[] readingActivityLabels = [];
@@ -40,41 +33,64 @@ public partial class Home : IDisposable
         Auth.Changed += OnAuthChanged;
         Refreshes.Changed += OnAppRefresh;
         currentUser = await Auth.GetCurrentUserAsync();
-        await LoadDashboardAsync();
+        if (currentUser is not null)
+        {
+            isLoading = true;
+            _ = InitializeDashboardAsync();
+        }
+    }
+
+    private async Task InitializeDashboardAsync()
+    {
+        try
+        {
+            await LoadDashboardAsync();
+        }
+        catch
+        {
+            // The normal dashboard refresh path will retry after the next app event.
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadDashboardAsync()
     {
         if (currentUser is null)
         {
+            dashboard = null;
+            usageDashboard = null;
             return;
         }
 
         isLoading = true;
         try
         {
-            var shelfTask = MangaApi.GetMangaEntriesAsync();
-            var catalogTask = CatalogApi.GetCatalogAsync(language: currentUser.PreferredLanguage);
-            var usageTask = currentUser.UsageAnalyticsEnabled ? UsageApi.GetDashboardAsync(30) : Task.FromResult<UsageDashboardResponse?>(null);
-            await Task.WhenAll(shelfTask, catalogTask, usageTask);
-            shelf = shelfTask.Result;
-            catalog = catalogTask.Result;
-            usageDashboard = usageTask.Result;
-
-            newReleases = shelf.Where(IsReadingWithNewChapters).OrderByDescending(ReleaseGap).ThenBy(entry => entry.Title).ToList();
-            planned = shelf.Where(entry => string.Equals(entry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)).OrderBy(entry => entry.Title).ToList();
-            continueReading = shelf.FirstOrDefault(entry => string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase))
-                ?? planned.FirstOrDefault();
-            recommendations = catalog.Where(entry => !entry.IsInMyShelf).OrderBy(entry => entry.Title).Take(3).ToList();
-            pendingRatings = shelf
-                .Where(entry => string.Equals(entry.ReadingStatus, "done", StringComparison.OrdinalIgnoreCase) && entry.Score is null)
-                .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            BuildReadingActivityChart();
+            dashboard = await DashboardApi.GetAsync();
+            if (currentUser.UsageAnalyticsEnabled)
+            {
+                _ = LoadUsageDashboardAsync();
+            }
         }
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadUsageDashboardAsync()
+    {
+        try
+        {
+            usageDashboard = await UsageApi.GetDashboardAsync(30);
+            BuildReadingActivityChart();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Analytics should never block the useful reading dashboard.
         }
     }
 
@@ -120,7 +136,7 @@ public partial class Home : IDisposable
         ];
     }
 
-    private async Task SetScore(MangaEntryResponse entry, int score)
+    private async Task SetScore(HomeDashboardMangaResponse entry, int score)
     {
         if (!savingRatings.Add(entry.Id)) return;
         try
@@ -129,9 +145,9 @@ public partial class Home : IDisposable
             var updated = await ShelfApi.UpdateShelfAsync(entry.Id, request);
             if (updated is null) return;
 
-            var index = shelf.FindIndex(item => item.Id == entry.Id);
-            if (index >= 0) shelf[index] = updated;
-            pendingRatings.RemoveAll(item => item.Id == entry.Id);
+            dashboard = dashboard is null
+                ? null
+                : dashboard with { PendingRatings = dashboard.PendingRatings.Where(item => item.Id != entry.Id).ToList() };
             Refreshes.Notify(AppRefreshScope.Shelf | AppRefreshScope.Analytics);
         }
         finally
@@ -170,26 +186,16 @@ public partial class Home : IDisposable
         Refreshes.Changed -= OnAppRefresh;
     }
 
-    private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
-        IsActivelyTracked(entry)
-        && entry.MangaDexPreferredLanguageLatestChapter is { } latest
-        && (latest > ParseChapter(entry.CurrentChapter)
-            || (latest == ParseChapter(entry.CurrentChapter) && !entry.IsRead));
-
-    private static bool IsActivelyTracked(MangaEntryResponse entry) =>
-        string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(entry.ReadingStatus, "paused", StringComparison.OrdinalIgnoreCase);
-
-    private static decimal ReleaseGap(MangaEntryResponse entry)
+    private static decimal ReleaseGap(HomeDashboardMangaResponse entry)
     {
-        var gap = Math.Max(0, (entry.MangaDexPreferredLanguageLatestChapter ?? 0) - ParseChapter(entry.CurrentChapter));
-        return gap == 0 && !entry.IsRead && entry.MangaDexPreferredLanguageLatestChapter == ParseChapter(entry.CurrentChapter) ? 1 : gap;
+        var current = decimal.TryParse(entry.CurrentChapter, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
+        var gap = Math.Max(0, (entry.MangaDexPreferredLanguageLatestChapter ?? 0) - current);
+        return gap == 0 && !entry.IsRead && entry.MangaDexPreferredLanguageLatestChapter == current ? 1 : gap;
     }
-    private static decimal ParseChapter(string value) => decimal.TryParse(value, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : 0;
     private static string DisplayChapter(string value) => string.IsNullOrWhiteSpace(value) ? "not started" : value;
-    private static string LatestLabel(MangaEntryResponse entry) => entry.MangaDexPreferredLanguageLatestChapter is { } latest ? $"Latest available: {latest:0.###}" : "No language-specific release data yet";
-    private static string ReleaseLabel(MangaEntryResponse entry) => $"+{ReleaseGap(entry):0.###} chapter{(ReleaseGap(entry) == 1 ? "" : "s")}";
+    private static string LatestLabel(HomeDashboardMangaResponse entry) => entry.MangaDexPreferredLanguageLatestChapter is { } latest ? $"Latest available: {latest:0.###}" : "No language-specific release data yet";
+    private static string ReleaseLabel(HomeDashboardMangaResponse entry) => $"+{ReleaseGap(entry):0.###} chapter{(ReleaseGap(entry) == 1 ? "" : "s")}";
     private string PreferredLanguagesLabel => string.Join(" / ", (currentUser?.PreferredLanguage ?? "en").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(language => language.ToUpperInvariant()));
-    private static string EntryMeta(CatalogMangaResponse entry) => string.Join(" · ", new[] { entry.MediaType, entry.FirstPublishYear?.ToString() }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private static string EntryMeta(HomeDashboardMangaResponse entry) => string.Join(" · ", new[] { entry.MediaType, entry.FirstPublishYear?.ToString() }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
 }

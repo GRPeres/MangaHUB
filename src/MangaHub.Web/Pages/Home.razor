@@ -37,7 +37,7 @@ else
             <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="deep" CornerIcon="@Icons.Material.Filled.MenuBook" OnClick="OpenContinueReading">
                 <div class="mh-dashboard-tile mh-dashboard-continue">
                     <MudText Typo="Typo.overline">Continue reading</MudText>
-                    @if (continueReading is { } entry)
+                    @if (dashboard?.ContinueReading is { } entry)
                     {
                         <div class="mh-dashboard-manga-line">
                             @if (!string.IsNullOrWhiteSpace(entry.CoverUrl))
@@ -63,7 +63,7 @@ else
             <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.FiberNew" OnClick="GoNewReleases">
                 <div class="mh-dashboard-tile mh-dashboard-stat">
                     <MudText Typo="Typo.overline">New releases</MudText>
-                    <MudText Typo="Typo.h2">@newReleases.Count</MudText>
+                    <MudText Typo="Typo.h2">@(dashboard?.NewReleaseCount ?? 0)</MudText>
                     <MudText Typo="Typo.caption">in @PreferredLanguagesLabel</MudText>
                 </div>
             </MangaBentoTile>
@@ -71,7 +71,7 @@ else
             <MangaBentoTile Scheme="soft" CornerIcon="@Icons.Material.Filled.BookmarkAdded" OnClick="GoPlanned">
                 <div class="mh-dashboard-tile mh-dashboard-stat">
                     <MudText Typo="Typo.overline">Planned</MudText>
-                    <MudText Typo="Typo.h2">@planned.Count</MudText>
+                    <MudText Typo="Typo.h2">@(dashboard?.PlannedCount ?? 0)</MudText>
                     <MudText Typo="Typo.caption">ready when you are</MudText>
                 </div>
             </MangaBentoTile>
@@ -114,14 +114,14 @@ else
             <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="ink" CornerIcon="@Icons.Material.Filled.NotificationsActive" OnClick="GoNewReleases">
                 <div class="mh-dashboard-tile">
                     <MudText Typo="Typo.overline">New on your shelf</MudText>
-                    @if (newReleases.Count == 0)
+                    @if (dashboard?.NewReleaseCount is not > 0)
                     {
                         <MudText Typo="Typo.h3">All caught up.</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">No new MangaDex chapters were found in your preferred language.</MudText>
                     }
                     else
                     {
-                        @foreach (var entry in newReleases.Take(3))
+                        @foreach (var entry in dashboard?.NewReleases ?? [])
                         {
                             <div class="mh-dashboard-release-row">
                                 <MudText Typo="Typo.subtitle2">@entry.Title</MudText>
@@ -135,14 +135,14 @@ else
             <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="secondary" CornerIcon="@Icons.Material.Filled.Explore" OnClick="GoCatalog">
                 <div class="mh-dashboard-tile">
                     <MudText Typo="Typo.overline">Try from your catalog</MudText>
-                    @if (recommendations.Count == 0)
+                    @if (dashboard?.Recommendations.Count is not > 0)
                     {
                         <MudText Typo="Typo.h3">Your catalog is already on your shelf.</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Add a few more catalog entries and they will appear here as gentle prompts.</MudText>
                     }
                     else
                     {
-                        @foreach (var entry in recommendations)
+                        @foreach (var entry in dashboard?.Recommendations ?? [])
                         {
                             <div class="mh-dashboard-release-row">
                                 <MudText Typo="Typo.subtitle2">@entry.Title</MudText>
@@ -156,14 +156,14 @@ else
             <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="warm" CornerIcon="@Icons.Material.Filled.StarRate">
                 <div class="mh-dashboard-tile">
                     <MudText Typo="Typo.overline">Rate completed manga</MudText>
-                    @if (pendingRatings.Count == 0)
+                    @if (dashboard?.PendingRatings.Count is not > 0)
                     {
                         <MudText Typo="Typo.h3">Your completed shelf is rated.</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Finish another story and it will appear here as a gentle reminder.</MudText>
                     }
                     else
                     {
-                        @foreach (var entry in pendingRatings.Take(2))
+                        @foreach (var entry in dashboard?.PendingRatings ?? [])
                         {
                             <div class="mh-dashboard-rating-row">
                                 @if (!string.IsNullOrWhiteSpace(entry.CoverUrl))
