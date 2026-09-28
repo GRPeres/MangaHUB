@@ -69,10 +69,10 @@ else if (overview is not null)
                             @foreach (var operation in OperationTypes) { <MudSelectItem Value="@operation.Type">@operation.Label</MudSelectItem> }
                         </MudSelect>
                         <MudSelect T="string" Label="Status" Dense="true" Variant="Variant.Outlined" Clearable="true" @bind-Value="historyStatus" @bind-Value:after="ReloadHistoryAsync">
-                            <MudSelectItem Value="completed">Completed</MudSelectItem><MudSelectItem Value="running">Running</MudSelectItem><MudSelectItem Value="queued">Queued</MudSelectItem><MudSelectItem Value="failed">Failed</MudSelectItem>
+                            <MudSelectItem Value="@("completed")">Completed</MudSelectItem><MudSelectItem Value="@("running")">Running</MudSelectItem><MudSelectItem Value="@("queued")">Queued</MudSelectItem><MudSelectItem Value="@("failed")">Failed</MudSelectItem>
                         </MudSelect>
                         <MudSelect T="string" Label="Started by" Dense="true" Variant="Variant.Outlined" Clearable="true" @bind-Value="historyTrigger" @bind-Value:after="ReloadHistoryAsync">
-                            <MudSelectItem Value="scheduled">Schedule</MudSelectItem><MudSelectItem Value="watchdog">Watchdog</MudSelectItem><MudSelectItem Value="manual">Manual</MudSelectItem>
+                            <MudSelectItem Value="@("scheduled")">Schedule</MudSelectItem><MudSelectItem Value="@("watchdog")">Watchdog</MudSelectItem><MudSelectItem Value="@("manual")">Manual</MudSelectItem>
                         </MudSelect>
                     </div>
                     @if (historyJobs.Count == 0)
