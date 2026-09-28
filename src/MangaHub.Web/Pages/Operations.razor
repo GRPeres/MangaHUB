@@ -22,14 +22,15 @@ else if (isLoading)
 }
 else if (overview is not null)
 {
-    <MudStack Spacing="3">
-        <AdminSectionNav />
-        <section class="mh-dashboard-header">
-            <MudStack Spacing="1"><MudText Typo="Typo.overline" Color="Color.Secondary">Admin maintenance</MudText><MudText Typo="Typo.h2">Operations</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Storage, source freshness, and worker requests in one place.</MudText></MudStack>
-            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">Refresh</MudButton>
-        </section>
+    <div class="mh-operations-page">
+        <MudStack Spacing="3">
+            <AdminSectionNav />
+            <section class="mh-dashboard-header">
+                <MudStack Spacing="1"><MudText Typo="Typo.overline" Color="Color.Secondary">Admin maintenance</MudText><MudText Typo="Typo.h2">Operations</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Storage, source freshness, and worker requests in one place.</MudText></MudStack>
+                <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">Refresh</MudButton>
+            </section>
 
-        <MangaBento Columns="4" Class="mh-operations-bento">
+            <MangaBento Columns="4" Class="mh-operations-bento">
             <MangaBentoTile Scheme="deep" CornerIcon="@Icons.Material.Filled.Inventory2" ItemClass="mh-operations-stat-item"><div class="mh-operation-stat"><MudText Typo="Typo.overline">Catalog</MudText><MudText Typo="Typo.h3">@overview.CatalogCount</MudText><MudText Typo="Typo.caption">@overview.MangaDexLinkedCount MangaDex-linked</MudText></div></MangaBentoTile>
             <MangaBentoTile Scheme="primary" CornerIcon="@Icons.Material.Filled.Storage" ItemClass="mh-operations-stat-item"><div class="mh-operation-stat"><MudText Typo="Typo.overline">Storage</MudText><MudText Typo="Typo.h3">@overview.CachedChapterCount</MudText><MudText Typo="Typo.caption">@FormatBytes(overview.CacheBytes) local</MudText></div></MangaBentoTile>
             <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.CloudSync" ItemClass="mh-operations-stat-item"><div class="mh-operation-stat"><MudText Typo="Typo.overline">MangaDex</MudText><MudText Typo="Typo.h3">@overview.StaleMangaDexCount</MudText><MudText Typo="Typo.caption">stale · @FormatDate(overview.LastMangaDexSyncAt)</MudText></div></MangaBentoTile>
@@ -93,8 +94,9 @@ else if (overview is not null)
                     }
                 </div>
             </MangaBentoTile>
-        </MangaBento>
-    </MudStack>
+            </MangaBento>
+        </MudStack>
+    </div>
 }
 
 @code {
