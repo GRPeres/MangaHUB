@@ -55,18 +55,11 @@
             </MudAlert>
         }
 
-        @if (isInitialLoading)
-        {
-            <MudStack Spacing="2" Class="mh-catalog-initial-loading">
-                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Loading the catalog...</MudText>
-            </MudStack>
-        }
-        else if (FilteredCatalog.Count == 0 && !hasMoreCatalog)
+        @if (!isInitialLoading && FilteredCatalog.Count == 0 && !hasMoreCatalog)
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No catalog entries matched this search.</MudAlert>
         }
-        else
+        else if (!isInitialLoading)
         {
             <MudStack Spacing="2">
                 @foreach (var item in FilteredCatalog)
