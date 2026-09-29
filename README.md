@@ -137,7 +137,7 @@ The TrueNAS deployment includes a `postgres-backup` sidecar that writes `pg_dump
 
 Backups are database-only. Manga files live separately in the NAS library mount.
 
-The backup sidecar keeps the seven newest dumps. It restores and validates each newly created dump in a temporary PostgreSQL database before writing a `.verified` marker beside it.
+The backup sidecar keeps the seven newest dumps. It restores each newly created dump in a temporary PostgreSQL database before writing a `.verified` marker beside it. It retries transient verification failures up to three times; `.inconclusive` means verification could not complete and does not mean the dump is corrupt. A `.failed` marker is written only after all restore attempts fail.
 
 ## Automated Updates
 

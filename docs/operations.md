@@ -35,9 +35,9 @@ The seven most recent dumps
 
 This backs up database data only. Manga files are expected to already live on the NAS storage.
 
-Every dump is validated immediately after it is written. The sidecar restores it into a temporary `mangahub_backup_verify` database, compares its schema and public-table row counts to the live database, then drops the temporary database. A successful validation writes a neighboring `.verified` marker. A `.failed` marker or `Backup verification warning` in the `postgres-backup` logs means the restored copy or its comparison needs attention; the dump itself is retained for investigation.
+Every dump is validated immediately after it is written by restoring it into a temporary `mangahub_backup_verify` database, then dropping that database. This validates the dump itself without comparing it to a live database that may be changing during verification. A successful validation writes a neighboring `.verified` marker.
 
-The row-count check is intentionally conservative: activity that writes to the live database while a backup is being made can produce a warning even if the restore itself succeeded. The restore, schema comparison, and backup file remain useful evidence in that case.
+The sidecar retries verification up to three times. A `.inconclusive` marker means the temporary verification environment was unavailable or interrupted; the dump is retained and is not classified as corrupt. A `.failed` marker is written only when all three full `pg_restore` attempts fail. Inconclusive and failed runs retain a neighboring `.verification.log` for diagnosis.
 
 ## Restore
 
