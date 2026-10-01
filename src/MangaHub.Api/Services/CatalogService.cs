@@ -18,8 +18,8 @@ public sealed class CatalogService(
 {
     private static readonly SemaphoreSlim CreateLock = new(1, 1);
 
-    public Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? query, string preferredLanguage, int offset, int limit, CancellationToken cancellationToken) =>
-        catalog.SearchAsync(userId, query, preferredLanguage, offset, limit, cancellationToken);
+    public Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? query, string preferredLanguage, int offset, int limit, bool readableOnly, CancellationToken cancellationToken) =>
+        catalog.SearchAsync(userId, query, preferredLanguage, offset, limit, readableOnly, cancellationToken);
 
     public async Task<CatalogMangaResponse> CreateAsync(Guid currentUserId, MangaEntryRequest entry, CancellationToken cancellationToken)
     {

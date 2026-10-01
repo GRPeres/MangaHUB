@@ -36,7 +36,7 @@ public sealed class CatalogRepository(MangaHubDbContext db)
     public Task<bool> IsInUserShelfAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken) =>
         db.UserMangaEntries.AnyAsync(x => x.UserId == userId && x.MangaEntryId == mangaEntryId, cancellationToken);
 
-    public async Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? queryText, string preferredLanguage, int offset, int limit, CancellationToken cancellationToken)
+    public async Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? queryText, string preferredLanguage, int offset, int limit, bool readableOnly, CancellationToken cancellationToken)
     {
         var languageCodes = LanguagePreferences.Parse(preferredLanguage).ToArray();
         var shelfIds = db.UserMangaEntries
@@ -47,6 +47,13 @@ public sealed class CatalogRepository(MangaHubDbContext db)
         if (!string.IsNullOrWhiteSpace(queryText))
         {
             query = query.Where(x => EF.Functions.ILike(x.Title, $"%{queryText}%") || EF.Functions.ILike(x.Authors, $"%{queryText}%"));
+        }
+
+        if (readableOnly)
+        {
+            query = query.Where(x => x.MangaDexId != ""
+                || x.FallbackReaderUrl.StartsWith("https://")
+                || x.FallbackReaderUrl.StartsWith("http://"));
         }
 
         return await query

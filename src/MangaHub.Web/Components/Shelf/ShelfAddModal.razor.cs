@@ -38,6 +38,7 @@ public partial class ShelfAddModal
     private string notes = "";
     private bool isSearchingCatalog;
     private bool isSaving;
+    private bool readableOnly = true;
     private bool wasOpen;
     private int catalogSearchVersion;
     private List<CatalogMangaResponse> AvailableCatalogResults => catalogResults
@@ -55,7 +56,7 @@ public partial class ShelfAddModal
 
         if (Open && catalogResults.Count == 0)
         {
-            catalogResults = await CatalogApi.GetCatalogAsync();
+            catalogResults = await CatalogApi.GetCatalogAsync(readableOnly: readableOnly);
         }
     }
 
@@ -67,7 +68,7 @@ public partial class ShelfAddModal
         catalogMessage = string.IsNullOrWhiteSpace(query) ? "Showing all catalog manga..." : "Searching catalog...";
         try
         {
-            var results = await CatalogApi.GetCatalogAsync(query);
+            var results = await CatalogApi.GetCatalogAsync(query, readableOnly: readableOnly);
             if (searchVersion != catalogSearchVersion)
             {
                 return;
@@ -143,7 +144,7 @@ public partial class ShelfAddModal
             var created = await ShelfApi.AddToShelfAsync(request);
             catalogSeverity = created is null ? Severity.Error : Severity.Success;
             catalogMessage = created is null ? "Could not add manga to your shelf." : $"Added {created.Title} to your shelf.";
-            catalogResults = await CatalogApi.GetCatalogAsync(catalogQuery);
+            catalogResults = await CatalogApi.GetCatalogAsync(catalogQuery, readableOnly: readableOnly);
             if (created is not null)
             {
                 Reset();
@@ -155,6 +156,12 @@ public partial class ShelfAddModal
         {
             isSaving = false;
         }
+    }
+
+    private async Task ChangeReadableFilter(bool value)
+    {
+        readableOnly = value;
+        await SearchCatalog(catalogQuery);
     }
 
     private async Task Close()
