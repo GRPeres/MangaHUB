@@ -4,13 +4,14 @@ namespace MangaHub.Web.API.Services;
 
 public sealed class CatalogApiService(ApiHttpClient api, AppRefreshService refreshes)
 {
-    public async Task<List<CatalogMangaResponse>> GetCatalogAsync(string? queryText = null, string? language = null, int offset = 0, int limit = 500)
+    public async Task<List<CatalogMangaResponse>> GetCatalogAsync(string? queryText = null, string? language = null, int offset = 0, int limit = 500, bool readableOnly = false)
     {
         var queryParts = new List<string>();
         if (!string.IsNullOrWhiteSpace(queryText)) queryParts.Add($"q={Uri.EscapeDataString(queryText)}");
         if (!string.IsNullOrWhiteSpace(language)) queryParts.Add($"language={Uri.EscapeDataString(language)}");
         queryParts.Add($"offset={Math.Max(offset, 0)}");
         queryParts.Add($"limit={Math.Clamp(limit, 1, 500)}");
+        if (readableOnly) queryParts.Add("readableOnly=true");
         var query = queryParts.Count == 0 ? "" : $"?{string.Join('&', queryParts)}";
         return await api.GetAsync<List<CatalogMangaResponse>>($"/api/catalog{query}") ?? [];
     }

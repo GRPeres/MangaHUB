@@ -25,6 +25,11 @@
                                       Disabled="@isSaving"
                                       OnSearch="SearchCatalog" />
 
+                <MudSelect T="bool" Value="@readableOnly" ValueChanged="ChangeReadableFilter" Label="Catalog availability" Dense="true" Variant="Variant.Outlined" Disabled="@isSaving">
+                    <MudSelectItem T="bool" Value="@true">Readable manga only</MudSelectItem>
+                    <MudSelectItem T="bool" Value="@false">All catalog manga</MudSelectItem>
+                </MudSelect>
+
                 @if (!string.IsNullOrWhiteSpace(catalogMessage))
                 {
                     <MudAlert Severity="@catalogSeverity" Variant="Variant.Outlined">@catalogMessage</MudAlert>

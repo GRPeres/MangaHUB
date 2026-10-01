@@ -7,7 +7,7 @@ description: Maintain MangaHub's Blazor PWA asset cache after a shipped UI chang
 
 Run this workflow for every UI or static-web change that will be deployed.
 
-1. From the repository root, run `scripts/bump-web-cache.ps1`.
+1. From the repository root, run `.codex/skills/mangahub-web-cache/scripts/bump-web-cache.ps1`.
 2. Confirm the script updated both stylesheet query strings in `src/MangaHub.Web/wwwroot/index.html`, the matching URLs in `src/MangaHub.Web/wwwroot/service-worker.js`, and the service-worker `CACHE_NAME`.
 3. Build `src/MangaHub.Web/MangaHub.Web.csproj` and inspect the diff.
 4. Do not bump versions for API-only, worker-only, database-only, or test-only changes.

@@ -8,26 +8,41 @@ public sealed class ChapterNumberComparer : IComparer<string>
 
     public int Compare(string? left, string? right)
     {
-        var leftParts = ParseParts(left);
-        var rightParts = ParseParts(right);
-
-        if (leftParts is null || rightParts is null)
+        if (!TryCompareNumericParts(left, right, out var comparison))
         {
+            var leftParts = ParseParts(left);
+            var rightParts = ParseParts(right);
             if (leftParts is not null) return -1;
             if (rightParts is not null) return 1;
             return string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
         }
 
-        for (var index = 0; index < Math.Min(leftParts.Length, rightParts.Length); index++)
+        return comparison != 0
+            ? comparison
+            : string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool HasSameNumericParts(string? left, string? right) =>
+        TryCompareNumericParts(left, right, out var comparison) && comparison == 0;
+
+    public static bool TryCompareNumericParts(string? left, string? right, out int comparison)
+    {
+        var leftParts = ParseParts(left);
+        var rightParts = ParseParts(right);
+        if (leftParts is null || rightParts is null)
         {
-            var comparison = leftParts[index].CompareTo(rightParts[index]);
-            if (comparison != 0) return comparison;
+            comparison = 0;
+            return false;
         }
 
-        var lengthComparison = leftParts.Length.CompareTo(rightParts.Length);
-        return lengthComparison != 0
-            ? lengthComparison
-            : string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
+        for (var index = 0; index < Math.Min(leftParts.Length, rightParts.Length); index++)
+        {
+            comparison = leftParts[index].CompareTo(rightParts[index]);
+            if (comparison != 0) return true;
+        }
+
+        comparison = leftParts.Length.CompareTo(rightParts.Length);
+        return true;
     }
 
     private static int[]? ParseParts(string? value)

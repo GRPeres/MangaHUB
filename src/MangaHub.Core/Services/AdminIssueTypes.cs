@@ -13,6 +13,8 @@ public static class AdminIssueTypes
     public const string MaintenanceTask = "maintenance-task";
     public const string MaintenanceOverdue = "maintenance-overdue";
     public const string ArchiveIntegrity = "archive-integrity";
+    public const string CatalogAddition = "catalog-addition";
+    public const string CatalogRegistrationFailure = "catalog-registration-failure";
 
     private static readonly IReadOnlyDictionary<string, AdminIssueTypeDefinition> Definitions =
         new Dictionary<string, AdminIssueTypeDefinition>(StringComparer.OrdinalIgnoreCase)
@@ -23,7 +25,8 @@ public static class AdminIssueTypes
             [CatalogMetadata] = new(CatalogMetadata, CatalogManga, "normal"),
             [DuplicateCatalogId] = new(DuplicateCatalogId, CatalogManga, "high"),
             [MaintenanceOverdue] = new(MaintenanceOverdue, MaintenanceTask, "high"),
-            [ArchiveIntegrity] = new(ArchiveIntegrity, MaintenanceTask, "high")
+            [ArchiveIntegrity] = new(ArchiveIntegrity, MaintenanceTask, "high"),
+            [CatalogRegistrationFailure] = new(CatalogRegistrationFailure, CatalogAddition, "normal")
         };
 
     public static bool TryGet(string kind, out AdminIssueTypeDefinition definition) =>
