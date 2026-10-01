@@ -136,6 +136,7 @@
                     }
                 </MudSelect>
                 <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="RemoveLanguageUnavailableFromShelf">Remove from shelf</MudButton>
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="CancelLanguageFallback">Stay in @LanguageLabel(PreferredLanguage)</MudButton>
                     @if (IsHttpUrl(languageFallbackExternalReaderUrl)) { <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="OpenExternalFallbackFromLanguageChoice">Read externally</MudButton> }
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ContinueInFallbackLanguage">Continue reading</MudButton>
@@ -781,6 +782,25 @@
         CancelLanguageFallback();
         await JS.InvokeVoidAsync("mangaHubExternalReader.open", url);
         try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId); } catch (HttpRequestException) { }
+    }
+
+    private async Task RemoveLanguageUnavailableFromShelf()
+    {
+        if (languageFallbackEntryId is not { } entryId)
+        {
+            return;
+        }
+
+        var title = entries.FirstOrDefault(entry => entry.Id == entryId)?.Title ?? "this manga";
+        CancelLanguageFallback();
+        if (!await ShelfApi.RemoveShelfAsync(entryId, IsAdmin ? selectedUserId : null))
+        {
+            Messages.Error("Could not remove this manga from your shelf.", "Shelf unavailable");
+            return;
+        }
+
+        await Load();
+        Messages.Info($"Removed {title} from your shelf. Its language-coverage issue remains open for repair.", "Removed from shelf");
     }
 
     private void CancelChapterMatch()
