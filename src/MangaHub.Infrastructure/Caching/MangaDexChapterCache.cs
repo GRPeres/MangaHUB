@@ -8,11 +8,18 @@ using Microsoft.Extensions.Options;
 
 namespace MangaHub.Infrastructure.Caching;
 
-public sealed class MangaDexChapterCache(
-    IHttpClientFactory httpClientFactory,
-    IOptions<MangaHubOptions> options) : IMangaDexChapterCache
+public sealed class MangaDexChapterCache : IMangaDexChapterCache
 {
+    private readonly IHttpClientFactory httpClientFactory;
+    private readonly IOptions<MangaHubOptions> options;
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> DownloadLocks = new(StringComparer.Ordinal);
+
+    public MangaDexChapterCache(IHttpClientFactory httpClientFactory, IOptions<MangaHubOptions> options)
+    {
+        this.httpClientFactory = httpClientFactory;
+        this.options = options;
+        EnsureSyncthingActiveCacheIgnoreRule();
+    }
 
     public async Task<MangaDexCachedChapter> EnsureCachedAsync(
         string mangaDexId,
@@ -22,6 +29,7 @@ public sealed class MangaDexChapterCache(
         IProgress<ReaderPreparationProgress>? progress = null,
         string imageQuality = "original")
     {
+        EnsureSyncthingActiveCacheIgnoreRule();
         var quality = NormalizeQuality(imageQuality);
         var (relativePath, activePath) = GetArchivePath(mangaDexId, chapterId, quality);
         var archivedPath = GetArchivedPath(mangaDexId, chapterId, quality);
@@ -149,7 +157,7 @@ public sealed class MangaDexChapterCache(
                 return false;
             }
 
-            EnsureSyncthingArchiveIgnoreRule();
+            EnsureSyncthingActiveCacheIgnoreRule();
             Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
             File.Move(activePath, archivePath, overwrite: true);
             return true;
@@ -298,20 +306,31 @@ public sealed class MangaDexChapterCache(
         return archivePath;
     }
 
-    private void EnsureSyncthingArchiveIgnoreRule()
+    private void EnsureSyncthingActiveCacheIgnoreRule()
     {
         var ignoreFile = Path.Combine(Path.GetFullPath(options.Value.MangaDexCachePath), ".stignore");
-        const string archiveRule = "/archive";
+        const string activeCacheRule = "/mangadex";
+        const string legacyArchiveRule = "/archive";
+        const string legacyComment = "// MangaHub archived CBZ files stay on the server.";
+        const string comment = "// MangaHub active cache is disposable; archive CBZ files are backed up by Syncthing.";
         try
         {
             var lines = File.Exists(ignoreFile) ? File.ReadAllLines(ignoreFile) : [];
-            if (lines.Any(line => string.Equals(line.Trim(), archiveRule, StringComparison.Ordinal)))
+            var retainedLines = lines
+                .Where(line => !string.Equals(line.Trim(), legacyArchiveRule, StringComparison.Ordinal)
+                    && !string.Equals(line.Trim(), legacyComment, StringComparison.Ordinal)
+                    && !string.Equals(line.Trim(), comment, StringComparison.Ordinal)
+                    && !string.Equals(line.Trim(), activeCacheRule, StringComparison.Ordinal))
+                .ToList();
+            retainedLines.Add(comment);
+            retainedLines.Add(activeCacheRule);
+
+            if (lines.SequenceEqual(retainedLines))
             {
                 return;
             }
 
-            File.AppendAllText(ignoreFile,
-                $"{(lines.Length == 0 ? "" : Environment.NewLine)}// MangaHub archived CBZ files stay on the server.{Environment.NewLine}{archiveRule}{Environment.NewLine}");
+            File.WriteAllLines(ignoreFile, retainedLines);
         }
         catch (IOException)
         {
