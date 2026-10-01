@@ -53,7 +53,7 @@ public sealed class CatalogServiceTests
             Request(metadataSource: "myanimelist", myAnimeListId: "2"),
             CancellationToken.None);
 
-        Assert.Equal("", created.MangaDexId);
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", created.MangaDexId);
         Assert.Contains(await db.MaintenanceJobs.ToListAsync(), job => job.Type == CatalogIdentityEnrichmentService.JobType && job.Status == "queued");
     }
 
@@ -162,6 +162,50 @@ public sealed class CatalogServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_RejectsAnExistingMyAnimeListIdBeforeMangaDexEnrichment()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+        await service.CreateAsync(Guid.NewGuid(), Request(title: "First", metadataSource: "myanimelist", myAnimeListId: "12345", mangaDexId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), CancellationToken.None);
+
+        var exception = await Assert.ThrowsAsync<CatalogDuplicateIdentityException>(() =>
+            service.CreateAsync(Guid.NewGuid(), Request(title: "Second", metadataSource: "myanimelist", myAnimeListId: "12345"), CancellationToken.None));
+
+        Assert.Contains("MyAnimeList", exception.Message);
+        Assert.Contains("First", exception.Message);
+        Assert.Equal(1, await db.MangaEntries.CountAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_DoesNotPersistMetadataSelectionWhenMangaDexCannotConfirmIt()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+
+        var exception = await Assert.ThrowsAsync<CatalogIdentityResolutionException>(() =>
+            service.CreateAsync(Guid.NewGuid(), Request(metadataSource: "myanimelist", myAnimeListId: "12345"), CancellationToken.None));
+
+        Assert.Contains("No catalog entry was created", exception.Message);
+        Assert.Empty(await db.MangaEntries.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_WaitsForMangaDexIdentityBeforeCheckingForDuplicates()
+    {
+        await using var db = TestDb.Create();
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.CatalogMatches.Add(new MangaDexCatalogMatch("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Berserk"));
+        var service = CreateService(db, new FakeOpenLibrary(null), mangaDex);
+        await service.CreateAsync(Guid.NewGuid(), Request(title: "Existing", mangaDexId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), CancellationToken.None);
+
+        var exception = await Assert.ThrowsAsync<CatalogDuplicateIdentityException>(() =>
+            service.CreateAsync(Guid.NewGuid(), Request(title: "Berserk", metadataSource: "myanimelist", myAnimeListId: "2"), CancellationToken.None));
+
+        Assert.Contains("MangaDex", exception.Message);
+        Assert.Equal(1, await db.MangaEntries.CountAsync());
+    }
+
+    [Fact]
     public async Task UpdateAsync_RejectsAnotherEntriesMangaUpdatesId()
     {
         await using var db = TestDb.Create();
@@ -219,7 +263,12 @@ public sealed class CatalogServiceTests
         var resolvedMangaDex = mangaDex ?? new FakeMangaDexSource();
         var resolvedMangaUpdates = mangaUpdates ?? new FakeMangaUpdatesClient();
         var catalog = new CatalogRepository(db);
-        return new CatalogService(catalog, openLibrary, CreateEnrichment(db, resolvedMangaDex, resolvedMangaUpdates));
+        return new CatalogService(
+            catalog,
+            openLibrary,
+            new MangaDexCatalogMatchService(resolvedMangaDex),
+            new MangaDexTitleMatchService([resolvedMangaDex]),
+            CreateEnrichment(db, resolvedMangaDex, resolvedMangaUpdates));
     }
 
     private static CatalogIdentityEnrichmentService CreateEnrichment(

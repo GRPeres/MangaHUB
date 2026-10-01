@@ -42,6 +42,10 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
         {
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "Duplicate catalog identity", detail: ex.Message);
         }
+        catch (CatalogIdentityResolutionException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "Catalog identity could not be confirmed", detail: ex.Message);
+        }
         catch (DbUpdateException ex)
         {
             logger.LogError(ex, "Catalog create failed while storing '{Title}' for {Username}.", request.Title, user.Username);
