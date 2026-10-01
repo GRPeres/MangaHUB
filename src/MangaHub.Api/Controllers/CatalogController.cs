@@ -40,10 +40,12 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
         }
         catch (CatalogDuplicateIdentityException ex)
         {
+            await catalog.ReportFailedCreateAsync(user.Id, request, ex.Message, cancellationToken);
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "Duplicate catalog identity", detail: ex.Message);
         }
         catch (CatalogIdentityResolutionException ex)
         {
+            await catalog.ReportFailedCreateAsync(user.Id, request, ex.Message, cancellationToken);
             return Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "Catalog identity could not be confirmed", detail: ex.Message);
         }
         catch (DbUpdateException ex)

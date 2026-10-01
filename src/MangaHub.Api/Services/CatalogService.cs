@@ -13,6 +13,7 @@ public sealed class CatalogService(
     MangaDexCatalogMatchService mangaDexMatches,
     MangaDexTitleMatchService mangaDexTitleMatches,
     CatalogIdentityEnrichmentService identityEnrichment,
+    AdminIssueRepository issues,
     UsageTrackingService? usage = null)
 {
     private static readonly SemaphoreSlim CreateLock = new(1, 1);
@@ -106,6 +107,41 @@ public sealed class CatalogService(
         if (usage is not null) await usage.TrackAsync(currentUserId, UsageEventTypes.CatalogUpdated, manga.Id, cancellationToken);
         var isInShelf = await catalog.IsInUserShelfAsync(currentUserId, manga.Id, cancellationToken);
         return ApiMapping.ToCatalogMangaResponse(manga, isInShelf);
+    }
+
+    public async Task ReportFailedCreateAsync(Guid currentUserId, MangaEntryRequest entry, string reason, CancellationToken cancellationToken)
+    {
+        var title = entry.Title.Trim();
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return;
+        }
+
+        var issue = new AdminIssue
+        {
+            Kind = AdminIssueTypes.CatalogRegistrationFailure,
+            SubjectType = AdminIssueTypes.CatalogAddition,
+            SubjectId = Guid.NewGuid(),
+            Priority = "normal",
+            TitleSnapshot = title,
+            MetadataJson = JsonSerializer.Serialize(new
+            {
+                entry.MetadataSource,
+                entry.MyAnimeListId,
+                mangaDexId = NormalizeMangaDexId(entry.MangaDexId),
+                entry.MangaUpdatesId,
+                failure = reason
+            })
+        };
+        issues.Add(issue);
+        issues.AddReport(new AdminIssueReport
+        {
+            AdminIssueId = issue.Id,
+            ReporterUserId = currentUserId,
+            Reason = "create-failed",
+            Note = reason[..Math.Min(reason.Length, 800)]
+        });
+        await issues.SaveChangesAsync(cancellationToken);
     }
 
     private static ReaderLinks ResolveReaderLinks(MangaEntryRequest entry)

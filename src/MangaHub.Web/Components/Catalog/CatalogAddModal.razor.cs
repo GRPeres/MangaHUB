@@ -1,6 +1,5 @@
 using MangaHub.Web.API.DTOs;
 using MangaHub.Web.API.Services;
-using MangaHub.Web.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
@@ -11,13 +10,13 @@ public partial class CatalogAddModal
 {
     [Inject] private CatalogApiService CatalogApi { get; set; } = default!;
     [Inject] private MetadataApiService MetadataApi { get; set; } = default!;
-    [Inject] private MessageService Messages { get; set; } = default!;
 
     [Parameter] public bool Open { get; set; }
     [Parameter] public EventCallback<bool> OpenChanged { get; set; }
     [Parameter] public CatalogMangaResponse? Entry { get; set; }
     [Parameter] public List<SeriesResponse> LocalSeries { get; set; } = [];
     [Parameter] public EventCallback<CatalogMangaResponse> OnSaved { get; set; }
+    [Parameter] public EventCallback<CatalogMangaResponse> OnCreatedInBackground { get; set; }
 
     private string title = "";
     private string authors = "";
@@ -218,16 +217,12 @@ public partial class CatalogAddModal
         }
 
         var request = BuildRequest();
-        var submittedTitle = title.Trim();
-
         if (!IsEditMode)
         {
             // Creation can wait on the rate-limited identity lookup without holding the form
             // hostage. The API still serializes and validates every create before it writes.
-            Reset();
             await OpenChanged.InvokeAsync(false);
-            Messages.Info($"Adding {submittedTitle}. MangaDex identity and duplicate checks are running in the background.", "Catalog add queued");
-            _ = CompleteBackgroundCreateAsync(request, submittedTitle);
+            _ = CompleteBackgroundCreateAsync(request);
             return;
         }
 
@@ -257,25 +252,20 @@ public partial class CatalogAddModal
         }
     }
 
-    private async Task CompleteBackgroundCreateAsync(MangaEntryRequest request, string submittedTitle)
+    private async Task CompleteBackgroundCreateAsync(MangaEntryRequest request)
     {
         try
         {
             var result = await CatalogApi.CreateCatalogMangaAsync(request);
             if (result.Value is { } saved)
             {
-                await OnSaved.InvokeAsync(saved);
-                Messages.Success($"Added {saved.Title}.", "Catalog add complete");
+                await OnCreatedInBackground.InvokeAsync(saved);
                 return;
             }
-
-            Messages.Error(
-                $"{submittedTitle} was not added ({result.StatusCode}): {result.Error}",
-                "Catalog add failed");
         }
         catch
         {
-            Messages.Error($"{submittedTitle} could not be added. Please try again.", "Catalog add failed");
+            // Expected registration failures are recorded by the API in Admin Issues.
         }
     }
 

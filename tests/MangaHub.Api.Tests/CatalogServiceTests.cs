@@ -254,6 +254,23 @@ public sealed class CatalogServiceTests
         Assert.Equal("hybrid", created.ReaderPreference);
     }
 
+    [Fact]
+    public async Task ReportFailedCreateAsync_CreatesAnIssueWithoutCreatingCatalogManga()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+        var userId = Guid.NewGuid();
+
+        await service.ReportFailedCreateAsync(userId, Request(title: "Unresolved manga", metadataSource: "myanimelist", myAnimeListId: "123"), "MangaDex could not confirm this metadata selection.", CancellationToken.None);
+
+        var issue = Assert.Single(await db.AdminIssues.ToListAsync());
+        Assert.Equal(AdminIssueTypes.CatalogRegistrationFailure, issue.Kind);
+        Assert.Equal("Unresolved manga", issue.TitleSnapshot);
+        Assert.Empty(await db.MangaEntries.ToListAsync());
+        var report = Assert.Single(await db.AdminIssueReports.ToListAsync());
+        Assert.Equal(userId, report.ReporterUserId);
+    }
+
     private static CatalogService CreateService(
         MangaHub.Infrastructure.Data.MangaHubDbContext db,
         IOpenLibraryClient openLibrary,
@@ -268,7 +285,8 @@ public sealed class CatalogServiceTests
             openLibrary,
             new MangaDexCatalogMatchService(resolvedMangaDex),
             new MangaDexTitleMatchService([resolvedMangaDex]),
-            CreateEnrichment(db, resolvedMangaDex, resolvedMangaUpdates));
+            CreateEnrichment(db, resolvedMangaDex, resolvedMangaUpdates),
+            new AdminIssueRepository(db));
     }
 
     private static CatalogIdentityEnrichmentService CreateEnrichment(

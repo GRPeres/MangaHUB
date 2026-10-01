@@ -81,7 +81,7 @@
     }
 </MudStack>
 
-<CatalogAddModal Open="@isCatalogModalOpen" OpenChanged="OnCatalogModalOpenChanged" Entry="@editingEntry" LocalSeries="@localSeries" OnSaved="OnCatalogSaved" />
+<CatalogAddModal Open="@isCatalogModalOpen" OpenChanged="OnCatalogModalOpenChanged" Entry="@editingEntry" LocalSeries="@localSeries" OnSaved="OnCatalogSaved" OnCreatedInBackground="OnCatalogCreatedInBackground" />
 <CatalogImportModal Open="@isImportCatalogOpen" OpenChanged="OnImportCatalogOpenChanged" OnImported="LoadCatalog" />
 <CatalogCacheModal Entry="@cacheEntry" Language="@selectedLanguage" OnClosed="CloseCache" OnChanged="LoadCatalog" />
 
@@ -401,6 +401,12 @@
     {
         messageSeverity = Severity.Success;
         message = $"Updated catalog metadata for {updated.Title}.";
+        await LoadCatalog();
+        Refreshes.Notify(AppRefreshScope.Catalog | AppRefreshScope.Shelf);
+    }
+
+    private async Task OnCatalogCreatedInBackground(CatalogMangaResponse created)
+    {
         await LoadCatalog();
         Refreshes.Notify(AppRefreshScope.Catalog | AppRefreshScope.Shelf);
     }
