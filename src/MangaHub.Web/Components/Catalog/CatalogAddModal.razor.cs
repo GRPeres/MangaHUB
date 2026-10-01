@@ -1,5 +1,6 @@
 using MangaHub.Web.API.DTOs;
 using MangaHub.Web.API.Services;
+using MangaHub.Web.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
@@ -10,6 +11,7 @@ public partial class CatalogAddModal
 {
     [Inject] private CatalogApiService CatalogApi { get; set; } = default!;
     [Inject] private MetadataApiService MetadataApi { get; set; } = default!;
+    [Inject] private MessageService Messages { get; set; } = default!;
 
     [Parameter] public bool Open { get; set; }
     [Parameter] public EventCallback<bool> OpenChanged { get; set; }
@@ -215,14 +217,26 @@ public partial class CatalogAddModal
             return;
         }
 
+        var request = BuildRequest();
+        var submittedTitle = title.Trim();
+
+        if (!IsEditMode)
+        {
+            // Creation can wait on the rate-limited identity lookup without holding the form
+            // hostage. The API still serializes and validates every create before it writes.
+            Reset();
+            await OpenChanged.InvokeAsync(false);
+            Messages.Info($"Adding {submittedTitle}. MangaDex identity and duplicate checks are running in the background.", "Catalog add queued");
+            _ = CompleteBackgroundCreateAsync(request, submittedTitle);
+            return;
+        }
+
         isSaving = true;
         messageSeverity = Severity.Info;
-        message = "Adding catalog manga...";
+        message = "Saving catalog manga...";
         try
         {
-            var result = IsEditMode
-                ? await CatalogApi.UpdateCatalogMangaAsync(Entry!.Id, BuildRequest())
-                : await CatalogApi.CreateCatalogMangaAsync(BuildRequest());
+            var result = await CatalogApi.UpdateCatalogMangaAsync(Entry!.Id, request);
             var saved = result.Value;
             if (saved is null)
             {
@@ -232,7 +246,7 @@ public partial class CatalogAddModal
             }
 
             messageSeverity = Severity.Success;
-            message = IsEditMode ? $"Saved {saved.Title}." : $"Added {saved.Title}.";
+            message = $"Saved {saved.Title}.";
             await OnSaved.InvokeAsync(saved);
             Reset();
             await OpenChanged.InvokeAsync(false);
@@ -240,6 +254,28 @@ public partial class CatalogAddModal
         finally
         {
             isSaving = false;
+        }
+    }
+
+    private async Task CompleteBackgroundCreateAsync(MangaEntryRequest request, string submittedTitle)
+    {
+        try
+        {
+            var result = await CatalogApi.CreateCatalogMangaAsync(request);
+            if (result.Value is { } saved)
+            {
+                await OnSaved.InvokeAsync(saved);
+                Messages.Success($"Added {saved.Title}.", "Catalog add complete");
+                return;
+            }
+
+            Messages.Error(
+                $"{submittedTitle} was not added ({result.StatusCode}): {result.Error}",
+                "Catalog add failed");
+        }
+        catch
+        {
+            Messages.Error($"{submittedTitle} could not be added. Please try again.", "Catalog add failed");
         }
     }
 
