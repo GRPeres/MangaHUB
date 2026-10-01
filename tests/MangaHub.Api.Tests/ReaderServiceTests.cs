@@ -717,6 +717,31 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenSubchapterHasTwoDigits_AdvancesToTheNextSubchapter()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Subdivision Test", MangaDexId = "subdivision-test-id" };
+        var series = new MangaSeries { Title = entry.Title, Source = "mangadex-cache", ExternalId = entry.MangaDexId };
+        var current = new MangaChapter { Series = series, SourceId = "chapter-17-10-en", ChapterNumber = "17.10", Language = "en", ImageQuality = "original", PageCount = 20 };
+        var earlier = new MangaChapter { Series = series, SourceId = "chapter-17-2-en", ChapterNumber = "17.2", Language = "en", ImageQuality = "original", PageCount = 20 };
+        var next = new MangaChapter { Series = series, SourceId = "chapter-17-11-en", ChapterNumber = "17.11", Language = "en", ImageQuality = "original", PageCount = 20 };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(series);
+        db.Chapters.AddRange(current, earlier, next);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "17.10", ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", new FakeMangaDexSource(), new FakeMangaDexChapterCache());
+
+        var launch = await service.PrepareMangaDexChapterAsync(userId, entry.Id, current.Id, null, CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Equal("17.11", launch.CurrentChapter);
+        Assert.Contains(next.Id.ToString(), launch.ReaderUrl);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_WhenNextChapterSkipsDecimalSuffix_RequiresJumpConfirmation()
     {
         await using var db = TestDb.Create();

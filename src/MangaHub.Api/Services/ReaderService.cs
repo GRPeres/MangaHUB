@@ -505,17 +505,10 @@ public sealed class ReaderService(
     private async Task<MangaSourceChapter?> FindNextMangaDexChapterAfterNumberAsync(string mangaDexId, string currentChapterNumber, string language, CancellationToken cancellationToken)
     {
         var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken);
-        var exactIndex = chapters.Select((chapter, index) => new { chapter, index })
-            .FirstOrDefault(item => string.Equals(item.chapter.Number, currentChapterNumber, StringComparison.OrdinalIgnoreCase))?.index;
-        if (exactIndex is not null)
-        {
-            return exactIndex.Value + 1 < chapters.Count ? chapters[exactIndex.Value + 1] : null;
-        }
-
-        var currentNumber = ParseChapterNumber(currentChapterNumber);
-        return currentNumber is null
-            ? null
-            : chapters.FirstOrDefault(chapter => ParseChapterNumber(chapter.Number) is { } chapterNumber && chapterNumber > currentNumber);
+        return chapters
+            .Where(chapter => IsLaterChapter(chapter.Number, currentChapterNumber))
+            .OrderBy(chapter => chapter.Number, ChapterNumberComparer.Instance)
+            .FirstOrDefault();
     }
 
     public async Task<string> MarkMangaDexUnavailableAsync(Guid userId, Guid entryId, CancellationToken cancellationToken)
@@ -566,15 +559,9 @@ public sealed class ReaderService(
 
     private async Task<List<string>> FindAvailableLanguagesAfterNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
     {
-        var currentNumber = ParseChapterNumber(currentChapterNumber);
-        if (currentNumber is null)
-        {
-            return [];
-        }
-
         return (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
             .Where(chapter => !LanguagePreferences.Contains(preferredLanguages, chapter.Language))
-            .Where(chapter => ParseChapterNumber(chapter.Number) is { } number && number > currentNumber)
+            .Where(chapter => IsLaterChapter(chapter.Number, currentChapterNumber))
             .Select(chapter => NormalizeLanguage(chapter.Language))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
@@ -584,15 +571,10 @@ public sealed class ReaderService(
     private async Task<MangaSourceChapter?> FindPreviousMangaDexChapterBeforeNumberAsync(string mangaDexId, string currentChapterNumber, string language, CancellationToken cancellationToken)
     {
         var chapters = await sources.Get("mangadex").GetChaptersAsync(mangaDexId, language, cancellationToken);
-        var currentNumber = ParseChapterNumber(currentChapterNumber);
-        return currentNumber is null
-            ? null
-            : chapters
-                .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
-                .Where(item => item.Number is not null && item.Number < currentNumber)
-                .OrderByDescending(item => item.Number)
-                .Select(item => item.Chapter)
-                .FirstOrDefault();
+        return chapters
+            .Where(chapter => IsEarlierChapter(chapter.Number, currentChapterNumber))
+            .OrderByDescending(chapter => chapter.Number, ChapterNumberComparer.Instance)
+            .FirstOrDefault();
     }
 
     private async Task<MangaSourceChapter?> FindPreviousMangaDexChapterBeforeNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
@@ -608,15 +590,9 @@ public sealed class ReaderService(
 
     private async Task<List<string>> FindAvailableLanguagesBeforeNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
     {
-        var currentNumber = ParseChapterNumber(currentChapterNumber);
-        if (currentNumber is null)
-        {
-            return [];
-        }
-
         return (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
             .Where(chapter => !LanguagePreferences.Contains(preferredLanguages, chapter.Language))
-            .Where(chapter => ParseChapterNumber(chapter.Number) is { } number && number < currentNumber)
+            .Where(chapter => IsEarlierChapter(chapter.Number, currentChapterNumber))
             .Select(chapter => NormalizeLanguage(chapter.Language))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
@@ -639,18 +615,11 @@ public sealed class ReaderService(
         IReadOnlyList<string> preferredLanguages,
         CancellationToken cancellationToken)
     {
-        var currentNumber = ParseChapterNumber(currentChapterNumber);
-        var proposedNumber = ParseChapterNumber(proposedChapterNumber);
-        if (currentNumber is null || proposedNumber is null)
-        {
-            return [];
-        }
-
         return (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
             .Where(chapter => !LanguagePreferences.Contains(preferredLanguages, chapter.Language))
-            .Select(chapter => new { Language = NormalizeLanguage(chapter.Language), Number = ParseChapterNumber(chapter.Number) })
-            .Where(item => item.Number is not null && item.Number > currentNumber && item.Number < proposedNumber)
-            .Select(item => item.Language)
+            .Where(chapter => IsLaterChapter(chapter.Number, currentChapterNumber)
+                && IsEarlierChapter(chapter.Number, proposedChapterNumber))
+            .Select(chapter => NormalizeLanguage(chapter.Language))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -766,10 +735,7 @@ public sealed class ReaderService(
         if (string.IsNullOrWhiteSpace(currentChapter))
         {
             return chapters
-                .Select((chapter, index) => new { Chapter = chapter, Index = index, Number = ParseChapterNumber(chapter.Number) })
-                .OrderBy(item => item.Number is null ? decimal.MaxValue : item.Number.Value)
-                .ThenBy(item => item.Index)
-                .Select(item => item.Chapter)
+                .OrderBy(chapter => chapter.Number, ChapterNumberComparer.Instance)
                 .FirstOrDefault();
         }
 
@@ -779,19 +745,22 @@ public sealed class ReaderService(
             return exact;
         }
 
-        var normalized = new string(currentChapter.Where(character => char.IsDigit(character) || character is '.' or ',').ToArray()).Replace(',', '.');
-        if (!decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var currentNumber))
+        if (!TryGetChapterParts(currentChapter, out _))
         {
             return null;
         }
 
-        var numberedChapters = chapters
-            .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.Number) })
-            .Where(item => item.Number is not null)
-            .ToList();
-        return numberedChapters.FirstOrDefault(item => item.Number == currentNumber)?.Chapter
-            ?? numberedChapters.Where(item => item.Number >= currentNumber).OrderBy(item => item.Number).FirstOrDefault()?.Chapter
-            ?? numberedChapters.OrderByDescending(item => item.Number).FirstOrDefault()?.Chapter;
+        var numericMatch = chapters.FirstOrDefault(chapter => ChapterNumberComparer.HasSameNumericParts(chapter.Number, currentChapter));
+        if (numericMatch is not null)
+        {
+            return numericMatch;
+        }
+
+        return chapters
+            .Where(chapter => IsSameOrLaterChapter(chapter.Number, currentChapter))
+            .OrderBy(chapter => chapter.Number, ChapterNumberComparer.Instance)
+            .FirstOrDefault()
+            ?? chapters.OrderByDescending(chapter => chapter.Number, ChapterNumberComparer.Instance).FirstOrDefault();
     }
 
     private static bool HasExactChapter(IReadOnlyList<MangaSourceChapter> chapters, string currentChapter) =>
@@ -799,28 +768,36 @@ public sealed class ReaderService(
 
     private static bool HasExactChapter(string chapterNumber, string currentChapter) =>
         string.Equals(chapterNumber, currentChapter, StringComparison.OrdinalIgnoreCase)
-        || (ParseChapterNumber(chapterNumber) is { } parsedChapter
-            && ParseChapterNumber(currentChapter) is { } parsedCurrent
-            && parsedChapter == parsedCurrent);
+        || ChapterNumberComparer.HasSameNumericParts(chapterNumber, currentChapter);
 
     private static bool HasZeroBasedSeriesStart(IReadOnlyList<MangaSourceChapter> chapters) =>
         chapters.Any(chapter => HasExactChapter(chapter.Number, "0"));
 
-    private static bool IsChapterJump(string currentChapter, string nextChapter) =>
-        ParseChapterNumber(currentChapter) is { } current
-        && ParseChapterNumber(nextChapter) is { } next
-        && next - current > 1m
-        && !IsImmediateDecimalFollowUp(current, next);
+    private static bool IsChapterJump(string currentChapter, string nextChapter)
+    {
+        if (!TryGetChapterParts(currentChapter, out var currentParts)
+            || !TryGetChapterParts(nextChapter, out var nextParts)
+            || nextParts[0] <= currentParts[0])
+        {
+            return false;
+        }
 
-    private static bool IsImmediateDecimalFollowUp(decimal current, decimal next) =>
-        current == decimal.Truncate(current)
-        && decimal.Truncate(next) == current + 1m
-        && next == decimal.Truncate(next) + .1m;
+        var baseGap = nextParts[0] - currentParts[0];
+        if (baseGap > 1)
+        {
+            return true;
+        }
+
+        // A normal chapter can be followed by the first subchapter of the next one
+        // (for example 1 -> 2.1). Later subdivisions imply a missing 2.1.
+        return currentParts.Length == 1
+            && nextParts.Length > 1
+            && nextParts[1] > 1;
+    }
 
     private static MangaChapter? FindAdjacentCachedChapter(MangaSeries? cachedSeries, string currentChapter, IReadOnlyList<string> preferredLanguages, bool next, string imageQuality)
     {
-        var currentNumber = ParseChapterNumber(currentChapter);
-        if (cachedSeries is null || currentNumber is null)
+        if (cachedSeries is null)
         {
             return null;
         }
@@ -828,12 +805,13 @@ public sealed class ReaderService(
         var candidates = cachedSeries.Chapters
             .Where(chapter => string.Equals(chapter.ImageQuality, imageQuality, StringComparison.OrdinalIgnoreCase))
             .Where(chapter => LanguagePreferences.Contains(preferredLanguages, chapter.Language))
-            .Select(chapter => new { Chapter = chapter, Number = ParseChapterNumber(chapter.ChapterNumber) })
-            .Where(item => item.Number is not null && (next ? item.Number > currentNumber : item.Number < currentNumber));
+            .Where(chapter => next
+                ? IsLaterChapter(chapter.ChapterNumber, currentChapter)
+                : IsEarlierChapter(chapter.ChapterNumber, currentChapter));
 
         return next
-            ? candidates.OrderBy(item => item.Number).ThenBy(item => LanguagePreferences.IndexOf(preferredLanguages, item.Chapter.Language)).Select(item => item.Chapter).FirstOrDefault()
-            : candidates.OrderByDescending(item => item.Number).ThenBy(item => LanguagePreferences.IndexOf(preferredLanguages, item.Chapter.Language)).Select(item => item.Chapter).FirstOrDefault();
+            ? candidates.OrderBy(chapter => chapter.ChapterNumber, ChapterNumberComparer.Instance).ThenBy(chapter => LanguagePreferences.IndexOf(preferredLanguages, chapter.Language)).FirstOrDefault()
+            : candidates.OrderByDescending(chapter => chapter.ChapterNumber, ChapterNumberComparer.Instance).ThenBy(chapter => LanguagePreferences.IndexOf(preferredLanguages, chapter.Language)).FirstOrDefault();
     }
 
     private static MangaChapter? FindCachedChapterForRemoteMiss(
@@ -869,9 +847,33 @@ public sealed class ReaderService(
 
         return candidates
             .OrderBy(chapter => LanguagePreferences.IndexOf(preferredLanguages, chapter.Language))
-            .ThenBy(chapter => ParseChapterNumber(chapter.ChapterNumber))
+            .ThenBy(chapter => chapter.ChapterNumber, ChapterNumberComparer.Instance)
             .ThenBy(chapter => chapter.CreatedAt)
             .FirstOrDefault();
+    }
+
+    private static bool IsLaterChapter(string candidate, string reference) =>
+        ChapterNumberComparer.TryCompareNumericParts(candidate, reference, out var comparison) && comparison > 0;
+
+    private static bool IsEarlierChapter(string candidate, string reference) =>
+        ChapterNumberComparer.TryCompareNumericParts(candidate, reference, out var comparison) && comparison < 0;
+
+    private static bool IsSameOrLaterChapter(string candidate, string reference) =>
+        ChapterNumberComparer.TryCompareNumericParts(candidate, reference, out var comparison) && comparison >= 0;
+
+    private static bool TryGetChapterParts(string value, out int[] parts)
+    {
+        var numeric = new string((value ?? "")
+            .SkipWhile(character => !char.IsDigit(character))
+            .TakeWhile(character => char.IsDigit(character) || character is '.' or ',')
+            .ToArray());
+
+        parts = numeric
+            .Replace(',', '.')
+            .Split('.', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number : -1)
+            .ToArray();
+        return parts.Length > 0 && parts.All(part => part >= 0);
     }
 
     private static decimal? ParseChapterNumber(string value)
