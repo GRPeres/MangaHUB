@@ -119,6 +119,7 @@ app.UseForwardedHeaders(forwardedHeaders);
 using (var scope = app.Services.CreateScope())
 {
     await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().InitializeAsync();
+    _ = scope.ServiceProvider.GetRequiredService<IMangaDexChapterCache>();
 }
 
 if (app.Environment.IsDevelopment())
