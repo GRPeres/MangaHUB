@@ -46,6 +46,7 @@ public partial class CatalogAddModal
     private bool isLoadingMangaUpdatesMetadata;
     private bool isSaving;
     private int metadataSearchVersion;
+    private int metadataSelectionVersion;
     private List<MetadataResult> metadataResults = [];
     private Guid? loadedEntryId;
     private bool wasOpen;
@@ -121,6 +122,7 @@ public partial class CatalogAddModal
 
     private async Task ApplyMetadata(MetadataResult item)
     {
+        var selectionVersion = ++metadataSelectionVersion;
         title = item.Title;
         authors = item.Authors;
         category = item.Category;
@@ -134,23 +136,18 @@ public partial class CatalogAddModal
         publishingStatus = item.PublishingStatus;
         chapterCount = item.ChapterCount;
         volumeCount = item.VolumeCount;
-        if (string.Equals(item.Source, "mangadex", StringComparison.OrdinalIgnoreCase))
-        {
-            mangaDexId = item.SourceId;
-        }
-        else if (string.Equals(item.Source, "mangaupdates", StringComparison.OrdinalIgnoreCase))
-        {
-            mangaUpdatesId = item.SourceId;
-        }
+        // A selected suggestion represents a different catalog candidate. Do not retain
+        // source IDs from the previous candidate while its follow-up lookups complete.
+        mangaDexId = string.Equals(item.Source, "mangadex", StringComparison.OrdinalIgnoreCase) ? item.SourceId : "";
+        mangaUpdatesId = string.Equals(item.Source, "mangaupdates", StringComparison.OrdinalIgnoreCase) ? item.SourceId : "";
         metadataResults = [];
         metadataMessage = "";
         if (string.IsNullOrWhiteSpace(mangaUpdatesId))
         {
-            await MatchMangaUpdatesAsync();
+            await MatchMangaUpdatesAsync(selectionVersion);
         }
-        if (!string.Equals(item.Source, "myanimelist", StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrWhiteSpace(item.MyAnimeListId)
-            || !string.IsNullOrWhiteSpace(mangaDexId))
+
+        if (!string.IsNullOrWhiteSpace(mangaDexId) || selectionVersion != metadataSelectionVersion)
         {
             messageSeverity = Severity.Success;
             message = $"Filled the form from {item.Title}.";
@@ -162,7 +159,15 @@ public partial class CatalogAddModal
         message = "Looking for the matching MangaDex title...";
         try
         {
-            var match = await MetadataApi.FindMangaDexMatchAsync(item.MyAnimeListId, item.Title);
+            var match = string.Equals(item.Source, "myanimelist", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(item.MyAnimeListId)
+                ? await MetadataApi.FindMangaDexMatchAsync(item.MyAnimeListId, item.Title)
+                : await MetadataApi.FindMangaDexTitleMatchAsync(item.Title);
+            if (selectionVersion != metadataSelectionVersion)
+            {
+                return;
+            }
+
             if (match is null)
             {
                 messageSeverity = Severity.Success;
@@ -181,7 +186,10 @@ public partial class CatalogAddModal
         }
         finally
         {
-            isMatchingMangaDex = false;
+            if (selectionVersion == metadataSelectionVersion)
+            {
+                isMatchingMangaDex = false;
+            }
         }
     }
 
@@ -295,6 +303,7 @@ public partial class CatalogAddModal
         message = "";
         metadataMessage = "";
         metadataSearchVersion++;
+        metadataSelectionVersion++;
         isMatchingMangaDex = false;
         isSaving = false;
         metadataResults = [];
@@ -326,14 +335,15 @@ public partial class CatalogAddModal
         metadataMessage = "";
         metadataResults = [];
         metadataSearchVersion++;
+        metadataSelectionVersion++;
     }
 
-    private async Task MatchMangaUpdatesAsync()
+    private async Task MatchMangaUpdatesAsync(int? selectionVersion = null)
     {
         try
         {
             var match = await MetadataApi.FindMangaUpdatesMatchAsync(title, mediaType, firstPublishYear);
-            if (match is not null)
+            if (match is not null && (!selectionVersion.HasValue || selectionVersion == metadataSelectionVersion))
             {
                 mangaUpdatesId = match.Id;
                 messageSeverity = Severity.Success;
@@ -447,14 +457,14 @@ public partial class CatalogAddModal
         volumeCount ??= item.VolumeCount;
     }
 
-    private async Task MatchMangaDexByTitleAsync()
+    private async Task MatchMangaDexByTitleAsync(int? selectionVersion = null)
     {
         if (string.IsNullOrWhiteSpace(title)) return;
 
         try
         {
             var match = await MetadataApi.FindMangaDexTitleMatchAsync(title);
-            if (match is not null)
+            if (match is not null && (!selectionVersion.HasValue || selectionVersion == metadataSelectionVersion))
             {
                 mangaDexId = match.Id;
             }
