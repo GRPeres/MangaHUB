@@ -4,6 +4,9 @@ namespace MangaHub.Core.Services;
 
 public static class MangaDexCacheRetentionPolicy
 {
+    public static bool ShouldQueueContinuation(bool batchLimitReached, int archivedCount) =>
+        batchLimitReached && archivedCount > 0;
+
     public static bool ShouldRetain(string sourceId, string chapterNumber, decimal? earliestActiveChapter)
         => ShouldRetain(sourceId, chapterNumber, earliestActiveChapter, null, DateTimeOffset.UtcNow, 0);
 

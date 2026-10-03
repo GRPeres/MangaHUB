@@ -4,6 +4,15 @@ namespace MangaHub.Core.Tests;
 
 public sealed class MangaDexCacheRetentionPolicyTests
 {
+    [Theory]
+    [InlineData(false, 3, false)]
+    [InlineData(true, 0, false)]
+    [InlineData(true, 1, true)]
+    public void ContinuationRequiresABatchLimitAndActualArchiveProgress(bool batchLimitReached, int archivedCount, bool expected)
+    {
+        Assert.Equal(expected, MangaDexCacheRetentionPolicy.ShouldQueueContinuation(batchLimitReached, archivedCount));
+    }
+
     [Fact]
     public void ShouldRetain_KeepsManualImportsRegardlessOfReaderProgress()
     {

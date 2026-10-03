@@ -453,7 +453,10 @@ public sealed class RemoteMaintenanceService(
             var batchSize = Math.Clamp(options.Value.MangaDexCacheRetentionBatchSize, 1, 100);
             var archived = 0;
             var considered = 0;
+            var alreadyArchived = 0;
+            var failed = 0;
             var batchLimitReached = false;
+            var cacheRoot = Path.GetFullPath(options.Value.MangaDexCachePath);
 
             foreach (var cached in cachedSeries)
             {
@@ -482,9 +485,17 @@ public sealed class RemoteMaintenanceService(
                         continue;
                     }
 
-                    considered++;
-
                     var dataSaver = chapterGroup.FirstOrDefault(item => string.Equals(item.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase));
+                    var archivedDataSaverPath = Path.Combine(cacheRoot, "archive", "mangadex", "data-saver", cached.ExternalId, $"{chapter.SourceId}.cbz");
+                    if (dataSaver is not null && File.Exists(archivedDataSaverPath))
+                    {
+                        // The persisted data-saver row intentionally remains after archival.
+                        // It is not pending cleanup work and must not trigger another batch.
+                        alreadyArchived++;
+                        continue;
+                    }
+
+                    considered++;
                     if (dataSaver is null)
                     {
                         MangaDexCachedChapter archive;
@@ -503,6 +514,7 @@ public sealed class RemoteMaintenanceService(
                             catch (Exception fallbackException) when (fallbackException is not OperationCanceledException)
                             {
                                 logger.LogWarning(fallbackException, "Could not create a local Data Saver archive fallback for {MangaDexId} chapter {ChapterId}; preserving the active original.", cached.ExternalId, chapter.SourceId);
+                                failed++;
                                 continue;
                             }
                         }
@@ -524,6 +536,7 @@ public sealed class RemoteMaintenanceService(
 
                     if (!await cache.ArchiveAsync(cached.ExternalId, chapter.SourceId, cancellationToken, "data-saver"))
                     {
+                        failed++;
                         continue;
                     }
 
@@ -543,12 +556,14 @@ public sealed class RemoteMaintenanceService(
             }
 
             logger.LogInformation(
-                "MangaDex cache retention archived {ArchivedCount} of {ConsideredCount} considered chapters (batch limit {BatchSize}, more work pending: {BatchLimitReached}); active readers retain chapters from their earliest current chapter onward.",
+                "MangaDex cache retention archived {ArchivedCount} of {ConsideredCount} considered chapters, skipped {AlreadyArchivedCount} already archived chapters, and could not archive {FailedCount} chapters (batch limit {BatchSize}, more work pending: {BatchLimitReached}); active readers retain chapters from their earliest current chapter onward.",
                 archived,
                 considered,
+                alreadyArchived,
+                failed,
                 batchSize,
                 batchLimitReached);
-            return batchLimitReached;
+            return MangaDexCacheRetentionPolicy.ShouldQueueContinuation(batchLimitReached, archived);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
