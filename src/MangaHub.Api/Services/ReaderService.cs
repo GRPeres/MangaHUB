@@ -106,18 +106,18 @@ public sealed class ReaderService(
             cachedChapter = FindAdjacentCachedChapter(cachedSeries, current.ChapterNumber, preferredLanguages, afterCachedChapterId is not null, quality);
             if (cachedChapter is not null
                 && afterCachedChapterId is not null
-                && !allowChapterJump
                 && IsChapterJump(current.ChapterNumber, cachedChapter.ChapterNumber))
             {
-                throw new MangaDexChapterJumpConfirmationRequiredException(
-                    current.ChapterNumber,
-                    cachedChapter.ChapterNumber,
-                    NormalizeLanguage(cachedChapter.Language),
-                    []);
+                var remoteCandidate = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguages, cancellationToken);
+                if (remoteCandidate is not null && ShouldPreferRemoteCandidate(remoteCandidate, cachedChapter, preferredLanguages))
+                {
+                    sourceChapter = remoteCandidate;
+                    cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id && chapter.ImageQuality == quality);
+                }
             }
             if (cachedChapter is null)
             {
-                sourceChapter = afterCachedChapterId is not null
+                sourceChapter ??= afterCachedChapterId is not null
                     ? await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguages, cancellationToken)
                     : await FindPreviousMangaDexChapterBeforeNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguages, cancellationToken);
                 if (sourceChapter is null)
@@ -139,18 +139,19 @@ public sealed class ReaderService(
                     return null;
                 }
 
-                if (afterCachedChapterId is not null
-                    && !allowChapterJump
-                    && IsChapterJump(current.ChapterNumber, sourceChapter.Number))
-                {
-                    throw new MangaDexChapterJumpConfirmationRequiredException(
-                        current.ChapterNumber,
-                        sourceChapter.Number,
-                        NormalizeLanguage(sourceChapter.Language),
-                        await FindCloserNextChapterLanguagesAsync(mangaDexId, current.ChapterNumber, sourceChapter.Number, preferredLanguages, cancellationToken));
-                }
-
                 cachedChapter = cachedSeries?.Chapters.FirstOrDefault(chapter => chapter.SourceId == sourceChapter.Id && chapter.ImageQuality == quality);
+            }
+            if (afterCachedChapterId is not null
+                && !allowChapterJump
+                && IsChapterJump(current.ChapterNumber, sourceChapter?.Number ?? cachedChapter?.ChapterNumber ?? ""))
+            {
+                var nextChapter = sourceChapter?.Number ?? cachedChapter!.ChapterNumber;
+                var nextLanguage = sourceChapter?.Language ?? cachedChapter!.Language;
+                throw new MangaDexChapterJumpConfirmationRequiredException(
+                    current.ChapterNumber,
+                    nextChapter,
+                    NormalizeLanguage(nextLanguage),
+                    await FindCloserNextChapterLanguagesAsync(mangaDexId, current.ChapterNumber, nextChapter, preferredLanguages, cancellationToken));
             }
         }
         else if (shelfEntry.IsRead && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter))
@@ -564,6 +565,14 @@ public sealed class ReaderService(
             .ThenBy(candidate => candidate.LanguagePriority)
             .Select(candidate => candidate.Chapter)
             .FirstOrDefault();
+    }
+
+    private static bool ShouldPreferRemoteCandidate(MangaSourceChapter remoteCandidate, MangaChapter cachedCandidate, IReadOnlyList<string> preferredLanguages)
+    {
+        var chapterComparison = ChapterNumberComparer.Instance.Compare(remoteCandidate.Number, cachedCandidate.ChapterNumber);
+        return chapterComparison < 0
+            || (chapterComparison == 0
+                && LanguagePreferences.IndexOf(preferredLanguages, remoteCandidate.Language) < LanguagePreferences.IndexOf(preferredLanguages, cachedCandidate.Language));
     }
 
     private async Task<List<string>> FindAvailableLanguagesAfterNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
