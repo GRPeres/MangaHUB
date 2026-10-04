@@ -803,9 +803,10 @@ public sealed class ReaderServiceTests
         var entry = new MangaEntry { Title = "Preferred Language Gap", MangaDexId = "preferred-language-gap-id" };
         var series = new MangaSeries { Title = "Preferred Language Gap", Source = "mangadex-cache", ExternalId = "preferred-language-gap-id" };
         var cachedChapter = new MangaChapter { Series = series, SourceId = "chapter-1-en", ChapterNumber = "1", Language = "en", PageCount = 20 };
+        var cachedEnglishJump = new MangaChapter { Series = series, SourceId = "chapter-16-en", ChapterNumber = "16", Language = "en", PageCount = 20 };
         db.MangaEntries.Add(entry);
         db.Series.Add(series);
-        db.Chapters.Add(cachedChapter);
+        db.Chapters.AddRange(cachedChapter, cachedEnglishJump);
         db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "1", ReadingStatus = "reading" });
         await db.SaveChangesAsync();
 
