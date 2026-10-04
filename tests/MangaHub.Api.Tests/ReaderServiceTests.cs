@@ -796,7 +796,7 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
-    public async Task PrepareMangaDexChapterAsync_WhenPreferredLanguageHasCloserChapter_OffersItInJumpChoices()
+    public async Task PrepareMangaDexChapterAsync_WhenPreferredLanguageHasCloserChapter_UsesItBeforeAFurtherPreferredLanguage()
     {
         await using var db = TestDb.Create();
         var userId = Guid.NewGuid();
@@ -816,19 +816,19 @@ public sealed class ReaderServiceTests
         ]);
         var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
 
-        var exception = await Assert.ThrowsAsync<ReaderService.MangaDexChapterJumpConfirmationRequiredException>(
-            () => service.PrepareMangaDexChapterAsync(
-                userId,
-                entry.Id,
-                cachedChapter.Id,
-                null,
-                "en,pt-br",
-                allowLanguageFallback: false,
-                allowChapterJump: false,
-                cancellationToken: CancellationToken.None));
+        var launch = await service.PrepareMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            cachedChapter.Id,
+            null,
+            "en,pt-br",
+            allowLanguageFallback: false,
+            allowChapterJump: false,
+            cancellationToken: CancellationToken.None);
 
-        Assert.Equal("16", exception.ChapterJump.NextChapter);
-        Assert.Equal(["pt-br"], exception.ChapterJump.AlternativeLanguages);
+        Assert.NotNull(launch);
+        Assert.Equal("2", launch.CurrentChapter);
+        Assert.Contains("language=pt-br", launch.ReaderUrl);
     }
 
     [Fact]

@@ -548,13 +548,22 @@ public sealed class ReaderService(
 
     private async Task<MangaSourceChapter?> FindNextMangaDexChapterAfterNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
     {
-        foreach (var language in preferredLanguages)
+        var candidates = new List<(MangaSourceChapter Chapter, int LanguagePriority)>();
+        for (var index = 0; index < preferredLanguages.Count; index++)
         {
+            var language = preferredLanguages[index];
             var chapter = await FindNextMangaDexChapterAfterNumberAsync(mangaDexId, currentChapterNumber, language, cancellationToken);
-            if (chapter is not null) return chapter;
+            if (chapter is not null)
+            {
+                candidates.Add((chapter, index));
+            }
         }
 
-        return null;
+        return candidates
+            .OrderBy(candidate => candidate.Chapter.Number, ChapterNumberComparer.Instance)
+            .ThenBy(candidate => candidate.LanguagePriority)
+            .Select(candidate => candidate.Chapter)
+            .FirstOrDefault();
     }
 
     private async Task<List<string>> FindAvailableLanguagesAfterNumberAsync(string mangaDexId, string currentChapterNumber, IReadOnlyList<string> preferredLanguages, CancellationToken cancellationToken)
