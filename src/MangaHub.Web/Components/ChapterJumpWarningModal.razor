@@ -1,3 +1,5 @@
+@using System.Globalization
+
 @if (Open)
 {
     <div class="mh-modal-backdrop mh-reader-dialog-backdrop">
@@ -12,7 +14,7 @@
                     <MudSelect T="string" @bind-Value="selectedLanguage" Label="A closer chapter may be available in" Variant="Variant.Outlined">
                         @foreach (var language in AlternativeLanguages)
                         {
-                            <MudSelectItem T="string" Value="@language">@language</MudSelectItem>
+                            <MudSelectItem T="string" Value="@language">@LanguageLabel(language)</MudSelectItem>
                         }
                     </MudSelect>
                 }
@@ -21,7 +23,7 @@
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="OnCancel">Stay on chapter @CurrentChapter</MudButton>
                     @if (!string.IsNullOrWhiteSpace(selectedLanguage))
                     {
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ReadAlternative">Try @selectedLanguage</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ReadAlternative">Try @LanguageLabel(selectedLanguage)</MudButton>
                     }
                     <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="OnConfirm">Continue to chapter @NextChapter</MudButton>
                 </MudStack>
@@ -51,4 +53,39 @@
     }
 
     private Task ReadAlternative() => OnReadAlternative.InvokeAsync(selectedLanguage);
+
+    private static string LanguageLabel(string code)
+    {
+        var normalized = (code ?? "").Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "en" => "English",
+            "pt-br" => "Portuguese (Brazil)",
+            "pt" => "Portuguese",
+            "es" => "Spanish",
+            "fr" => "French",
+            "de" => "German",
+            "it" => "Italian",
+            "ja" => "Japanese",
+            "ko" => "Korean",
+            "zh" => "Chinese",
+            "zh-hk" => "Chinese (Hong Kong)",
+            "zh-ro" => "Chinese (Romanized)",
+            "ja-ro" => "Japanese (Romanized)",
+            "ko-ro" => "Korean (Romanized)",
+            _ => TryGetCultureName(normalized) ?? code ?? ""
+        };
+    }
+
+    private static string? TryGetCultureName(string code)
+    {
+        try
+        {
+            return CultureInfo.GetCultureInfo(code).EnglishName;
+        }
+        catch (CultureNotFoundException)
+        {
+            return null;
+        }
+    }
 }

@@ -616,12 +616,12 @@ public sealed class ReaderService(
         CancellationToken cancellationToken)
     {
         return (await sources.Get("mangadex").GetChaptersAsync(mangaDexId, null, cancellationToken))
-            .Where(chapter => !LanguagePreferences.Contains(preferredLanguages, chapter.Language))
             .Where(chapter => IsLaterChapter(chapter.Number, currentChapterNumber)
                 && IsEarlierChapter(chapter.Number, proposedChapterNumber))
             .Select(chapter => NormalizeLanguage(chapter.Language))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(language => LanguagePreferences.IndexOf(preferredLanguages, language))
+            .ThenBy(language => language, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
