@@ -796,6 +796,42 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenPreferredLanguageHasCloserChapter_UsesItBeforeAFurtherPreferredLanguage()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Preferred Language Gap", MangaDexId = "preferred-language-gap-id" };
+        var series = new MangaSeries { Title = "Preferred Language Gap", Source = "mangadex-cache", ExternalId = "preferred-language-gap-id" };
+        var cachedChapter = new MangaChapter { Series = series, SourceId = "chapter-1-en", ChapterNumber = "1", Language = "en", PageCount = 20 };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(series);
+        db.Chapters.Add(cachedChapter);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "1", ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.AddRange([
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-16-en", "16", "", 20, "en"),
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-2-pt", "2", "", 20, "pt-br")
+        ]);
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var launch = await service.PrepareMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            cachedChapter.Id,
+            null,
+            "en,pt-br",
+            allowLanguageFallback: false,
+            allowChapterJump: false,
+            cancellationToken: CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Equal("2", launch.CurrentChapter);
+        Assert.Contains("language=pt-br", launch.ReaderUrl);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_AcceptingLanguageFallbackStillRequiresChapterJumpConfirmation()
     {
         await using var db = TestDb.Create();

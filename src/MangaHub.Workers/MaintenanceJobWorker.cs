@@ -119,11 +119,28 @@ public sealed class MaintenanceJobWorker(
             && result.ShouldContinue
             && string.Equals(claim.Type, "mangadex-cache-cleanup", StringComparison.Ordinal))
         {
+            var continuationCutoff = DateTimeOffset.UtcNow.AddHours(-24);
+            var continuationLimit = Math.Clamp(options.Value.MangaDexCacheRetentionMaxContinuationBatches, 1, 100);
+            var continuationCount = await db.MaintenanceJobs.CountAsync(item =>
+                item.Type == claim.Type
+                && item.Trigger == "continuation"
+                && item.RequestedAt >= continuationCutoff,
+                CancellationToken.None);
             var continuationAlreadyQueued = await db.MaintenanceJobs.AnyAsync(item =>
                 item.Id != claim.Id
                 && item.Type == claim.Type
                 && (item.Status == "queued" || item.Status == "running"), CancellationToken.None);
-            if (!continuationAlreadyQueued)
+            if (continuationAlreadyQueued)
+            {
+                logger.LogInformation("Cache cleanup batch {JobId} yielded while another cleanup is pending; no duplicate continuation was queued.", claim.Id);
+            }
+            else if (continuationCount >= continuationLimit)
+            {
+                error = $"Stopped after {continuationLimit} cleanup continuations in 24 hours. The next daily maintenance run will resume remaining work.";
+                job.Error = error;
+                logger.LogWarning("Cache cleanup batch {JobId} reached its 24-hour continuation cap of {ContinuationLimit}.", claim.Id, continuationLimit);
+            }
+            else
             {
                 db.MaintenanceJobs.Add(new MaintenanceJob
                 {
