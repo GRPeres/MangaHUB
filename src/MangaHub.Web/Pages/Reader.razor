@@ -224,8 +224,8 @@
     private bool IsMangaDexReader => string.Equals(ReaderSource, "mangadex", StringComparison.OrdinalIgnoreCase)
         || (string.IsNullOrWhiteSpace(ReaderSource) && EntryId is not null);
     private bool CanPrepareAdjacentChapter => IsMangaDexReader && EntryId is not null;
-    // The URL identifies the language of the chapter on screen. Adjacent chapter lookups
-    // still use the account's ordered language list so they can fall through to its next choice.
+    // Keep the language currently on screen first, then fall through to the account's ordered choices.
+    // A manual chapter-language switch must also affect the next/previous chapter flow.
     private string ActiveLanguage => string.IsNullOrWhiteSpace(ReaderLanguage) ? PrimaryPreferredLanguage : ReaderLanguage;
     private string PrimaryPreferredLanguage => preferredLanguage
         .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -291,7 +291,7 @@
         prefetchedChapterId = ChapterId;
         try
         {
-            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId, preferredLanguage);
+            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId, AdjacentLanguagePreferences());
         }
         catch (HttpRequestException)
         {
@@ -407,7 +407,7 @@
                 EntryId.Value,
                 afterCachedChapterId: next ? ChapterId : null,
                 beforeCachedChapterId: next ? null : ChapterId,
-                language: language ?? preferredLanguage,
+                language: AdjacentLanguagePreferences(language),
                 allowLanguageFallback: allowLanguageFallback,
                 allowChapterJump: allowChapterJump);
             if (readerPreparation is null)
@@ -472,6 +472,23 @@
         fallbackLanguages = [];
         fallbackLanguage = "";
         languageFallbackExternalReaderUrl = "";
+    }
+
+    private string AdjacentLanguagePreferences(string? primaryLanguage = null)
+    {
+        var languages = new List<string>();
+        foreach (var language in new[] { primaryLanguage, ActiveLanguage }
+                     .Concat(preferredLanguage.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)))
+        {
+            var normalized = language?.Trim();
+            if (!string.IsNullOrWhiteSpace(normalized)
+                && !languages.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+            {
+                languages.Add(normalized);
+            }
+        }
+
+        return string.Join(',', languages.Count == 0 ? ["en"] : languages);
     }
 
     private async Task ContinueInFallbackLanguage()
