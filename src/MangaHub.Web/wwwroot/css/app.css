@@ -226,6 +226,18 @@ a {
     max-width: 860px;
 }
 
+.mh-card-metadata-cover {
+    align-self: center;
+    background: var(--mud-palette-lines-default);
+    border-radius: 8px;
+    display: block;
+    height: auto;
+    max-height: min(42vh, 520px);
+    max-width: min(100%, 280px);
+    object-fit: contain;
+    width: auto;
+}
+
 .reader-toolbar {
     align-items: center;
     display: grid;

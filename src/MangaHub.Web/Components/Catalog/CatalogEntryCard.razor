@@ -161,6 +161,11 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CloseMetadata" aria-label="Close catalog metadata" />
                 </MudStack>
 
+                @if (!string.IsNullOrWhiteSpace(DisplayCoverUrl))
+                {
+                    <img src="@DisplayCoverUrl" alt="@($"{Entry.Title} cover")" class="mh-card-metadata-cover" />
+                }
+
                 @if (CategoryLabels.Count > 0)
                 {
                     <MudStack Row="true" Spacing="1" Class="flex-wrap">
