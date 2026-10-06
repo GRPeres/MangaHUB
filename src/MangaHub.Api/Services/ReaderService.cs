@@ -168,7 +168,7 @@ public sealed class ReaderService(
                         throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
                     }
 
-                    await RecordCompletedMangaDexChapterAsync(entry, shelfEntry.CurrentChapter, cancellationToken);
+                    await RecordCompletedMangaDexChapterAsync(entry, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
                     if (await IsPublishingCompleteAsync(entry, cancellationToken))
                     {
                         await MarkShelfEntryDoneAsync(shelfEntry, cancellationToken);
@@ -667,7 +667,11 @@ public sealed class ReaderService(
         return firstAvailable ?? [];
     }
 
-    private async Task RecordCompletedMangaDexChapterAsync(MangaEntry entry, string currentChapterNumber, CancellationToken cancellationToken)
+    private async Task RecordCompletedMangaDexChapterAsync(
+        MangaEntry entry,
+        string currentChapterNumber,
+        IReadOnlyList<string> preferredLanguages,
+        CancellationToken cancellationToken)
     {
         var chapterNumber = ParseChapterNumber(currentChapterNumber);
         if (chapterNumber is null)
@@ -680,6 +684,7 @@ public sealed class ReaderService(
         entry.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
         entry.UpdatedAt = DateTimeOffset.UtcNow;
         await shelf.SaveChangesAsync(cancellationToken);
+        await shelf.ClampMangaDexLanguageLatestChaptersAsync(entry.Id, preferredLanguages, chapterNumber.Value, cancellationToken);
     }
 
     private async Task MarkShelfEntryDoneAsync(UserMangaEntry shelfEntry, CancellationToken cancellationToken)

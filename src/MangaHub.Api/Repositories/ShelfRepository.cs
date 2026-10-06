@@ -267,5 +267,34 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         db.SaveChangesAsync(cancellationToken);
 
+    public async Task ClampMangaDexLanguageLatestChaptersAsync(
+        Guid mangaEntryId,
+        IReadOnlyList<string> languages,
+        decimal latestChapter,
+        CancellationToken cancellationToken)
+    {
+        var normalizedLanguages = languages
+            .Select(language => language.Trim().ToLowerInvariant())
+            .Where(language => language.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (normalizedLanguages.Count == 0)
+        {
+            return;
+        }
+
+        var latestChapters = await db.MangaDexLanguageLatestChapters
+            .Where(latest => latest.MangaEntryId == mangaEntryId && normalizedLanguages.Contains(latest.Language))
+            .ToListAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var latest in latestChapters.Where(latest => latest.LatestChapter > latestChapter))
+        {
+            latest.LatestChapter = latestChapter;
+            latest.SyncedAt = now;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public void ClearTracking() => db.ChangeTracker.Clear();
 }

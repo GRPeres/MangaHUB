@@ -384,6 +384,13 @@ public sealed class RemoteMaintenanceService(
                     }
                 }
 
+                // This is a full, page-bearing feed scan. Anything no longer present must not
+                // continue advertising a release that the reader cannot actually open.
+                foreach (var stale in cachedLanguages.Values.Where(cached => !latestChapters.ContainsKey(cached.Language)).ToList())
+                {
+                    db.MangaDexLanguageLatestChapters.Remove(stale);
+                }
+
                 await CreateReleaseNotificationsAsync(db, entry, releasedLanguages, cancellationToken);
 
                 if (latestChapter is not null)
@@ -1171,29 +1178,70 @@ public sealed class RemoteMaintenanceService(
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : null;
     }
 
+    private static int? ReadInt(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value)
+        && value.ValueKind == JsonValueKind.Number
+        && value.TryGetInt32(out var number)
+            ? number
+            : null;
+
     private static async Task<Dictionary<string, decimal>> GetLatestChapterNumbersByLanguageAsync(HttpClient client, string mangaDexId, CancellationToken cancellationToken)
     {
-        var path = $"/manga/{Uri.EscapeDataString(mangaDexId)}/feed?limit=100&includeExternalUrl=0&order[chapter]=desc";
-        using var response = await client.GetAsync(path, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        const int pageSize = 100;
+        var latestByLanguage = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        var offset = 0;
+        var total = int.MaxValue;
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        if (!document.RootElement.TryGetProperty("data", out var data) || data.GetArrayLength() == 0)
+        while (offset < total)
         {
-            return [];
+            var path = $"/manga/{Uri.EscapeDataString(mangaDexId)}/feed?limit={pageSize}&offset={offset}&includeExternalUrl=0&order[chapter]=desc";
+            using var response = await client.GetAsync(path, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            total = ReadInt(document.RootElement, "total") ?? 0;
+            if (!document.RootElement.TryGetProperty("data", out var data)
+                || data.ValueKind != JsonValueKind.Array
+                || data.GetArrayLength() == 0)
+            {
+                break;
+            }
+
+            foreach (var item in data.EnumerateArray())
+            {
+                if (!item.TryGetProperty("attributes", out var attributes))
+                {
+                    continue;
+                }
+
+                // Match MangaDexSource: official/external entries may have a chapter number,
+                // but no image pages and therefore cannot be opened in MangaHub's reader.
+                if ((ReadInt(attributes, "pages") ?? 0) <= 0)
+                {
+                    continue;
+                }
+
+                var language = attributes.TryGetProperty("translatedLanguage", out var languageElement)
+                    ? languageElement.GetString()?.Trim().ToLowerInvariant() ?? ""
+                    : "";
+                var chapter = attributes.TryGetProperty("chapter", out var chapterElement)
+                    ? ParseChapterNumber(chapterElement.GetString() ?? "")
+                    : null;
+                if (string.IsNullOrWhiteSpace(language) || chapter is null)
+                {
+                    continue;
+                }
+
+                if (!latestByLanguage.TryGetValue(language, out var latest) || chapter.Value > latest)
+                {
+                    latestByLanguage[language] = chapter.Value;
+                }
+            }
+
+            offset += data.GetArrayLength();
         }
 
-        return data.EnumerateArray()
-            .Where(item => item.TryGetProperty("attributes", out _))
-            .Select(item => item.GetProperty("attributes"))
-            .Select(attributes => new
-            {
-                Language = attributes.TryGetProperty("translatedLanguage", out var language) ? language.GetString() ?? "" : "",
-                Number = attributes.TryGetProperty("chapter", out var chapter) ? ParseChapterNumber(chapter.GetString() ?? "") : null
-            })
-            .Where(item => item.Number is not null && !string.IsNullOrWhiteSpace(item.Language))
-            .GroupBy(item => item.Language.Trim().ToLowerInvariant(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.Max(item => item.Number!.Value), StringComparer.OrdinalIgnoreCase);
+        return latestByLanguage;
     }
 }
