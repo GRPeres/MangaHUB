@@ -33,87 +33,115 @@ else
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="GoLibrary">Open shelf</MudButton>
         </section>
 
-        <MangaBento Columns="4" Class="mh-dashboard-bento">
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="deep" CornerIcon="@Icons.Material.Filled.MenuBook" OnClick="OpenContinueReading">
-                <div class="mh-dashboard-tile mh-dashboard-continue">
-                    <MudText Typo="Typo.overline">Continue reading</MudText>
-                    @if (dashboard?.ContinueReading is { } entry)
-                    {
-                        <div class="mh-dashboard-manga-line">
-                            @if (!string.IsNullOrWhiteSpace(entry.CoverUrl))
-                            {
-                                <img src="@entry.CoverUrl" alt="" />
-                            }
-                            <MudStack Spacing="0" Class="mh-dashboard-manga-copy">
-                                <MudText Typo="Typo.h3">@entry.Title</MudText>
-                                <MudText Typo="Typo.body2">Chapter @DisplayChapter(entry.CurrentChapter)</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@LatestLabel(entry)</MudText>
-                            </MudStack>
-                        </div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Open your shelf to start the reader.</MudText>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.h3">Your next story is waiting.</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Choose something planned below or add a catalog title to your shelf.</MudText>
-                    }
-                </div>
-            </MangaBentoTile>
+        <section class="mh-dashboard-section" aria-labelledby="dashboard-now-title">
+            <div class="mh-dashboard-section-heading">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">Right now</MudText>
+                <MudText id="dashboard-now-title" Typo="Typo.h4">Pick up where you left off</MudText>
+            </div>
 
-            <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.FiberNew" OnClick="GoNewReleases">
-                <div class="mh-dashboard-tile mh-dashboard-stat">
-                    <MudText Typo="Typo.overline">New releases</MudText>
-                    <MudText Typo="Typo.h2">@(dashboard?.NewReleaseCount ?? 0)</MudText>
-                    <MudText Typo="Typo.caption">in @PreferredLanguagesLabel</MudText>
-                </div>
-            </MangaBentoTile>
-
-            <MangaBentoTile Scheme="soft" CornerIcon="@Icons.Material.Filled.BookmarkAdded" OnClick="GoPlanned">
-                <div class="mh-dashboard-tile mh-dashboard-stat">
-                    <MudText Typo="Typo.overline">Planned</MudText>
-                    <MudText Typo="Typo.h2">@(dashboard?.PlannedCount ?? 0)</MudText>
-                    <MudText Typo="Typo.caption">ready when you are</MudText>
-                </div>
-            </MangaBentoTile>
-
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="primary" CornerIcon="@Icons.Material.Filled.AutoGraph" OnClick="GoAccount">
-                <div class="mh-dashboard-tile mh-dashboard-activity">
-                    <MudText Typo="Typo.overline">Reading activity</MudText>
-                    @if (currentUser.UsageAnalyticsEnabled)
-                    {
-                        @if (HasReadingActivity)
+            <MangaBento Columns="3" Class="mh-dashboard-overview-bento">
+                <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="deep" CornerIcon="@Icons.Material.Filled.MenuBook" OnClick="OpenContinueReading">
+                    <div class="mh-dashboard-tile mh-dashboard-continue">
+                        <MudText Typo="Typo.overline">Continue reading</MudText>
+                        @if (dashboard?.ContinueReading is { } entry)
                         {
-                            <MudChart ChartType="ChartType.Line"
-                                      ChartSeries="@readingActivitySeries"
-                                      ChartLabels="@readingActivityLabels"
-                                      ChartOptions="@readingActivityChartOptions"
-                                      Height="132px"
-                                      Width="100%"
-                                      MatchBoundsToSize="true"
-                                      Class="mh-dashboard-activity-chart" />
+                            <div class="mh-dashboard-manga-line">
+                                @if (!string.IsNullOrWhiteSpace(entry.CoverUrl))
+                                {
+                                    <img src="@entry.CoverUrl" alt="" />
+                                }
+                                <MudStack Spacing="0" Class="mh-dashboard-manga-copy">
+                                    <MudText Typo="Typo.h3">@entry.Title</MudText>
+                                    <MudText Typo="Typo.body2">Chapter @DisplayChapter(entry.CurrentChapter)</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@LatestLabel(entry)</MudText>
+                                </MudStack>
+                            </div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Open your shelf to start the reader.</MudText>
                         }
                         else
                         {
-                            <MudText Typo="Typo.h3">Your reading story starts here.</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Finish a chapter and this space will turn into your weekly reading trend.</MudText>
+                            <MudText Typo="Typo.h3">Your next story is waiting.</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Choose something planned below or add a catalog title to your shelf.</MudText>
                         }
-                        <div class="mh-dashboard-activity-grid">
-                            <div><MudText Typo="Typo.caption">Yesterday</MudText><MudText Typo="Typo.h3">@ChaptersReadYesterday</MudText><MudText Typo="Typo.caption">chapters read</MudText></div>
-                            <div><MudText Typo="Typo.caption">This week</MudText><MudText Typo="Typo.h3">@WeeklyReadingTime</MudText><MudText Typo="Typo.caption">@WeeklyChapters chapter@(WeeklyChapters == 1 ? "" : "s") finished</MudText></div>
-                            <div><MudText Typo="Typo.caption">Current streak</MudText><MudText Typo="Typo.h3">@(usageDashboard?.CurrentStreak ?? 0)</MudText><MudText Typo="Typo.caption">@(usageDashboard?.ActiveDays ?? 0) active days this month</MudText></div>
-                        </div>
+                    </div>
+                </MangaBentoTile>
+
+                <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.FiberNew" OnClick="GoNewReleases">
+                    <div class="mh-dashboard-tile mh-dashboard-stat">
+                        <MudText Typo="Typo.overline">New releases</MudText>
+                        <MudText Typo="Typo.h2">@(dashboard?.NewReleaseCount ?? 0)</MudText>
+                        <MudText Typo="Typo.caption">in @PreferredLanguagesLabel</MudText>
+                    </div>
+                </MangaBentoTile>
+
+                <MangaBentoTile Scheme="soft" CornerIcon="@Icons.Material.Filled.BookmarkAdded" OnClick="GoPlanned">
+                    <div class="mh-dashboard-tile mh-dashboard-stat">
+                        <MudText Typo="Typo.overline">Planned</MudText>
+                        <MudText Typo="Typo.h2">@(dashboard?.PlannedCount ?? 0)</MudText>
+                        <MudText Typo="Typo.caption">ready when you are</MudText>
+                    </div>
+                </MangaBentoTile>
+            </MangaBento>
+        </section>
+
+        <section class="mh-dashboard-section" aria-labelledby="dashboard-activity-title">
+            <div class="mh-dashboard-section-heading mh-dashboard-section-heading-row">
+                <div>
+                    <MudText Typo="Typo.overline" Color="Color.Secondary">Private insights</MudText>
+                    <MudText id="dashboard-activity-title" Typo="Typo.h4">Reading activity</MudText>
+                </div>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Tune" OnClick="GoAnalyticsSettings">Preferences</MudButton>
+            </div>
+
+            <MudPaper Class="mh-dashboard-activity-panel" Elevation="0" Outlined="true">
+                @if (currentUser.UsageAnalyticsEnabled)
+                {
+                    @if (HasReadingActivity)
+                    {
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@readingActivitySeries"
+                                  ChartLabels="@readingActivityLabels"
+                                  ChartOptions="@readingActivityChartOptions"
+                                  Height="250px"
+                                  Width="100%"
+                                  MatchBoundsToSize="true"
+                                  Class="mh-dashboard-activity-chart" />
                     }
                     else
                     {
-                        <MudText Typo="Typo.h3">Make your reading visible.</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Enable private usage insights in Account to see reading time, chapters, active days, and future recommendations.</MudText>
+                        <div class="mh-dashboard-empty-activity">
+                            <MudText Typo="Typo.h3">Your reading story starts here.</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Finish a chapter and this space will turn into your weekly reading trend.</MudText>
+                        </div>
                     }
-                </div>
-            </MangaBentoTile>
+                    <div class="mh-dashboard-activity-grid">
+                        <div><MudText Typo="Typo.caption">Yesterday</MudText><MudText Typo="Typo.h3">@ChaptersReadYesterday</MudText><MudText Typo="Typo.caption">chapters read</MudText></div>
+                        <div><MudText Typo="Typo.caption">This week</MudText><MudText Typo="Typo.h3">@WeeklyReadingTime</MudText><MudText Typo="Typo.caption">@WeeklyChapters chapter@(WeeklyChapters == 1 ? "" : "s") finished</MudText></div>
+                        <div><MudText Typo="Typo.caption">Current streak</MudText><MudText Typo="Typo.h3">@(usageDashboard?.CurrentStreak ?? 0)</MudText><MudText Typo="Typo.caption">@(usageDashboard?.ActiveDays ?? 0) active days this month</MudText></div>
+                    </div>
+                }
+                else
+                {
+                    <div class="mh-dashboard-empty-activity">
+                        <MudText Typo="Typo.h3">Make your reading visible.</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Enable private usage insights in Settings to see reading time, chapters, active days, and future recommendations.</MudText>
+                    </div>
+                }
+            </MudPaper>
+        </section>
 
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="ink" CornerIcon="@Icons.Material.Filled.NotificationsActive" OnClick="GoNewReleases">
-                <div class="mh-dashboard-tile">
-                    <MudText Typo="Typo.overline">New on your shelf</MudText>
+        <section class="mh-dashboard-section" aria-labelledby="dashboard-shelf-title">
+            <div class="mh-dashboard-section-heading">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">Your shelf</MudText>
+                <MudText id="dashboard-shelf-title" Typo="Typo.h4">Keep the list moving</MudText>
+            </div>
+
+            <div class="mh-dashboard-discovery-grid">
+                <MudPaper Class="mh-dashboard-panel mh-dashboard-release-panel" Elevation="0" Outlined="true">
+                    <div class="mh-dashboard-panel-header">
+                        <MudStack Spacing="0"><MudText Typo="Typo.h5">New on your shelf</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Available in @PreferredLanguagesLabel</MudText></MudStack>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="GoNewReleases">View updates</MudButton>
+                    </div>
                     @if (dashboard?.NewReleaseCount is not > 0)
                     {
                         <MudText Typo="Typo.h3">All caught up.</MudText>
@@ -129,12 +157,13 @@ else
                             </div>
                         }
                     }
-                </div>
-            </MangaBentoTile>
+                </MudPaper>
 
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="secondary" CornerIcon="@Icons.Material.Filled.Explore" OnClick="GoCatalog">
-                <div class="mh-dashboard-tile">
-                    <MudText Typo="Typo.overline">Try from your catalog</MudText>
+                <MudPaper Class="mh-dashboard-panel" Elevation="0" Outlined="true">
+                    <div class="mh-dashboard-panel-header">
+                        <MudStack Spacing="0"><MudText Typo="Typo.h5">Try from your catalog</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Quiet prompts, not a queue</MudText></MudStack>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="GoCatalog">Browse catalog</MudButton>
+                    </div>
                     @if (dashboard?.Recommendations.Count is not > 0)
                     {
                         <MudText Typo="Typo.h3">Your catalog is already on your shelf.</MudText>
@@ -150,12 +179,12 @@ else
                             </div>
                         }
                     }
-                </div>
-            </MangaBentoTile>
+                </MudPaper>
 
-            <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="warm" CornerIcon="@Icons.Material.Filled.StarRate">
-                <div class="mh-dashboard-tile">
-                    <MudText Typo="Typo.overline">Rate completed manga</MudText>
+                <MudPaper Class="mh-dashboard-panel mh-dashboard-ratings-panel" Elevation="0" Outlined="true">
+                    <div class="mh-dashboard-panel-header">
+                        <MudStack Spacing="0"><MudText Typo="Typo.h5">Rate completed manga</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">A quick record for future you</MudText></MudStack>
+                    </div>
                     @if (dashboard?.PendingRatings.Count is not > 0)
                     {
                         <MudText Typo="Typo.h3">Your completed shelf is rated.</MudText>
@@ -181,8 +210,8 @@ else
                             </div>
                         }
                     }
-                </div>
-            </MangaBentoTile>
-        </MangaBento>
+                </MudPaper>
+            </div>
+        </section>
     </MudStack>
 }

@@ -100,7 +100,7 @@ public partial class Home : IDisposable
     private void GoNewReleases() => Navigation.NavigateTo("library?availability=new");
     private void GoPlanned() => Navigation.NavigateTo("library/planned");
     private void OpenContinueReading() => Navigation.NavigateTo("library");
-    private void GoAccount() => Navigation.NavigateTo("account");
+    private void GoAnalyticsSettings() => Navigation.NavigateTo("account?section=other");
 
     private int ChaptersReadYesterday => usageDashboard?.Days.FirstOrDefault(day => day.Date == DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)))?.ChaptersCompleted ?? 0;
     private int WeeklyReaderSeconds => usageDashboard?.Days.Where(day => day.Date >= DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-6))).Sum(day => day.ReaderSeconds) ?? 0;
