@@ -10,6 +10,10 @@
          AnchorOrigin="Origin.BottomRight"
          TransformOrigin="Origin.TopRight"
          aria-label="More catalog actions">
+    @if (OnViewDetails.HasDelegate)
+    {
+        <MudMenuItem Icon="@Icons.Material.Filled.Info" OnClick="OpenDetails">Manga details</MudMenuItem>
+    }
     <MudMenuItem Icon="@Icons.Material.Filled.Flag" OnClick="OpenDialog">Report a problem</MudMenuItem>
 </MudMenu>
 
@@ -42,12 +46,14 @@
     [Parameter] public Guid MangaEntryId { get; set; }
     [Parameter] public string Title { get; set; } = "";
     [Parameter] public string Class { get; set; } = "";
+    [Parameter] public EventCallback OnViewDetails { get; set; }
     private bool open;
     private bool saving;
     private string kind = AdminIssueTypes.CoverImage;
     private string reason = "missing";
     private string note = "";
     private void OpenDialog() => open = true;
+    private Task OpenDetails() => OnViewDetails.InvokeAsync();
     private void ChangeKind(string value) { kind = value; reason = kind == AdminIssueTypes.CoverImage ? "missing" : "title"; }
     private void Close() => open = false;
     private async Task Submit()
