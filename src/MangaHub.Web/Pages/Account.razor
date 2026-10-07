@@ -4,13 +4,19 @@
 @inject AdminApiService AdminApi
 @inject MessageService Messages
 @inject UsageApiService UsageApi
+@inject NavigationManager Navigation
 
-<PageTitle>Account</PageTitle>
+<PageTitle>@PageTitleText</PageTitle>
 
 <MudStack Spacing="4">
+    <SectionNavigation Items="@SettingsSections"
+                       ActiveKey="@activeSection"
+                       OnSelect="SelectSection"
+                       AriaLabel="Settings sections" />
+
     <MudStack Spacing="1" Class="mh-page-title">
-        <MudText Typo="Typo.overline" Color="Color.Secondary">Profile</MudText>
-        <MudText Typo="Typo.h1">Account</MudText>
+        <MudText Typo="Typo.overline" Color="Color.Secondary">Settings</MudText>
+        <MudText Typo="Typo.h1">@SectionTitle</MudText>
     </MudStack>
 
     @if (currentUser is null)
@@ -19,81 +25,92 @@
     }
     else
     {
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.h2">@currentUser.Username</MudText>
-                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
-                    <MudChip T="string" Color="@(IsAdmin ? Color.Secondary : Color.Primary)" Variant="Variant.Filled">@currentUser.Role</MudChip>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshAccount">Refresh</MudButton>
-                    <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudButton>
-                </MudStack>
-            </MudStack>
-        </MudPaper>
-
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.h2">Reading language order</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">MangaHub reads with the highest available language first. Every language in this list contributes to new-release counts and notifications.</MudText>
-                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
-                    <MudSelect T="string" Value="@languageToAdd" ValueChanged="AddLanguage" Label="Add language" Variant="Variant.Outlined" Class="mh-account-language-select">
-                        @foreach (var language in AvailableLanguages)
-                        {
-                            <MudSelectItem Value="@language.Code" Disabled="@preferredLanguages.Contains(language.Code, StringComparer.OrdinalIgnoreCase)">@language.Label</MudSelectItem>
-                        }
-                    </MudSelect>
-                    <MudTextField T="string" @bind-Value="customLanguage" Label="Custom code" Variant="Variant.Outlined" Immediate="true" Class="mh-account-language-custom" />
-                    <MudTooltip Text="Add custom language"><MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(customLanguage)" OnClick="AddCustomLanguage" aria-label="Add custom language" /></MudTooltip>
-                </MudStack>
-                <div class="mh-account-language-order" aria-label="Language priority order">
-                    @for (var index = 0; index < preferredLanguages.Count; index++)
-                    {
-                        var cardIndex = index;
-                        var language = preferredLanguages[cardIndex];
-                        <div class="@($"mud-paper mud-paper-outlined mh-account-language-card {(draggingLanguageIndex == cardIndex ? "is-dragging" : "")}")"
-                             draggable="true"
-                             @ondragstart="() => BeginLanguageDrag(cardIndex)"
-                             @ondragover:preventDefault
-                             @ondragenter="() => MoveLanguageDuringDrag(cardIndex)"
-                             @ondrop:preventDefault
-                             @ondrop="() => MoveLanguageDuringDrag(cardIndex)"
-                             @ondragend="EndLanguageDrag">
-                            <div class="mh-account-language-grip" title="Drag to change priority" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Color="Color.Secondary" /></div>
-                            <div class="mh-account-language-identity">
-                                <span class="mh-account-language-rank" aria-label="Priority @(cardIndex + 1)">@((cardIndex + 1).ToString())</span>
-                                <MudText Typo="Typo.subtitle1">@LanguageLabel(language)</MudText>
-                                <span class="mh-account-language-code">@language</span>
-                            </div>
-                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" Disabled="@(preferredLanguages.Count == 1)" OnClick="() => RemoveLanguage(cardIndex)" aria-label="Remove language" title="Remove language" />
-                        </div>
-                    }
-                </div>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@isSavingLanguage" OnClick="SavePreferredLanguage">Save language order</MudButton>
-            </MudStack>
-        </MudPaper>
-
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.h2">Private usage insights</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Optional on-device activity is saved only in MangaHub to build future reading insights, recommendations, and better alerts. It never includes page images, passwords, search text, IP addresses, or browser details.</MudText>
-                <MudSwitch T="bool" Value="@(currentUser?.UsageAnalyticsEnabled ?? false)" ValueChanged="SetUsageAnalytics" Color="Color.Primary" Label="Save my usage analytics" Disabled="@isSavingUsage" />
-                @if (currentUser?.UsageAnalyticsEnabled == true)
-                {
-                    <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                        <MudButton Href="@UsageApi.ExportUrl" Target="_blank" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download">Export analytics</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteOutline" OnClick="DeleteUsageAnalytics">Delete analytics history</MudButton>
+        @if (IsAccountSection)
+        {
+            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h2">@currentUser.Username</MudText>
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
+                        <MudChip T="string" Color="@(IsAdmin ? Color.Secondary : Color.Primary)" Variant="Variant.Filled">@currentUser.Role</MudChip>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshAccount">Refresh</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Logout" OnClick="Logout">Log out</MudButton>
                     </MudStack>
-                }
-            </MudStack>
-        </MudPaper>
+                </MudStack>
+            </MudPaper>
+        }
 
-        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.h2">Notification cleanup</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Keep your notification inbox tidy by removing read notifications after the server retention period. Unread notifications are never removed automatically.</MudText>
-                <MudSwitch T="bool" Value="@(currentUser?.AutoDeleteReadNotifications ?? true)" ValueChanged="SetNotificationCleanup" Color="Color.Primary" Label="Automatically delete read notifications" Disabled="@isSavingNotificationCleanup" />
-            </MudStack>
-        </MudPaper>
+        @if (IsReadingSection)
+        {
+            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h2">Reading language order</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">MangaHub reads with the highest available language first. Every language in this list contributes to new-release counts and notifications.</MudText>
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
+                        <MudSelect T="string" Value="@languageToAdd" ValueChanged="AddLanguage" Label="Add language" Variant="Variant.Outlined" Class="mh-account-language-select">
+                            @foreach (var language in AvailableLanguages)
+                            {
+                                <MudSelectItem Value="@language.Code" Disabled="@preferredLanguages.Contains(language.Code, StringComparer.OrdinalIgnoreCase)">@language.Label</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudTextField T="string" @bind-Value="customLanguage" Label="Custom code" Variant="Variant.Outlined" Immediate="true" Class="mh-account-language-custom" />
+                        <MudTooltip Text="Add custom language"><MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(customLanguage)" OnClick="AddCustomLanguage" aria-label="Add custom language" /></MudTooltip>
+                    </MudStack>
+                    <div class="mh-account-language-order" aria-label="Language priority order">
+                        @for (var index = 0; index < preferredLanguages.Count; index++)
+                        {
+                            var cardIndex = index;
+                            var language = preferredLanguages[cardIndex];
+                            <div class="@($"mud-paper mud-paper-outlined mh-account-language-card {(draggingLanguageIndex == cardIndex ? "is-dragging" : "")}")"
+                                 draggable="true"
+                                 @ondragstart="() => BeginLanguageDrag(cardIndex)"
+                                 @ondragover:preventDefault
+                                 @ondragenter="() => MoveLanguageDuringDrag(cardIndex)"
+                                 @ondrop:preventDefault
+                                 @ondrop="() => MoveLanguageDuringDrag(cardIndex)"
+                                 @ondragend="EndLanguageDrag">
+                                <div class="mh-account-language-grip" title="Drag to change priority" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Color="Color.Secondary" /></div>
+                                <div class="mh-account-language-identity">
+                                    <span class="mh-account-language-rank" aria-label="Priority @(cardIndex + 1)">@((cardIndex + 1).ToString())</span>
+                                    <MudText Typo="Typo.subtitle1">@LanguageLabel(language)</MudText>
+                                    <span class="mh-account-language-code">@language</span>
+                                </div>
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" Disabled="@(preferredLanguages.Count == 1)" OnClick="() => RemoveLanguage(cardIndex)" aria-label="Remove language" title="Remove language" />
+                            </div>
+                        }
+                    </div>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@isSavingLanguage" OnClick="SavePreferredLanguage">Save language order</MudButton>
+                </MudStack>
+            </MudPaper>
+        }
 
+        @if (IsOtherSection)
+        {
+            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h2">Private usage insights</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Optional on-device activity is saved only in MangaHub to build future reading insights, recommendations, and better alerts. It never includes page images, passwords, search text, IP addresses, or browser details.</MudText>
+                    <MudSwitch T="bool" Value="@(currentUser?.UsageAnalyticsEnabled ?? false)" ValueChanged="SetUsageAnalytics" Color="Color.Primary" Label="Save my usage analytics" Disabled="@isSavingUsage" />
+                    @if (currentUser?.UsageAnalyticsEnabled == true)
+                    {
+                        <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                            <MudButton Href="@UsageApi.ExportUrl" Target="_blank" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download">Export analytics</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteOutline" OnClick="DeleteUsageAnalytics">Delete analytics history</MudButton>
+                        </MudStack>
+                    }
+                </MudStack>
+            </MudPaper>
+
+            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h2">Notification cleanup</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Keep your notification inbox tidy by removing read notifications after the server retention period. Unread notifications are never removed automatically.</MudText>
+                    <MudSwitch T="bool" Value="@(currentUser?.AutoDeleteReadNotifications ?? true)" ValueChanged="SetNotificationCleanup" Color="Color.Primary" Label="Automatically delete read notifications" Disabled="@isSavingNotificationCleanup" />
+                </MudStack>
+            </MudPaper>
+        }
+
+        @if (IsAccountSection)
+        {
         <MudPaper Class="pa-4" Elevation="0" Outlined="true">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.h2">Sign-in and recovery</MudText>
@@ -128,7 +145,9 @@
             </MudStack>
         </MudPaper>
 
-        @if (IsAdmin)
+        }
+
+        @if (IsAccountSection && IsAdmin)
         {
             <MudPaper Class="pa-4" Elevation="0" Outlined="true">
                 <MudStack Spacing="3">
@@ -179,6 +198,26 @@
     @code {
 
     private UserResponse? currentUser;
+    [SupplyParameterFromQuery(Name = "section")] public string? SectionQuery { get; set; }
+
+    private string activeSection = "account";
+    private static readonly IReadOnlyList<SectionNavigationItem> SettingsSections =
+    [
+        new("account", "Account", Icons.Material.Filled.ManageAccounts),
+        new("reading", "Reading", Icons.Material.Filled.MenuBook),
+        new("other", "Other", Icons.Material.Filled.Tune)
+    ];
+
+    private bool IsAccountSection => activeSection == "account";
+    private bool IsReadingSection => activeSection == "reading";
+    private bool IsOtherSection => activeSection == "other";
+    private string SectionTitle => activeSection switch
+    {
+        "reading" => "Reading preferences",
+        "other" => "Other preferences",
+        _ => "Account"
+    };
+    private string PageTitleText => $"{SectionTitle} | MangaHub";
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private List<UserAdminResponse> users = [];
     private string message = "";
@@ -201,6 +240,11 @@
     private bool isSavingUsage;
     private bool isSavingNotificationCleanup;
 
+    protected override void OnParametersSet()
+    {
+        activeSection = NormalizeSection(SectionQuery);
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
@@ -220,6 +264,19 @@
             await LoadUsers();
         }
     }
+
+    private Task SelectSection(string section)
+    {
+        Navigation.NavigateTo(section == "account" ? "/account" : $"/account?section={Uri.EscapeDataString(section)}");
+        return Task.CompletedTask;
+    }
+
+    private static string NormalizeSection(string? section) => section?.Trim().ToLowerInvariant() switch
+    {
+        "reading" => "reading",
+        "other" => "other",
+        _ => "account"
+    };
 
     private async Task LoadUsers()
     {
