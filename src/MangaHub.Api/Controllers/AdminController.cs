@@ -62,6 +62,15 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         return Ok(await operations.GetOverviewAsync(cancellationToken));
     }
 
+    [HttpGet("archive")]
+    public async Task<IActionResult> Archive(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        return Ok(await operations.GetArchiveOverviewAsync(cancellationToken));
+    }
+
     [HttpGet("catalog/count")]
     public async Task<IActionResult> CatalogCount(CancellationToken cancellationToken)
     {

@@ -42,10 +42,10 @@ else if (overview is not null)
                     <div class="mh-operation-storage-grid">
                         <div><MudText Typo="Typo.caption">Active cache</MudText><MudText Typo="Typo.h6">@FormatBytes(overview.ActiveCacheBytes)</MudText><MudText Typo="Typo.caption">@overview.ActiveCachedChapterCount chapters</MudText></div>
                         <div><MudText Typo="Typo.caption">Archive</MudText><MudText Typo="Typo.h6">@FormatBytes(overview.ArchivedCacheBytes)</MudText><MudText Typo="Typo.caption">@overview.ArchivedChapterCount chapters</MudText></div>
-                        <div><MudText Typo="Typo.caption">Original / Data Saver</MudText><MudText Typo="Typo.h6">@overview.OriginalCachedChapterCount / @overview.DataSaverCachedChapterCount</MudText><MudText Typo="Typo.caption">@FormatBytes(overview.OriginalCacheBytes) / @FormatBytes(overview.DataSaverCacheBytes)</MudText></div>
-                        <div><MudText Typo="Typo.caption">Projected active reclaim</MudText><MudText Typo="Typo.h6">@FormatBytes(overview.ReclaimableActiveBytes)</MudText><MudText Typo="Typo.caption">@overview.ReclaimableActiveChapterCount chapters · 7-day grace</MudText></div>
+                        <div><MudText Typo="Typo.caption">Projected reclaim</MudText><MudText Typo="Typo.h6">@FormatBytes(overview.ReclaimableActiveBytes)</MudText><MudText Typo="Typo.caption">@overview.ReclaimableActiveChapterCount chapters</MudText></div>
                         <div><MudText Typo="Typo.caption">Archive recovery · 30 days</MudText><MudText Typo="Typo.h6">@overview.ArchiveRestoreCountLast30Days restored</MudText><MudText Typo="Typo.caption">@overview.ArchiveRedownloadCountLast30Days re-downloaded</MudText></div>
                     </div>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/admin/archive" EndIcon="@Icons.Material.Filled.ArrowForward">Open archive details</MudButton>
                 </div>
             </MangaBentoTile>
             <MangaBentoTile ColSpan="2" RowSpan="2" Scheme="ink" CornerIcon="@Icons.Material.Filled.PlaylistPlay" ItemClass="mh-operations-actions-item">

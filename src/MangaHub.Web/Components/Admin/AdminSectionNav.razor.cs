@@ -17,12 +17,14 @@ public partial class AdminSectionNav
     [
         new("catalog", "Catalog", Icons.Material.Filled.Inventory2, Count: _catalogCount),
         new("issues", "Issues", Icons.Material.Filled.ReportProblem, Color.Error, Count: _openIssueCount),
-        new("operations", "Operations", Icons.Material.Filled.SettingsSuggest)
+        new("operations", "Operations", Icons.Material.Filled.SettingsSuggest),
+        new("archive", "Archive", Icons.Material.Filled.Archive)
     ];
 
     private string ActiveSection => CurrentRoute switch
     {
         "operations" or "admin/operations" => "operations",
+        "archive" or "admin/archive" => "archive",
         "issues" or "admin/issues" => "issues",
         _ => "catalog"
     };

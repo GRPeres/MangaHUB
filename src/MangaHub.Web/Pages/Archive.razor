@@ -1,0 +1,131 @@
+@page "/archive"
+@page "/admin/archive"
+@using MangaHub.Web.API.DTOs
+@using MangaHub.Web.API.Services
+@inject AuthSessionService Auth
+@inject AdminApiService AdminApi
+
+<PageTitle>Archive</PageTitle>
+
+@if (user is null)
+{
+    <MudAlert Severity="Severity.Warning">Sign in to view archive storage.</MudAlert>
+}
+else if (!isAdmin)
+{
+    <MudAlert Severity="Severity.Error">Admin permissions are required.</MudAlert>
+}
+else if (isLoading)
+{
+    <MudStack AlignItems="AlignItems.Center" Class="mh-archive-loading"><MudProgressCircular Indeterminate="true" /><MudText>Inspecting chapter storage...</MudText></MudStack>
+}
+else if (overview is not null)
+{
+    <MudStack Spacing="3" Class="mh-archive-page">
+        <AdminSectionNav />
+
+        <section class="mh-archive-header">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">Admin storage</MudText>
+                <MudText Typo="Typo.h2">Archive</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Why chapters remain active, what can move to long-term storage, and how each cached manga is using space.</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="1" Class="mh-archive-header-actions">
+                <MudButton Class="mh-archive-operations-button" Variant="Variant.Outlined" Color="Color.Primary" Href="/admin/operations">Maintenance jobs</MudButton>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" OnClick="LoadAsync" aria-label="Refresh archive details" />
+            </MudStack>
+        </section>
+
+        <MangaBento Columns="4" Class="mh-archive-summary">
+            <MangaBentoTile Scheme="primary" CornerIcon="@Icons.Material.Filled.Storage"><div class="mh-archive-stat"><MudText Typo="Typo.overline">Active cache</MudText><MudText Typo="Typo.h3">@FormatBytes(overview.ActiveBytes)</MudText><MudText Typo="Typo.caption">@overview.ActiveChapterCount chapter files</MudText></div></MangaBentoTile>
+            <MangaBentoTile Scheme="deep" CornerIcon="@Icons.Material.Filled.AutoStories"><div class="mh-archive-stat"><MudText Typo="Typo.overline">Reader protected</MudText><MudText Typo="Typo.h3">@overview.ReadingProtectedMangaCount</MudText><MudText Typo="Typo.caption">@overview.ReadingProtectedChapterCount chapter files in use</MudText></div></MangaBentoTile>
+            <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.DeleteSweep"><div class="mh-archive-stat"><MudText Typo="Typo.overline">Ready to archive</MudText><MudText Typo="Typo.h3">@FormatBytes(overview.ReadyToArchiveBytes)</MudText><MudText Typo="Typo.caption">@overview.ReadyToArchiveChapterCount chapter files</MudText></div></MangaBentoTile>
+            <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.Archive"><div class="mh-archive-stat"><MudText Typo="Typo.overline">Long-term archive</MudText><MudText Typo="Typo.h3">@FormatBytes(overview.ArchivedBytes)</MudText><MudText Typo="Typo.caption">@overview.ArchivedChapterCount Data Saver files</MudText></div></MangaBentoTile>
+        </MangaBento>
+
+        <MudPaper Elevation="0" Outlined="true" Class="mh-archive-panel">
+            <MudStack Spacing="2">
+                <MudStack Spacing="0"><MudText Typo="Typo.h5">Why active chapters remain</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">A chapter is kept active for the reader, while it is inside the @overview.GraceDays-day reread grace period, or until the next cache-cleanup batch archives it.</MudText></MudStack>
+                <div class="mh-archive-reason-grid">
+                    <div class="mh-archive-reason"><MudIcon Icon="@Icons.Material.Filled.AutoStories" Color="Color.Primary" /><div><MudText Typo="Typo.subtitle2">Reader protection</MudText><MudText Typo="Typo.body2">@overview.ReadingProtectedMangaCount manga · @overview.ReadingProtectedChapterCount files · @FormatBytes(overview.ReadingProtectedBytes)</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Keeps the current chapter and anything newer for Reading or On hiatus shelves.</MudText></div></div>
+                    <div class="mh-archive-reason"><MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Warning" /><div><MudText Typo="Typo.subtitle2">Reread grace period</MudText><MudText Typo="Typo.body2">@overview.GracePeriodMangaCount manga · @overview.GracePeriodChapterCount files · @FormatBytes(overview.GracePeriodBytes)</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Recently opened chapters remain active for @overview.GraceDays days.</MudText></div></div>
+                    <div class="mh-archive-reason"><MudIcon Icon="@Icons.Material.Filled.Archive" Color="Color.Success" /><div><MudText Typo="Typo.subtitle2">Awaiting archive</MudText><MudText Typo="Typo.body2">@overview.ReadyToArchiveMangaCount manga · @overview.ReadyToArchiveChapterCount files · @FormatBytes(overview.ReadyToArchiveBytes)</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Eligible now; the cache-cleanup job will turn these into Data Saver archive files.</MudText></div></div>
+                </div>
+                @if (overview.UnmanagedActiveChapterCount > 0)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">@overview.UnmanagedActiveChapterCount active chapter file(s) (@FormatBytes(overview.UnmanagedActiveBytes)) are not matched to a cache record, so cleanup will leave them alone.</MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Elevation="0" Outlined="true" Class="mh-archive-panel">
+            <MudStack Spacing="2">
+                <MudStack Spacing="0"><MudText Typo="Typo.h5">Archive recovery</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Over the last 30 days, @overview.ArchiveRestoreCountLast30Days chapters were restored from archive and @overview.ArchiveRedownloadCountLast30Days needed a MangaDex re-download.</MudText></MudStack>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Elevation="0" Outlined="true" Class="mh-archive-panel">
+            <MudStack Spacing="2">
+                <MudStack Spacing="0"><MudText Typo="Typo.h5">Manga cache breakdown</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Each row is based on cache files currently present on disk.</MudText></MudStack>
+                <MudTextField T="string" @bind-Value="search" Immediate="true" Placeholder="Filter manga" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+                @if (VisibleManga.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No cached manga match this filter.</MudText>
+                }
+                else
+                {
+                    <div class="mh-archive-manga-list">
+                        @foreach (var item in VisibleManga)
+                        {
+                            <article class="mh-archive-manga-row">
+                                <div class="mh-archive-manga-heading"><MudText Typo="Typo.subtitle1">@item.Title</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@item.MangaDexId</MudText></div>
+                                <div class="mh-archive-manga-metrics">
+                                    <div><MudText Typo="Typo.overline">Active</MudText><MudText Typo="Typo.body2">@item.ActiveChapterCount · @FormatBytes(item.ActiveBytes)</MudText></div>
+                                    <div><MudText Typo="Typo.overline">Archive</MudText><MudText Typo="Typo.body2">@item.ArchivedChapterCount · @FormatBytes(item.ArchivedBytes)</MudText></div>
+                                    <div class="mh-archive-reason-chips">
+                                        @if (item.ReadingProtectedChapterCount > 0) { <MudChip T="string" Size="Size.Small" Color="Color.Primary">Reading @item.ReadingProtectedChapterCount@(item.RetainFromChapter is null ? "" : $" from Ch. {item.RetainFromChapter:0.###}")</MudChip> }
+                                        @if (item.GracePeriodChapterCount > 0) { <MudChip T="string" Size="Size.Small" Color="Color.Warning">Grace @item.GracePeriodChapterCount</MudChip> }
+                                        @if (item.ReadyToArchiveChapterCount > 0) { <MudChip T="string" Size="Size.Small" Color="Color.Success">Ready @item.ReadyToArchiveChapterCount</MudChip> }
+                                        @if (item.UnmanagedActiveChapterCount > 0) { <MudChip T="string" Size="Size.Small" Color="Color.Error">Unmanaged @item.UnmanagedActiveChapterCount</MudChip> }
+                                    </div>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </MudStack>
+        </MudPaper>
+    </MudStack>
+}
+
+@code {
+    private UserResponse? user;
+    private ArchiveOverviewResponse? overview;
+    private bool isLoading = true;
+    private string search = "";
+    private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private List<ArchiveMangaRetentionResponse> VisibleManga => overview?.Manga
+        .Where(item => string.IsNullOrWhiteSpace(search) || item.Title.Contains(search, StringComparison.OrdinalIgnoreCase) || item.MangaDexId.Contains(search, StringComparison.OrdinalIgnoreCase))
+        .ToList() ?? [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await Auth.GetCurrentUserAsync();
+        if (isAdmin) await LoadAsync(); else isLoading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        try { overview = await AdminApi.GetArchiveOverviewAsync(); }
+        finally { isLoading = false; }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024d:0.#} KB";
+        if (bytes < 1024 * 1024 * 1024) return $"{bytes / 1024d / 1024d:0.#} MB";
+        return $"{bytes / 1024d / 1024d / 1024d:0.##} GB";
+    }
+}

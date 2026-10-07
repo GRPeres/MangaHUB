@@ -50,6 +50,148 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
             archiveRedownloads);
     }
 
+    public async Task<ArchiveOverviewResponse> GetArchiveOverviewAsync(CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var graceDays = Math.Clamp(options.Value.MangaDexCacheRetentionGraceDays, 0, 90);
+        var root = Path.GetFullPath(options.Value.MangaDexCachePath);
+        var usage = GetCacheUsage(root);
+        var entries = await db.MangaEntries.AsNoTracking()
+            .Where(entry => entry.MangaDexId != "")
+            .Select(entry => new { entry.MangaDexId, entry.Title })
+            .ToListAsync(cancellationToken);
+        var titles = entries
+            .GroupBy(entry => entry.MangaDexId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Title, StringComparer.OrdinalIgnoreCase);
+        var activeProgress = await db.UserMangaEntries.AsNoTracking()
+            .Where(shelf => (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
+                && shelf.MangaEntry!.MangaDexId != "")
+            .Select(shelf => new { shelf.MangaEntry!.MangaDexId, shelf.CurrentChapter })
+            .ToListAsync(cancellationToken);
+        var retainFrom = activeProgress
+            .GroupBy(item => item.MangaDexId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new { group.Key, Chapter = MangaDexCacheRetentionPolicy.FindEarliestRecordedChapter(group.Select(item => item.CurrentChapter)) })
+            .Where(item => item.Chapter is not null)
+            .ToDictionary(item => item.Key, item => item.Chapter!.Value, StringComparer.OrdinalIgnoreCase);
+        var series = await db.Series.AsNoTracking()
+            .Include(item => item.Chapters)
+            .Where(item => item.Source == "mangadex-cache")
+            .ToListAsync(cancellationToken);
+
+        var activeFiles = GetCacheFiles(root, archived: false)
+            .GroupBy(file => CacheKey(file.MangaDexId, file.SourceId), StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+        var archivedFiles = GetCacheFiles(root, archived: true)
+            .GroupBy(file => CacheKey(file.MangaDexId, file.SourceId), StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+        var manga = new Dictionary<string, ArchiveMangaRetention>(StringComparer.OrdinalIgnoreCase);
+        var readingManga = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var graceManga = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var readyManga = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var readingChapters = 0;
+        var graceChapters = 0;
+        var readyChapters = 0;
+        var readingBytes = 0L;
+        var graceBytes = 0L;
+        var readyBytes = 0L;
+        var unmanagedChapters = 0;
+        var unmanagedBytes = 0L;
+
+        foreach (var cached in series)
+        {
+            retainFrom.TryGetValue(cached.ExternalId, out var currentRetainFrom);
+            var view = GetManga(manga, cached.ExternalId, titles.GetValueOrDefault(cached.ExternalId, cached.Title));
+            view.RetainFromChapter = retainFrom.ContainsKey(cached.ExternalId) ? currentRetainFrom : null;
+
+            foreach (var chapterGroup in cached.Chapters.GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
+            {
+                var key = CacheKey(cached.ExternalId, chapterGroup.Key);
+                if (activeFiles.Remove(key, out var active))
+                {
+                    var chapter = chapterGroup.First();
+                    var bytes = active.Sum(file => file.Bytes);
+                    view.ActiveChapterCount += active.Count;
+                    view.ActiveBytes += bytes;
+                    var lastAccessedAt = chapterGroup.Max(item => item.LastAccessedAt ?? item.CreatedAt);
+                    var chapterNumber = MangaDexCacheRetentionPolicy.ParseChapterNumber(chapter.ChapterNumber);
+                    var protectedForReader = retainFrom.ContainsKey(cached.ExternalId)
+                        && chapterNumber is not null
+                        && chapterNumber.Value >= currentRetainFrom;
+                    var protectedByGrace = lastAccessedAt >= now.AddDays(-graceDays);
+
+                    if (protectedForReader)
+                    {
+                        readingManga.Add(cached.ExternalId);
+                        readingChapters += active.Count;
+                        readingBytes += bytes;
+                        view.ReadingProtectedChapterCount += active.Count;
+                    }
+                    else if (protectedByGrace)
+                    {
+                        graceManga.Add(cached.ExternalId);
+                        graceChapters += active.Count;
+                        graceBytes += bytes;
+                        view.GracePeriodChapterCount += active.Count;
+                    }
+                    else if (!MangaDexCacheRetentionPolicy.ShouldRetain(chapter.SourceId, chapter.ChapterNumber, null, lastAccessedAt, now, graceDays))
+                    {
+                        readyManga.Add(cached.ExternalId);
+                        readyChapters += active.Count;
+                        readyBytes += bytes;
+                        view.ReadyToArchiveChapterCount += active.Count;
+                    }
+                    else
+                    {
+                        view.UnmanagedActiveChapterCount += active.Count;
+                        unmanagedChapters += active.Count;
+                        unmanagedBytes += bytes;
+                    }
+                }
+
+                if (archivedFiles.Remove(key, out var archived))
+                {
+                    view.ArchivedChapterCount += archived.Count;
+                    view.ArchivedBytes += archived.Sum(file => file.Bytes);
+                }
+            }
+        }
+
+        foreach (var fileGroup in activeFiles.Values)
+        {
+            var sample = fileGroup[0];
+            var view = GetManga(manga, sample.MangaDexId, titles.GetValueOrDefault(sample.MangaDexId, "Unindexed cache files"));
+            view.ActiveChapterCount += fileGroup.Count;
+            view.ActiveBytes += fileGroup.Sum(file => file.Bytes);
+            view.UnmanagedActiveChapterCount += fileGroup.Count;
+            unmanagedChapters += fileGroup.Count;
+            unmanagedBytes += fileGroup.Sum(file => file.Bytes);
+        }
+        foreach (var fileGroup in archivedFiles.Values)
+        {
+            var sample = fileGroup[0];
+            var view = GetManga(manga, sample.MangaDexId, titles.GetValueOrDefault(sample.MangaDexId, "Unindexed cache files"));
+            view.ArchivedChapterCount += fileGroup.Count;
+            view.ArchivedBytes += fileGroup.Sum(file => file.Bytes);
+        }
+
+        var telemetryCutoff = now.AddDays(-30);
+        var restores = await db.ArchiveRecoveryEvents.CountAsync(item => item.Action == "restored" && item.OccurredAt >= telemetryCutoff, cancellationToken);
+        var redownloads = await db.ArchiveRecoveryEvents.CountAsync(item => item.Action == "redownloaded" && item.OccurredAt >= telemetryCutoff, cancellationToken);
+        return new ArchiveOverviewResponse(
+            usage.ActiveChapters, usage.ActiveBytes, usage.ArchivedChapters, usage.ArchivedBytes,
+            readingManga.Count, readingChapters, readingBytes,
+            graceManga.Count, graceChapters, graceBytes,
+            readyManga.Count, readyChapters, readyBytes,
+            unmanagedChapters, unmanagedBytes,
+            graceDays, restores, redownloads,
+            manga.Values
+                .Where(item => item.ActiveChapterCount > 0 || item.ArchivedChapterCount > 0)
+                .OrderByDescending(item => item.ActiveBytes)
+                .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+                .Select(item => item.ToResponse())
+                .ToList());
+    }
+
     public async Task<MaintenanceJobResponse?> QueueAsync(Guid requestedByUserId, string type, CancellationToken cancellationToken)
     {
         return await QueueAsync(requestedByUserId, type, "manual", cancellationToken);
@@ -133,6 +275,48 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
         catch (UnauthorizedAccessException) { return new CacheUsage(); }
     }
 
+    private static ArchiveMangaRetention GetManga(Dictionary<string, ArchiveMangaRetention> manga, string mangaDexId, string title)
+    {
+        if (!manga.TryGetValue(mangaDexId, out var result))
+        {
+            result = new ArchiveMangaRetention(mangaDexId, title);
+            manga[mangaDexId] = result;
+        }
+        return result;
+    }
+
+    private static List<CacheFile> GetCacheFiles(string root, bool archived)
+    {
+        try
+        {
+            var baseDirectory = archived
+                ? Path.Combine(root, "archive", "mangadex", "data-saver")
+                : Path.Combine(root, "mangadex");
+            if (!Directory.Exists(baseDirectory)) return [];
+
+            return Directory.EnumerateFiles(baseDirectory, "*.cbz", SearchOption.AllDirectories)
+                .Select(path => ToCacheFile(baseDirectory, path, archived))
+                .Where(file => file is not null)
+                .Cast<CacheFile>()
+                .ToList();
+        }
+        catch (IOException) { return []; }
+        catch (UnauthorizedAccessException) { return []; }
+    }
+
+    private static CacheFile? ToCacheFile(string baseDirectory, string path, bool archived)
+    {
+        var parts = Path.GetRelativePath(baseDirectory, path)
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        var isDataSaver = archived || (parts.Length >= 3 && string.Equals(parts[0], "data-saver", StringComparison.OrdinalIgnoreCase));
+        var offset = isDataSaver && !archived ? 1 : 0;
+        if (parts.Length - offset != 2) return null;
+        var info = new FileInfo(path);
+        return new CacheFile(parts[offset], Path.GetFileNameWithoutExtension(parts[offset + 1]), info.Length);
+    }
+
+    private static string CacheKey(string mangaDexId, string sourceId) => $"{mangaDexId}\u001f{sourceId}";
+
     private async Task<ReclaimableCacheUsage> GetReclaimableCacheUsageAsync(CancellationToken cancellationToken)
     {
         var activeProgress = await db.UserMangaEntries
@@ -190,5 +374,28 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
     {
         public int Chapters { get; set; }
         public long Bytes { get; set; }
+    }
+
+    private sealed record CacheFile(string MangaDexId, string SourceId, long Bytes);
+
+    private sealed class ArchiveMangaRetention(string mangaDexId, string title)
+    {
+        public string MangaDexId { get; } = mangaDexId;
+        public string Title { get; } = title;
+        public int ActiveChapterCount { get; set; }
+        public long ActiveBytes { get; set; }
+        public int ReadingProtectedChapterCount { get; set; }
+        public int GracePeriodChapterCount { get; set; }
+        public int ReadyToArchiveChapterCount { get; set; }
+        public int UnmanagedActiveChapterCount { get; set; }
+        public decimal? RetainFromChapter { get; set; }
+        public int ArchivedChapterCount { get; set; }
+        public long ArchivedBytes { get; set; }
+
+        public ArchiveMangaRetentionResponse ToResponse() => new(
+            MangaDexId, Title, ActiveChapterCount, ActiveBytes,
+            ReadingProtectedChapterCount, GracePeriodChapterCount, ReadyToArchiveChapterCount,
+            UnmanagedActiveChapterCount,
+            RetainFromChapter, ArchivedChapterCount, ArchivedBytes);
     }
 }
