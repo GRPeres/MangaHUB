@@ -116,7 +116,7 @@
                     {
                         <MudText Typo="Typo.body2">Chapter language: @LanguageLabel(ActiveLanguage)</MudText>
                     }
-                    <MudSelect T="string" Value="@readerSettings.ImageQuality" ValueChanged="SwitchImageQuality" Dense="true" Label="Image quality" Variant="Variant.Outlined">
+                    <MudSelect T="string" Value="@ActiveImageQuality" ValueChanged="SwitchImageQuality" Dense="true" Label="Image quality" Variant="Variant.Outlined">
                         <MudSelectItem T="string" Value="@("original")">Original</MudSelectItem>
                         <MudSelectItem T="string" Value="@("data-saver")">Data Saver</MudSelectItem>
                     </MudSelect>
@@ -291,7 +291,7 @@
         prefetchedChapterId = ChapterId;
         try
         {
-            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId, AdjacentLanguagePreferences());
+            await MangaApi.PrefetchNextMangaDexChapterAsync(EntryId.Value, ChapterId, AdjacentLanguagePreferences(), ActiveImageQuality);
         }
         catch (HttpRequestException)
         {

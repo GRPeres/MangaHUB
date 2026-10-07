@@ -9,6 +9,7 @@
 @inject NotificationApiService Notifications
 @inject MessageService Messages
 @inject AppRefreshService Refreshes
+@inject ReaderSettingsService ReaderSettings
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -612,7 +613,8 @@
 
             if (options.HasMangaDex)
             {
-                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguages, allowLanguageFallback: allowLanguageFallback, allowChapterJump: allowChapterJump, requestedChapter: requestedChapter);
+                var imageQuality = MangaHub.Web.Services.ReaderSettings.Normalize(await ReaderSettings.GetAsync()).ImageQuality;
+                readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguages, imageQuality: imageQuality, allowLanguageFallback: allowLanguageFallback, allowChapterJump: allowChapterJump, requestedChapter: requestedChapter);
                 if (readerPreparation is null)
                 {
                     ShowWarning("Could not start MangaDex chapter preparation.");

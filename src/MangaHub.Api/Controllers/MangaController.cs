@@ -107,7 +107,8 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
         Guid entryId,
         [FromQuery] Guid afterCachedChapterId,
         CancellationToken cancellationToken,
-        [FromQuery] string? language = null)
+        [FromQuery] string? language = null,
+        [FromQuery] string? imageQuality = null)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null)
@@ -119,7 +120,7 @@ public sealed class MangaController(CurrentUserService currentUsers, ShelfServic
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        preparations.PrefetchNext(user.Id, entryId, afterCachedChapterId, language ?? user.PreferredLanguage);
+        preparations.PrefetchNext(user.Id, entryId, afterCachedChapterId, language ?? user.PreferredLanguage, imageQuality ?? "original");
         return Accepted();
     }
 

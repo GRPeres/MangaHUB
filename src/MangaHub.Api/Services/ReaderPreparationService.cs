@@ -31,7 +31,7 @@ public sealed class ReaderPreparationService(
         jobs[jobId] = new ReaderPreparationJob(userId, DateTimeOffset.UtcNow, status);
 
         if (afterCachedChapterId is not null
-            && activePrefetches.TryGetValue(CreatePrefetchKey(userId, entryId, afterCachedChapterId.Value, language), out var prefetch))
+            && activePrefetches.TryGetValue(CreatePrefetchKey(userId, entryId, afterCachedChapterId.Value, language, imageQuality), out var prefetch))
         {
             _ = Task.Run(() => ContinueFromPrefetchAsync(
                 jobId,
@@ -67,9 +67,9 @@ public sealed class ReaderPreparationService(
     public ReaderPreparationStatus? Get(Guid jobId, Guid userId) =>
         jobs.TryGetValue(jobId, out var job) && job.UserId == userId ? job.Status : null;
 
-    public void PrefetchNext(Guid userId, Guid entryId, Guid afterCachedChapterId, string language)
+    public void PrefetchNext(Guid userId, Guid entryId, Guid afterCachedChapterId, string language, string imageQuality = "original")
     {
-        var key = CreatePrefetchKey(userId, entryId, afterCachedChapterId, language);
+        var key = CreatePrefetchKey(userId, entryId, afterCachedChapterId, language, imageQuality);
         var prefetch = new ReaderPrefetchOperation();
         if (!activePrefetches.TryAdd(key, prefetch))
         {
@@ -89,6 +89,7 @@ public sealed class ReaderPreparationService(
                     entryId,
                     afterCachedChapterId,
                     language,
+                    imageQuality,
                     CancellationToken.None,
                     progress);
             }
@@ -319,7 +320,7 @@ public sealed class ReaderPreparationService(
     }
 
     private sealed record ReaderPreparationJob(Guid UserId, DateTimeOffset CreatedAt, ReaderPreparationStatus Status);
-    private sealed record ReaderPrefetchKey(Guid UserId, Guid EntryId, Guid ChapterId, string Language);
+    private sealed record ReaderPrefetchKey(Guid UserId, Guid EntryId, Guid ChapterId, string Language, string ImageQuality);
 
     private sealed class ReaderPrefetchOperation
     {
@@ -333,11 +334,14 @@ public sealed class ReaderPreparationService(
         public void Complete() => completion.TrySetResult();
     }
 
-    private static ReaderPrefetchKey CreatePrefetchKey(Guid userId, Guid entryId, Guid chapterId, string language) =>
-        new(userId, entryId, chapterId, NormalizeLanguage(language));
+    private static ReaderPrefetchKey CreatePrefetchKey(Guid userId, Guid entryId, Guid chapterId, string language, string imageQuality) =>
+        new(userId, entryId, chapterId, NormalizeLanguage(language), NormalizeImageQuality(imageQuality));
 
     private static string NormalizeLanguage(string language) =>
         string.IsNullOrWhiteSpace(language) ? "en" : language.Trim().ToLowerInvariant();
+
+    private static string NormalizeImageQuality(string imageQuality) =>
+        string.Equals(imageQuality, "data-saver", StringComparison.OrdinalIgnoreCase) ? "data-saver" : "original";
 
     private sealed class CallbackProgress(Action<ReaderPreparationProgress> report) : IProgress<ReaderPreparationProgress>
     {

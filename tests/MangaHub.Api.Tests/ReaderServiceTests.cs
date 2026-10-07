@@ -383,7 +383,7 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
-    public async Task PrefetchNextMangaDexChapterAsync_CachesNextChapterWithoutChangingReadingProgress()
+    public async Task PrefetchNextMangaDexChapterAsync_CachesRequestedQualityWithoutChangingReadingProgress()
     {
         await using var db = TestDb.Create();
         var userId = Guid.NewGuid();
@@ -413,6 +413,7 @@ public sealed class ReaderServiceTests
             entry.Id,
             currentChapter.Id,
             "en",
+            "data-saver",
             CancellationToken.None,
             progress);
 
@@ -423,6 +424,7 @@ public sealed class ReaderServiceTests
         Assert.Equal("reading", shelf.ReadingStatus);
         cachedSeries = await new SeriesRepository(db).GetBySourceAndExternalIdAsync("mangadex-cache", "berserk-id", CancellationToken.None);
         Assert.Equal(2, cachedSeries!.Chapters.Count);
+        Assert.Equal("data-saver", cachedSeries.Chapters.Single(chapter => chapter.SourceId == "chapter-2").ImageQuality);
     }
 
     [Fact]

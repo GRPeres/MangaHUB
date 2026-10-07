@@ -79,10 +79,10 @@ public sealed class MangaApiService(ApiHttpClient api, AppRefreshService refresh
             new { });
     }
 
-    public async Task PrefetchNextMangaDexChapterAsync(Guid entryId, Guid currentCachedChapterId, string language = "en") =>
+    public async Task PrefetchNextMangaDexChapterAsync(Guid entryId, Guid currentCachedChapterId, string language = "en", string imageQuality = "original") =>
         await api.SendWithoutResponseAsync(
             HttpMethod.Post,
-            $"/api/manga/{entryId}/mangadex-reader/prefetch-next?afterCachedChapterId={currentCachedChapterId}&language={Uri.EscapeDataString(language)}",
+            $"/api/manga/{entryId}/mangadex-reader/prefetch-next?afterCachedChapterId={currentCachedChapterId}&language={Uri.EscapeDataString(language)}&imageQuality={Uri.EscapeDataString(imageQuality)}",
             new { });
 
     public async Task<bool> MarkCurrentChapterReadAsync(Guid entryId, Guid chapterId)

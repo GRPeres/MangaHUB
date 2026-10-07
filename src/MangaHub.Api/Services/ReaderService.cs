@@ -432,6 +432,7 @@ public sealed class ReaderService(
         Guid entryId,
         Guid afterCachedChapterId,
         string language,
+        string imageQuality,
         CancellationToken cancellationToken,
         IProgress<ReaderPreparationProgress>? progress = null) =>
         await PrepareMangaDexChapterAsync(
@@ -445,10 +446,11 @@ public sealed class ReaderService(
             cancellationToken,
             progress,
             updateReadingProgress: false,
-            requestedChapter: null);
+            requestedChapter: null,
+            imageQuality: imageQuality);
 
     public Task PrefetchNextMangaDexChapterAsync(Guid userId, Guid entryId, Guid afterCachedChapterId, CancellationToken cancellationToken) =>
-        PrefetchNextMangaDexChapterAsync(userId, entryId, afterCachedChapterId, "en", cancellationToken);
+        PrefetchNextMangaDexChapterAsync(userId, entryId, afterCachedChapterId, "en", "original", cancellationToken);
 
     public async Task<bool> MarkCurrentChapterReadAsync(
         Guid userId,
