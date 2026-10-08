@@ -39,6 +39,17 @@ public sealed class MangaDexCacheRetentionPolicyTests
         Assert.False(expired);
     }
 
+    [Fact]
+    public void ShouldRetain_DoesNotTreatCacheCreationAsReaderActivity()
+    {
+        var now = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero);
+
+        var retained = MangaDexCacheRetentionPolicy.ShouldRetain(
+            "chapter-1", "1", Array.Empty<MangaDexCacheRetentionPolicy.ReaderProgress>(), null, now, 7);
+
+        Assert.False(retained);
+    }
+
     [Theory]
     [InlineData("23", false)]
     [InlineData("24", true)]

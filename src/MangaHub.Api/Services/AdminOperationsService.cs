@@ -107,7 +107,7 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
                     var bytes = active.Sum(file => file.Bytes);
                     view.ActiveChapterCount += active.Count;
                     view.ActiveBytes += bytes;
-                    var lastAccessedAt = chapterGroup.Max(item => item.LastAccessedAt ?? item.CreatedAt);
+                    var lastAccessedAt = chapterGroup.Select(item => item.LastAccessedAt).Max();
                     var protectedForReader = MangaDexCacheRetentionPolicy.IsProtectedForReader(chapter.ChapterNumber, readerProgress);
                     var protectedByGrace = lastAccessedAt >= now.AddDays(-graceDays);
 
@@ -326,7 +326,7 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
             {
                 var original = group.FirstOrDefault(chapter => !string.Equals(chapter.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase));
                 if (original is null) continue;
-                var lastAccessedAt = group.Max(chapter => chapter.LastAccessedAt ?? chapter.CreatedAt);
+                var lastAccessedAt = group.Select(chapter => chapter.LastAccessedAt).Max();
                 if (MangaDexCacheRetentionPolicy.ShouldRetain(original.SourceId, original.ChapterNumber, readerProgress, lastAccessedAt, DateTimeOffset.UtcNow, options.Value.MangaDexCacheRetentionGraceDays)) continue;
 
                 var path = Path.GetFullPath(Path.Combine(root, "mangadex", cached.ExternalId, $"{original.SourceId}.cbz"));

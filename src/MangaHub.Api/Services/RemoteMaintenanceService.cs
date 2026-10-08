@@ -473,7 +473,9 @@ public sealed class RemoteMaintenanceService(
                     }
 
                     var chapter = chapterGroup.First();
-                    var lastAccessedAt = chapterGroup.Max(item => item.LastAccessedAt ?? item.CreatedAt);
+                    // Cache creation and background prefetching are not reader activity. Only an
+                    // explicit reader access earns the temporary archival grace period.
+                    var lastAccessedAt = chapterGroup.Select(item => item.LastAccessedAt).Max();
                     if (MangaDexCacheRetentionPolicy.ShouldRetain(
                         chapter.SourceId,
                         chapter.ChapterNumber,
