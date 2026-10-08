@@ -15,7 +15,8 @@ public sealed class InternalMaintenanceController(
     MaintenanceWatchdogService watchdog,
     RemoteMaintenanceService remoteMaintenance,
     ILibraryScanner libraryScanner,
-    IOptions<MangaHubOptions> options) : ControllerBase
+    IOptions<MangaHubOptions> options,
+    ILogger<InternalMaintenanceController> logger) : ControllerBase
 {
     [HttpPost("{type}/queue")]
     public async Task<IActionResult> Queue(string type, [FromQuery] string trigger = "scheduled", CancellationToken cancellationToken = default)
@@ -50,14 +51,29 @@ public sealed class InternalMaintenanceController(
             return Unauthorized();
         }
 
-        if (string.Equals(type, "library-scan", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            await libraryScanner.ScanAsync(cancellationToken);
-            return Ok(new MaintenanceRunResult());
-        }
+            if (string.Equals(type, "library-scan", StringComparison.OrdinalIgnoreCase))
+            {
+                await libraryScanner.ScanAsync(cancellationToken);
+                return Ok(new MaintenanceRunResult());
+            }
 
-        var result = await remoteMaintenance.RunRequestedAsync(type.Trim().ToLowerInvariant(), cancellationToken);
-        return Ok(result);
+            var result = await remoteMaintenance.RunRequestedAsync(type.Trim().ToLowerInvariant(), cancellationToken);
+            return Ok(result);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Internal maintenance request {Type} failed.", type);
+            return Problem(
+                title: $"Maintenance task '{type}' failed",
+                detail: DescribeFailure(ex),
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     private bool HasValidWorkerToken()
@@ -72,5 +88,20 @@ public sealed class InternalMaintenanceController(
         return CryptographicOperations.FixedTimeEquals(
             Encoding.UTF8.GetBytes(configured),
             Encoding.UTF8.GetBytes(supplied));
+    }
+
+    private static string DescribeFailure(Exception exception)
+    {
+        var messages = new List<string>();
+        for (Exception? current = exception; current is not null && messages.Count < 3; current = current.InnerException)
+        {
+            if (!string.IsNullOrWhiteSpace(current.Message))
+            {
+                messages.Add(current.Message.Trim());
+            }
+        }
+
+        var detail = string.Join(" -> ", messages.Distinct(StringComparer.Ordinal));
+        return detail.Length <= 700 ? detail : detail[..700] + "...";
     }
 }

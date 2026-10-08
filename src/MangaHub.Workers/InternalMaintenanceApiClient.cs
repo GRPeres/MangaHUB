@@ -2,6 +2,7 @@ using MangaHub.Infrastructure;
 using MangaHub.Core.Services;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace MangaHub.Workers;
 
@@ -25,7 +26,7 @@ public sealed class InternalMaintenanceApiClient(HttpClient httpClient, IOptions
         using var request = new HttpRequestMessage(HttpMethod.Post, $"internal/maintenance/{Uri.EscapeDataString(type)}");
         request.Headers.Add("X-MangaHub-Worker-Token", token);
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, cancellationToken);
         return await response.Content.ReadFromJsonAsync<MaintenanceRunResult>(cancellationToken: cancellationToken)
             ?? new MaintenanceRunResult();
     }
@@ -41,6 +42,49 @@ public sealed class InternalMaintenanceApiClient(HttpClient httpClient, IOptions
         using var request = new HttpRequestMessage(method, path);
         request.Headers.Add("X-MangaHub-Worker-Token", token);
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, cancellationToken);
     }
+
+    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        throw new HttpRequestException(
+            $"Maintenance API returned HTTP {(int)response.StatusCode} ({response.ReasonPhrase ?? "unknown status"}): {DescribeProblem(body)}",
+            null,
+            response.StatusCode);
+    }
+
+    private static string DescribeProblem(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return "The API did not provide an error detail.";
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            var root = document.RootElement;
+            foreach (var property in new[] { "detail", "title" })
+            {
+                if (root.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(value.GetString()))
+                {
+                    return Truncate(value.GetString()!);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // A plain-text upstream error is still more useful than a bare status code.
+        }
+
+        return Truncate(string.Join(" ", body.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)));
+    }
+
+    private static string Truncate(string value) => value.Length <= 700 ? value : value[..700] + "...";
 }

@@ -86,7 +86,7 @@ else if (overview is not null)
                         @foreach (var job in historyJobs)
                         {
                             <div class="mh-operation-job"><MudStack Spacing="0"><MudText Typo="Typo.subtitle2">@JobLabel(job.Type)</MudText><MudText Typo="Typo.caption">@FormatDate(job.RequestedAt) · @JobTriggerLabel(job.Trigger)</MudText></MudStack><MudChip T="string" Size="Size.Small" Color="@JobColor(job.Status)">@job.Status</MudChip></div>
-                            @if (!string.IsNullOrWhiteSpace(job.Error)) { <MudText Typo="Typo.caption" Color="Color.Error">@job.Error</MudText> }
+                            @if (!string.IsNullOrWhiteSpace(job.Error)) { <MudAlert Dense="true" Severity="Severity.Error" Variant="Variant.Outlined" Class="mh-operation-job-error">@job.Error</MudAlert> }
                         }
                         @if (hasMoreHistory)
                         {
