@@ -2,8 +2,10 @@
 .mh-archive-header { align-items: end; border-bottom: 1px solid var(--mud-palette-divider); display: flex; gap: 1rem; justify-content: space-between; padding: .5rem 0 1.25rem; }
 .mh-archive-header > :first-child { min-width: 0; }
 .mh-archive-header-actions { align-items: center; flex: 0 0 auto; }
-::deep .mh-archive-summary { --bzb-gap: 4px; --mh-bento-item-min-height: 118px; --mh-bento-row-height: 118px; }
-.mh-archive-stat { display: flex; flex-direction: column; gap: .35rem; height: 100%; justify-content: flex-end; }
+::deep .mh-archive-summary { --bzb-gap: .75rem; --mh-bento-item-min-height: 128px; --mh-bento-row-height: 128px; }
+::deep .mh-archive-summary .mh-bento-grid { gap: .75rem !important; }
+::deep .mh-archive-summary .mh-bento-tile { padding: 1rem 1.1rem; }
+.mh-archive-stat { display: flex; flex-direction: column; gap: .45rem; height: 100%; justify-content: flex-end; min-width: 0; }
 .mh-archive-panel { border-radius: 8px; padding: 1rem; }
 .mh-archive-recovery-header { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
 .mh-archive-reason-grid { display: grid; gap: .75rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -16,7 +18,7 @@
 .mh-archive-reason-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
 
 @media (max-width: 960px) {
-    ::deep .mh-archive-summary { --mh-bento-item-min-height: 90px; --mh-bento-row-height: 90px; }
+    ::deep .mh-archive-summary { --mh-bento-item-min-height: 96px; --mh-bento-row-height: 96px; }
     ::deep .mh-archive-summary .bzb-item { grid-column: span 2 !important; }
     .mh-archive-reason-grid { grid-template-columns: 1fr; }
     .mh-archive-manga-row { grid-template-columns: 1fr; }
@@ -26,6 +28,8 @@
     .mh-archive-header { align-items: start; padding-bottom: .8rem; }
     ::deep .mh-archive-operations-button { display: none; }
     .mh-archive-panel { padding: .8rem; }
+    ::deep .mh-archive-summary .mh-bento-grid { gap: .55rem !important; }
+    ::deep .mh-archive-summary .mh-bento-tile { padding: .85rem .9rem; }
     .mh-archive-recovery-header { align-items: stretch; flex-direction: column; }
     .mh-archive-manga-metrics { align-items: start; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .mh-archive-reason-chips { grid-column: 1 / -1; }
