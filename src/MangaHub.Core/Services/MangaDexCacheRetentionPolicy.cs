@@ -66,7 +66,6 @@ public static class MangaDexCacheRetentionPolicy
 
     public static bool IsProtectedForReader(string chapterNumber, IReadOnlyCollection<ReaderProgress> readerProgress)
     {
-        var hasUsableProgress = false;
         foreach (var progress in readerProgress)
         {
             if (string.IsNullOrWhiteSpace(progress.CurrentChapter))
@@ -79,15 +78,13 @@ public static class MangaDexCacheRetentionPolicy
                 continue;
             }
 
-            hasUsableProgress = true;
             if (comparison > 0 || (comparison == 0 && progress.IncludeCurrentChapter))
             {
                 return true;
             }
         }
 
-        // Do not delete a chapter with an unparseable label while a reader has progress for this manga.
-        return !hasUsableProgress && readerProgress.Any(progress => !string.IsNullOrWhiteSpace(progress.CurrentChapter));
+        return false;
     }
 
     public static ReaderProgress? FindMostProtectiveProgress(IEnumerable<ReaderProgress> progress)

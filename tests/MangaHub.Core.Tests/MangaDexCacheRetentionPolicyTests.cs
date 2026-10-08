@@ -96,4 +96,12 @@ public sealed class MangaDexCacheRetentionPolicyTests
         Assert.True(MangaDexCacheRetentionPolicy.ShouldRetain("chapter-id", "24.1", progress, null, DateTimeOffset.UtcNow, 0));
         Assert.True(MangaDexCacheRetentionPolicy.ShouldRetain("chapter-id", "25", progress, null, DateTimeOffset.UtcNow, 0));
     }
+
+    [Fact]
+    public void ShouldRetain_DoesNotPinEveryChapterForUnparseableReaderProgress()
+    {
+        var progress = new[] { new MangaDexCacheRetentionPolicy.ReaderProgress("not started", IncludeCurrentChapter: true) };
+
+        Assert.False(MangaDexCacheRetentionPolicy.ShouldRetain("chapter-id", "24", progress, null, DateTimeOffset.UtcNow, 0));
+    }
 }

@@ -491,8 +491,24 @@ public sealed class RemoteMaintenanceService(
                     var archivedDataSaverPath = Path.Combine(cacheRoot, "archive", "mangadex", "data-saver", cached.ExternalId, $"{chapter.SourceId}.cbz");
                     if (dataSaver is not null && File.Exists(archivedDataSaverPath))
                     {
-                        // The persisted data-saver row intentionally remains after archival.
-                        // It is not pending cleanup work and must not trigger another batch.
+                        // A restart can occur after the Data Saver file moves but before the
+                        // active original and its row are removed. Reconcile that half-finished
+                        // archival instead of treating it as permanently ineligible.
+                        var staleOriginals = chapterGroup
+                            .Where(item => !string.Equals(item.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+                        foreach (var original in staleOriginals)
+                        {
+                            await cache.DeleteAsync(cached.ExternalId, original.SourceId, cancellationToken, original.ImageQuality);
+                            db.Chapters.Remove(original);
+                        }
+                        if (staleOriginals.Count > 0)
+                        {
+                            await db.SaveChangesAsync(cancellationToken);
+                            logger.LogInformation("Reconciled {Count} stale active cache variant(s) after archival of {MangaDexId}/{ChapterId}.", staleOriginals.Count, cached.ExternalId, chapter.SourceId);
+                        }
+
+                        // The persisted Data Saver row intentionally remains after archival.
                         alreadyArchived++;
                         continue;
                     }
