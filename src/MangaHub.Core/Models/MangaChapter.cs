@@ -12,6 +12,8 @@ public sealed class MangaChapter
     public int PageCount { get; set; }
     public string FileHash { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    // Legacy cache-access timestamp. It included background prefetches and is not used for retention.
     public DateTimeOffset? LastAccessedAt { get; set; }
+    public DateTimeOffset? LastReaderOpenedAt { get; set; }
     public MangaSeries? Series { get; set; }
 }

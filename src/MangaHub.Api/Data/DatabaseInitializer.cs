@@ -306,6 +306,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "Language" character varying(16) NOT NULL DEFAULT 'en';
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "ImageQuality" character varying(20) NOT NULL DEFAULT 'original';
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "LastAccessedAt" timestamp with time zone NULL;
+            ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "LastReaderOpenedAt" timestamp with time zone NULL;
 
             CREATE TABLE IF NOT EXISTS archive_recovery_events (
                 "Id" uuid PRIMARY KEY,

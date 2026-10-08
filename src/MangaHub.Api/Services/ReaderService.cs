@@ -364,7 +364,12 @@ public sealed class ReaderService(
             return null;
         }
 
-        cachedChapter.LastAccessedAt = DateTimeOffset.UtcNow;
+        // Background prefetch prepares a chapter for a possible future read; it is
+        // not reader activity and must not extend the cache retention grace period.
+        if (updateReadingProgress)
+        {
+            cachedChapter.LastReaderOpenedAt = DateTimeOffset.UtcNow;
+        }
 
         var resolvedLanguage = NormalizeLanguage(cachedChapter.Language);
         if (isInitialTrackedChapterSelection

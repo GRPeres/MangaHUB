@@ -406,6 +406,7 @@ public sealed class ReaderServiceTests
         Assert.NotNull(launch);
         var cachedSeries = await new SeriesRepository(db).GetBySourceAndExternalIdAsync("mangadex-cache", "berserk-id", CancellationToken.None);
         var currentChapter = Assert.Single(cachedSeries!.Chapters);
+        Assert.NotNull(currentChapter.LastReaderOpenedAt);
         var progress = new RecordingProgress();
 
         await service.PrefetchNextMangaDexChapterAsync(
@@ -424,7 +425,9 @@ public sealed class ReaderServiceTests
         Assert.Equal("reading", shelf.ReadingStatus);
         cachedSeries = await new SeriesRepository(db).GetBySourceAndExternalIdAsync("mangadex-cache", "berserk-id", CancellationToken.None);
         Assert.Equal(2, cachedSeries!.Chapters.Count);
-        Assert.Equal("data-saver", cachedSeries.Chapters.Single(chapter => chapter.SourceId == "chapter-2").ImageQuality);
+        var prefetchedChapter = cachedSeries.Chapters.Single(chapter => chapter.SourceId == "chapter-2");
+        Assert.Equal("data-saver", prefetchedChapter.ImageQuality);
+        Assert.Null(prefetchedChapter.LastReaderOpenedAt);
     }
 
     [Fact]
