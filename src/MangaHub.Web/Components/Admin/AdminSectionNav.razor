@@ -1,4 +1,7 @@
 <SectionNavigation Items="@Sections"
                    ActiveKey="@ActiveSection"
                    OnSelect="SelectSection"
-                   AriaLabel="Admin management sections" />
+                   AriaLabel="Admin management sections"
+                   CollapseOnOverflow="true"
+                   Expanded="@mobileSectionsExpanded"
+                   ExpandedChanged="OnMobileSectionsExpandedChanged" />
