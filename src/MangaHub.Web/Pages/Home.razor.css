@@ -89,6 +89,23 @@
     padding: clamp(1rem, 3vw, 1.5rem);
 }
 
+.mh-dashboard-chart-frame {
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 82%, var(--mud-palette-primary));
+    border-radius: 8px;
+    min-width: 0;
+    overflow: hidden;
+    padding: .85rem .85rem .55rem;
+}
+
+.mh-dashboard-chart-header {
+    align-items: baseline;
+    display: flex;
+    gap: .75rem;
+    justify-content: space-between;
+    padding: 0 .15rem .35rem;
+}
+
 .mh-dashboard-empty-activity {
     align-content: center;
     display: grid;
@@ -109,7 +126,29 @@
 }
 
 .mh-dashboard-activity-chart {
+    display: block;
     min-height: 250px;
+    min-width: 0;
+}
+
+.mh-dashboard-chart-frame ::deep .mud-chart {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.mh-dashboard-chart-frame ::deep .mud-chart svg {
+    display: block;
+    overflow: visible;
+}
+
+.mh-dashboard-chart-frame ::deep .mud-chart .mud-charts-gridlines-yaxis path,
+.mh-dashboard-chart-frame ::deep .mud-chart .mud-charts-gridlines-xaxis path {
+    stroke: color-mix(in srgb, var(--mud-palette-divider) 82%, transparent);
+}
+
+.mh-dashboard-chart-frame ::deep .mud-chart .mud-charts-xaxis text,
+.mh-dashboard-chart-frame ::deep .mud-chart .mud-charts-yaxis text {
+    fill: var(--mud-palette-text-secondary);
 }
 
 .mh-dashboard-discovery-grid {
@@ -216,6 +255,15 @@
     .mh-dashboard-activity-chart,
     .mh-dashboard-empty-activity {
         min-height: 210px;
+    }
+
+    .mh-dashboard-chart-frame {
+        padding: .7rem .55rem .45rem;
+    }
+
+    .mh-dashboard-chart-header {
+        padding-left: .25rem;
+        padding-right: .25rem;
     }
 
     .mh-dashboard-activity-grid,

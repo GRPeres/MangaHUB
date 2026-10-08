@@ -98,14 +98,20 @@ else
                 {
                     @if (HasReadingActivity)
                     {
-                        <MudChart ChartType="ChartType.Line"
-                                  ChartSeries="@readingActivitySeries"
-                                  ChartLabels="@readingActivityLabels"
-                                  ChartOptions="@readingActivityChartOptions"
-                                  Height="250px"
-                                  Width="100%"
-                                  MatchBoundsToSize="true"
-                                  Class="mh-dashboard-activity-chart" />
+                        <div class="mh-dashboard-chart-frame">
+                            <div class="mh-dashboard-chart-header">
+                                <MudText Typo="Typo.caption">Past 7 days</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Chapters completed</MudText>
+                            </div>
+                            <MudChart ChartType="ChartType.Line"
+                                      ChartSeries="@readingActivitySeries"
+                                      ChartLabels="@readingActivityLabels"
+                                      ChartOptions="@readingActivityChartOptions"
+                                      Height="250px"
+                                      Width="100%"
+                                      MatchBoundsToSize="true"
+                                      Class="mh-dashboard-activity-chart" />
+                        </div>
                     }
                     else
                     {

@@ -34,7 +34,7 @@
         grid-row: auto !important;
     }
 
-    ::deep .mh-operations-bento .mh-operations-stat-item .mh-bento-tile { padding: .65rem .75rem; }
+    ::deep .mh-operations-bento .mh-operations-stat-item .mh-bento-tile { padding: .75rem .85rem; }
     ::deep .mh-operations-bento .mh-operations-stat-item .mh-bento-corner-icon,
     ::deep .mh-operations-bento .mh-operations-stat-item .mud-typography-caption { display: none; }
     ::deep .mh-operations-bento .mh-operations-stat-item .mud-typography-h3 { font-size: 1.25rem; line-height: 1.2; }

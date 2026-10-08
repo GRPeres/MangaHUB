@@ -4,9 +4,7 @@
     --mh-bento-fg: var(--mud-palette-text-primary);
     --mh-bento-muted: var(--mud-palette-text-secondary);
     --mh-bento-border: var(--mud-palette-divider);
-    background:
-        radial-gradient(circle at 94% 8%, color-mix(in srgb, var(--mh-bento-accent) 18%, transparent), transparent 32%),
-        linear-gradient(135deg, color-mix(in srgb, var(--mh-bento-accent) 8%, var(--mh-bento-bg)), var(--mh-bento-bg));
+    background: var(--mh-bento-bg);
     border: 1px solid var(--mh-bento-border);
     border-radius: 8px;
     color: var(--mh-bento-fg);
@@ -15,7 +13,7 @@
     height: 100%;
     min-height: 0;
     overflow: hidden;
-    padding: 1rem;
+    padding: clamp(.9rem, 1.6vw, 1.1rem);
     position: relative;
     transition: border-color .16s ease, transform .16s ease, background .16s ease;
 }
