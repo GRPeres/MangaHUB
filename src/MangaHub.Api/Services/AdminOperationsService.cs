@@ -8,7 +8,11 @@ using Microsoft.Extensions.Options;
 
 namespace MangaHub.Api.Services;
 
-public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaHubOptions> options)
+public sealed class AdminOperationsService(
+    MangaHubDbContext db,
+    IOptions<MangaHubOptions> options,
+    IMangaDexChapterCache? mangaDexCache = null,
+    IArchiveReader? archiveReader = null)
 {
     private static readonly HashSet<string> AllowedJobTypes = ["release-sync", "mangadex-status-sync", "prefetch", "mangadex-cache-cleanup", "mangadex-archive-integrity-check", "mangaupdates-sync", CatalogIdentityEnrichmentService.JobType, "library-scan", "idle-backfill"];
 
@@ -184,6 +188,91 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
                 .ToList());
     }
 
+    public async Task<ArchiveRecoveryTestResponse> TestArchiveRecoveryAsync(CancellationToken cancellationToken)
+    {
+        if (mangaDexCache is null || archiveReader is null)
+        {
+            return new(false, "Archive recovery is not available in this server instance.");
+        }
+
+        var root = Path.GetFullPath(options.Value.MangaDexCachePath);
+        var candidates = await db.Chapters.AsNoTracking()
+            .Include(chapter => chapter.Series)
+            .Where(chapter => chapter.Series != null
+                && chapter.Series.Source == "mangadex-cache"
+                && chapter.ImageQuality == "data-saver")
+            .OrderBy(chapter => chapter.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        foreach (var chapter in candidates)
+        {
+            var series = chapter.Series;
+            if (series is null || !IsSafeCacheIdentifier(series.ExternalId) || !IsSafeCacheIdentifier(chapter.SourceId))
+            {
+                continue;
+            }
+
+            var archivedPath = Path.Combine(root, "archive", "mangadex", "data-saver", series.ExternalId, $"{chapter.SourceId}.cbz");
+            if (!File.Exists(archivedPath))
+            {
+                continue;
+            }
+
+            var restored = false;
+            try
+            {
+                restored = await mangaDexCache.RestoreArchivedAsync(series.ExternalId, chapter.SourceId, cancellationToken, "data-saver");
+                if (!restored)
+                {
+                    continue;
+                }
+
+                var activePath = Path.Combine(root, "mangadex", "data-saver", series.ExternalId, $"{chapter.SourceId}.cbz");
+                var page = await archiveReader.ReadPageAsync(activePath, 0, cancellationToken);
+                if (page is null || page.Bytes.Length == 0)
+                {
+                    throw new InvalidDataException("The restored chapter did not contain a readable first page.");
+                }
+
+                if (!await mangaDexCache.ArchiveAsync(series.ExternalId, chapter.SourceId, cancellationToken, "data-saver"))
+                {
+                    return new(false, $"Read Ch. {chapter.ChapterNumber} from the active test copy, but could not return it to the archive.", series.Title, chapter.ChapterNumber);
+                }
+
+                db.ArchiveRecoveryEvents.Add(new ArchiveRecoveryEvent
+                {
+                    MangaDexId = series.ExternalId,
+                    ChapterSourceId = chapter.SourceId,
+                    Action = "test-restored",
+                    OccurredAt = DateTimeOffset.UtcNow
+                });
+                await db.SaveChangesAsync(cancellationToken);
+                return new(true, $"Restored, read, and re-archived a Data Saver chapter without contacting MangaDex.", series.Title, chapter.ChapterNumber);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+            {
+                if (restored)
+                {
+                    try
+                    {
+                        if (!await mangaDexCache.ArchiveAsync(series.ExternalId, chapter.SourceId, cancellationToken, "data-saver"))
+                        {
+                            return new(false, $"Archive recovery test failed and could not return the test copy to the archive: {ex.Message}", series.Title, chapter.ChapterNumber);
+                        }
+                    }
+                    catch (Exception archiveException) when (archiveException is IOException or UnauthorizedAccessException)
+                    {
+                        return new(false, $"Archive recovery test failed and could not return the test copy to the archive: {archiveException.Message}", series.Title, chapter.ChapterNumber);
+                    }
+                }
+
+                return new(false, $"Archive recovery test failed: {ex.Message}", series.Title, chapter.ChapterNumber);
+            }
+        }
+
+        return new(false, "No archived Data Saver chapter is currently available to test.");
+    }
+
     public async Task<MaintenanceJobResponse?> QueueAsync(Guid requestedByUserId, string type, CancellationToken cancellationToken)
     {
         return await QueueAsync(requestedByUserId, type, "manual", cancellationToken);
@@ -218,6 +307,9 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
         await db.SaveChangesAsync(cancellationToken);
         return ToResponse(job);
     }
+
+    private static bool IsSafeCacheIdentifier(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && value.All(character => char.IsLetterOrDigit(character) || character == '-');
 
     private static MaintenanceJobResponse ToResponse(MaintenanceJob job) => new(job.Id, job.Type, job.Trigger, job.Status, job.RequestedAt, job.StartedAt, job.CompletedAt, job.Error);
 

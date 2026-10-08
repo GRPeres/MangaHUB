@@ -68,6 +68,10 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
 {
     public List<string> CachedChapterIds { get; } = [];
     public List<string> DataSaverConversions { get; } = [];
+    public List<string> RestoredChapterIds { get; } = [];
+    public List<string> ArchivedChapterIds { get; } = [];
+    public bool RestoreArchivedResult { get; set; }
+    public bool ArchiveResult { get; set; }
 
     public Task<MangaDexCachedChapter> EnsureCachedAsync(
         string mangaDexId,
@@ -102,11 +106,17 @@ internal sealed class FakeMangaDexChapterCache : IMangaDexChapterCache
         return Task.CompletedTask;
     }
 
-    public Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original") =>
-        Task.FromResult(CachedChapterIds.Remove(chapterId));
+    public Task<bool> ArchiveAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original")
+    {
+        ArchivedChapterIds.Add(chapterId);
+        return Task.FromResult(ArchiveResult || CachedChapterIds.Remove(chapterId));
+    }
 
-    public Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original") =>
-        Task.FromResult(false);
+    public Task<bool> RestoreArchivedAsync(string mangaDexId, string chapterId, CancellationToken cancellationToken, string imageQuality = "original")
+    {
+        RestoredChapterIds.Add(chapterId);
+        return Task.FromResult(RestoreArchivedResult);
+    }
 }
 
 internal sealed class FakeMangaUpdatesClient : IMangaUpdatesClient

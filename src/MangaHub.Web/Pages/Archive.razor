@@ -4,6 +4,7 @@
 @using MangaHub.Web.API.Services
 @inject AuthSessionService Auth
 @inject AdminApiService AdminApi
+@inject MessageService Messages
 
 <PageTitle>Archive</PageTitle>
 
@@ -60,7 +61,11 @@ else if (overview is not null)
 
         <MudPaper Elevation="0" Outlined="true" Class="mh-archive-panel">
             <MudStack Spacing="2">
-                <MudStack Spacing="0"><MudText Typo="Typo.h5">Archive recovery</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Over the last 30 days, @overview.ArchiveRestoreCountLast30Days chapters were restored from archive and @overview.ArchiveRedownloadCountLast30Days needed a MangaDex re-download.</MudText></MudStack>
+                <div class="mh-archive-recovery-header">
+                    <MudStack Spacing="0"><MudText Typo="Typo.h5">Archive recovery</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Over the last 30 days, @overview.ArchiveRestoreCountLast30Days chapters were restored from archive and @overview.ArchiveRedownloadCountLast30Days needed a MangaDex re-download.</MudText></MudStack>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Science" Disabled="@isTestingRecovery" OnClick="TestArchiveRecoveryAsync">@(isTestingRecovery ? "Testing archive..." : "Test archive recovery")</MudButton>
+                </div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Uses one real archived Data Saver chapter, reads its first page locally, then returns it to the archive.</MudText>
             </MudStack>
         </MudPaper>
 
@@ -102,6 +107,7 @@ else if (overview is not null)
     private UserResponse? user;
     private ArchiveOverviewResponse? overview;
     private bool isLoading = true;
+    private bool isTestingRecovery;
     private string search = "";
     private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private List<ArchiveMangaRetentionResponse> VisibleManga => overview?.Manga
@@ -119,6 +125,36 @@ else if (overview is not null)
         isLoading = true;
         try { overview = await AdminApi.GetArchiveOverviewAsync(); }
         finally { isLoading = false; }
+    }
+
+    private async Task TestArchiveRecoveryAsync()
+    {
+        if (isTestingRecovery) return;
+        isTestingRecovery = true;
+        try
+        {
+            var result = await AdminApi.TestArchiveRecoveryAsync();
+            if (result is null)
+            {
+                Messages.Error("Archive recovery test did not return a result.");
+                return;
+            }
+
+            var subject = string.IsNullOrWhiteSpace(result.Title) ? "" : $" {result.Title} Ch. {result.ChapterNumber}.";
+            if (result.Success)
+            {
+                Messages.Success(result.Message + subject);
+                await LoadAsync();
+            }
+            else
+            {
+                Messages.Error(result.Message + subject, "Archive recovery test failed");
+            }
+        }
+        finally
+        {
+            isTestingRecovery = false;
+        }
     }
 
     private static string FormatBytes(long bytes)

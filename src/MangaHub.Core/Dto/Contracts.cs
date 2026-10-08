@@ -17,6 +17,7 @@ public sealed record MangaNotificationResponse(Guid Id, Guid MangaEntryId, strin
 public sealed record WebPushSubscriptionRequest(string Endpoint, string P256dh, string Auth, string DeviceLabel = "");
 public sealed record WebPushSubscriptionResponse(Guid Id, string DeviceLabel, DateTimeOffset UpdatedAt);
 public sealed record DiagnosticResult(bool Success, string Message);
+public sealed record ArchiveRecoveryTestResponse(bool Success, string Message, string Title = "", string ChapterNumber = "");
 public sealed record CreateAdminIssueReportRequest(string Kind, string SubjectType, Guid SubjectId, string Reason, string Note = "");
 public sealed record AdminIssueReportStateResponse(Guid IssueId, bool HasMyOpenReport, int ReportCount, string Status);
 public sealed record AdminIssueListItemResponse(Guid Id, string Kind, string SubjectType, Guid SubjectId, string Status, string Priority, string Title, string CoverUrl, int ReportCount, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);

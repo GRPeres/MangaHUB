@@ -14,6 +14,7 @@ public sealed class AdminApiService(ApiHttpClient api)
     public Task<DiagnosticResult?> TestMangaDexAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/mangadex");
     public Task<OperationsOverviewResponse?> GetOperationsAsync() => api.GetAsync<OperationsOverviewResponse>("/api/admin/operations");
     public Task<ArchiveOverviewResponse?> GetArchiveOverviewAsync() => api.GetAsync<ArchiveOverviewResponse>("/api/admin/archive");
+    public Task<ArchiveRecoveryTestResponse?> TestArchiveRecoveryAsync() => api.SendAsync<object, ArchiveRecoveryTestResponse>(HttpMethod.Post, "/api/admin/archive/test-recovery", new { });
     public Task<int> GetCatalogCountAsync() => api.GetAsync<int>("/api/admin/catalog/count");
     public async Task<List<MaintenanceJobResponse>> GetMaintenanceHistoryAsync(int offset, int limit = 25, string? type = null, string? status = null, string? trigger = null)
     {
