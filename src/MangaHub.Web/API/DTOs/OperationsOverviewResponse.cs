@@ -31,6 +31,6 @@ public sealed record ArchiveMangaRetentionResponse(
     int GracePeriodChapterCount,
     int ReadyToArchiveChapterCount,
     int UnmanagedActiveChapterCount,
-    decimal? RetainFromChapter,
+    string? ReaderProtectionDetail,
     int ArchivedChapterCount,
     long ArchivedBytes);

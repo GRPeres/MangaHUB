@@ -70,7 +70,7 @@ public sealed record ArchiveMangaRetentionResponse(
     int GracePeriodChapterCount,
     int ReadyToArchiveChapterCount,
     int UnmanagedActiveChapterCount,
-    decimal? RetainFromChapter,
+    string? ReaderProtectionDetail,
     int ArchivedChapterCount,
     long ArchivedBytes);
 public sealed record MaintenanceJobResponse(Guid Id, string Type, string Trigger, string Status, DateTimeOffset RequestedAt, DateTimeOffset? StartedAt, DateTimeOffset? CompletedAt, string Error);

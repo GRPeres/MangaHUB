@@ -63,16 +63,7 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
         var titles = entries
             .GroupBy(entry => entry.MangaDexId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().Title, StringComparer.OrdinalIgnoreCase);
-        var activeProgress = await db.UserMangaEntries.AsNoTracking()
-            .Where(shelf => (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
-                && shelf.MangaEntry!.MangaDexId != "")
-            .Select(shelf => new { shelf.MangaEntry!.MangaDexId, shelf.CurrentChapter })
-            .ToListAsync(cancellationToken);
-        var retainFrom = activeProgress
-            .GroupBy(item => item.MangaDexId, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new { group.Key, Chapter = MangaDexCacheRetentionPolicy.FindEarliestRecordedChapter(group.Select(item => item.CurrentChapter)) })
-            .Where(item => item.Chapter is not null)
-            .ToDictionary(item => item.Key, item => item.Chapter!.Value, StringComparer.OrdinalIgnoreCase);
+        var readerProgressByMangaDexId = await GetReaderProgressByMangaDexIdAsync(cancellationToken);
         var series = await db.Series.AsNoTracking()
             .Include(item => item.Chapters)
             .Where(item => item.Source == "mangadex-cache")
@@ -99,9 +90,13 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
 
         foreach (var cached in series)
         {
-            retainFrom.TryGetValue(cached.ExternalId, out var currentRetainFrom);
+            readerProgressByMangaDexId.TryGetValue(cached.ExternalId, out var readerProgress);
+            readerProgress ??= [];
             var view = GetManga(manga, cached.ExternalId, titles.GetValueOrDefault(cached.ExternalId, cached.Title));
-            view.RetainFromChapter = retainFrom.ContainsKey(cached.ExternalId) ? currentRetainFrom : null;
+            var mostProtective = MangaDexCacheRetentionPolicy.FindMostProtectiveProgress(readerProgress);
+            view.ReaderProtectionDetail = mostProtective is null
+                ? null
+                : $"{(mostProtective.IncludeCurrentChapter ? "from" : "after")} Ch. {mostProtective.CurrentChapter}";
 
             foreach (var chapterGroup in cached.Chapters.GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
             {
@@ -113,10 +108,7 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
                     view.ActiveChapterCount += active.Count;
                     view.ActiveBytes += bytes;
                     var lastAccessedAt = chapterGroup.Max(item => item.LastAccessedAt ?? item.CreatedAt);
-                    var chapterNumber = MangaDexCacheRetentionPolicy.ParseChapterNumber(chapter.ChapterNumber);
-                    var protectedForReader = retainFrom.ContainsKey(cached.ExternalId)
-                        && chapterNumber is not null
-                        && chapterNumber.Value >= currentRetainFrom;
+                    var protectedForReader = MangaDexCacheRetentionPolicy.IsProtectedForReader(chapter.ChapterNumber, readerProgress);
                     var protectedByGrace = lastAccessedAt >= now.AddDays(-graceDays);
 
                     if (protectedForReader)
@@ -133,7 +125,7 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
                         graceBytes += bytes;
                         view.GracePeriodChapterCount += active.Count;
                     }
-                    else if (!MangaDexCacheRetentionPolicy.ShouldRetain(chapter.SourceId, chapter.ChapterNumber, null, lastAccessedAt, now, graceDays))
+                    else if (!MangaDexCacheRetentionPolicy.ShouldRetain(chapter.SourceId, chapter.ChapterNumber, readerProgress, lastAccessedAt, now, graceDays))
                     {
                         readyManga.Add(cached.ExternalId);
                         readyChapters += active.Count;
@@ -319,16 +311,7 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
 
     private async Task<ReclaimableCacheUsage> GetReclaimableCacheUsageAsync(CancellationToken cancellationToken)
     {
-        var activeProgress = await db.UserMangaEntries
-            .Where(shelf => (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
-                && shelf.MangaEntry!.MangaDexId != "")
-            .Select(shelf => new { shelf.MangaEntry!.MangaDexId, shelf.CurrentChapter })
-            .ToListAsync(cancellationToken);
-        var earliestActiveChapterByMangaDexId = activeProgress
-            .GroupBy(item => item.MangaDexId, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new { group.Key, Earliest = MangaDexCacheRetentionPolicy.FindEarliestRecordedChapter(group.Select(item => item.CurrentChapter)) })
-            .Where(group => group.Earliest is not null)
-            .ToDictionary(group => group.Key, group => group.Earliest!.Value, StringComparer.OrdinalIgnoreCase);
+        var readerProgressByMangaDexId = await GetReaderProgressByMangaDexIdAsync(cancellationToken);
         var series = await db.Series.AsNoTracking().Include(item => item.Chapters)
             .Where(item => item.Source == "mangadex-cache")
             .ToListAsync(cancellationToken);
@@ -337,14 +320,14 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
 
         foreach (var cached in series)
         {
-            earliestActiveChapterByMangaDexId.TryGetValue(cached.ExternalId, out var earliest);
-            var retainFrom = earliestActiveChapterByMangaDexId.ContainsKey(cached.ExternalId) ? earliest : (decimal?)null;
+            readerProgressByMangaDexId.TryGetValue(cached.ExternalId, out var readerProgress);
+            readerProgress ??= [];
             foreach (var group in cached.Chapters.GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
             {
                 var original = group.FirstOrDefault(chapter => !string.Equals(chapter.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase));
                 if (original is null) continue;
                 var lastAccessedAt = group.Max(chapter => chapter.LastAccessedAt ?? chapter.CreatedAt);
-                if (MangaDexCacheRetentionPolicy.ShouldRetain(original.SourceId, original.ChapterNumber, retainFrom, lastAccessedAt, DateTimeOffset.UtcNow, options.Value.MangaDexCacheRetentionGraceDays)) continue;
+                if (MangaDexCacheRetentionPolicy.ShouldRetain(original.SourceId, original.ChapterNumber, readerProgress, lastAccessedAt, DateTimeOffset.UtcNow, options.Value.MangaDexCacheRetentionGraceDays)) continue;
 
                 var path = Path.GetFullPath(Path.Combine(root, "mangadex", cached.ExternalId, $"{original.SourceId}.cbz"));
                 if (!path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path)) continue;
@@ -354,6 +337,23 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
         }
 
         return result;
+    }
+
+    private async Task<Dictionary<string, IReadOnlyCollection<MangaDexCacheRetentionPolicy.ReaderProgress>>> GetReaderProgressByMangaDexIdAsync(CancellationToken cancellationToken)
+    {
+        var progress = await db.UserMangaEntries.AsNoTracking()
+            .Where(shelf => shelf.ReadingStatus == "reading" && shelf.MangaEntry!.MangaDexId != "")
+            .Select(shelf => new { shelf.MangaEntry!.MangaDexId, shelf.CurrentChapter, shelf.IsRead })
+            .ToListAsync(cancellationToken);
+
+        return progress
+            .GroupBy(item => item.MangaDexId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyCollection<MangaDexCacheRetentionPolicy.ReaderProgress>)group
+                    .Select(item => new MangaDexCacheRetentionPolicy.ReaderProgress(item.CurrentChapter, !item.IsRead))
+                    .ToList(),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     private sealed class CacheUsage
@@ -388,7 +388,7 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
         public int GracePeriodChapterCount { get; set; }
         public int ReadyToArchiveChapterCount { get; set; }
         public int UnmanagedActiveChapterCount { get; set; }
-        public decimal? RetainFromChapter { get; set; }
+        public string? ReaderProtectionDetail { get; set; }
         public int ArchivedChapterCount { get; set; }
         public long ArchivedBytes { get; set; }
 
@@ -396,6 +396,6 @@ public sealed class AdminOperationsService(MangaHubDbContext db, IOptions<MangaH
             MangaDexId, Title, ActiveChapterCount, ActiveBytes,
             ReadingProtectedChapterCount, GracePeriodChapterCount, ReadyToArchiveChapterCount,
             UnmanagedActiveChapterCount,
-            RetainFromChapter, ArchivedChapterCount, ArchivedBytes);
+            ReaderProtectionDetail, ArchivedChapterCount, ArchivedBytes);
     }
 }

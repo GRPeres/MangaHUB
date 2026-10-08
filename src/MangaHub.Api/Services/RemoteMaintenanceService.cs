@@ -435,22 +435,17 @@ public sealed class RemoteMaintenanceService(
             var cache = scope.ServiceProvider.GetRequiredService<IMangaDexChapterCache>();
             var mangaDex = scope.ServiceProvider.GetRequiredService<MangaSourceRegistry>().Get("mangadex");
             var activeProgress = await db.UserMangaEntries
-                .Where(shelf => (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
+                .Where(shelf => shelf.ReadingStatus == "reading"
                     && shelf.MangaEntry!.MangaDexId != "")
-                .Select(shelf => new { shelf.MangaEntry!.MangaDexId, shelf.CurrentChapter })
+                .Select(shelf => new { shelf.MangaEntry!.MangaDexId, shelf.CurrentChapter, shelf.IsRead })
                 .ToListAsync(cancellationToken);
 
-            var earliestActiveChapterByMangaDexId = activeProgress
+            var readerProgressByMangaDexId = activeProgress
                 .GroupBy(item => item.MangaDexId, StringComparer.OrdinalIgnoreCase)
-                .Select(group => new
-                {
-                    MangaDexId = group.Key,
-                    EarliestChapter = MangaDexCacheRetentionPolicy.FindEarliestRecordedChapter(group.Select(item => item.CurrentChapter))
-                })
-                .Where(group => group.EarliestChapter is not null)
-                .ToDictionary(
-                    group => group.MangaDexId,
-                    group => group.EarliestChapter!.Value,
+                .ToDictionary(group => group.Key,
+                    group => (IReadOnlyCollection<MangaDexCacheRetentionPolicy.ReaderProgress>)group
+                        .Select(item => new MangaDexCacheRetentionPolicy.ReaderProgress(item.CurrentChapter, !item.IsRead))
+                        .ToList(),
                     StringComparer.OrdinalIgnoreCase);
 
             var cachedSeries = await db.Series
@@ -467,10 +462,8 @@ public sealed class RemoteMaintenanceService(
 
             foreach (var cached in cachedSeries)
             {
-                earliestActiveChapterByMangaDexId.TryGetValue(cached.ExternalId, out var earliestActiveChapter);
-                var retainFrom = earliestActiveChapterByMangaDexId.ContainsKey(cached.ExternalId)
-                    ? earliestActiveChapter
-                    : (decimal?)null;
+                readerProgressByMangaDexId.TryGetValue(cached.ExternalId, out var readerProgress);
+                readerProgress ??= [];
                 foreach (var chapterGroup in cached.Chapters.ToList().GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
                 {
                     if (considered >= batchSize)
@@ -484,7 +477,7 @@ public sealed class RemoteMaintenanceService(
                     if (MangaDexCacheRetentionPolicy.ShouldRetain(
                         chapter.SourceId,
                         chapter.ChapterNumber,
-                        retainFrom,
+                        readerProgress,
                         lastAccessedAt,
                         DateTimeOffset.UtcNow,
                         options.Value.MangaDexCacheRetentionGraceDays))
@@ -563,7 +556,7 @@ public sealed class RemoteMaintenanceService(
             }
 
             logger.LogInformation(
-                "MangaDex cache retention archived {ArchivedCount} of {ConsideredCount} considered chapters, skipped {AlreadyArchivedCount} already archived chapters, and could not archive {FailedCount} chapters (batch limit {BatchSize}, more work pending: {BatchLimitReached}); active readers retain chapters from their earliest current chapter onward.",
+                "MangaDex cache retention archived {ArchivedCount} of {ConsideredCount} considered chapters, skipped {AlreadyArchivedCount} already archived chapters, and could not archive {FailedCount} chapters (batch limit {BatchSize}, more work pending: {BatchLimitReached}); only unfinished current chapters and chapters beyond completed Reading progress are reader-protected.",
                 archived,
                 considered,
                 alreadyArchived,
