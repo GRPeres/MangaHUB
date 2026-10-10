@@ -7,7 +7,7 @@ namespace MangaHub.Api.Repositories;
 
 public sealed class DashboardRepository(MangaHubDbContext db)
 {
-    public async Task<HomeDashboardResponse> GetAsync(Guid userId, string preferredLanguage, CancellationToken cancellationToken)
+    public async Task<HomeDashboardResponse> GetAsync(Guid userId, string preferredLanguage, DateTimeOffset externalReaderCheckDueBefore, CancellationToken cancellationToken)
     {
         var languageCodes = LanguagePreferences.Parse(preferredLanguage).ToArray();
         var shelfEntries = await db.UserMangaEntries.AsNoTracking()
@@ -28,7 +28,10 @@ public sealed class DashboardRepository(MangaHubDbContext db)
                     .Where(latest => latest.MangaEntryId == entry.MangaEntryId && languageCodes.Contains(latest.Language))
                     .Select(latest => (decimal?)latest.LatestChapter)
                     .Max(),
-                entry.IsRead))
+                entry.IsRead,
+                entry.MangaEntry.MangaDexId,
+                entry.ExternalReaderLatestChapter,
+                entry.LastExternalReaderVerifiedAt))
             .ToListAsync(cancellationToken);
 
         var newReleases = shelfEntries
@@ -42,7 +45,7 @@ public sealed class DashboardRepository(MangaHubDbContext db)
             .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
         var continueReading = shelfEntries
-            .Where(entry => HasStatus(entry, "reading"))
+            .Where(entry => HasStatus(entry, "reading") && IsContinueReadingCandidate(entry, externalReaderCheckDueBefore))
             .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault()
             ?? planned.FirstOrDefault();
@@ -70,7 +73,10 @@ public sealed class DashboardRepository(MangaHubDbContext db)
                 entry.MediaType,
                 entry.FirstPublishYear,
                 null,
-                false))
+                false,
+                "",
+                "",
+                null))
             .ToListAsync(cancellationToken);
 
         return new HomeDashboardResponse(
@@ -95,6 +101,13 @@ public sealed class DashboardRepository(MangaHubDbContext db)
     {
         var gap = Math.Max(0, (entry.MangaDexPreferredLanguageLatestChapter ?? 0) - ParseChapter(entry.CurrentChapter));
         return gap == 0 && !entry.IsRead && entry.MangaDexPreferredLanguageLatestChapter == ParseChapter(entry.CurrentChapter) ? 1 : gap;
+    }
+
+    private static bool IsContinueReadingCandidate(HomeDashboardMangaResponse entry, DateTimeOffset externalReaderCheckDueBefore)
+    {
+        if (!string.IsNullOrWhiteSpace(entry.MangaDexId)) return true;
+        if (ParseChapter(entry.ExternalReaderLatestChapter) > ParseChapter(entry.CurrentChapter)) return true;
+        return entry.LastExternalReaderVerifiedAt is null || entry.LastExternalReaderVerifiedAt <= externalReaderCheckDueBefore;
     }
 
     private static decimal ParseChapter(string value) =>

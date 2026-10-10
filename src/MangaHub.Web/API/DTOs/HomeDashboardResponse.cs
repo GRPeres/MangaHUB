@@ -13,7 +13,10 @@ public sealed record HomeDashboardMangaResponse(
     string MediaType,
     int? FirstPublishYear,
     decimal? MangaDexPreferredLanguageLatestChapter,
-    bool IsRead);
+    bool IsRead,
+    string MangaDexId = "",
+    string ExternalReaderLatestChapter = "",
+    DateTimeOffset? LastExternalReaderVerifiedAt = null);
 
 public sealed record HomeDashboardResponse(
     HomeDashboardMangaResponse? ContinueReading,
