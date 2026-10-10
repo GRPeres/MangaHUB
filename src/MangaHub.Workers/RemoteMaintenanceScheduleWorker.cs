@@ -26,9 +26,10 @@ public sealed class RemoteMaintenanceScheduleWorker(
             if (now >= nextReleaseSyncAt)
             {
                 // The MangaDex lane preserves this order before selecting Update chapters to pre-cache.
-                StartScheduledJob("release-sync-and-prefetch", async token =>
+                StartScheduledJob("release-sync-and-language-coverage-and-prefetch", async token =>
                 {
                     await QueueAsync("release-sync", token);
+                    await QueueAsync("mangadex-language-coverage-check", token);
                     await QueueAsync("prefetch", token);
                 }, stoppingToken);
                 nextReleaseSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaDexReleasePollMinutes, 15, 720));

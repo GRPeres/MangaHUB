@@ -14,7 +14,7 @@ public sealed class AdminOperationsService(
     IMangaDexChapterCache? mangaDexCache = null,
     IArchiveReader? archiveReader = null)
 {
-    private static readonly HashSet<string> AllowedJobTypes = ["release-sync", "mangadex-status-sync", "prefetch", "mangadex-cache-cleanup", "mangadex-archive-integrity-check", "mangaupdates-sync", CatalogIdentityEnrichmentService.JobType, "library-scan", "idle-backfill"];
+    private static readonly HashSet<string> AllowedJobTypes = ["release-sync", "mangadex-status-sync", "mangadex-language-coverage-check", "prefetch", "mangadex-cache-cleanup", "mangadex-archive-integrity-check", "mangaupdates-sync", CatalogIdentityEnrichmentService.JobType, "library-scan", "idle-backfill"];
 
     public async Task<OperationsOverviewResponse> GetOverviewAsync(CancellationToken cancellationToken)
     {

@@ -259,6 +259,12 @@ public sealed class IssueReportingService(
         if (manga is null) return false;
 
         manga.FallbackReaderUrl = request.FallbackReaderUrl.Trim();
+        if (string.Equals(issue.Kind, AdminIssueTypes.MangaDexTranslationAbandoned, StringComparison.OrdinalIgnoreCase)
+            && manga.ReaderPreference == ReaderPreference.MangaHub)
+        {
+            // Keep existing MangaDex chapters readable while exposing the repaired source for the missing translation range.
+            manga.ReaderPreference = ReaderPreference.Hybrid;
+        }
         manga.UpdatedAt = DateTimeOffset.UtcNow;
         await CloseAsync(issue, adminUserId, "resolved", request.ResolutionNote, "External reader link repaired", "An admin repaired the external reader link for", cancellationToken);
         return true;
@@ -505,7 +511,8 @@ public sealed class IssueReportingService(
 
     private static bool IsExternalReaderRepairIssue(string kind) =>
         string.Equals(kind, AdminIssueTypes.ExternalReaderLink, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(kind, AdminIssueTypes.MangaDexLanguageCoverage, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(kind, AdminIssueTypes.MangaDexLanguageCoverage, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(kind, AdminIssueTypes.MangaDexTranslationAbandoned, StringComparison.OrdinalIgnoreCase);
 
     private sealed record DuplicateIdentityMetadata(string Provider, string Value);
 

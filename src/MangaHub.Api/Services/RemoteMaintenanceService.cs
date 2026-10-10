@@ -32,7 +32,7 @@ public sealed class RemoteMaintenanceService(
     {
         var priority = type switch
         {
-            "release-sync" or "mangadex-status-sync" or "mangaupdates-sync" => RemoteJobPriority.ReleaseSync,
+            "release-sync" or "mangadex-status-sync" or "mangadex-language-coverage-check" or "mangaupdates-sync" => RemoteJobPriority.ReleaseSync,
             "prefetch" => RemoteJobPriority.Prefetch,
             "mangadex-cache-cleanup" or "mangadex-archive-integrity-check" or "mangaupdates-match" or CatalogIdentityEnrichmentService.JobType => RemoteJobPriority.Maintenance,
             "idle-backfill" => RemoteJobPriority.Backfill,
@@ -45,6 +45,7 @@ public sealed class RemoteMaintenanceService(
         {
             case "release-sync": await RunReleaseSyncAsync(cancellationToken); break;
             case "mangadex-status-sync": await RunMangaDexStatusSyncAsync(cancellationToken); break;
+            case "mangadex-language-coverage-check": await RunMangaDexTranslationCoverageCheckAsync(cancellationToken); break;
             case "prefetch": await RunPrefetchAsync(cancellationToken); break;
             case "mangadex-cache-cleanup": shouldContinue = await RunCacheRetentionAsync(cancellationToken); break;
             case "mangadex-archive-integrity-check": await RunArchiveIntegrityCheckAsync(cancellationToken); break;
@@ -104,6 +105,30 @@ public sealed class RemoteMaintenanceService(
         catch (Exception ex)
         {
             logger.LogError(ex, "MangaDex status sync run failed.");
+        }
+    }
+
+    private async Task RunMangaDexTranslationCoverageCheckAsync(CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaDexEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var coverage = scope.ServiceProvider.GetRequiredService<MangaDexTranslationCoverageService>();
+            await coverage.RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "MangaDex translation coverage check failed.");
+            throw;
         }
     }
 

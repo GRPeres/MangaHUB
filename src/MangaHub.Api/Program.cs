@@ -86,6 +86,7 @@ builder.Services.AddScoped<AdminOperationsService>();
 builder.Services.AddScoped<ArchiveRecoveryTelemetryService>();
 builder.Services.AddScoped<MaintenanceWatchdogService>();
 builder.Services.AddScoped<RemoteMaintenanceService>();
+builder.Services.AddScoped<MangaDexTranslationCoverageService>();
 builder.Services.AddScoped<OpenLibraryService>();
 builder.Services.AddScoped<MangaDexCatalogMatchService>();
 builder.Services.AddScoped<MangaDexTitleMatchService>();

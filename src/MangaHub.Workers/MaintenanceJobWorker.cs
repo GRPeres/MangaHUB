@@ -194,6 +194,7 @@ public sealed class MaintenanceJobWorker(
     private static bool UsesMangaDexLane(string type) => type is
         "release-sync" or
         "mangadex-status-sync" or
+        "mangadex-language-coverage-check" or
         "prefetch" or
         "mangadex-cache-cleanup" or
         "mangadex-archive-integrity-check" or

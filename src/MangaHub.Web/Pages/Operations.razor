@@ -116,6 +116,7 @@ else if (overview is not null)
     private static readonly (string Type, string Label)[] OperationTypes =
     [
         ("release-sync", "MangaDex release refresh"),
+        ("mangadex-language-coverage-check", "Translation coverage check"),
         ("mangadex-status-sync", "MangaDex status repair"),
         ("prefetch", "Update prefetch"),
         ("mangadex-cache-cleanup", "Cache cleanup"),
@@ -139,7 +140,7 @@ else if (overview is not null)
         return $"{bytes / 1024d / 1024d / 1024d:0.##} GB";
     }
     private static string FormatDate(DateTimeOffset? value) => value?.ToLocalTime().ToString("g") ?? "Not yet";
-    private static string JobLabel(string type) => type switch { "release-sync" => "MangaDex release refresh", "mangadex-status-sync" => "MangaDex status and shelf repair", "prefetch" => "Update prefetch", "mangadex-cache-cleanup" => "MangaDex cache cleanup", "mangadex-archive-integrity-check" => "Archive integrity check", "mangaupdates-sync" => "MangaUpdates refresh", "catalog-id-enrichment" => "Catalog ID matching", "library-scan" => "Local library scan", "idle-backfill" => "Idle backfill", _ => type };
+    private static string JobLabel(string type) => type switch { "release-sync" => "MangaDex release refresh", "mangadex-language-coverage-check" => "Translation coverage check", "mangadex-status-sync" => "MangaDex status and shelf repair", "prefetch" => "Update prefetch", "mangadex-cache-cleanup" => "MangaDex cache cleanup", "mangadex-archive-integrity-check" => "Archive integrity check", "mangaupdates-sync" => "MangaUpdates refresh", "catalog-id-enrichment" => "Catalog ID matching", "library-scan" => "Local library scan", "idle-backfill" => "Idle backfill", _ => type };
     private static string JobTriggerLabel(string trigger) => trigger switch { "scheduled" => "automatic schedule", "continuation" => "cleanup continuation", "watchdog" => "watchdog retry", "recovery" => "recovery retry", _ => "manual" };
     private static Color JobColor(string status) => status switch { "completed" => Color.Success, "failed" => Color.Error, "running" => Color.Warning, _ => Color.Info };
 }
