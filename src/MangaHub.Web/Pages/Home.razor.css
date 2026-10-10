@@ -120,9 +120,15 @@
 }
 
 .mh-dashboard-activity-grid > div {
-    border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 75%, transparent);
+    align-content: start;
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 82%, var(--mud-palette-primary));
+    border-radius: 8px;
+    display: grid;
+    gap: .15rem;
+    min-height: 104px;
     min-width: 0;
-    padding-top: .65rem;
+    padding: .85rem;
 }
 
 .mh-dashboard-activity-chart {
