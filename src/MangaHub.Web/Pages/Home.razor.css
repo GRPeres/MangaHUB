@@ -230,9 +230,13 @@
         flex-direction: column;
     }
 
-    .mh-dashboard-header ::deep .mud-button-root,
-    .mh-dashboard-section-heading-row ::deep .mud-button-root {
+    .mh-dashboard-header ::deep .mud-button-root {
         align-self: stretch;
+    }
+
+    .mh-dashboard-section-heading-row ::deep .mud-button-root {
+        align-self: flex-end;
+        width: auto;
     }
 
     ::deep .mh-dashboard-overview-bento {
