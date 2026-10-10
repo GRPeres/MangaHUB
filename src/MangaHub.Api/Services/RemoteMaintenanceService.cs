@@ -669,7 +669,9 @@ public sealed class RemoteMaintenanceService(
         var chapters = await db.Chapters
             .Include(chapter => chapter.Series)
             .Where(chapter => chapter.Series!.Source == MangaDexCacheSource
-                && string.Equals(chapter.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase))
+                // ImageQuality is normalized when chapters are created. Keep this SQL-translatable;
+                // EF Core cannot translate StringComparison overloads for PostgreSQL.
+                && chapter.ImageQuality == "data-saver")
             .OrderBy(chapter => chapter.Id)
             .ToListAsync(cancellationToken);
         if (chapters.Count == 0)
