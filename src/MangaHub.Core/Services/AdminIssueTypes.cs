@@ -8,6 +8,7 @@ public static class AdminIssueTypes
     public const string ExternalReaderLink = "external-reader-link";
     public const string MangaDexLanguageCoverage = "mangadex-language-coverage";
     public const string MangaDexTranslationAbandoned = "mangadex-translation-abandoned";
+    public const string MangaDexReleaseStalled = "mangadex-release-stalled";
     public const string CoverImage = "cover-image";
     public const string CatalogMetadata = "catalog-metadata";
     public const string DuplicateCatalogId = "duplicate-catalog-id";
@@ -23,6 +24,7 @@ public static class AdminIssueTypes
             [ExternalReaderLink] = new(ExternalReaderLink, CatalogManga, "normal"),
             [MangaDexLanguageCoverage] = new(MangaDexLanguageCoverage, CatalogManga, "normal"),
             [MangaDexTranslationAbandoned] = new(MangaDexTranslationAbandoned, CatalogManga, "high"),
+            [MangaDexReleaseStalled] = new(MangaDexReleaseStalled, CatalogManga, "normal"),
             [CoverImage] = new(CoverImage, CatalogManga, "normal"),
             [CatalogMetadata] = new(CatalogMetadata, CatalogManga, "normal"),
             [DuplicateCatalogId] = new(DuplicateCatalogId, CatalogManga, "high"),

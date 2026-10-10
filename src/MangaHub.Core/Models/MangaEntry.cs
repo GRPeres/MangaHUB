@@ -21,6 +21,8 @@ public sealed class MangaEntry
     public string ReaderPreference { get; set; } = global::MangaHub.Core.Models.ReaderPreference.MangaHub;
     public string MangaDexId { get; set; } = "";
     public decimal? MangaDexLatestChapter { get; set; }
+    public DateTimeOffset? MangaDexLatestChapterObservedAt { get; set; }
+    public DateTimeOffset? MangaDexNonHiatusSince { get; set; }
     public DateTimeOffset? MangaDexLastSyncedAt { get; set; }
     public decimal? MangaDexLastPrefetchedChapter { get; set; }
     public DateTimeOffset? MangaDexLastPrefetchedAt { get; set; }

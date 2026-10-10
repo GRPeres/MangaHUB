@@ -32,7 +32,7 @@ public sealed class RemoteMaintenanceService(
     {
         var priority = type switch
         {
-            "release-sync" or "mangadex-status-sync" or "mangadex-language-coverage-check" or "mangaupdates-sync" => RemoteJobPriority.ReleaseSync,
+            "release-sync" or "mangadex-status-sync" or "mangadex-language-coverage-check" or "mangadex-release-stall-check" or "mangaupdates-sync" => RemoteJobPriority.ReleaseSync,
             "prefetch" => RemoteJobPriority.Prefetch,
             "mangadex-cache-cleanup" or "mangadex-archive-integrity-check" or "mangaupdates-match" or CatalogIdentityEnrichmentService.JobType => RemoteJobPriority.Maintenance,
             "idle-backfill" => RemoteJobPriority.Backfill,
@@ -46,6 +46,7 @@ public sealed class RemoteMaintenanceService(
             case "release-sync": await RunReleaseSyncAsync(cancellationToken); break;
             case "mangadex-status-sync": await RunMangaDexStatusSyncAsync(cancellationToken); break;
             case "mangadex-language-coverage-check": await RunMangaDexTranslationCoverageCheckAsync(cancellationToken); break;
+            case "mangadex-release-stall-check": await RunMangaDexReleaseStallCheckAsync(cancellationToken); break;
             case "prefetch": await RunPrefetchAsync(cancellationToken); break;
             case "mangadex-cache-cleanup": shouldContinue = await RunCacheRetentionAsync(cancellationToken); break;
             case "mangadex-archive-integrity-check": await RunArchiveIntegrityCheckAsync(cancellationToken); break;
@@ -128,6 +129,30 @@ public sealed class RemoteMaintenanceService(
         catch (Exception ex)
         {
             logger.LogError(ex, "MangaDex translation coverage check failed.");
+            throw;
+        }
+    }
+
+    private async Task RunMangaDexReleaseStallCheckAsync(CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaDexEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var stallCheck = scope.ServiceProvider.GetRequiredService<MangaDexReleaseStallService>();
+            await stallCheck.RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "MangaDex stalled-release check failed.");
             throw;
         }
     }
@@ -335,6 +360,7 @@ public sealed class RemoteMaintenanceService(
         foreach (var entry in entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var syncedAt = DateTimeOffset.UtcNow;
 
             try
             {
@@ -346,6 +372,7 @@ public sealed class RemoteMaintenanceService(
 
                     if (IsMangaDexHiatus(sourceSeries.Status))
                     {
+                        entry.MangaDexNonHiatusSince = null;
                         var activeShelfEntries = await db.UserMangaEntries
                             .Where(shelf => shelf.MangaEntryId == entry.Id
                                 && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "done"))
@@ -359,6 +386,7 @@ public sealed class RemoteMaintenanceService(
                     }
                     else if (IsMangaDexOngoing(sourceSeries.Status))
                     {
+                        entry.MangaDexNonHiatusSince ??= syncedAt;
                         var resumableShelfEntries = await db.UserMangaEntries
                             .Where(shelf => shelf.MangaEntryId == entry.Id
                                 && (shelf.ReadingStatus == "paused" || shelf.ReadingStatus == "done"))
@@ -370,6 +398,10 @@ public sealed class RemoteMaintenanceService(
                             resumed++;
                         }
                     }
+                    else
+                    {
+                        entry.MangaDexNonHiatusSince = null;
+                    }
 
                     if (statusChanged)
                     {
@@ -380,7 +412,7 @@ public sealed class RemoteMaintenanceService(
 
                 var latestChapters = await GetLatestChapterNumbersByLanguageAsync(client, entry.MangaDexId, cancellationToken);
                 decimal? latestChapter = latestChapters.Count == 0 ? null : latestChapters.Values.Max();
-                entry.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
+                entry.MangaDexLastSyncedAt = syncedAt;
 
                 var cachedLanguages = await db.MangaDexLanguageLatestChapters
                     .Where(latest => latest.MangaEntryId == entry.Id)
@@ -421,12 +453,22 @@ public sealed class RemoteMaintenanceService(
                 if (latestChapter is not null)
                 {
                     var latestWholeChapter = (int)Math.Floor(latestChapter.Value);
-                    if (entry.MangaDexLatestChapter != latestChapter || entry.ChapterCount != latestWholeChapter)
+                    var latestChapterChanged = entry.MangaDexLatestChapter != latestChapter;
+                    if (latestChapterChanged || entry.ChapterCount != latestWholeChapter)
                     {
                         entry.MangaDexLatestChapter = latestChapter;
                         entry.ChapterCount = latestWholeChapter;
+                        if (latestChapterChanged || entry.MangaDexLatestChapterObservedAt is null)
+                        {
+                            entry.MangaDexLatestChapterObservedAt = syncedAt;
+                        }
                         entry.UpdatedAt = DateTimeOffset.UtcNow;
                         updated++;
+                    }
+                    else if (entry.MangaDexLatestChapterObservedAt is null)
+                    {
+                        // Start reliable tracking for records created before this field existed.
+                        entry.MangaDexLatestChapterObservedAt = syncedAt;
                     }
                 }
             }

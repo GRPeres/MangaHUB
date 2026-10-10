@@ -14,6 +14,7 @@ public sealed class RemoteMaintenanceScheduleWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var nextReleaseSyncAt = DateTimeOffset.MinValue;
+        var nextMangaDexReleaseStallCheckAt = DateTimeOffset.MinValue;
         var nextCacheCleanupAt = DateTimeOffset.MinValue;
         var nextMangaUpdatesSyncAt = DateTimeOffset.MinValue;
         var nextMangaUpdatesMatchAt = DateTimeOffset.MinValue;
@@ -33,6 +34,11 @@ public sealed class RemoteMaintenanceScheduleWorker(
                     await QueueAsync("prefetch", token);
                 }, stoppingToken);
                 nextReleaseSyncAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(options.Value.MangaDexReleasePollMinutes, 15, 720));
+            }
+            if (now >= nextMangaDexReleaseStallCheckAt)
+            {
+                StartScheduledJob("mangadex-release-stall-check", token => QueueAsync("mangadex-release-stall-check", token), stoppingToken);
+                nextMangaDexReleaseStallCheckAt = DateTimeOffset.UtcNow.AddHours(24);
             }
             if (now >= nextCacheCleanupAt)
             {

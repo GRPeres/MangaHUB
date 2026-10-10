@@ -153,6 +153,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "ReaderPreference" character varying(20) NOT NULL DEFAULT 'mangahub',
                 "MangaDexId" character varying(80) NOT NULL,
                 "MangaDexLatestChapter" numeric(10,3) NULL,
+                "MangaDexLatestChapterObservedAt" timestamp with time zone NULL,
+                "MangaDexNonHiatusSince" timestamp with time zone NULL,
                 "MangaDexLastSyncedAt" timestamp with time zone NULL,
                 "MangaDexLastPrefetchedChapter" numeric(10,3) NULL,
                 "MangaDexLastPrefetchedAt" timestamp with time zone NULL,
@@ -184,6 +186,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexUrl" text NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ALTER COLUMN "MangaDexUrl" SET DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexId" character varying(80) NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapterObservedAt" timestamp with time zone NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexNonHiatusSince" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastSyncedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLastPrefetchedAt" timestamp with time zone NULL;
@@ -341,6 +345,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_OpenLibraryKey" ON manga_entries ("OpenLibraryKey");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MyAnimeListId" ON manga_entries ("MyAnimeListId");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_Title" ON manga_entries ("Title");
+            CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLatestChapterObservedAt" ON manga_entries ("MangaDexLatestChapterObservedAt");
+            CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexNonHiatusSince" ON manga_entries ("MangaDexNonHiatusSince");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastSyncedAt" ON manga_entries ("MangaDexLastSyncedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastPrefetchedAt" ON manga_entries ("MangaDexLastPrefetchedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastBackfilledAt" ON manga_entries ("MangaDexLastBackfilledAt");

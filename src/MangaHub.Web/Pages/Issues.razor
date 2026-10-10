@@ -79,6 +79,12 @@ else
                         @TranslationCoverageSummary
                     </MudAlert>
                 }
+                @if (IsReleaseStallIssue)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                        @ReleaseStallSummary
+                    </MudAlert>
+                }
                 @if (IsExternalReaderRepairIssue)
                 {
                     <MudTextField T="string" @bind-Value="replacementUrl" Label="Replacement external reader URL" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
@@ -197,6 +203,7 @@ else
         || string.Equals(selected?.Kind, "mangadex-translation-abandoned", StringComparison.OrdinalIgnoreCase);
     private bool IsCoverImageIssue => string.Equals(selected?.Kind, "cover-image", StringComparison.OrdinalIgnoreCase);
     private bool IsTranslationCoverageIssue => string.Equals(selected?.Kind, "mangadex-translation-abandoned", StringComparison.OrdinalIgnoreCase);
+    private bool IsReleaseStallIssue => string.Equals(selected?.Kind, "mangadex-release-stalled", StringComparison.OrdinalIgnoreCase);
     private bool IsDuplicateCatalogIssue => string.Equals(selected?.Kind, "duplicate-catalog-id", StringComparison.OrdinalIgnoreCase);
     private bool CanReintegrate => IsOpen && !string.IsNullOrWhiteSpace(selected?.MyAnimeListId) && string.IsNullOrWhiteSpace(selected?.MangaDexId);
     private string GoogleSearchUrl => selected is null ? "" : SearchUrl("https://www.google.com/search?q=", selected);
@@ -230,6 +237,28 @@ else
             catch (System.Text.Json.JsonException)
             {
                 return "MangaDex translations are materially behind another available language.";
+            }
+        }
+    }
+    private string ReleaseStallSummary
+    {
+        get
+        {
+            if (selected is null) return "";
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(selected.MetadataJson);
+                var root = document.RootElement;
+                var chapter = root.TryGetProperty("latestChapter", out var chapterNode) ? chapterNode.ToString() : "unknown";
+                var days = root.TryGetProperty("inactiveDays", out var daysNode) ? daysNode.ToString() : "30+";
+                var observed = root.TryGetProperty("latestChapterObservedAt", out var observedNode) && observedNode.TryGetDateTimeOffset(out var observedAt)
+                    ? observedAt.ToLocalTime().ToString("d")
+                    : "unknown date";
+                return $"MangaDex still marks this title ongoing, but its latest page-bearing chapter is Ch. {chapter}, last observed on {observed} ({days} days ago). Check an external source or confirm its status.";
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return "MangaDex still marks this title ongoing, but no new page-bearing chapter has appeared for at least 30 days.";
             }
         }
     }
@@ -344,8 +373,8 @@ else
     }
     private async Task DismissAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.DismissIssueAsync(selected.Id, resolutionNote)) { Messages.Info("The issue was dismissed and reporters were notified."); CloseIssue(); await LoadAsync(); } } finally { saving = false; } }
     private async Task ReopenAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ReopenIssueAsync(selected.Id)) { await OpenIssueAsync(selected.Id); await LoadAsync(); } } finally { saving = false; } }
-    private static string IssueLabel(string kind) => kind switch { "external-reader-link" => "External reader link", "mangadex-language-coverage" => "MangaDex language coverage", "mangadex-translation-abandoned" => "Translation coverage behind", "cover-image" => "Cover image", "catalog-metadata" => "Catalog metadata", "duplicate-catalog-id" => "Duplicate catalog ID", "catalog-registration-failure" => "Catalog registration failed", "maintenance-overdue" => "Maintenance overdue", "archive-integrity" => "Archive integrity", _ => kind };
-    private static string IssueIcon(string kind) => kind switch { "external-reader-link" => Icons.Material.Filled.LinkOff, "mangadex-language-coverage" or "mangadex-translation-abandoned" => Icons.Material.Filled.Translate, "cover-image" => Icons.Material.Filled.BrokenImage, "catalog-metadata" => Icons.Material.Filled.EditNote, "duplicate-catalog-id" => Icons.Material.Filled.ContentCopy, "catalog-registration-failure" => Icons.Material.Filled.AppRegistration, "maintenance-overdue" => Icons.Material.Filled.ScheduleSend, "archive-integrity" => Icons.Material.Filled.Inventory, _ => Icons.Material.Filled.ReportProblem };
+    private static string IssueLabel(string kind) => kind switch { "external-reader-link" => "External reader link", "mangadex-language-coverage" => "MangaDex language coverage", "mangadex-translation-abandoned" => "Translation coverage behind", "mangadex-release-stalled" => "MangaDex release stalled", "cover-image" => "Cover image", "catalog-metadata" => "Catalog metadata", "duplicate-catalog-id" => "Duplicate catalog ID", "catalog-registration-failure" => "Catalog registration failed", "maintenance-overdue" => "Maintenance overdue", "archive-integrity" => "Archive integrity", _ => kind };
+    private static string IssueIcon(string kind) => kind switch { "external-reader-link" => Icons.Material.Filled.LinkOff, "mangadex-language-coverage" or "mangadex-translation-abandoned" => Icons.Material.Filled.Translate, "mangadex-release-stalled" => Icons.Material.Filled.HourglassTop, "cover-image" => Icons.Material.Filled.BrokenImage, "catalog-metadata" => Icons.Material.Filled.EditNote, "duplicate-catalog-id" => Icons.Material.Filled.ContentCopy, "catalog-registration-failure" => Icons.Material.Filled.AppRegistration, "maintenance-overdue" => Icons.Material.Filled.ScheduleSend, "archive-integrity" => Icons.Material.Filled.Inventory, _ => Icons.Material.Filled.ReportProblem };
     private static Color StatusColor(string value) => value == "resolved" ? Color.Success : value == "dismissed" ? Color.Secondary : Color.Error;
     private static string ReasonLabel(string reason) => reason switch { "create-failed" => "Registration failed", "language-coverage" => "Preferred language unavailable", "title" => "Wrong title", "description" => "Wrong description", "category" => "Wrong categories or format", "release-status" => "Wrong release status", "wrong-manga" => "Wrong manga", "wrong-image" => "Wrong cover", "missing" => "Cover missing", "low-quality" => "Poor image quality", "obsolete" => "Obsolete or unhelpful", "unsafe" => "Potentially unsafe", "broken" => "Broken link or image", _ => "Other problem" };
     private static string DisplayIdentifier(string value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
