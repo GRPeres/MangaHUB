@@ -89,9 +89,6 @@
 }
 
 .mh-dashboard-chart-frame {
-    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
-    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 82%, var(--mud-palette-primary));
-    border-radius: 8px;
     min-width: 0;
     overflow: hidden;
     padding: .85rem .85rem .55rem;
