@@ -142,8 +142,9 @@ else
                 <MudText id="dashboard-shelf-title" Typo="Typo.h4">Keep the list moving</MudText>
             </div>
 
-            <div class="mh-dashboard-discovery-grid">
-                <MudPaper Class="mh-dashboard-panel mh-dashboard-release-panel" Elevation="0" Outlined="true">
+            <MangaBento Columns="2" Class="mh-dashboard-discovery-bento">
+                <MangaBentoTile Scheme="warm" CornerIcon="@Icons.Material.Filled.FiberNew">
+                    <div class="mh-dashboard-panel">
                     <div class="mh-dashboard-panel-header">
                         <MudStack Spacing="0"><MudText Typo="Typo.h5">New on your shelf</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Available in @PreferredLanguagesLabel</MudText></MudStack>
                         <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="GoNewReleases">View updates</MudButton>
@@ -163,9 +164,11 @@ else
                             </div>
                         }
                     }
-                </MudPaper>
+                    </div>
+                </MangaBentoTile>
 
-                <MudPaper Class="mh-dashboard-panel" Elevation="0" Outlined="true">
+                <MangaBentoTile Scheme="soft" CornerIcon="@Icons.Material.Filled.TravelExplore">
+                    <div class="mh-dashboard-panel">
                     <div class="mh-dashboard-panel-header">
                         <MudStack Spacing="0"><MudText Typo="Typo.h5">Try from your catalog</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Quiet prompts, not a queue</MudText></MudStack>
                         <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="GoCatalog">Browse catalog</MudButton>
@@ -185,9 +188,11 @@ else
                             </div>
                         }
                     }
-                </MudPaper>
+                    </div>
+                </MangaBentoTile>
 
-                <MudPaper Class="mh-dashboard-panel mh-dashboard-ratings-panel" Elevation="0" Outlined="true">
+                <MangaBentoTile ColSpan="2" Scheme="primary" CornerIcon="@Icons.Material.Filled.StarOutline">
+                    <div class="mh-dashboard-panel mh-dashboard-ratings-panel">
                     <div class="mh-dashboard-panel-header">
                         <MudStack Spacing="0"><MudText Typo="Typo.h5">Rate completed manga</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">A quick record for future you</MudText></MudStack>
                     </div>
@@ -216,8 +221,9 @@ else
                             </div>
                         }
                     }
-                </MudPaper>
-            </div>
+                    </div>
+                </MangaBentoTile>
+            </MangaBento>
         </section>
     </MudStack>
 }
