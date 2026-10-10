@@ -105,7 +105,7 @@ public sealed class DashboardRepository(MangaHubDbContext db)
 
     private static bool IsContinueReadingCandidate(HomeDashboardMangaResponse entry, DateTimeOffset externalReaderCheckDueBefore)
     {
-        if (!string.IsNullOrWhiteSpace(entry.MangaDexId)) return true;
+        if (!string.IsNullOrWhiteSpace(entry.MangaDexId)) return IsReadingWithNewChapters(entry);
         if (ParseChapter(entry.ExternalReaderLatestChapter) > ParseChapter(entry.CurrentChapter)) return true;
         return entry.LastExternalReaderVerifiedAt is null || entry.LastExternalReaderVerifiedAt <= externalReaderCheckDueBefore;
     }
