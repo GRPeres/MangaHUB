@@ -44,7 +44,7 @@ else if (overview is not null)
             <MangaBentoTile Scheme="secondary" CornerIcon="@Icons.Material.Filled.Archive"><div class="mh-archive-stat"><MudText Typo="Typo.overline">Long-term archive</MudText><MudText Typo="Typo.h3">@FormatBytes(overview.ArchivedBytes)</MudText><MudText Typo="Typo.caption">@overview.ArchivedChapterCount Data Saver files</MudText></div></MangaBentoTile>
         </MangaBento>
 
-        <MudPaper Elevation="0" Outlined="true" Class="mh-archive-panel">
+        <section class="mh-archive-panel">
             <MudStack Spacing="2">
                 <MudStack Spacing="0"><MudText Typo="Typo.h5">Why active chapters remain</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">A chapter is kept active for the reader, while it is inside the @overview.GraceDays-day reread grace period, or until the next cache-cleanup batch archives it.</MudText></MudStack>
                 <div class="mh-archive-reason-grid">
@@ -57,9 +57,9 @@ else if (overview is not null)
                     <MudAlert Severity="Severity.Warning" Dense="true">@overview.UnmanagedActiveChapterCount active chapter file(s) (@FormatBytes(overview.UnmanagedActiveBytes)) are not matched to a cache record, so cleanup will leave them alone.</MudAlert>
                 }
             </MudStack>
-        </MudPaper>
+        </section>
 
-        <MudPaper Elevation="0" Outlined="true" Class="mh-archive-panel">
+        <section class="mh-archive-panel">
             <MudStack Spacing="2">
                 <div class="mh-archive-recovery-header">
                     <MudStack Spacing="0"><MudText Typo="Typo.h5">Archive recovery</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Over the last 30 days, @overview.ArchiveRestoreCountLast30Days chapters were restored from archive and @overview.ArchiveRedownloadCountLast30Days needed a MangaDex re-download.</MudText></MudStack>
@@ -67,9 +67,9 @@ else if (overview is not null)
                 </div>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">Uses one real archived Data Saver chapter, reads its first page locally, then returns it to the archive.</MudText>
             </MudStack>
-        </MudPaper>
+        </section>
 
-        <MudPaper Elevation="0" Outlined="true" Class="mh-archive-panel">
+        <section class="mh-archive-panel">
             <MudStack Spacing="2">
                 <MudStack Spacing="0"><MudText Typo="Typo.h5">Manga cache breakdown</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Each row is based on cache files currently present on disk.</MudText></MudStack>
                 <MudTextField T="string" @bind-Value="search" Immediate="true" Placeholder="Filter manga" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
@@ -99,7 +99,7 @@ else if (overview is not null)
                     </div>
                 }
             </MudStack>
-        </MudPaper>
+        </section>
     </MudStack>
 }
 
