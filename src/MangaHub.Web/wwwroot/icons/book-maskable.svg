@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">MangaHub app icon</title>
+  <desc id="desc">An open manga book with stylized comic panels on a violet gradient background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="0.48" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+    <linearGradient id="pageL" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EDE5FF"/>
+    </linearGradient>
+    <linearGradient id="pageR" x1="1" y1="0" x2="0" y2="1">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DDD6FE"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+
+  <!-- The opaque background works on both light and dark device themes. -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <path d="M70 118C160 31 338 29 439 129" stroke="#C4B5FD" stroke-width="20" opacity=".14" fill="none" stroke-linecap="round"/>
+  <path d="M81 392C170 462 348 465 434 379" stroke="#DDD6FE" stroke-width="24" opacity=".10" fill="none" stroke-linecap="round"/>
+
+  <!-- Page shadow and lavender base: the pages form a subtle M silhouette. -->
+  <path d="M125 177Q179 156 249 199L256 356Q196 322 125 339ZM263 199Q333 156 387 177V339Q318 322 256 356Z" fill="#250E51" opacity=".22" filter="url(#shadow)" transform="translate(0 12)"/>
+  <path d="M116 178Q177 152 247 194L247 356Q191 324 116 336Z" fill="#C4B5FD"/>
+  <path d="M265 194Q334 152 396 178V336Q322 324 265 356Z" fill="#A78BFA"/>
+  <path d="M130 164Q183 150 247 190V338Q196 309 130 321Z" fill="url(#pageL)"/>
+  <path d="M265 190Q329 150 382 164V321Q315 309 265 338Z" fill="url(#pageR)"/>
+
+  <!-- Minimal comic-frame lines, thick enough for an app icon. -->
+  <path d="M153 200L224 224M153 244L224 268" fill="none" stroke="#A78BFA" stroke-width="10" stroke-linecap="round"/>
+  <path d="M153 285L205 303" fill="none" stroke="#C4B5FD" stroke-width="9" stroke-linecap="round"/>
+  <path d="M291 220L358 199V265L291 288Z" fill="#A78BFA" fill-opacity=".45" stroke="#8B5CF6" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M301 306L359 290" fill="none" stroke="#A78BFA" stroke-width="9" stroke-linecap="round"/>
+
+  <!-- Small starburst gives the manga panel visual energy. -->
+  <path d="M326 216L331 238L351 241L333 248L330 269L322 250L307 245L322 237Z" fill="#FFFFFF" opacity=".95"/>
+
+  <!-- Center fold and binding read clearly even at 48px. -->
+  <path d="M256 191V349" stroke="#F7F2FF" stroke-opacity=".9" stroke-width="6" stroke-linecap="round"/>
+  <path d="M116 356Q185 337 256 379Q326 337 396 356" fill="none" stroke="#DDD6FE" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
