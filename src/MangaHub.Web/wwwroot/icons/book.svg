@@ -1,8 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MangaHub book logo">
   <rect width="512" height="512" rx="112" fill="#160d22"/>
-  <path d="M142 128c0-21 17-38 38-38h88c32 0 61 11 84 30 8 7 18 7 26 0 7-6 15-11 24-16v282c-18 15-41 23-66 23h-78c-24 0-46 10-62 26-7 7-18 2-18-8V166c0-21-15-38-36-38z" fill="#8c5de8"/>
-  <path d="M110 128c0-21 17-38 38-38h26c-16 17-26 39-26 64v255c0 10-11 15-18 8-12-12-28-19-45-21-10-1-17-10-17-20V170c0-23 19-42 42-42z" fill="#f7f2ff"/>
-  <path d="M222 153h55c24 0 46 8 64 22v181c-18-9-38-14-59-14h-60V153z" fill="#fffaff" opacity=".92"/>
-  <path d="M371 153c17-13 38-21 61-21h13v244c0 10-7 19-17 20-20 2-40 9-57 21V153z" fill="#d8c9e8"/>
-  <path d="M232 205h82M232 253h82M232 301h60" stroke="#6d3bb6" stroke-width="22" stroke-linecap="round"/>
+  <path d="M117 144c0-19 16-34 35-34h80c38 0 72 14 96 40 24-26 58-40 96-40h-80c19 0 35 15 35 34v237c0 9-10 15-18 10-20-13-43-20-68-20h-61c-29 0-56 9-78 25-8 6-19 0-19-10V144z" fill="#8c5de8"/>
+  <path d="M132 143c0-10 8-18 18-18h79c34 0 67 13 91 37v184c-23-14-49-21-76-21h-61c-18 0-35 4-51 12V143z" fill="#fffaff"/>
+  <path d="M336 162c25-24 57-37 91-37h-79c-10 0-18 8-18 18v194c16-8 33-12 51-12h61c27 0 53 7 76 21V162c-24-24-57-37-91-37h-79c-4 0-8 1-12 2v35z" fill="#dfd0f2"/>
+  <path d="M320 162v184" stroke="#6d3bb6" stroke-width="12" stroke-linecap="round"/>
+  <path d="M174 185h99M174 228h99M174 271h68" stroke="#6d3bb6" stroke-width="16" stroke-linecap="round"/>
+  <path d="M381 132h51v117l-26-17-25 17V132z" fill="#f5b8dd"/>
 </svg>
