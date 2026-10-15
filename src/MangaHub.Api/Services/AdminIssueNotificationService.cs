@@ -29,7 +29,9 @@ public sealed class AdminIssueNotificationService(
             return;
         }
 
-        var type = $"admin-issue-language-coverage-{issue.Id:N}-{priority}";
+        // Notifications are already unique per user, manga, type, gap, and language.
+        // Keep this compact because notifications.Type is deliberately limited to 40 characters.
+        var type = $"adm-cov-{priority}";
         var alreadyNotified = await db.Notifications
             .Where(notification => notification.Type == type)
             .Select(notification => notification.UserId)

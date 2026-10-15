@@ -458,7 +458,8 @@ public partial class MainLayout : IDisposable
             return;
         }
 
-        if (notification.Type.StartsWith("admin-issue-", StringComparison.OrdinalIgnoreCase))
+        if (notification.Type.StartsWith("admin-issue-", StringComparison.OrdinalIgnoreCase)
+            || notification.Type.StartsWith("adm-cov-", StringComparison.OrdinalIgnoreCase))
         {
             Navigation.NavigateTo("admin/issues");
             return;

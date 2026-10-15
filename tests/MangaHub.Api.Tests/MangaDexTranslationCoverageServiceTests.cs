@@ -106,6 +106,7 @@ public sealed class MangaDexTranslationCoverageServiceTests
         Assert.Equal(admin.Id, notification.UserId);
         Assert.Contains("12", notification.Body);
         Assert.Contains("high", notification.Type, StringComparison.OrdinalIgnoreCase);
+        Assert.True(notification.Type.Length <= 40);
     }
 
     private static MangaDexTranslationCoverageService CreateService(MangaHub.Infrastructure.Data.MangaHubDbContext db) =>
