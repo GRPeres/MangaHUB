@@ -179,7 +179,26 @@ public sealed class IssueReportingService(
     public async Task OpenMangaDexLanguageCoverageIssueAsync(Guid userId, MangaEntry manga, IReadOnlyList<string> preferredLanguages, IReadOnlyList<string> availableLanguages, CancellationToken cancellationToken)
     {
         var kind = AdminIssueTypes.MangaDexLanguageCoverage;
-        var issue = await issues.GetOpenAsync(kind, AdminIssueTypes.CatalogManga, manga.Id, cancellationToken);
+        var matches = await issues.GetOpenByKindsAsync([kind, AdminIssueTypes.MangaDexTranslationAbandoned], AdminIssueTypes.CatalogManga, manga.Id, cancellationToken);
+        var issue = matches.FirstOrDefault(item => item.Kind == kind);
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var legacy in matches.Where(item => item.Kind == AdminIssueTypes.MangaDexTranslationAbandoned))
+        {
+            if (issue is null)
+            {
+                legacy.Kind = kind;
+                issue = legacy;
+            }
+            else
+            {
+                legacy.Status = "resolved";
+                legacy.ResolvedAt = now;
+                legacy.UpdatedAt = now;
+                legacy.ResolutionNote = "Merged into the MangaDex language coverage issue for this manga.";
+            }
+        }
+
         var context = JsonSerializer.Serialize(new { preferredLanguages, availableLanguages, fallbackReaderUrl = manga.FallbackReaderUrl });
         if (issue is null)
         {
@@ -197,7 +216,7 @@ public sealed class IssueReportingService(
         else
         {
             issue.MetadataJson = context;
-            issue.UpdatedAt = DateTimeOffset.UtcNow;
+            issue.UpdatedAt = now;
         }
 
         if (!issue.Reports.Any(report => report.ReporterUserId == userId))

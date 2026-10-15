@@ -103,6 +103,30 @@ public sealed class IssueReportingServiceTests
     }
 
     [Fact]
+    public async Task MangaDexLanguageCoverage_MigratesAnOpenLegacyTranslationIssue()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "Legacy language gap", MangaDexId = "mangadex-id" };
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash" };
+        var legacy = new AdminIssue
+        {
+            Kind = AdminIssueTypes.MangaDexTranslationAbandoned,
+            SubjectType = AdminIssueTypes.CatalogManga,
+            SubjectId = manga.Id,
+            TitleSnapshot = manga.Title
+        };
+        db.AddRange(manga, user, legacy);
+        await db.SaveChangesAsync();
+
+        await CreateService(db).OpenMangaDexLanguageCoverageIssueAsync(user.Id, manga, ["en"], ["pt-br"], CancellationToken.None);
+
+        var issue = Assert.Single(db.AdminIssues);
+        Assert.Equal(AdminIssueTypes.MangaDexLanguageCoverage, issue.Kind);
+        Assert.Equal("open", issue.Status);
+        Assert.Single(db.AdminIssueReports);
+    }
+
+    [Fact]
     public async Task ReportAsync_MergesReportsIntoOneOpenIssue()
     {
         await using var db = TestDb.Create();

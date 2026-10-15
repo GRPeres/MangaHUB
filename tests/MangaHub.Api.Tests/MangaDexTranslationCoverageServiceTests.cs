@@ -26,7 +26,7 @@ public sealed class MangaDexTranslationCoverageServiceTests
         var result = await CreateService(db).RunAsync(CancellationToken.None);
 
         var issue = Assert.Single(db.AdminIssues);
-        Assert.Equal(AdminIssueTypes.MangaDexTranslationAbandoned, issue.Kind);
+        Assert.Equal(AdminIssueTypes.MangaDexLanguageCoverage, issue.Kind);
         Assert.Equal(1, result.OpenedOrUpdatedIssues);
         Assert.Contains("\"en\"", issue.MetadataJson);
         Assert.Contains("\"pt-br\"", issue.MetadataJson);
@@ -34,7 +34,7 @@ public sealed class MangaDexTranslationCoverageServiceTests
     }
 
     [Fact]
-    public async Task RunAsync_ResolvesIssueWhenAnyPreferredLanguageCatchesUp()
+    public async Task RunAsync_MigratesLegacyIssueAndResolvesItWhenAnyPreferredLanguageCatchesUp()
     {
         await using var db = TestDb.Create();
         var manga = new MangaEntry { Title = "Recovered", MangaDexId = "manga-id" };
@@ -56,6 +56,7 @@ public sealed class MangaDexTranslationCoverageServiceTests
         var result = await CreateService(db).RunAsync(CancellationToken.None);
 
         Assert.Equal(1, result.ResolvedIssues);
+        Assert.Equal(AdminIssueTypes.MangaDexLanguageCoverage, issue.Kind);
         Assert.Equal("resolved", issue.Status);
     }
 

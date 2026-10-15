@@ -39,15 +39,16 @@ public sealed class MangaDexTranslationCoverageService(MangaHubDbContext db, ILo
             .ToDictionary(group => group.Key, group => group.ToList());
 
         var openIssues = await db.AdminIssues
-            .Where(issue => issue.Kind == AdminIssueTypes.MangaDexTranslationAbandoned
+            .Where(issue => (issue.Kind == AdminIssueTypes.MangaDexLanguageCoverage || issue.Kind == AdminIssueTypes.MangaDexTranslationAbandoned)
                 && issue.SubjectType == AdminIssueTypes.CatalogManga
                 && issue.Status == "open")
-            .ToDictionaryAsync(issue => issue.SubjectId, cancellationToken);
+            .ToListAsync(cancellationToken);
 
         var evaluated = 0;
         var openedOrUpdated = 0;
         var resolved = 0;
         var now = DateTimeOffset.UtcNow;
+        var coverageIssues = NormalizeLegacyIssues(openIssues, now);
 
         foreach (var mangaShelves in shelves.GroupBy(item => item.MangaEntryId))
         {
@@ -69,7 +70,7 @@ public sealed class MangaDexTranslationCoverageService(MangaHubDbContext db, ILo
 
             if (affected.Count == 0)
             {
-                if (openIssues.TryGetValue(mangaShelves.Key, out var recovered))
+                if (coverageIssues.TryGetValue(mangaShelves.Key, out var recovered))
                 {
                     recovered.Status = "resolved";
                     recovered.ResolvedAt = now;
@@ -98,7 +99,7 @@ public sealed class MangaDexTranslationCoverageService(MangaHubDbContext db, ILo
                 checkedAt = now
             });
 
-            if (openIssues.TryGetValue(mangaShelves.Key, out var existing))
+            if (coverageIssues.TryGetValue(mangaShelves.Key, out var existing))
             {
                 existing.MetadataJson = metadata;
                 existing.Priority = affected.Max(item => item.Gap) >= 10 ? "high" : "normal";
@@ -108,11 +109,11 @@ public sealed class MangaDexTranslationCoverageService(MangaHubDbContext db, ILo
             {
                 db.AdminIssues.Add(new AdminIssue
                 {
-                    Kind = AdminIssueTypes.MangaDexTranslationAbandoned,
+                    Kind = AdminIssueTypes.MangaDexLanguageCoverage,
                     SubjectType = AdminIssueTypes.CatalogManga,
                     SubjectId = mangaShelves.Key,
                     Priority = affected.Max(item => item.Gap) >= 10 ? "high" : "normal",
-                    TitleSnapshot = $"Translation coverage behind: {representative.Title}",
+                    TitleSnapshot = $"MangaDex language coverage: {representative.Title}",
                     MetadataJson = metadata,
                     ResolutionNote = "Add an external fallback reader for the affected languages, or wait for MangaDex translations to catch up."
                 });
@@ -133,6 +134,37 @@ public sealed class MangaDexTranslationCoverageService(MangaHubDbContext db, ILo
             .Select(item => (decimal?)item.LatestChapter)
             .Max();
         return new TranslationCoverageEvaluation(preferredLanguages, preferredLatest, allLanguageLatest - (preferredLatest ?? 0m));
+    }
+
+    private static Dictionary<Guid, AdminIssue> NormalizeLegacyIssues(IEnumerable<AdminIssue> issues, DateTimeOffset now)
+    {
+        var canonicalIssues = new Dictionary<Guid, AdminIssue>();
+        foreach (var group in issues.GroupBy(issue => issue.SubjectId))
+        {
+            var canonical = group.FirstOrDefault(issue => issue.Kind == AdminIssueTypes.MangaDexLanguageCoverage);
+            foreach (var legacy in group.Where(issue => issue.Kind == AdminIssueTypes.MangaDexTranslationAbandoned))
+            {
+                if (canonical is null)
+                {
+                    legacy.Kind = AdminIssueTypes.MangaDexLanguageCoverage;
+                    canonical = legacy;
+                }
+                else
+                {
+                    legacy.Status = "resolved";
+                    legacy.ResolvedAt = now;
+                    legacy.UpdatedAt = now;
+                    legacy.ResolutionNote = "Merged into the MangaDex language coverage issue for this manga.";
+                }
+            }
+
+            if (canonical is not null)
+            {
+                canonicalIssues[group.Key] = canonical;
+            }
+        }
+
+        return canonicalIssues;
     }
 
     private sealed record ShelfLanguageContext(Guid MangaEntryId, string Title, string FallbackReaderUrl, string PreferredLanguage);

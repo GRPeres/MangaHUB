@@ -10,6 +10,14 @@ public sealed class AdminIssueRepository(MangaHubDbContext db)
     public Task<AdminIssue?> GetOpenAsync(string kind, string subjectType, Guid subjectId, CancellationToken cancellationToken) =>
         db.AdminIssues.Include(issue => issue.Reports).FirstOrDefaultAsync(issue => issue.Kind == kind && issue.SubjectType == subjectType && issue.SubjectId == subjectId && issue.Status == "open", cancellationToken);
 
+    public Task<List<AdminIssue>> GetOpenByKindsAsync(IEnumerable<string> kinds, string subjectType, Guid subjectId, CancellationToken cancellationToken)
+    {
+        var values = kinds.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        return db.AdminIssues.Include(issue => issue.Reports)
+            .Where(issue => values.Contains(issue.Kind) && issue.SubjectType == subjectType && issue.SubjectId == subjectId && issue.Status == "open")
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<AdminIssue?> GetDetailsAsync(Guid issueId, CancellationToken cancellationToken) =>
         db.AdminIssues.Include(issue => issue.Reports).FirstOrDefaultAsync(issue => issue.Id == issueId, cancellationToken);
 
