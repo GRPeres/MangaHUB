@@ -2,6 +2,11 @@
     display: block;
 }
 
+.mh-nav-button-host ::deep .mh-nav-button-badge {
+    display: block;
+    width: 100%;
+}
+
 .mh-nav-button-host ::deep .mh-nav-button {
     border-radius: 8px;
     justify-content: flex-start;

@@ -29,6 +29,7 @@ public partial class MainLayout : IDisposable
     private string? _pendingRoute;
     private List<MangaNotificationResponse> _notifications = [];
     private int _unreadNotificationCount;
+    private int _openAdminIssueCount;
     private bool _phoneNotificationsEnabled;
     private List<WebPushSubscriptionResponse> _pushSubscriptions = [];
     private bool _pushSubscriptionsOpen;
@@ -57,6 +58,7 @@ public partial class MainLayout : IDisposable
         _darkMode = await ThemePreference.GetDarkModeAsync() ?? false;
         _currentUser = await Auth.GetCurrentUserAsync();
         await LoadNotificationsAsync();
+        await LoadAdminIssueCountAsync();
         GuardCurrentRoute();
     }
 
@@ -322,6 +324,7 @@ public partial class MainLayout : IDisposable
     private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {
         GuardCurrentRoute();
+        _ = LoadAdminIssueCountAsync();
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -380,6 +383,7 @@ public partial class MainLayout : IDisposable
     {
         _currentUser = Auth.CurrentUser;
         _ = LoadNotificationsAsync();
+        _ = LoadAdminIssueCountAsync();
         _ = CheckExternalReaderCheckInsAsync();
         _ = InvokeAsync(StateHasChanged);
     }
@@ -417,6 +421,25 @@ public partial class MainLayout : IDisposable
             _notifications = [];
             _unreadNotificationCount = 0;
             _pushSubscriptions = [];
+        }
+    }
+
+    private async Task LoadAdminIssueCountAsync()
+    {
+        if (!IsAdmin)
+        {
+            _openAdminIssueCount = 0;
+            return;
+        }
+
+        try
+        {
+            _openAdminIssueCount = await AdminApi.GetOpenIssueCountAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (HttpRequestException)
+        {
+            _openAdminIssueCount = 0;
         }
     }
 

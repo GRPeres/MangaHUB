@@ -150,6 +150,15 @@
         color: var(--mud-palette-primary);
     }
 }
+
+.mh-mobile-admin-badge {
+    display: flex;
+    min-width: 0;
+}
+
+.mh-mobile-admin-badge ::deep .mh-mobile-nav-item {
+    width: 100%;
+}
 .mh-notification-list {
     max-height: min(26rem, 55vh);
     overflow-x: hidden;

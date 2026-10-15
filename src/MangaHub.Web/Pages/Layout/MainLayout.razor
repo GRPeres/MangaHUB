@@ -88,7 +88,7 @@
                 <NavRailButton Route="library" Label="Shelf" Icon="@Icons.Material.Filled.AutoStories" Expanded="@_drawerExpanded" IsActive="@IsActive("library")" OnNavigate="Navigate" />
                 @if (IsAdmin)
                 {
-                    <NavRailButton Route="admin/catalog" Label="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="@_drawerExpanded" IsActive="@IsAdminSectionActive" OnNavigate="Navigate" />
+                    <NavRailButton Route="admin/catalog" Label="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="@_drawerExpanded" IsActive="@IsAdminSectionActive" BadgeCount="@_openAdminIssueCount" OnNavigate="Navigate" />
                 }
                 <NavRailButton Route="account" Label="Account" Icon="@Icons.Material.Filled.ManageAccounts" Expanded="@_drawerExpanded" IsActive="@IsActive("account")" OnNavigate="Navigate" />
 
@@ -120,10 +120,12 @@
             </button>
             @if (IsAdmin)
             {
-                <button type="button" class="@AdminMobileNavClass" @onclick="@(() => Navigate("admin/catalog"))">
-                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
-                    <span>Admin</span>
-                </button>
+                <MudBadge Content="@_openAdminIssueCount.ToString()" Color="Color.Error" Overlap="true" Origin="Origin.TopRight" Visible="@(_openAdminIssueCount > 0)" Class="mh-mobile-admin-badge">
+                    <button type="button" class="@AdminMobileNavClass" @onclick="@(() => Navigate("admin/catalog"))">
+                        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
+                        <span>Admin</span>
+                    </button>
+                </MudBadge>
             }
             <button type="button" class="@MobileNavClass("account")" @onclick="@(() => Navigate("account"))">
                 <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" />

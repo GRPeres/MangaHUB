@@ -9,6 +9,7 @@ public partial class NavRailButton : ComponentBase
     [Parameter] public string Icon { get; set; } = "";
     [Parameter] public bool Expanded { get; set; }
     [Parameter] public bool IsActive { get; set; }
+    [Parameter] public int BadgeCount { get; set; }
     [Parameter] public EventCallback<string> OnNavigate { get; set; }
 
     private string ButtonClass => IsActive ? "mh-nav-button mh-nav-button-active" : "mh-nav-button";

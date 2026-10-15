@@ -1,15 +1,34 @@
 <span class="mh-nav-button-host">
     <MudTooltip Text="@Label" Placement="Placement.Right" Class="mh-nav-tooltip" Disabled="@Expanded">
-        <MudButton Variant="Variant.Text"
-                   Color="@(IsActive ? Color.Primary : Color.Inherit)"
-                   StartIcon="@Icon"
-                   Class="@ButtonClass"
-                   FullWidth="true"
-                   OnClick="HandleClick">
-            @if (Expanded)
-            {
-                <span class="mh-nav-button-label">@Label</span>
-            }
-        </MudButton>
+        @if (BadgeCount > 0)
+        {
+            <MudBadge Content="@BadgeCount.ToString()" Color="Color.Error" Overlap="true" Origin="Origin.TopRight" Class="mh-nav-button-badge">
+                <MudButton Variant="Variant.Text"
+                           Color="@(IsActive ? Color.Primary : Color.Inherit)"
+                           StartIcon="@Icon"
+                           Class="@ButtonClass"
+                           FullWidth="true"
+                           OnClick="HandleClick">
+                    @if (Expanded)
+                    {
+                        <span class="mh-nav-button-label">@Label</span>
+                    }
+                </MudButton>
+            </MudBadge>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Text"
+                       Color="@(IsActive ? Color.Primary : Color.Inherit)"
+                       StartIcon="@Icon"
+                       Class="@ButtonClass"
+                       FullWidth="true"
+                       OnClick="HandleClick">
+                @if (Expanded)
+                {
+                    <span class="mh-nav-button-label">@Label</span>
+                }
+            </MudButton>
+        }
     </MudTooltip>
 </span>
