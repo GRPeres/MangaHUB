@@ -139,6 +139,7 @@
         min-height: 52px;
         min-width: 0;
         padding: .35rem .2rem;
+        position: relative;
     }
 
     .mh-mobile-nav-item ::deep .mud-icon-root {
@@ -151,13 +152,24 @@
     }
 }
 
-.mh-mobile-admin-badge {
-    display: flex;
-    min-width: 0;
-}
-
-.mh-mobile-admin-badge ::deep .mh-mobile-nav-item {
-    width: 100%;
+.mh-mobile-nav-attention-count {
+    align-items: center;
+    background: var(--mud-palette-error);
+    border: 2px solid var(--mud-palette-surface);
+    border-radius: 999px;
+    color: var(--mud-palette-error-text);
+    display: inline-flex;
+    font-size: .65rem;
+    font-weight: 800;
+    justify-content: center;
+    line-height: 1;
+    min-height: 1.15rem;
+    min-width: 1.15rem;
+    padding: .08rem .24rem;
+    pointer-events: none;
+    position: absolute;
+    right: .1rem;
+    top: .1rem;
 }
 .mh-notification-list {
     max-height: min(26rem, 55vh);

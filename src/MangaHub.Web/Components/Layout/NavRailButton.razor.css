@@ -1,10 +1,27 @@
 .mh-nav-button-host {
     display: block;
+    position: relative;
 }
 
-.mh-nav-button-host ::deep .mh-nav-button-badge {
-    display: block;
-    width: 100%;
+.mh-nav-attention-count {
+    align-items: center;
+    background: var(--mud-palette-error);
+    border: 2px solid var(--mud-palette-surface);
+    border-radius: 999px;
+    color: var(--mud-palette-error-text);
+    display: inline-flex;
+    font-size: .68rem;
+    font-weight: 800;
+    justify-content: center;
+    line-height: 1;
+    min-height: 1.2rem;
+    min-width: 1.2rem;
+    padding: .1rem .28rem;
+    pointer-events: none;
+    position: absolute;
+    right: .1rem;
+    top: .1rem;
+    z-index: 2;
 }
 
 .mh-nav-button-host ::deep .mh-nav-button {

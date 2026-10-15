@@ -120,12 +120,14 @@
             </button>
             @if (IsAdmin)
             {
-                <MudBadge Content="@_openAdminIssueCount.ToString()" Color="Color.Error" Overlap="true" Origin="Origin.TopRight" Visible="@(_openAdminIssueCount > 0)" Class="mh-mobile-admin-badge">
-                    <button type="button" class="@AdminMobileNavClass" @onclick="@(() => Navigate("admin/catalog"))">
-                        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
-                        <span>Admin</span>
-                    </button>
-                </MudBadge>
+                <button type="button" class="@AdminMobileNavClass" @onclick="@(() => Navigate("admin/catalog"))">
+                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
+                    <span>Admin</span>
+                    @if (_openAdminIssueCount > 0)
+                    {
+                        <span class="mh-mobile-nav-attention-count" role="status" aria-label="@($"{_openAdminIssueCount} admin items need attention")">@_openAdminIssueCount</span>
+                    }
+                </button>
             }
             <button type="button" class="@MobileNavClass("account")" @onclick="@(() => Navigate("account"))">
                 <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" />
