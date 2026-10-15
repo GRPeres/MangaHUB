@@ -1,4 +1,13 @@
-.mh-issue-card { min-height: 92px; }
+.mh-issues-header-actions { align-items: center; flex: 0 0 auto; }
+.mh-issue-groups { display: grid; gap: 1rem; }
+.mh-issue-group { background: color-mix(in srgb, var(--mud-palette-surface) 94%, var(--mud-palette-primary)); border: 1px solid var(--mud-palette-divider); border-radius: 8px; overflow: hidden; }
+.mh-issue-group-header { align-items: center; background: transparent; color: var(--mud-palette-text-primary); cursor: pointer; display: grid; gap: .85rem; grid-template-columns: auto minmax(0, 1fr) auto auto; padding: 1rem 1.15rem; text-align: left; width: 100%; }
+.mh-issue-group-header:hover { background: color-mix(in srgb, var(--mud-palette-primary) 7%, transparent); }
+.mh-issue-group-header:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: -2px; }
+.mh-issue-group-icon { align-items: center; background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent); border-radius: 999px; color: var(--mud-palette-primary); display: inline-flex; justify-content: center; padding: .45rem; }
+.mh-issue-group-copy { min-width: 0; }
+.mh-issue-group-items { border-top: 1px solid var(--mud-palette-divider); margin: 0 !important; padding: 1rem 1.15rem 1.15rem; }
+.mh-issue-card { height: 100%; min-height: 92px; }
 .mh-issue-detail-modal { max-width: 760px; }
 .mh-issue-cover { border-radius: 6px; height: 120px; object-fit: cover; width: 80px; }
 .mh-issue-metadata-anchor { position: relative; }
@@ -7,3 +16,11 @@
 .mh-issue-metadata-cover { border-radius: 4px; height: 48px; object-fit: cover; width: 32px; }
 .mh-duplicate-entry { background-color: var(--mud-palette-background-grey); }
 .mh-duplicate-cover { border-radius: 4px; height: 56px; object-fit: cover; width: 38px; }
+
+@media (max-width: 600px) {
+    .mh-issues-header-actions { gap: .25rem; width: 100%; }
+    .mh-issues-header-actions ::deep .mud-input-control { flex: 1 1 auto; min-width: 0; }
+    .mh-issue-group-header { gap: .65rem; grid-template-columns: auto minmax(0, 1fr) auto; padding: .9rem; }
+    .mh-issue-group-header > .mud-chip { display: none; }
+    .mh-issue-group-items { padding: .75rem; }
+}
