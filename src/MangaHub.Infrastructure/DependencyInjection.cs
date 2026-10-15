@@ -21,6 +21,7 @@ public static class DependencyInjection
             ?? configuration["DATABASE_URL"]
             ?? "Host=localhost;Database=mangahub;Username=mangahub;Password=mangahub";
         services.AddDbContext<MangaHubDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddScoped<MaintenanceFailureIssueService>();
         return services;
     }
 

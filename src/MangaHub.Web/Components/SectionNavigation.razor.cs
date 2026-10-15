@@ -4,7 +4,7 @@ using MudBlazor;
 
 namespace MangaHub.Web.Components;
 
-public sealed record SectionNavigationItem(string Key, string Label, string Icon, Color ButtonColor = Color.Primary, bool IsPrimary = false, int? Count = null);
+public sealed record SectionNavigationItem(string Key, string Label, string Icon, Color ButtonColor = Color.Primary, bool IsPrimary = false, int? Count = null, int? BadgeCount = null);
 
 public partial class SectionNavigation
 {

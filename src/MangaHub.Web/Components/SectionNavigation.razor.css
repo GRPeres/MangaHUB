@@ -8,6 +8,10 @@
     white-space: nowrap;
 }
 
+.mh-section-nav ::deep .mh-section-nav-badge {
+    display: inline-flex;
+}
+
 .mh-section-nav ::deep .mh-section-nav-toggle {
     display: none;
 }

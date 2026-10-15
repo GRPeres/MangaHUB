@@ -15,6 +15,7 @@ public static class AdminIssueTypes
     public const string MaintenanceTask = "maintenance-task";
     public const string MaintenanceOverdue = "maintenance-overdue";
     public const string ArchiveIntegrity = "archive-integrity";
+    public const string MaintenanceFailure = "maintenance-failure";
     public const string CatalogAddition = "catalog-addition";
     public const string CatalogRegistrationFailure = "catalog-registration-failure";
 
@@ -30,6 +31,7 @@ public static class AdminIssueTypes
             [DuplicateCatalogId] = new(DuplicateCatalogId, CatalogManga, "high"),
             [MaintenanceOverdue] = new(MaintenanceOverdue, MaintenanceTask, "high"),
             [ArchiveIntegrity] = new(ArchiveIntegrity, MaintenanceTask, "high"),
+            [MaintenanceFailure] = new(MaintenanceFailure, MaintenanceTask, "normal"),
             [CatalogRegistrationFailure] = new(CatalogRegistrationFailure, CatalogAddition, "normal")
         };
 

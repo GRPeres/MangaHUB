@@ -3,15 +3,32 @@
 <nav @ref="navigationElement" class="@NavigationClass" aria-label="@AriaLabel">
     @foreach (var item in Items)
     {
-        <MudButton Variant="@(IsActive(item) ? Variant.Filled : Variant.Outlined)"
-                   Color="@item.ButtonColor"
-                   Size="Size.Medium"
-                   StartIcon="@item.Icon"
-                   Class="@ButtonClass(item)"
-                   OnClick="@(() => SelectAsync(item.Key))"
-                   aria-current="@(IsActive(item) ? "page" : null)">
-            @(item.Count is { } count ? $"{item.Label} ({count})" : item.Label)
-        </MudButton>
+        @if (item.BadgeCount is > 0)
+        {
+            <MudBadge Content="@item.BadgeCount.Value.ToString()" Color="Color.Error" Overlap="true" Origin="Origin.TopRight" Class="mh-section-nav-badge">
+                <MudButton Variant="@(IsActive(item) ? Variant.Filled : Variant.Outlined)"
+                           Color="@item.ButtonColor"
+                           Size="Size.Medium"
+                           StartIcon="@item.Icon"
+                           Class="@ButtonClass(item)"
+                           OnClick="@(() => SelectAsync(item.Key))"
+                           aria-current="@(IsActive(item) ? "page" : null)">
+                    @(item.Count is { } count ? $"{item.Label} ({count})" : item.Label)
+                </MudButton>
+            </MudBadge>
+        }
+        else
+        {
+            <MudButton Variant="@(IsActive(item) ? Variant.Filled : Variant.Outlined)"
+                       Color="@item.ButtonColor"
+                       Size="Size.Medium"
+                       StartIcon="@item.Icon"
+                       Class="@ButtonClass(item)"
+                       OnClick="@(() => SelectAsync(item.Key))"
+                       aria-current="@(IsActive(item) ? "page" : null)">
+                @(item.Count is { } count ? $"{item.Label} ({count})" : item.Label)
+            </MudButton>
+        }
     }
     @if (CollapseOnOverflow && isOverflowing)
     {

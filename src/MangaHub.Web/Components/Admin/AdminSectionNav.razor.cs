@@ -17,7 +17,7 @@ public partial class AdminSectionNav
     private IReadOnlyList<SectionNavigationItem> Sections =>
     [
         new("catalog", "Catalog", Icons.Material.Filled.Inventory2, Count: _catalogCount, IsPrimary: true),
-        new("issues", "Issues", Icons.Material.Filled.ReportProblem, Color.Error, IsPrimary: true, Count: _openIssueCount),
+        new("issues", "Issues", Icons.Material.Filled.ReportProblem, Color.Error, IsPrimary: true, Count: _openIssueCount, BadgeCount: _openIssueCount),
         new("operations", "Operations", Icons.Material.Filled.SettingsSuggest),
         new("archive", "Archive", Icons.Material.Filled.Archive)
     ];

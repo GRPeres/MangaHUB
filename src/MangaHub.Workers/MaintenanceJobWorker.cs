@@ -106,6 +106,7 @@ public sealed class MaintenanceJobWorker(
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+        var failureIssues = scope.ServiceProvider.GetRequiredService<MaintenanceFailureIssueService>();
         var job = await db.MaintenanceJobs.FirstOrDefaultAsync(item => item.Id == claim.Id, CancellationToken.None);
         if (job is null || job.Status != "running")
         {
@@ -115,6 +116,14 @@ public sealed class MaintenanceJobWorker(
         job.Status = status;
         job.Error = error;
         job.CompletedAt = DateTimeOffset.UtcNow;
+        if (status == "failed")
+        {
+            await failureIssues.RecordFailureAsync(job, CancellationToken.None);
+        }
+        else
+        {
+            await failureIssues.ResolveAfterSuccessAsync(job, CancellationToken.None);
+        }
         if (status == "completed"
             && result.ShouldContinue
             && string.Equals(claim.Type, "mangadex-cache-cleanup", StringComparison.Ordinal))
@@ -166,6 +175,7 @@ public sealed class MaintenanceJobWorker(
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+        var failureIssues = scope.ServiceProvider.GetRequiredService<MaintenanceFailureIssueService>();
         var interrupted = await db.MaintenanceJobs
             .Where(job => job.Status == "running")
             .ToListAsync(cancellationToken);
@@ -179,6 +189,7 @@ public sealed class MaintenanceJobWorker(
             job.Status = "failed";
             job.CompletedAt = DateTimeOffset.UtcNow;
             job.Error = "Interrupted by a worker restart before the job completed. A recovery retry was queued.";
+            await failureIssues.RecordFailureAsync(job, cancellationToken);
             db.MaintenanceJobs.Add(new MaintenanceJob
             {
                 Type = job.Type,
