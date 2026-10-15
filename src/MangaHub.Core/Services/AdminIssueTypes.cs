@@ -9,6 +9,7 @@ public static class AdminIssueTypes
     public const string MangaDexLanguageCoverage = "mangadex-language-coverage";
     public const string MangaDexTranslationAbandoned = "mangadex-translation-abandoned";
     public const string MangaDexReleaseStalled = "mangadex-release-stalled";
+    public const string MangaDexIdentityMismatch = "mangadex-identity-mismatch";
     public const string CoverImage = "cover-image";
     public const string CatalogMetadata = "catalog-metadata";
     public const string DuplicateCatalogId = "duplicate-catalog-id";
@@ -26,6 +27,7 @@ public static class AdminIssueTypes
             [MangaDexLanguageCoverage] = new(MangaDexLanguageCoverage, CatalogManga, "normal"),
             [MangaDexTranslationAbandoned] = new(MangaDexTranslationAbandoned, CatalogManga, "high"),
             [MangaDexReleaseStalled] = new(MangaDexReleaseStalled, CatalogManga, "normal"),
+            [MangaDexIdentityMismatch] = new(MangaDexIdentityMismatch, CatalogManga, "high"),
             [CoverImage] = new(CoverImage, CatalogManga, "normal"),
             [CatalogMetadata] = new(CatalogMetadata, CatalogManga, "normal"),
             [DuplicateCatalogId] = new(DuplicateCatalogId, CatalogManga, "high"),

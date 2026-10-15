@@ -126,6 +126,22 @@ else
                         }
                     </MudAlert>
                 }
+                @if (IsMangaDexIdentityMismatchIssue)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @if (MangaDexIdentityMismatch is { } mismatch)
+                        {
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.body2">This catalog entry expects <strong>MAL #@mismatch.ExpectedMyAnimeListId</strong>, but MangaDex link <strong>@mismatch.LinkedMangaDexId</strong> belongs to <strong>MAL #@mismatch.LinkedMyAnimeListId</strong>.</MudText>
+                                <MudText Typo="Typo.body2">Linked MangaDex title: <strong>@mismatch.LinkedTitle</strong>.</MudText>
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">The linked MangaDex record has a different MyAnimeList identity from this catalog entry.</MudText>
+                        }
+                    </MudAlert>
+                }
                 @if (IsMaintenanceFailureIssue)
                 {
                     <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
@@ -263,6 +279,7 @@ else
     private bool IsTranslationCoverageIssue => string.Equals(selected?.Kind, "mangadex-language-coverage", StringComparison.OrdinalIgnoreCase)
         || string.Equals(selected?.Kind, "mangadex-translation-abandoned", StringComparison.OrdinalIgnoreCase);
     private bool IsReleaseStallIssue => string.Equals(selected?.Kind, "mangadex-release-stalled", StringComparison.OrdinalIgnoreCase);
+    private bool IsMangaDexIdentityMismatchIssue => string.Equals(selected?.Kind, "mangadex-identity-mismatch", StringComparison.OrdinalIgnoreCase);
     private bool IsMaintenanceFailureIssue => string.Equals(selected?.Kind, "maintenance-failure", StringComparison.OrdinalIgnoreCase);
     private bool IsDuplicateCatalogIssue => string.Equals(selected?.Kind, "duplicate-catalog-id", StringComparison.OrdinalIgnoreCase);
     private bool CanReintegrate => IsOpen && !string.IsNullOrWhiteSpace(selected?.MyAnimeListId) && string.IsNullOrWhiteSpace(selected?.MangaDexId);
@@ -319,6 +336,27 @@ else
                     ? observedAt.ToLocalTime().ToString("d")
                     : "unknown date";
                 return new ReleaseStallDetail(chapter, days, observed);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return null;
+            }
+        }
+    }
+    private MangaDexIdentityMismatchDetail? MangaDexIdentityMismatch
+    {
+        get
+        {
+            if (selected is null) return null;
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(selected.MetadataJson);
+                var root = document.RootElement;
+                var expected = root.TryGetProperty("expectedMyAnimeListId", out var expectedNode) ? expectedNode.GetString() : null;
+                var linkedId = root.TryGetProperty("linkedMangaDexId", out var linkedIdNode) ? linkedIdNode.GetString() : null;
+                var linkedMal = root.TryGetProperty("linkedMyAnimeListId", out var linkedMalNode) ? linkedMalNode.GetString() : null;
+                var title = root.TryGetProperty("linkedTitle", out var titleNode) ? titleNode.GetString() : null;
+                return new MangaDexIdentityMismatchDetail(expected ?? "unknown", linkedId ?? "unknown", linkedMal ?? "unknown", title ?? "unknown");
             }
             catch (System.Text.Json.JsonException)
             {
@@ -465,8 +503,8 @@ else
     }
     private async Task DismissAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.DismissIssueAsync(selected.Id, resolutionNote)) { Messages.Info("The issue was dismissed and reporters were notified."); CloseIssue(); await LoadAsync(); } } finally { saving = false; } }
     private async Task ReopenAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ReopenIssueAsync(selected.Id)) { await OpenIssueAsync(selected.Id); await LoadAsync(); } } finally { saving = false; } }
-    private static string IssueLabel(string kind) => kind switch { "external-reader-link" => "External reader link", "mangadex-language-coverage" => "MangaDex language coverage", "mangadex-translation-abandoned" => "Translation coverage behind", "mangadex-release-stalled" => "MangaDex release stalled", "cover-image" => "Cover image", "catalog-metadata" => "Catalog metadata", "duplicate-catalog-id" => "Duplicate catalog ID", "catalog-registration-failure" => "Catalog registration failed", "maintenance-overdue" => "Maintenance overdue", "maintenance-failure" => "Maintenance failure", "archive-integrity" => "Archive integrity", _ => kind };
-    private static string IssueIcon(string kind) => kind switch { "external-reader-link" => Icons.Material.Filled.LinkOff, "mangadex-language-coverage" or "mangadex-translation-abandoned" => Icons.Material.Filled.Translate, "mangadex-release-stalled" => Icons.Material.Filled.HourglassTop, "cover-image" => Icons.Material.Filled.BrokenImage, "catalog-metadata" => Icons.Material.Filled.EditNote, "duplicate-catalog-id" => Icons.Material.Filled.ContentCopy, "catalog-registration-failure" => Icons.Material.Filled.AppRegistration, "maintenance-overdue" or "maintenance-failure" => Icons.Material.Filled.BuildCircle, "archive-integrity" => Icons.Material.Filled.Inventory, _ => Icons.Material.Filled.ReportProblem };
+    private static string IssueLabel(string kind) => kind switch { "external-reader-link" => "External reader link", "mangadex-language-coverage" => "MangaDex language coverage", "mangadex-translation-abandoned" => "Translation coverage behind", "mangadex-release-stalled" => "MangaDex release stalled", "mangadex-identity-mismatch" => "MangaDex identity mismatch", "cover-image" => "Cover image", "catalog-metadata" => "Catalog metadata", "duplicate-catalog-id" => "Duplicate catalog ID", "catalog-registration-failure" => "Catalog registration failed", "maintenance-overdue" => "Maintenance overdue", "maintenance-failure" => "Maintenance failure", "archive-integrity" => "Archive integrity", _ => kind };
+    private static string IssueIcon(string kind) => kind switch { "external-reader-link" => Icons.Material.Filled.LinkOff, "mangadex-language-coverage" or "mangadex-translation-abandoned" => Icons.Material.Filled.Translate, "mangadex-release-stalled" => Icons.Material.Filled.HourglassTop, "mangadex-identity-mismatch" => Icons.Material.Filled.LinkOff, "cover-image" => Icons.Material.Filled.BrokenImage, "catalog-metadata" => Icons.Material.Filled.EditNote, "duplicate-catalog-id" => Icons.Material.Filled.ContentCopy, "catalog-registration-failure" => Icons.Material.Filled.AppRegistration, "maintenance-overdue" or "maintenance-failure" => Icons.Material.Filled.BuildCircle, "archive-integrity" => Icons.Material.Filled.Inventory, _ => Icons.Material.Filled.ReportProblem };
     private static Color StatusColor(string value) => value == "resolved" ? Color.Success : value == "dismissed" ? Color.Secondary : Color.Error;
     private static int PriorityRank(string value) => value switch { "critical" => 0, "high" => 1, "normal" => 2, "low" => 3, _ => 4 };
     private static Color PriorityColor(string value) => value switch { "critical" => Color.Error, "high" => Color.Warning, "normal" => Color.Primary, _ => Color.Secondary };
@@ -485,5 +523,6 @@ else
     private sealed record TranslationCoverageDetail(string LatestChapter, List<TranslationCoverageLanguageDetail> AffectedLanguages);
     private sealed record TranslationCoverageLanguageDetail(string Languages, string LatestChapter, string Gap);
     private sealed record ReleaseStallDetail(string LatestChapter, string InactiveDays, string LastObserved);
+    private sealed record MangaDexIdentityMismatchDetail(string ExpectedMyAnimeListId, string LinkedMangaDexId, string LinkedMyAnimeListId, string LinkedTitle);
     private sealed record MaintenanceFailureDetail(string Type, string Trigger, string Error, string FailedAt);
 }

@@ -119,6 +119,48 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
         return null;
     }
 
+    public async Task<MangaDexCatalogIdentity?> GetIdentityAsync(string mangaDexId, CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaDexEnabled || string.IsNullOrWhiteSpace(mangaDexId))
+        {
+            return null;
+        }
+
+        var normalizedId = mangaDexId.Trim();
+        var cacheKey = $"mangadex:catalog:identity:{normalizedId}";
+        if (cache.TryGetValue(cacheKey, out MangaDexCatalogIdentity? cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        var response = await httpClient.GetAsync($"/manga/{Uri.EscapeDataString(normalizedId)}", cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        if (!document.RootElement.TryGetProperty("data", out var item)
+            || !item.TryGetProperty("id", out var idElement)
+            || !item.TryGetProperty("attributes", out var attributes))
+        {
+            return null;
+        }
+
+        var title = attributes.TryGetProperty("title", out var titles) ? ReadLocalized(titles) : "";
+        var alternateTitles = attributes.TryGetProperty("altTitles", out var alternatives)
+            ? ReadAlternateTitles(alternatives, title)
+            : [];
+        var myAnimeListId = attributes.TryGetProperty("links", out var links)
+            ? ReadString(links, "mal")
+            : "";
+        var identity = new MangaDexCatalogIdentity(idElement.GetString() ?? normalizedId, title, myAnimeListId, alternateTitles);
+        cache.Set(cacheKey, identity, TimeSpan.FromMinutes(Math.Max(1, options.Value.MangaDexReaderCacheMinutes)));
+        return identity;
+    }
+
     public async Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken)
     {
         if (!options.Value.MangaDexEnabled || string.IsNullOrWhiteSpace(seriesId))

@@ -206,6 +206,7 @@ public sealed class MaintenanceJobWorker(
         "release-sync" or
         "mangadex-status-sync" or
         "mangadex-language-coverage-check" or
+        "mangadex-identity-audit" or
         "mangadex-release-stall-check" or
         "prefetch" or
         "mangadex-cache-cleanup" or

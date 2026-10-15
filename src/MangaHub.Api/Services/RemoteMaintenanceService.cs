@@ -32,7 +32,7 @@ public sealed class RemoteMaintenanceService(
     {
         var priority = type switch
         {
-            "release-sync" or "mangadex-status-sync" or "mangadex-language-coverage-check" or "mangadex-release-stall-check" or "mangaupdates-sync" => RemoteJobPriority.ReleaseSync,
+            "release-sync" or "mangadex-status-sync" or "mangadex-language-coverage-check" or "mangadex-identity-audit" or "mangadex-release-stall-check" or "mangaupdates-sync" => RemoteJobPriority.ReleaseSync,
             "prefetch" => RemoteJobPriority.Prefetch,
             "mangadex-cache-cleanup" or "mangadex-archive-integrity-check" or "mangaupdates-match" or CatalogIdentityEnrichmentService.JobType => RemoteJobPriority.Maintenance,
             "idle-backfill" => RemoteJobPriority.Backfill,
@@ -46,6 +46,7 @@ public sealed class RemoteMaintenanceService(
             case "release-sync": await RunReleaseSyncAsync(cancellationToken); break;
             case "mangadex-status-sync": await RunMangaDexStatusSyncAsync(cancellationToken); break;
             case "mangadex-language-coverage-check": await RunMangaDexTranslationCoverageCheckAsync(cancellationToken); break;
+            case "mangadex-identity-audit": await RunMangaDexIdentityAuditAsync(cancellationToken); break;
             case "mangadex-release-stall-check": await RunMangaDexReleaseStallCheckAsync(cancellationToken); break;
             case "prefetch": await RunPrefetchAsync(cancellationToken); break;
             case "mangadex-cache-cleanup": shouldContinue = await RunCacheRetentionAsync(cancellationToken); break;
@@ -153,6 +154,30 @@ public sealed class RemoteMaintenanceService(
         catch (Exception ex)
         {
             logger.LogError(ex, "MangaDex stalled-release check failed.");
+            throw;
+        }
+    }
+
+    private async Task RunMangaDexIdentityAuditAsync(CancellationToken cancellationToken)
+    {
+        if (!options.Value.MangaDexEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var audit = scope.ServiceProvider.GetRequiredService<MangaDexIdentityAuditService>();
+            await audit.RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "MangaDex identity audit failed.");
             throw;
         }
     }

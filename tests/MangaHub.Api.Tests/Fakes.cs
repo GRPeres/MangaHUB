@@ -44,6 +44,7 @@ internal sealed class FakeMangaDexSource : IMangaSource, IMangaDexCatalogLookup
     public Dictionary<string, IReadOnlyList<MangaPage>> Pages { get; } = [];
     public List<MangaDexCatalogMatch> CatalogMatches { get; } = [];
     public MangaSourceSeries? Series { get; set; }
+    public MangaDexCatalogIdentity? Identity { get; set; }
 
     public Task<IReadOnlyList<MangaSearchResult>> SearchAsync(string query, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MangaSearchResult>>(SearchResults);
@@ -53,6 +54,9 @@ internal sealed class FakeMangaDexSource : IMangaSource, IMangaDexCatalogLookup
 
     public Task<MangaDexCatalogMatch?> FindByMyAnimeListIdAsync(string myAnimeListId, string title, CancellationToken cancellationToken) =>
         Task.FromResult(CatalogMatches.FirstOrDefault());
+
+    public Task<MangaDexCatalogIdentity?> GetIdentityAsync(string mangaDexId, CancellationToken cancellationToken) =>
+        Task.FromResult(Identity);
 
     public Task<IReadOnlyList<MangaSourceChapter>> GetChaptersAsync(string seriesId, string? language, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MangaSourceChapter>>(
