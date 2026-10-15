@@ -96,13 +96,33 @@ else
                 @if (IsTranslationCoverageIssue)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                        @TranslationCoverageSummary
+                        @if (TranslationCoverage is { } coverage)
+                        {
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.body2">Latest in any MangaDex language: <strong class="mh-issue-chapter">Ch. @coverage.LatestChapter</strong>.</MudText>
+                                @foreach (var affected in coverage.AffectedLanguages)
+                                {
+                                    <MudText Typo="Typo.body2">@affected.Languages: <strong class="mh-issue-chapter">Ch. @affected.LatestChapter</strong> · @affected.Gap chapters behind.</MudText>
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">MangaDex translations are materially behind another available language.</MudText>
+                        }
                     </MudAlert>
                 }
                 @if (IsReleaseStallIssue)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                        @ReleaseStallSummary
+                        @if (ReleaseStall is { } stall)
+                        {
+                            <MudText Typo="Typo.body2">MangaDex still marks this title ongoing, but its latest page-bearing chapter is <strong class="mh-issue-chapter">Ch. @stall.LatestChapter</strong>, last observed on @stall.LastObserved (@stall.InactiveDays days ago). Check an external source or confirm its status.</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">MangaDex still marks this title ongoing, but no new page-bearing chapter has appeared for at least 30 days.</MudText>
+                        }
                     </MudAlert>
                 }
                 @if (IsExternalReaderRepairIssue)
@@ -223,7 +243,8 @@ else
         || string.Equals(selected?.Kind, "mangadex-language-coverage", StringComparison.OrdinalIgnoreCase)
         || string.Equals(selected?.Kind, "mangadex-translation-abandoned", StringComparison.OrdinalIgnoreCase);
     private bool IsCoverImageIssue => string.Equals(selected?.Kind, "cover-image", StringComparison.OrdinalIgnoreCase);
-    private bool IsTranslationCoverageIssue => string.Equals(selected?.Kind, "mangadex-translation-abandoned", StringComparison.OrdinalIgnoreCase);
+    private bool IsTranslationCoverageIssue => string.Equals(selected?.Kind, "mangadex-language-coverage", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(selected?.Kind, "mangadex-translation-abandoned", StringComparison.OrdinalIgnoreCase);
     private bool IsReleaseStallIssue => string.Equals(selected?.Kind, "mangadex-release-stalled", StringComparison.OrdinalIgnoreCase);
     private bool IsDuplicateCatalogIssue => string.Equals(selected?.Kind, "duplicate-catalog-id", StringComparison.OrdinalIgnoreCase);
     private bool CanReintegrate => IsOpen && !string.IsNullOrWhiteSpace(selected?.MyAnimeListId) && string.IsNullOrWhiteSpace(selected?.MangaDexId);
@@ -235,54 +256,55 @@ else
     private string MangaDexSearchUrl => selected is null ? "" : BuildMangaDexSearchUrl(selected);
     private string MalSearchUrl => selected is null ? "" : BuildMalSearchUrl(selected);
     private string MangaUpdatesSearchUrl => selected is null ? "" : BuildMangaUpdatesSearchUrl(selected);
-    private string TranslationCoverageSummary
+    private TranslationCoverageDetail? TranslationCoverage
     {
         get
         {
-            if (selected is null) return "";
+            if (selected is null) return null;
             try
             {
                 using var document = System.Text.Json.JsonDocument.Parse(selected.MetadataJson);
                 var root = document.RootElement;
-                var latest = root.TryGetProperty("latestAnyLanguageChapter", out var latestNode) ? latestNode.ToString() : "unknown";
+                var latest = root.TryGetProperty("latestAnyLanguageChapter", out var latestNode) ? FormatChapter(latestNode) : "unknown";
                 var groups = root.TryGetProperty("affectedLanguageSets", out var affectedNode) && affectedNode.ValueKind == System.Text.Json.JsonValueKind.Array
                     ? affectedNode.EnumerateArray().Select(group =>
                     {
                         var languages = group.TryGetProperty("preferredLanguages", out var languagesNode) && languagesNode.ValueKind == System.Text.Json.JsonValueKind.Array
                             ? string.Join(", ", languagesNode.EnumerateArray().Select(language => language.GetString()).Where(language => !string.IsNullOrWhiteSpace(language)))
                             : "preferred languages";
-                        var preferred = group.TryGetProperty("latestPreferredLanguageChapter", out var preferredNode) && preferredNode.ValueKind != System.Text.Json.JsonValueKind.Null ? preferredNode.ToString() : "none";
-                        var gap = group.TryGetProperty("chaptersBehind", out var gapNode) ? gapNode.ToString() : "?";
-                        return $"{languages}: Ch. {preferred} (behind by {gap})";
+                        var preferred = group.TryGetProperty("latestPreferredLanguageChapter", out var preferredNode) && preferredNode.ValueKind != System.Text.Json.JsonValueKind.Null ? FormatChapter(preferredNode) : "none";
+                        var gap = group.TryGetProperty("chaptersBehind", out var gapNode) ? FormatChapter(gapNode) : "?";
+                        return new TranslationCoverageLanguageDetail(languages, preferred, gap);
                     })
+                    .ToList()
                     : [];
-                return $"Latest in any MangaDex language: Ch. {latest}. Affected preferences: {string.Join("; ", groups)}.";
+                return new TranslationCoverageDetail(latest, groups);
             }
             catch (System.Text.Json.JsonException)
             {
-                return "MangaDex translations are materially behind another available language.";
+                return null;
             }
         }
     }
-    private string ReleaseStallSummary
+    private ReleaseStallDetail? ReleaseStall
     {
         get
         {
-            if (selected is null) return "";
+            if (selected is null) return null;
             try
             {
                 using var document = System.Text.Json.JsonDocument.Parse(selected.MetadataJson);
                 var root = document.RootElement;
-                var chapter = root.TryGetProperty("latestChapter", out var chapterNode) ? chapterNode.ToString() : "unknown";
+                var chapter = root.TryGetProperty("latestChapter", out var chapterNode) ? FormatChapter(chapterNode) : "unknown";
                 var days = root.TryGetProperty("inactiveDays", out var daysNode) ? daysNode.ToString() : "30+";
                 var observed = root.TryGetProperty("latestChapterObservedAt", out var observedNode) && observedNode.TryGetDateTimeOffset(out var observedAt)
                     ? observedAt.ToLocalTime().ToString("d")
                     : "unknown date";
-                return $"MangaDex still marks this title ongoing, but its latest page-bearing chapter is Ch. {chapter}, last observed on {observed} ({days} days ago). Check an external source or confirm its status.";
+                return new ReleaseStallDetail(chapter, days, observed);
             }
             catch (System.Text.Json.JsonException)
             {
-                return "MangaDex still marks this title ongoing, but no new page-bearing chapter has appeared for at least 30 days.";
+                return null;
             }
         }
     }
@@ -413,4 +435,10 @@ else
     private static string BuildMangaDexSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MangaDexId) ? SearchUrl("https://mangadex.org/search?q=", issue) : $"https://mangadex.org/title/{issue.MangaDexId}";
     private static string BuildMalSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MyAnimeListId) ? SearchUrl("https://myanimelist.net/manga.php?q=", issue) : $"https://myanimelist.net/manga/{issue.MyAnimeListId}";
     private static string BuildMangaUpdatesSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MangaUpdatesId) ? SearchUrl("https://www.mangaupdates.com/search.html?search=", issue) : $"https://www.mangaupdates.com/series/{issue.MangaUpdatesId}";
+    private static string FormatChapter(System.Text.Json.JsonElement value) => value.TryGetDecimal(out var chapter)
+        ? chapter.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
+        : value.ToString();
+    private sealed record TranslationCoverageDetail(string LatestChapter, List<TranslationCoverageLanguageDetail> AffectedLanguages);
+    private sealed record TranslationCoverageLanguageDetail(string Languages, string LatestChapter, string Gap);
+    private sealed record ReleaseStallDetail(string LatestChapter, string InactiveDays, string LastObserved);
 }
