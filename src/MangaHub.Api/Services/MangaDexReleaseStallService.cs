@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MangaHub.Api.Services;
 
 /// <summary>
-/// Detects a MangaDex title which has remained ongoing and unchanged for a full month.
+/// Detects a MangaDex title whose newest readable chapter was published over a month ago.
 /// A hiatus, completed, or otherwise non-ongoing status resets the clock.
 /// </summary>
 public sealed class MangaDexReleaseStallService(MangaHubDbContext db, ILogger<MangaDexReleaseStallService> logger)
@@ -22,7 +22,8 @@ public sealed class MangaDexReleaseStallService(MangaHubDbContext db, ILogger<Ma
             .Where(entry => entry.MangaDexId != ""
                 && entry.PublishingStatus.ToLower() == "ongoing"
                 && entry.MangaDexNonHiatusSince != null && entry.MangaDexNonHiatusSince <= cutoff
-                && entry.MangaDexLatestChapterObservedAt != null && entry.MangaDexLatestChapterObservedAt <= cutoff)
+                && (entry.MangaDexLatestChapterPublishedAt ?? entry.MangaDexLatestChapterObservedAt) != null
+                && (entry.MangaDexLatestChapterPublishedAt ?? entry.MangaDexLatestChapterObservedAt) <= cutoff)
             .ToListAsync(cancellationToken);
         var stalledIds = stalled.Select(entry => entry.Id).ToHashSet();
         var openIssues = await db.AdminIssues
@@ -35,10 +36,12 @@ public sealed class MangaDexReleaseStallService(MangaHubDbContext db, ILogger<Ma
         foreach (var manga in stalled)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var inactiveDays = Math.Floor((now - manga.MangaDexLatestChapterObservedAt!.Value).TotalDays);
+            var latestChapterAt = manga.MangaDexLatestChapterPublishedAt ?? manga.MangaDexLatestChapterObservedAt!.Value;
+            var inactiveDays = Math.Floor((now - latestChapterAt).TotalDays);
             var metadata = JsonSerializer.Serialize(new
             {
                 latestChapter = manga.MangaDexLatestChapter,
+                latestChapterPublishedAt = manga.MangaDexLatestChapterPublishedAt,
                 latestChapterObservedAt = manga.MangaDexLatestChapterObservedAt,
                 nonHiatusSince = manga.MangaDexNonHiatusSince,
                 inactiveDays,

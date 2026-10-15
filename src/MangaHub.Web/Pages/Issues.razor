@@ -118,7 +118,7 @@ else
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
                         @if (ReleaseStall is { } stall)
                         {
-                            <MudText Typo="Typo.body2">MangaDex still marks this title ongoing, but its latest page-bearing chapter is <strong class="mh-issue-chapter">Ch. @stall.LatestChapter</strong>, last observed on @stall.LastObserved (@stall.InactiveDays days ago). Check an external source or confirm its status.</MudText>
+                            <MudText Typo="Typo.body2">MangaDex still marks this title ongoing, but its latest page-bearing chapter is <strong class="mh-issue-chapter">Ch. @stall.LatestChapter</strong>, published on @stall.LastObserved (@stall.InactiveDays days ago). Check an external source or confirm its status.</MudText>
                         }
                         else
                         {
@@ -332,7 +332,9 @@ else
                 var root = document.RootElement;
                 var chapter = root.TryGetProperty("latestChapter", out var chapterNode) ? FormatChapter(chapterNode) : "unknown";
                 var days = root.TryGetProperty("inactiveDays", out var daysNode) ? daysNode.ToString() : "30+";
-                var observed = root.TryGetProperty("latestChapterObservedAt", out var observedNode) && observedNode.TryGetDateTimeOffset(out var observedAt)
+                var observed = root.TryGetProperty("latestChapterPublishedAt", out var publishedNode) && publishedNode.TryGetDateTimeOffset(out var publishedAt)
+                    ? publishedAt.ToLocalTime().ToString("d")
+                    : root.TryGetProperty("latestChapterObservedAt", out var observedNode) && observedNode.TryGetDateTimeOffset(out var observedAt)
                     ? observedAt.ToLocalTime().ToString("d")
                     : "unknown date";
                 return new ReleaseStallDetail(chapter, days, observed);

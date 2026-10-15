@@ -435,16 +435,26 @@ public sealed class RemoteMaintenanceService(
                     }
                 }
 
-                var latestChapters = await GetLatestChapterNumbersByLanguageAsync(client, entry.MangaDexId, cancellationToken);
-                decimal? latestChapter = latestChapters.Count == 0 ? null : latestChapters.Values.Max();
+                var latestChapters = await GetLatestChapterMetadataByLanguageAsync(client, entry.MangaDexId, cancellationToken);
+                decimal? latestChapter = latestChapters.Count == 0 ? null : latestChapters.Values.Max(chapter => chapter.Number);
+                var latestPublishedDates = latestChapter is null
+                    ? new List<DateTimeOffset>()
+                    : latestChapters.Values
+                        .Where(chapter => chapter.Number == latestChapter.Value)
+                        .Select(chapter => chapter.PublishedAt)
+                        .Where(publishedAt => publishedAt is not null)
+                        .Cast<DateTimeOffset>()
+                        .ToList();
+                DateTimeOffset? latestPublishedAt = latestPublishedDates.Count == 0 ? null : latestPublishedDates.Max();
                 entry.MangaDexLastSyncedAt = syncedAt;
 
                 var cachedLanguages = await db.MangaDexLanguageLatestChapters
                     .Where(latest => latest.MangaEntryId == entry.Id)
                     .ToDictionaryAsync(latest => latest.Language, StringComparer.OrdinalIgnoreCase, cancellationToken);
                 var releasedLanguages = new List<(string Language, decimal Chapter)>();
-                foreach (var (language, latestChapterForLanguage) in latestChapters)
+                foreach (var (language, latestMetadata) in latestChapters)
                 {
+                    var latestChapterForLanguage = latestMetadata.Number;
                     if (cachedLanguages.TryGetValue(language, out var cached))
                     {
                         if (latestChapterForLanguage > cached.LatestChapter)
@@ -489,6 +499,11 @@ public sealed class RemoteMaintenanceService(
                         }
                         entry.UpdatedAt = DateTimeOffset.UtcNow;
                         updated++;
+                    }
+                    if (latestPublishedAt is not null && entry.MangaDexLatestChapterPublishedAt != latestPublishedAt)
+                    {
+                        entry.MangaDexLatestChapterPublishedAt = latestPublishedAt;
+                        entry.UpdatedAt = DateTimeOffset.UtcNow;
                     }
                     else if (entry.MangaDexLatestChapterObservedAt is null)
                     {
@@ -1290,10 +1305,10 @@ public sealed class RemoteMaintenanceService(
             ? number
             : null;
 
-    private static async Task<Dictionary<string, decimal>> GetLatestChapterNumbersByLanguageAsync(HttpClient client, string mangaDexId, CancellationToken cancellationToken)
+    private static async Task<Dictionary<string, LatestMangaDexChapter>> GetLatestChapterMetadataByLanguageAsync(HttpClient client, string mangaDexId, CancellationToken cancellationToken)
     {
         const int pageSize = 100;
-        var latestByLanguage = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        var latestByLanguage = new Dictionary<string, LatestMangaDexChapter>(StringComparer.OrdinalIgnoreCase);
         var offset = 0;
         var total = int.MaxValue;
 
@@ -1338,9 +1353,10 @@ public sealed class RemoteMaintenanceService(
                     continue;
                 }
 
-                if (!latestByLanguage.TryGetValue(language, out var latest) || chapter.Value > latest)
+                var publishedAt = ReadDateTimeOffset(attributes, "publishAt") ?? ReadDateTimeOffset(attributes, "createdAt");
+                if (!latestByLanguage.TryGetValue(language, out var latest) || chapter.Value > latest.Number)
                 {
-                    latestByLanguage[language] = chapter.Value;
+                    latestByLanguage[language] = new LatestMangaDexChapter(chapter.Value, publishedAt);
                 }
             }
 
@@ -1349,4 +1365,13 @@ public sealed class RemoteMaintenanceService(
 
         return latestByLanguage;
     }
+
+    private static DateTimeOffset? ReadDateTimeOffset(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value)
+        && value.ValueKind == JsonValueKind.String
+        && DateTimeOffset.TryParse(value.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)
+            ? parsed
+            : null;
+
+    private sealed record LatestMangaDexChapter(decimal Number, DateTimeOffset? PublishedAt);
 }

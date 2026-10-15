@@ -85,6 +85,29 @@ public sealed class MangaDexReleaseStallServiceTests
         Assert.Equal("resolved", issue.Status);
     }
 
+    [Fact]
+    public async Task RunAsync_UsesMangaDexPublishDateInsteadOfTheFirstObservedDate()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry
+        {
+            Title = "Recently published",
+            MangaDexId = "manga-id",
+            PublishingStatus = "ongoing",
+            MangaDexLatestChapter = 42,
+            MangaDexLatestChapterObservedAt = DateTimeOffset.UtcNow.AddDays(-90),
+            MangaDexLatestChapterPublishedAt = DateTimeOffset.UtcNow.AddDays(-2),
+            MangaDexNonHiatusSince = DateTimeOffset.UtcNow.AddDays(-90)
+        };
+        db.MangaEntries.Add(manga);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync(CancellationToken.None);
+
+        Assert.Equal(0, result.StalledManga);
+        Assert.Empty(db.AdminIssues);
+    }
+
     private static MangaDexReleaseStallService CreateService(MangaHub.Infrastructure.Data.MangaHubDbContext db) =>
         new(db, Microsoft.Extensions.Logging.Abstractions.NullLogger<MangaDexReleaseStallService>.Instance);
 }
