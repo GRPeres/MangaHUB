@@ -435,6 +435,12 @@ public partial class MainLayout : IDisposable
             return;
         }
 
+        if (notification.Type.StartsWith("admin-issue-", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("admin/issues");
+            return;
+        }
+
         Navigation.NavigateTo("library");
     }
 

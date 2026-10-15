@@ -64,13 +64,14 @@ else
                         @if (!isCollapsed)
                         {
                             <MudGrid Spacing="2" Class="mh-issue-group-items">
-                                @foreach (var item in group)
+                                @foreach (var item in group.OrderBy(item => PriorityRank(item.Priority)).ThenByDescending(item => item.UpdatedAt))
                                 {
                                     <MudItem xs="12" md="6">
                                         <MudPaper Outlined="true" Class="pa-3 mh-issue-card">
                                             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                                                 <MudAvatar Size="Size.Medium" Color="Color.Error"><MudIcon Icon="@IssueIcon(item.Kind)" /></MudAvatar>
                                                 <MudStack Spacing="0" Class="flex-grow-1"><MudText Typo="Typo.subtitle1">@item.Title</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@item.ReportCount report@(item.ReportCount == 1 ? "" : "s") · @item.UpdatedAt.ToLocalTime().ToString("g")</MudText></MudStack>
+                                                <MudChip T="string" Size="Size.Small" Color="@PriorityColor(item.Priority)">@PriorityLabel(item.Priority)</MudChip>
                                                 <MudChip T="string" Size="Size.Small" Color="@StatusColor(item.Status)">@item.Status</MudChip>
                                                 <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" OnClick="() => OpenIssueAsync(item.Id)" aria-label="Open issue" />
                                             </MudStack>
@@ -91,7 +92,7 @@ else
     <div class="mh-modal-backdrop" @onclick="CloseIssue">
         <section class="mh-modal mh-issue-detail-modal" role="dialog" aria-modal="true" aria-labelledby="issue-detail-title" @onclick:stopPropagation="true">
             <MudStack Spacing="3">
-                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween"><MudStack Spacing="0"><MudText id="issue-detail-title" Typo="Typo.h2">@selected.Title</MudText><MudText Typo="Typo.body2" Color="Color.Error">@IssueLabel(selected.Kind) · @selected.Reports.Count report@(selected.Reports.Count == 1 ? "" : "s")</MudText></MudStack><MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseIssue" aria-label="Close issue" /></MudStack>
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween"><MudStack Spacing="0"><MudText id="issue-detail-title" Typo="Typo.h2">@selected.Title</MudText><MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center"><MudText Typo="Typo.body2" Color="Color.Error">@IssueLabel(selected.Kind) · @selected.Reports.Count report@(selected.Reports.Count == 1 ? "" : "s")</MudText><MudChip T="string" Size="Size.Small" Color="@PriorityColor(selected.Priority)">@PriorityLabel(selected.Priority)</MudChip></MudStack></MudStack><MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseIssue" aria-label="Close issue" /></MudStack>
                 @if (!string.IsNullOrWhiteSpace(selected.CoverUrl)) { <img class="mh-issue-cover" src="@selected.CoverUrl" alt="" /> }
                 @if (IsTranslationCoverageIssue)
                 {
@@ -427,6 +428,9 @@ else
     private static string IssueLabel(string kind) => kind switch { "external-reader-link" => "External reader link", "mangadex-language-coverage" => "MangaDex language coverage", "mangadex-translation-abandoned" => "Translation coverage behind", "mangadex-release-stalled" => "MangaDex release stalled", "cover-image" => "Cover image", "catalog-metadata" => "Catalog metadata", "duplicate-catalog-id" => "Duplicate catalog ID", "catalog-registration-failure" => "Catalog registration failed", "maintenance-overdue" => "Maintenance overdue", "archive-integrity" => "Archive integrity", _ => kind };
     private static string IssueIcon(string kind) => kind switch { "external-reader-link" => Icons.Material.Filled.LinkOff, "mangadex-language-coverage" or "mangadex-translation-abandoned" => Icons.Material.Filled.Translate, "mangadex-release-stalled" => Icons.Material.Filled.HourglassTop, "cover-image" => Icons.Material.Filled.BrokenImage, "catalog-metadata" => Icons.Material.Filled.EditNote, "duplicate-catalog-id" => Icons.Material.Filled.ContentCopy, "catalog-registration-failure" => Icons.Material.Filled.AppRegistration, "maintenance-overdue" => Icons.Material.Filled.ScheduleSend, "archive-integrity" => Icons.Material.Filled.Inventory, _ => Icons.Material.Filled.ReportProblem };
     private static Color StatusColor(string value) => value == "resolved" ? Color.Success : value == "dismissed" ? Color.Secondary : Color.Error;
+    private static int PriorityRank(string value) => value switch { "critical" => 0, "high" => 1, "normal" => 2, "low" => 3, _ => 4 };
+    private static Color PriorityColor(string value) => value switch { "critical" => Color.Error, "high" => Color.Warning, "normal" => Color.Primary, _ => Color.Secondary };
+    private static string PriorityLabel(string value) => value switch { "critical" => "Critical", "high" => "High", "normal" => "Normal", "low" => "Low", _ => "Normal" };
     private static Color GroupStatusColor(IGrouping<string, AdminIssueListItemResponse> group) => group.Any(item => item.Status == "open") ? Color.Error : group.Any(item => item.Status == "resolved") ? Color.Success : Color.Secondary;
     private static string GroupStatusLabel(IGrouping<string, AdminIssueListItemResponse> group) => group.Any(item => item.Status == "open") ? "Open" : group.Any(item => item.Status == "resolved") ? "Resolved" : "Dismissed";
     private static string ReasonLabel(string reason) => reason switch { "create-failed" => "Registration failed", "language-coverage" => "Preferred language unavailable", "title" => "Wrong title", "description" => "Wrong description", "category" => "Wrong categories or format", "release-status" => "Wrong release status", "wrong-manga" => "Wrong manga", "wrong-image" => "Wrong cover", "missing" => "Cover missing", "low-quality" => "Poor image quality", "obsolete" => "Obsolete or unhelpful", "unsafe" => "Potentially unsafe", "broken" => "Broken link or image", _ => "Other problem" };

@@ -11,7 +11,10 @@ namespace MangaHub.Api.Services;
 /// another page-bearing language. The issue is catalog-wide but its evidence is
 /// calculated from every affected shelf owner's ordered language list.
 /// </summary>
-public sealed class MangaDexTranslationCoverageService(MangaHubDbContext db, ILogger<MangaDexTranslationCoverageService> logger)
+public sealed class MangaDexTranslationCoverageService(
+    MangaHubDbContext db,
+    AdminIssueNotificationService issueNotifications,
+    ILogger<MangaDexTranslationCoverageService> logger)
 {
     private const decimal GapThreshold = 2m;
 
@@ -82,10 +85,14 @@ public sealed class MangaDexTranslationCoverageService(MangaHubDbContext db, ILo
             }
 
             var representative = mangaShelves.First();
+            var maximumGap = affected.Max(item => item.Gap);
+            var priority = GetPriority(maximumGap);
             var metadata = JsonSerializer.Serialize(new
             {
                 latestAnyLanguageChapter = allLanguageLatest,
                 threshold = GapThreshold,
+                maximumChapterGap = maximumGap,
+                priority,
                 affectedLanguageSets = affected.Select(item => new
                 {
                     preferredLanguages = item.PreferredLanguages,
@@ -99,25 +106,29 @@ public sealed class MangaDexTranslationCoverageService(MangaHubDbContext db, ILo
                 checkedAt = now
             });
 
+            AdminIssue issue;
             if (coverageIssues.TryGetValue(mangaShelves.Key, out var existing))
             {
                 existing.MetadataJson = metadata;
-                existing.Priority = affected.Max(item => item.Gap) >= 10 ? "high" : "normal";
+                existing.Priority = priority;
                 existing.UpdatedAt = now;
+                issue = existing;
             }
             else
             {
-                db.AdminIssues.Add(new AdminIssue
+                issue = new AdminIssue
                 {
                     Kind = AdminIssueTypes.MangaDexLanguageCoverage,
                     SubjectType = AdminIssueTypes.CatalogManga,
                     SubjectId = mangaShelves.Key,
-                    Priority = affected.Max(item => item.Gap) >= 10 ? "high" : "normal",
+                    Priority = priority,
                     TitleSnapshot = $"MangaDex language coverage: {representative.Title}",
                     MetadataJson = metadata,
                     ResolutionNote = "Add an external fallback reader for the affected languages, or wait for MangaDex translations to catch up."
-                });
+                };
+                db.AdminIssues.Add(issue);
             }
+            await issueNotifications.NotifyCoverageGapAsync(issue, new MangaEntry { Id = mangaShelves.Key, Title = representative.Title }, maximumGap, priority, cancellationToken);
             openedOrUpdated++;
         }
 
@@ -135,6 +146,14 @@ public sealed class MangaDexTranslationCoverageService(MangaHubDbContext db, ILo
             .Max();
         return new TranslationCoverageEvaluation(preferredLanguages, preferredLatest, allLanguageLatest - (preferredLatest ?? 0m));
     }
+
+    private static string GetPriority(decimal maximumGap) => maximumGap switch
+    {
+        >= 25m => "critical",
+        >= 10m => "high",
+        >= 5m => "normal",
+        _ => "low"
+    };
 
     private static Dictionary<Guid, AdminIssue> NormalizeLegacyIssues(IEnumerable<AdminIssue> issues, DateTimeOffset now)
     {

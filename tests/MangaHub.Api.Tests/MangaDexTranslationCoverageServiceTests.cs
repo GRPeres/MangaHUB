@@ -1,6 +1,8 @@
 using MangaHub.Api.Services;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
+using MangaHub.Infrastructure;
+using Microsoft.Extensions.Options;
 
 namespace MangaHub.Api.Tests;
 
@@ -81,6 +83,37 @@ public sealed class MangaDexTranslationCoverageServiceTests
         Assert.Empty(db.AdminIssues);
     }
 
+    [Fact]
+    public async Task RunAsync_EscalatesSeriousGapsAndAlertsEachAdministratorOnlyOnce()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "Seriously behind", MangaDexId = "manga-id" };
+        var reader = new MangaUser { Username = "reader", PasswordHash = "hash", PreferredLanguage = "en" };
+        var admin = new MangaUser { Username = "admin", PasswordHash = "hash", Role = "admin", PreferredLanguage = "en" };
+        db.AddRange(manga, reader, admin);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = reader.Id, MangaEntryId = manga.Id, ReadingStatus = "reading" });
+        db.MangaDexLanguageLatestChapters.AddRange(
+            new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "en", LatestChapter = 10 },
+            new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "fr", LatestChapter = 22 });
+        await db.SaveChangesAsync();
+
+        await CreateService(db).RunAsync(CancellationToken.None);
+        await CreateService(db).RunAsync(CancellationToken.None);
+
+        var issue = Assert.Single(db.AdminIssues);
+        Assert.Equal("high", issue.Priority);
+        var notification = Assert.Single(db.Notifications);
+        Assert.Equal(admin.Id, notification.UserId);
+        Assert.Contains("12", notification.Body);
+        Assert.Contains("high", notification.Type, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static MangaDexTranslationCoverageService CreateService(MangaHub.Infrastructure.Data.MangaHubDbContext db) =>
-        new(db, Microsoft.Extensions.Logging.Abstractions.NullLogger<MangaDexTranslationCoverageService>.Instance);
+        new(
+            db,
+            new AdminIssueNotificationService(
+                db,
+                Options.Create(new MangaHubOptions()),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<AdminIssueNotificationService>.Instance),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<MangaDexTranslationCoverageService>.Instance);
 }
