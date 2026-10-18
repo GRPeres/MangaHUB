@@ -314,6 +314,30 @@ public sealed class IssueReportingServiceTests
     }
 
     [Fact]
+    public async Task RepairMangaDexIdentityAsync_PreviewDoesNotChangeDataAndConfirmationRejectsChangedMatch()
+    {
+        await using var db = TestDb.Create();
+        var id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+        var manga = new MangaEntry { Title = "Title", MyAnimeListId = "1234", MangaDexId = "old" };
+        var issue = new AdminIssue { Kind = AdminIssueTypes.MangaDexIdentityMismatch, SubjectType = AdminIssueTypes.CatalogManga, SubjectId = manga.Id, TitleSnapshot = manga.Title };
+        db.AddRange(manga, issue);
+        await db.SaveChangesAsync();
+        var source = new FakeMangaDexSource { Identity = new MangaDexCatalogIdentity(id, "Match", "1234", []) };
+        source.CatalogMatches.Add(new MangaDexCatalogMatch(id, "Match"));
+        var service = CreateService(db, source);
+        var preview = await service.RepairMangaDexIdentityAsync(Guid.NewGuid(), issue.Id, CancellationToken.None, preview: true, confirmedMalId: "1234");
+        Assert.NotNull(preview.Match);
+        Assert.Equal("old", manga.MangaDexId);
+        Assert.Equal("open", issue.Status);
+        var rejected = await service.RepairMangaDexIdentityAsync(Guid.NewGuid(), issue.Id, CancellationToken.None, confirmedMatchId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", confirmedMalId: "1234");
+        Assert.Null(rejected.Match);
+        Assert.Equal("old", manga.MangaDexId);
+        var confirmed = await service.RepairMangaDexIdentityAsync(Guid.NewGuid(), issue.Id, CancellationToken.None, confirmedMatchId: id, confirmedMalId: "1234");
+        Assert.NotNull(confirmed.Match);
+        Assert.Equal(id, manga.MangaDexId);
+    }
+
+    [Fact]
     public async Task RepairMangaDexIdentityAsync_RepairsVerifiedMatchAndClearsOldReleaseState()
     {
         await using var db = TestDb.Create();

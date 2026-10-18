@@ -359,7 +359,7 @@ public sealed class IssueReportingService(
         return (new MangaDexCatalogMatch(mangaDexId.ToString(), identity.Title), "");
     }
 
-    public async Task<(MangaDexCatalogMatch? Match, string Error)> RepairMangaDexIdentityAsync(Guid adminUserId, Guid issueId, CancellationToken cancellationToken)
+    public async Task<(MangaDexCatalogMatch? Match, string Error)> RepairMangaDexIdentityAsync(Guid adminUserId, Guid issueId, CancellationToken cancellationToken, bool preview = false, string? confirmedMatchId = null, string? confirmedMalId = null)
     {
         var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
         if (issue is null || issue.Status != "open" || issue.Kind != AdminIssueTypes.MangaDexIdentityMismatch)
@@ -370,6 +370,8 @@ public sealed class IssueReportingService(
             return (null, "The catalog entry no longer has a MyAnimeList ID to match.");
 
         var expectedMalId = manga.MyAnimeListId.Trim();
+        if (confirmedMalId is not null && confirmedMalId != expectedMalId)
+            return (null, "The catalog entry changed. Refresh the issue and search again.");
         var originalMangaDexId = manga.MangaDexId;
         var match = await mangaDexMatches.FindAsync(expectedMalId, manga.Title, cancellationToken);
         if (match is null || !Guid.TryParse(match.Id, out var matchedId))
@@ -393,11 +395,16 @@ public sealed class IssueReportingService(
             return (null, "The catalog entry changed while matching. Refresh the issue and try again.");
 
         var normalizedId = matchedId.ToString();
+        if (confirmedMatchId is not null && (!Guid.TryParse(confirmedMatchId, out var confirmedId) || confirmedId != matchedId))
+            return (null, "The matching MangaDex result changed. Search again before confirming.");
         var duplicate = await catalog.FindByMangaDexIdAsync(normalizedId, cancellationToken);
         if (duplicate is not null && duplicate.Id != manga.Id)
             return (null, $"This MangaDex ID is already linked to {duplicate.Title}. Review the duplicate catalog entries first.");
         if (string.Equals(originalMangaDexId, normalizedId, StringComparison.OrdinalIgnoreCase))
             return (null, "The current MangaDex link already matches this ID. Refresh the issue and audit again.");
+
+        if (preview)
+            return (new MangaDexCatalogMatch(normalizedId, identity.Title), "");
 
         manga.MangaDexId = normalizedId;
         manga.MangaDexLatestChapter = null;

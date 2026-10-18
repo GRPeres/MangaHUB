@@ -141,14 +141,24 @@ else
                             <MudText Typo="Typo.body2">The linked MangaDex record has a different MyAnimeList identity from this catalog entry.</MudText>
                         }
                     </MudAlert>
-                    @if (IsOpen)
+                    @if (IsOpen && MangaDexIdentityMismatch is { } repairMismatch)
                     {
-                        @if (MangaDexIdentityMismatch is { } repairMismatch && int.TryParse(repairMismatch.LinkedMyAnimeListId, out _))
+                        <fieldset class="mh-identity-options" disabled="@saving">
+                            <legend>Which source should this catalog entry follow?</legend>
+                            <label class="mh-identity-option">
+                                <input type="radio" name="identity-repair" checked="@(identityChoice == "mangadex")" disabled="@(!int.TryParse(repairMismatch.LinkedMyAnimeListId, out _))" @onchange='() => SelectIdentityChoice("mangadex")' />
+                                <span><strong>Keep MangaDex</strong><span>Change MAL #@repairMismatch.ExpectedMyAnimeListId to #@repairMismatch.LinkedMyAnimeListId. Other catalog metadata stays unchanged.</span></span>
+                            </label>
+                            <label class="mh-identity-option">
+                                <input type="radio" name="identity-repair" checked="@(identityChoice == "mal")" @onchange='() => SelectIdentityChoice("mal")' />
+                                <span><strong>Keep MyAnimeList</strong><span>Find a MangaDex entry matching MAL #@repairMismatch.ExpectedMyAnimeListId and review it before replacing the link.</span></span>
+                            </label>
+                        </fieldset>
+                        @if (identityCandidate is not null && identityChoice == "mal")
                         {
-                            <MudText Typo="Typo.body2">If the linked MangaDex title is correct, update the MAL ID to match it. Other catalog metadata is not changed.</MudText>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@saving" OnClick="RepairMalIdentityAsync">Use MangaDex MAL #@repairMismatch.LinkedMyAnimeListId</MudButton>
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Verified match: <strong>@identityCandidate.Title</strong> (@identityCandidate.Id). Confirm to replace the MangaDex link.</MudAlert>
                         }
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoFixHigh" Disabled="@saving" OnClick="RepairMangaDexIdentityAsync">@(saving ? "Finding match..." : "Find and use matching MangaDex link")</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(saving || string.IsNullOrEmpty(identityChoice))" OnClick="ConfirmIdentityChoiceAsync">@(saving ? "Working..." : identityChoice == "mal" && identityCandidate is null ? "Find match" : "Confirm fix")</MudButton>
                     }
                 }
                 @if (IsMaintenanceFailureIssue)
@@ -275,6 +285,8 @@ else
     private List<MetadataResult> metadataResults = [];
     private bool loading = true;
     private bool saving;
+    private string identityChoice = "";
+    private MangaHub.Web.API.DTOs.MangaDexCatalogMatch? identityCandidate;
     private bool isSearchingMetadata;
     private int metadataSearchVersion;
     private readonly HashSet<string> collapsedGroups = new(StringComparer.OrdinalIgnoreCase);
@@ -407,7 +419,9 @@ else
     private void CollapseAll() { foreach (var group in IssueGroups) collapsedGroups.Add(group.Key); }
     private void ExpandAll() => collapsedGroups.Clear();
     private async Task OpenIssueAsync(Guid id) { selected = await AdminApi.GetIssueAsync(id); if (selected is null) Messages.Error("Could not load this issue."); else { replacementUrl = selected.FallbackReaderUrl; replacementCoverUrl = selected.CoverUrl; resolutionNote = selected.ResolutionNote; metadataQuery = selected.Title; metadataResults = []; metadataMessage = ""; } }
-    private void CloseIssue() { selected = null; metadataResults = []; metadataMessage = ""; }
+    private void CloseIssue() { selected = null; metadataResults = []; metadataMessage = ""; identityChoice = ""; identityCandidate = null; }
+    private void SelectIdentityChoice(string choice) { identityChoice = choice; identityCandidate = null; }
+    private Task ConfirmIdentityChoiceAsync() => identityChoice == "mangadex" ? RepairMalIdentityAsync() : RepairMangaDexIdentityAsync();
     private async Task ResolveAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ResolveIssueAsync(selected.Id, new(replacementUrl, resolutionNote))) { Messages.Success("The shared link was repaired and reporters were notified.", "Issue resolved"); CloseIssue(); await LoadAsync(); } else Messages.Error("Enter a valid replacement URL.", "Could not resolve issue"); } finally { saving = false; } }
     private async Task ResolveCoverAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ResolveCoverImageIssueAsync(selected.Id, new(replacementCoverUrl, resolutionNote))) { Messages.Success("The shared cover was updated and reporters were notified.", "Issue resolved"); CloseIssue(); await LoadAsync(); } else Messages.Error("Enter a valid image URL, or leave it blank to remove the cover.", "Could not resolve issue"); } finally { saving = false; } }
     private async Task ReintegrateWithMangaDexAsync()
@@ -457,10 +471,18 @@ else
         saving = true;
         try
         {
-            var result = await AdminApi.RepairMangaDexIdentityAsync(selected.Id);
+            var mismatch = MangaDexIdentityMismatch;
+            if (mismatch is null) return;
+            var preview = identityCandidate is null;
+            var result = await AdminApi.RepairMangaDexIdentityAsync(selected.Id, preview, mismatch.ExpectedMyAnimeListId, identityCandidate?.Id);
             if (result.Value is null)
             {
                 Messages.Warning(string.IsNullOrWhiteSpace(result.Error) ? "No verified MangaDex match was found." : result.Error, "MangaDex link not changed");
+                return;
+            }
+            if (preview)
+            {
+                identityCandidate = result.Value;
                 return;
             }
             Messages.Success($"Linked {result.Value.Title}. MangaDex release information will refresh automatically.", "MangaDex link repaired");

@@ -167,12 +167,12 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     }
 
     [HttpPost("issues/{issueId:guid}/repair-mangadex-identity")]
-    public async Task<IActionResult> RepairMangaDexIdentity(Guid issueId, CancellationToken cancellationToken)
+    public async Task<IActionResult> RepairMangaDexIdentity(Guid issueId, CancellationToken cancellationToken, [FromQuery] bool preview = false, [FromQuery] string? confirmedMatchId = null, [FromQuery] string? confirmedMalId = null)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
         if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
-        var result = await issues.RepairMangaDexIdentityAsync(user.Id, issueId, cancellationToken);
+        var result = await issues.RepairMangaDexIdentityAsync(user.Id, issueId, cancellationToken, preview, confirmedMatchId, confirmedMalId);
         return result.Match is null ? BadRequest(result.Error) : Ok(result.Match);
     }
 
