@@ -293,6 +293,26 @@ public sealed class IssueReportingServiceTests
         Assert.Equal("resolved", db.AdminIssues.Single().Status);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RepairMalIdentityAsync_UpdatesVerifiedIdUnlessDuplicate(bool duplicate)
+    {
+        await using var db = TestDb.Create();
+        var id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+        var manga = new MangaEntry { Title = "Slime", MyAnimeListId = "87610", MangaDexId = id, MangaDexLatestChapter = 50 };
+        var issue = new AdminIssue { Kind = AdminIssueTypes.MangaDexIdentityMismatch, SubjectType = AdminIssueTypes.CatalogManga, SubjectId = manga.Id, TitleSnapshot = manga.Title };
+        db.AddRange(manga, issue);
+        if (duplicate) db.MangaEntries.Add(new MangaEntry { Title = "Existing", MyAnimeListId = "87609" });
+        await db.SaveChangesAsync();
+        var source = new FakeMangaDexSource { Identity = new MangaDexCatalogIdentity(id, "Slime", "87609", []) };
+        var result = await CreateService(db, source).RepairMalIdentityAsync(Guid.NewGuid(), issue.Id, "87610", "87609", CancellationToken.None);
+        Assert.Equal(duplicate ? "87610" : "87609", manga.MyAnimeListId);
+        Assert.Equal(duplicate ? "open" : "resolved", issue.Status);
+        Assert.Equal(50, manga.MangaDexLatestChapter);
+        Assert.Equal(!duplicate, result.Match is not null);
+    }
+
     [Fact]
     public async Task RepairMangaDexIdentityAsync_RepairsVerifiedMatchAndClearsOldReleaseState()
     {

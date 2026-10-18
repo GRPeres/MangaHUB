@@ -156,6 +156,16 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
             : Ok(match);
     }
 
+    [HttpPost("issues/{issueId:guid}/repair-mal-identity")]
+    public async Task<IActionResult> RepairMalIdentity(Guid issueId, [FromQuery] string expectedMalId, [FromQuery] string linkedMalId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var result = await issues.RepairMalIdentityAsync(user.Id, issueId, expectedMalId, linkedMalId, cancellationToken);
+        return result.Match is null ? BadRequest(result.Error) : Ok(result.Match);
+    }
+
     [HttpPost("issues/{issueId:guid}/repair-mangadex-identity")]
     public async Task<IActionResult> RepairMangaDexIdentity(Guid issueId, CancellationToken cancellationToken)
     {

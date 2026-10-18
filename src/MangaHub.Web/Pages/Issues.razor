@@ -143,6 +143,11 @@ else
                     </MudAlert>
                     @if (IsOpen)
                     {
+                        @if (MangaDexIdentityMismatch is { } repairMismatch && int.TryParse(repairMismatch.LinkedMyAnimeListId, out _))
+                        {
+                            <MudText Typo="Typo.body2">If the linked MangaDex title is correct, update the MAL ID to match it. Other catalog metadata is not changed.</MudText>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@saving" OnClick="RepairMalIdentityAsync">Use MangaDex MAL #@repairMismatch.LinkedMyAnimeListId</MudButton>
+                        }
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoFixHigh" Disabled="@saving" OnClick="RepairMangaDexIdentityAsync">@(saving ? "Finding match..." : "Find and use matching MangaDex link")</MudButton>
                     }
                 }
@@ -426,6 +431,25 @@ else
         {
             saving = false;
         }
+    }
+    private async Task RepairMalIdentityAsync()
+    {
+        if (selected is null || !IsOpen || saving || MangaDexIdentityMismatch is not { } mismatch) return;
+        saving = true;
+        try
+        {
+            var result = await AdminApi.RepairMalIdentityAsync(selected.Id, mismatch.ExpectedMyAnimeListId, mismatch.LinkedMyAnimeListId);
+            if (result.Value is null)
+            {
+                Messages.Warning(string.IsNullOrWhiteSpace(result.Error) ? "The MAL ID could not be verified." : result.Error, "Catalog identity not changed");
+                return;
+            }
+            Messages.Success($"Updated the MAL ID to #{mismatch.LinkedMyAnimeListId}. Review the remaining catalog metadata if needed.", "Catalog identity repaired");
+            CloseIssue();
+            await LoadAsync();
+        }
+        catch (HttpRequestException) { Messages.Error("The server could not be reached. Please try again.", "Catalog identity not changed"); }
+        finally { saving = false; }
     }
     private async Task RepairMangaDexIdentityAsync()
     {

@@ -332,6 +332,33 @@ public sealed class IssueReportingService(
         return match;
     }
 
+    public async Task<(MangaDexCatalogMatch? Match, string Error)> RepairMalIdentityAsync(Guid adminUserId, Guid issueId, string expectedMalId, string linkedMalId, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        if (issue is null || issue.Status != "open" || issue.Kind != AdminIssueTypes.MangaDexIdentityMismatch)
+            return (null, "This identity mismatch is no longer open.");
+        var manga = await catalog.GetByIdAsync(issue.SubjectId, cancellationToken);
+        if (manga is null || !Guid.TryParse(manga.MangaDexId, out var mangaDexId) || manga.MyAnimeListId.Trim() != expectedMalId)
+            return (null, "The catalog entry changed. Refresh the issue and try again.");
+        MangaDexCatalogIdentity? identity;
+        try { identity = await mangaDexMatches.GetIdentityAsync(mangaDexId.ToString(), cancellationToken); }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException)
+        { return (null, "MangaDex could not verify the linked title. Please try again later."); }
+        if (identity is null || !Guid.TryParse(identity.Id, out var verifiedId) || verifiedId != mangaDexId
+            || !int.TryParse(linkedMalId, out var malId) || malId <= 0 || identity.MyAnimeListId.Trim() != linkedMalId)
+            return (null, "MangaDex no longer confirms the displayed MAL ID. Refresh the issue and try again.");
+        var current = await catalog.GetByIdNoTrackingAsync(manga.Id, cancellationToken);
+        if (current is null || current.MangaDexId != manga.MangaDexId || current.MyAnimeListId.Trim() != expectedMalId)
+            return (null, "The catalog entry changed while verifying. Refresh the issue and try again.");
+        var duplicate = await catalog.FindByMyAnimeListIdAsync(linkedMalId, cancellationToken);
+        if (duplicate is not null && duplicate.Id != manga.Id)
+            return (null, $"MAL #{linkedMalId} is already linked to {duplicate.Title}. Review the duplicate catalog entries first.");
+        manga.MyAnimeListId = linkedMalId;
+        manga.UpdatedAt = DateTimeOffset.UtcNow;
+        await CloseAsync(issue, adminUserId, "resolved", $"Updated MAL ID from #{expectedMalId} to #{linkedMalId}, verified against the existing MangaDex link. Other catalog metadata was not changed.", "Catalog identity repaired", "An admin repaired the catalog identity for", cancellationToken);
+        return (new MangaDexCatalogMatch(mangaDexId.ToString(), identity.Title), "");
+    }
+
     public async Task<(MangaDexCatalogMatch? Match, string Error)> RepairMangaDexIdentityAsync(Guid adminUserId, Guid issueId, CancellationToken cancellationToken)
     {
         var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
