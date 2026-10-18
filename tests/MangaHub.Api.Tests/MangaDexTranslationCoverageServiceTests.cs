@@ -8,6 +8,42 @@ namespace MangaHub.Api.Tests;
 
 public sealed class MangaDexTranslationCoverageServiceTests
 {
+    [Theory]
+    [InlineData("20", true, false)]
+    [InlineData("17", true, true)]
+    [InlineData("bad", true, true)]
+    [InlineData("20", false, true)]
+    public async Task RunAsync_UsesRecordedExternalCoverageOnlyWhenLinked(string externalLatest, bool linked, bool expectIssue)
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "External", MangaDexId = "id", FallbackReaderUrl = linked ? "https://example.com" : "" };
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash", PreferredLanguage = "en" };
+        db.AddRange(manga, user, new UserMangaEntry { UserId = user.Id, MangaEntryId = manga.Id, ReadingStatus = "reading", ExternalReaderLatestChapter = externalLatest });
+        db.MangaDexLanguageLatestChapters.AddRange(new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "en", LatestChapter = 10 }, new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "fr", LatestChapter = 20 });
+        await db.SaveChangesAsync();
+        await CreateService(db).RunAsync(CancellationToken.None);
+        Assert.Equal(expectIssue, db.AdminIssues.Any());
+        if (externalLatest == "17" && linked) Assert.Contains("\"maximumChapterGap\":3", Assert.Single(db.AdminIssues).MetadataJson);
+    }
+
+    [Fact]
+    public async Task RunAsync_ExternalCoverageIsPerUserAndResolvesWhenEveryoneIsCovered()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "External", MangaDexId = "id", FallbackReaderUrl = "https://example.com" };
+        var one = new MangaUser { Username = "one", PasswordHash = "hash", PreferredLanguage = "en" };
+        var two = new MangaUser { Username = "two", PasswordHash = "hash", PreferredLanguage = "en" };
+        var first = new UserMangaEntry { UserId = one.Id, MangaEntryId = manga.Id, ReadingStatus = "reading", ExternalReaderLatestChapter = "20" };
+        var second = new UserMangaEntry { UserId = two.Id, MangaEntryId = manga.Id, ReadingStatus = "reading", ExternalReaderLatestChapter = "" };
+        db.AddRange(manga, one, two, first, second, new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "en", LatestChapter = 10 }, new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "fr", LatestChapter = 20 });
+        await db.SaveChangesAsync();
+        await CreateService(db).RunAsync(CancellationToken.None);
+        Assert.Equal("open", Assert.Single(db.AdminIssues).Status);
+        second.ExternalReaderLatestChapter = "20";
+        await db.SaveChangesAsync();
+        await CreateService(db).RunAsync(CancellationToken.None);
+        Assert.Equal("resolved", Assert.Single(db.AdminIssues).Status);
+    }
     [Fact]
     public async Task RunAsync_UsesEveryPreferredLanguageAndCreatesOneRepairableIssue()
     {

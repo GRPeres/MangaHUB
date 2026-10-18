@@ -103,7 +103,7 @@ else
                                 <MudText Typo="Typo.body2">Latest in any MangaDex language: <strong class="mh-issue-chapter">Ch. @coverage.LatestChapter</strong>.</MudText>
                                 @foreach (var affected in coverage.AffectedLanguages)
                                 {
-                                    <MudText Typo="Typo.body2">@affected.Languages: <strong class="mh-issue-chapter">Ch. @affected.LatestChapter</strong> · @affected.Gap chapters behind.</MudText>
+                                    <MudText Typo="Typo.body2">@affected.Languages: latest readable <strong class="mh-issue-chapter">Ch. @affected.LatestChapter</strong>@(affected.IncludesExternal ? " (including external reader)" : "") · @affected.Gap chapters behind.</MudText>
                                 }
                             </MudStack>
                         }
@@ -328,9 +328,10 @@ else
                         var languages = group.TryGetProperty("preferredLanguages", out var languagesNode) && languagesNode.ValueKind == System.Text.Json.JsonValueKind.Array
                             ? string.Join(", ", languagesNode.EnumerateArray().Select(language => language.GetString()).Where(language => !string.IsNullOrWhiteSpace(language)))
                             : "preferred languages";
-                        var preferred = group.TryGetProperty("latestPreferredLanguageChapter", out var preferredNode) && preferredNode.ValueKind != System.Text.Json.JsonValueKind.Null ? FormatChapter(preferredNode) : "none";
+                        var preferred = group.TryGetProperty("latestReadableChapter", out var readableNode) && readableNode.ValueKind != System.Text.Json.JsonValueKind.Null ? FormatChapter(readableNode) : group.TryGetProperty("latestPreferredLanguageChapter", out var preferredNode) && preferredNode.ValueKind != System.Text.Json.JsonValueKind.Null ? FormatChapter(preferredNode) : "none";
+                        var includesExternal = group.TryGetProperty("latestExternalReaderChapter", out var externalNode) && externalNode.ValueKind == System.Text.Json.JsonValueKind.Number;
                         var gap = group.TryGetProperty("chaptersBehind", out var gapNode) ? FormatChapter(gapNode) : "?";
-                        return new TranslationCoverageLanguageDetail(languages, preferred, gap);
+                        return new TranslationCoverageLanguageDetail(languages, preferred, gap, includesExternal);
                     })
                     .ToList()
                     : [];
@@ -598,7 +599,7 @@ else
         ? chapter.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
         : value.ToString();
     private sealed record TranslationCoverageDetail(string LatestChapter, List<TranslationCoverageLanguageDetail> AffectedLanguages);
-    private sealed record TranslationCoverageLanguageDetail(string Languages, string LatestChapter, string Gap);
+    private sealed record TranslationCoverageLanguageDetail(string Languages, string LatestChapter, string Gap, bool IncludesExternal);
     private sealed record ReleaseStallDetail(string LatestChapter, string InactiveDays, string LastObserved);
     private sealed record MangaDexIdentityMismatchDetail(string ExpectedMyAnimeListId, string LinkedMangaDexId, string LinkedMyAnimeListId, string LinkedTitle);
     private sealed record MaintenanceFailureDetail(string Type, string Trigger, string Error, string FailedAt);

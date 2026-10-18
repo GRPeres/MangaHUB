@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
 using MangaHub.Infrastructure.Data;
@@ -26,7 +27,7 @@ public sealed class MangaDexTranslationCoverageService(
             join manga in db.MangaEntries.AsNoTracking() on shelf.MangaEntryId equals manga.Id
             where manga.MangaDexId != ""
                 && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
-            select new ShelfLanguageContext(manga.Id, manga.Title, manga.FallbackReaderUrl, user.PreferredLanguage))
+            select new ShelfLanguageContext(manga.Id, manga.Title, manga.FallbackReaderUrl, user.PreferredLanguage, shelf.ExternalReaderLatestChapter))
             .ToListAsync(cancellationToken);
 
         if (shelves.Count == 0)
@@ -64,7 +65,7 @@ public sealed class MangaDexTranslationCoverageService(
             evaluated++;
             var allLanguageLatest = latest.Max(item => item.LatestChapter);
             var affected = mangaShelves
-                .Select(item => Evaluate(item.PreferredLanguage, latest, allLanguageLatest))
+                .Select(item => Evaluate(item, latest, allLanguageLatest))
                 .Where(item => item.Gap > GapThreshold)
                 .GroupBy(item => string.Join(",", item.PreferredLanguages), StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.OrderByDescending(item => item.Gap).First())
@@ -78,7 +79,7 @@ public sealed class MangaDexTranslationCoverageService(
                     recovered.Status = "resolved";
                     recovered.ResolvedAt = now;
                     recovered.UpdatedAt = now;
-                    recovered.ResolutionNote = "Preferred MangaDex translation coverage is within two chapters of the latest available language again.";
+                    recovered.ResolutionNote = "Recorded readable coverage, including any external reader, is within two chapters of the latest MangaDex language.";
                     resolved++;
                 }
                 continue;
@@ -97,6 +98,8 @@ public sealed class MangaDexTranslationCoverageService(
                 {
                     preferredLanguages = item.PreferredLanguages,
                     latestPreferredLanguageChapter = item.PreferredLatest,
+                    latestExternalReaderChapter = item.ExternalLatest,
+                    latestReadableChapter = item.ReadableLatest,
                     chaptersBehind = item.Gap
                 }),
                 availableLanguages = latest
@@ -137,14 +140,18 @@ public sealed class MangaDexTranslationCoverageService(
         return new TranslationCoverageCheckResult(evaluated, openedOrUpdated, resolved);
     }
 
-    private static TranslationCoverageEvaluation Evaluate(string preferredLanguage, IReadOnlyList<MangaDexLanguageLatestChapter> latest, decimal allLanguageLatest)
+    private static TranslationCoverageEvaluation Evaluate(ShelfLanguageContext shelf, IReadOnlyList<MangaDexLanguageLatestChapter> latest, decimal allLanguageLatest)
     {
-        var preferredLanguages = LanguagePreferences.Parse(preferredLanguage);
+        var preferredLanguages = LanguagePreferences.Parse(shelf.PreferredLanguage);
         var preferredLatest = latest
             .Where(item => LanguagePreferences.Contains(preferredLanguages, item.Language))
             .Select(item => (decimal?)item.LatestChapter)
             .Max();
-        return new TranslationCoverageEvaluation(preferredLanguages, preferredLatest, allLanguageLatest - (preferredLatest ?? 0m));
+        decimal? externalLatest = !string.IsNullOrWhiteSpace(shelf.FallbackReaderUrl)
+            && decimal.TryParse(shelf.ExternalReaderLatestChapter?.Trim().Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed)
+            && parsed >= 0 ? parsed : null;
+        var readableLatest = externalLatest.HasValue && (!preferredLatest.HasValue || externalLatest.Value > preferredLatest.Value) ? externalLatest : preferredLatest;
+        return new TranslationCoverageEvaluation(preferredLanguages, preferredLatest, externalLatest, readableLatest, allLanguageLatest - (readableLatest ?? 0m));
     }
 
     private static string GetPriority(decimal maximumGap) => maximumGap switch
@@ -186,8 +193,8 @@ public sealed class MangaDexTranslationCoverageService(
         return canonicalIssues;
     }
 
-    private sealed record ShelfLanguageContext(Guid MangaEntryId, string Title, string FallbackReaderUrl, string PreferredLanguage);
-    private sealed record TranslationCoverageEvaluation(IReadOnlyList<string> PreferredLanguages, decimal? PreferredLatest, decimal Gap);
+    private sealed record ShelfLanguageContext(Guid MangaEntryId, string Title, string FallbackReaderUrl, string PreferredLanguage, string ExternalReaderLatestChapter);
+    private sealed record TranslationCoverageEvaluation(IReadOnlyList<string> PreferredLanguages, decimal? PreferredLatest, decimal? ExternalLatest, decimal? ReadableLatest, decimal Gap);
 }
 
 public sealed record TranslationCoverageCheckResult(int EvaluatedManga, int OpenedOrUpdatedIssues, int ResolvedIssues);
