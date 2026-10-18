@@ -332,6 +332,61 @@ public sealed class IssueReportingService(
         return match;
     }
 
+    public async Task<(MangaDexCatalogMatch? Match, string Error)> RepairMangaDexIdentityAsync(Guid adminUserId, Guid issueId, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        if (issue is null || issue.Status != "open" || issue.Kind != AdminIssueTypes.MangaDexIdentityMismatch)
+            return (null, "This identity mismatch is no longer open.");
+
+        var manga = await catalog.GetByIdAsync(issue.SubjectId, cancellationToken);
+        if (manga is null || string.IsNullOrWhiteSpace(manga.MyAnimeListId))
+            return (null, "The catalog entry no longer has a MyAnimeList ID to match.");
+
+        var expectedMalId = manga.MyAnimeListId.Trim();
+        var originalMangaDexId = manga.MangaDexId;
+        var match = await mangaDexMatches.FindAsync(expectedMalId, manga.Title, cancellationToken);
+        if (match is null || !Guid.TryParse(match.Id, out var matchedId))
+            return (null, "No verified MangaDex match was found for this MyAnimeList ID. Check the catalog entry manually.");
+
+        MangaDexCatalogIdentity? identity;
+        try
+        {
+            identity = await mangaDexMatches.GetIdentityAsync(matchedId.ToString(), cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException)
+        {
+            return (null, "MangaDex could not verify the matching title. Please try again later.");
+        }
+        if (identity is null || !Guid.TryParse(identity.Id, out var verifiedId) || verifiedId != matchedId
+            || !string.Equals(identity.MyAnimeListId.Trim(), expectedMalId, StringComparison.Ordinal))
+            return (null, "MangaDex did not confirm the expected MyAnimeList ID for the proposed match.");
+
+        var current = await catalog.GetByIdNoTrackingAsync(manga.Id, cancellationToken);
+        if (current is null || current.MangaDexId != originalMangaDexId || current.MyAnimeListId.Trim() != expectedMalId)
+            return (null, "The catalog entry changed while matching. Refresh the issue and try again.");
+
+        var normalizedId = matchedId.ToString();
+        var duplicate = await catalog.FindByMangaDexIdAsync(normalizedId, cancellationToken);
+        if (duplicate is not null && duplicate.Id != manga.Id)
+            return (null, $"This MangaDex ID is already linked to {duplicate.Title}. Review the duplicate catalog entries first.");
+        if (string.Equals(originalMangaDexId, normalizedId, StringComparison.OrdinalIgnoreCase))
+            return (null, "The current MangaDex link already matches this ID. Refresh the issue and audit again.");
+
+        manga.MangaDexId = normalizedId;
+        manga.MangaDexLatestChapter = null;
+        manga.MangaDexLatestChapterPublishedAt = null;
+        manga.MangaDexLatestChapterObservedAt = null;
+        manga.MangaDexNonHiatusSince = null;
+        manga.MangaDexLastSyncedAt = null;
+        manga.MangaDexLastPrefetchedChapter = null;
+        manga.MangaDexLastPrefetchedAt = null;
+        manga.MangaDexLastBackfilledAt = null;
+        manga.UpdatedAt = DateTimeOffset.UtcNow;
+        await catalog.ClearMangaDexLanguageLatestAsync(manga.Id, cancellationToken);
+        await CloseAsync(issue, adminUserId, "resolved", $"Updated MangaDex link to {normalizedId}, verified against MAL #{expectedMalId}.", "MangaDex link repaired", "An admin repaired the MangaDex link for", cancellationToken);
+        return (new MangaDexCatalogMatch(normalizedId, identity.Title), "");
+    }
+
     public async Task<IssueMetadataReintegrationResponse?> ReintegrateWithSelectedMetadataAsync(
         Guid adminUserId,
         Guid issueId,

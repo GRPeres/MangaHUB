@@ -141,6 +141,10 @@ else
                             <MudText Typo="Typo.body2">The linked MangaDex record has a different MyAnimeList identity from this catalog entry.</MudText>
                         }
                     </MudAlert>
+                    @if (IsOpen)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoFixHigh" Disabled="@saving" OnClick="RepairMangaDexIdentityAsync">@(saving ? "Finding match..." : "Find and use matching MangaDex link")</MudButton>
+                    }
                 }
                 @if (IsMaintenanceFailureIssue)
                 {
@@ -417,6 +421,31 @@ else
             Messages.Success($"Linked MangaDex: {result.Value.Title}. Reporters were notified.", "MangaHub reader restored");
             CloseIssue();
             await LoadAsync();
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+    private async Task RepairMangaDexIdentityAsync()
+    {
+        if (selected is null || !IsOpen || saving) return;
+        saving = true;
+        try
+        {
+            var result = await AdminApi.RepairMangaDexIdentityAsync(selected.Id);
+            if (result.Value is null)
+            {
+                Messages.Warning(string.IsNullOrWhiteSpace(result.Error) ? "No verified MangaDex match was found." : result.Error, "MangaDex link not changed");
+                return;
+            }
+            Messages.Success($"Linked {result.Value.Title}. MangaDex release information will refresh automatically.", "MangaDex link repaired");
+            CloseIssue();
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            Messages.Error("The server could not be reached. Please try again.", "MangaDex link not changed");
         }
         finally
         {

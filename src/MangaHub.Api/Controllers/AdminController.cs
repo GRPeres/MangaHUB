@@ -156,6 +156,16 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
             : Ok(match);
     }
 
+    [HttpPost("issues/{issueId:guid}/repair-mangadex-identity")]
+    public async Task<IActionResult> RepairMangaDexIdentity(Guid issueId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var result = await issues.RepairMangaDexIdentityAsync(user.Id, issueId, cancellationToken);
+        return result.Match is null ? BadRequest(result.Error) : Ok(result.Match);
+    }
+
     [HttpPost("issues/{issueId:guid}/reintegrate-metadata")]
     public async Task<IActionResult> ReintegrateWithSelectedMetadata(Guid issueId, [FromBody] ReintegrateIssueWithMetadataRequest request, CancellationToken cancellationToken)
     {

@@ -18,6 +18,12 @@ public sealed class CatalogRepository(MangaHubDbContext db)
     public Task<MangaEntry?> FindByMangaDexIdAsync(string mangaDexId, CancellationToken cancellationToken) =>
         db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.MangaDexId == mangaDexId, cancellationToken);
 
+    public async Task ClearMangaDexLanguageLatestAsync(Guid mangaEntryId, CancellationToken cancellationToken)
+    {
+        var latest = await db.MangaDexLanguageLatestChapters.Where(item => item.MangaEntryId == mangaEntryId).ToListAsync(cancellationToken);
+        db.MangaDexLanguageLatestChapters.RemoveRange(latest);
+    }
+
     public Task<MangaEntry?> FindByMyAnimeListIdAsync(string myAnimeListId, CancellationToken cancellationToken) =>
         db.MangaEntries.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.MyAnimeListId == myAnimeListId, cancellationToken);
 

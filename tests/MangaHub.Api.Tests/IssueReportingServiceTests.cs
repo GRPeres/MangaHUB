@@ -293,6 +293,50 @@ public sealed class IssueReportingServiceTests
         Assert.Equal("resolved", db.AdminIssues.Single().Status);
     }
 
+    [Fact]
+    public async Task RepairMangaDexIdentityAsync_RepairsVerifiedMatchAndClearsOldReleaseState()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "Correct title", MyAnimeListId = "1234", MangaDexId = "old", MangaDexLatestChapter = 50, MangaDexLastSyncedAt = DateTimeOffset.UtcNow, FallbackReaderUrl = "https://example.com/reader" };
+        var issue = new AdminIssue { Kind = AdminIssueTypes.MangaDexIdentityMismatch, SubjectType = AdminIssueTypes.CatalogManga, SubjectId = manga.Id, TitleSnapshot = manga.Title };
+        db.AddRange(manga, issue, new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "en", LatestChapter = 50 });
+        await db.SaveChangesAsync();
+        var mangaDex = new FakeMangaDexSource { Identity = new MangaDexCatalogIdentity("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Correct title", "1234", []) };
+        mangaDex.CatalogMatches.Add(new MangaDexCatalogMatch("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Correct title"));
+
+        var result = await CreateService(db, mangaDex).RepairMangaDexIdentityAsync(Guid.NewGuid(), issue.Id, CancellationToken.None);
+
+        Assert.NotNull(result.Match);
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", manga.MangaDexId);
+        Assert.Null(manga.MangaDexLatestChapter);
+        Assert.Null(manga.MangaDexLastSyncedAt);
+        Assert.Empty(db.MangaDexLanguageLatestChapters);
+        Assert.Equal("https://example.com/reader", manga.FallbackReaderUrl);
+        Assert.Equal("resolved", issue.Status);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RepairMangaDexIdentityAsync_RejectsUnverifiedOrDuplicateMatch(bool duplicate)
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "Correct title", MyAnimeListId = "1234", MangaDexId = "old" };
+        var issue = new AdminIssue { Kind = AdminIssueTypes.MangaDexIdentityMismatch, SubjectType = AdminIssueTypes.CatalogManga, SubjectId = manga.Id, TitleSnapshot = manga.Title };
+        db.AddRange(manga, issue);
+        if (duplicate) db.MangaEntries.Add(new MangaEntry { Title = "Already linked", MangaDexId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" });
+        await db.SaveChangesAsync();
+        var mangaDex = new FakeMangaDexSource { Identity = new MangaDexCatalogIdentity("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Candidate", duplicate ? "1234" : "9999", []) };
+        mangaDex.CatalogMatches.Add(new MangaDexCatalogMatch("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Candidate"));
+
+        var result = await CreateService(db, mangaDex).RepairMangaDexIdentityAsync(Guid.NewGuid(), issue.Id, CancellationToken.None);
+
+        Assert.Null(result.Match);
+        Assert.NotEmpty(result.Error);
+        Assert.Equal("old", manga.MangaDexId);
+        Assert.Equal("open", issue.Status);
+    }
+
     private static IssueReportingService CreateService(MangaHub.Infrastructure.Data.MangaHubDbContext db, FakeMangaDexSource? mangaDex = null) =>
         new(
             new AdminIssueRepository(db),
