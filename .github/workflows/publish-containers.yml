@@ -80,6 +80,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import os
+          import re
           import sys
           import urllib.error
           import urllib.parse
@@ -110,6 +111,10 @@ jobs:
                       sys.exit(f'Watchtower returned HTTP {response.status}.')
                   print('Watchtower update check completed; inspect Watchtower logs for the update results.')
           except urllib.error.HTTPError as error:
+              for name in ('CF-Ray', 'CF-Mitigated', 'Server', 'Content-Type'):
+                  value = error.headers.get(name, '')
+                  if value and re.fullmatch(r'[A-Za-z0-9 ._:/;=+-]{1,150}', value):
+                      print(f'{name}: {value}')
               sys.exit(f'Watchtower update request failed with HTTP {error.code}.')
           except (urllib.error.URLError, TimeoutError, OSError) as error:
               sys.exit(f'Watchtower update request failed: {type(error).__name__}.')
