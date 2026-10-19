@@ -211,7 +211,7 @@ public sealed class ShelfRepository(MangaHubDbContext db)
 
     private static bool NeedsManualReleaseCheck(MangaEntryResponse entry, DateTimeOffset dueBefore) =>
         IsActivelyTracked(entry)
-        && string.IsNullOrWhiteSpace(entry.MangaDexId)
+        && (string.IsNullOrWhiteSpace(entry.MangaDexId) || !string.IsNullOrWhiteSpace(entry.FallbackReaderUrl))
         && (entry.LastExternalReaderVerifiedAt is null || entry.LastExternalReaderVerifiedAt <= dueBefore);
 
     public async Task<List<ExternalReaderCheckInResponse>> ListPendingExternalReaderCheckInsAsync(Guid userId, CancellationToken cancellationToken) =>

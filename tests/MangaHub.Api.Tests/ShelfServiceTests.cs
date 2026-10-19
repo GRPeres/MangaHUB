@@ -71,6 +71,44 @@ public sealed class ShelfServiceTests
     }
 
     [Fact]
+    public async Task ListAsync_ExternalReaderChecksIncludeLinkedMangaWithoutDuplicatingReleases()
+    {
+        await using var db = TestDb.Create();
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash", PreferredLanguage = "en" };
+        var other = new MangaUser { Username = "other", PasswordHash = "hash" };
+        var due = new MangaEntry { Title = "Due linked", MangaDexId = "due", FallbackReaderUrl = "https://reader.example/due" };
+        var recent = new MangaEntry { Title = "Recent linked", MangaDexId = "recent", FallbackReaderUrl = "https://reader.example/recent" };
+        var tracked = new MangaEntry { Title = "MangaDex only", MangaDexId = "tracked" };
+        var release = new MangaEntry { Title = "New release", MangaDexId = "release", FallbackReaderUrl = "https://reader.example/release" };
+        var planned = new MangaEntry { Title = "Planned linked", MangaDexId = "planned", FallbackReaderUrl = "https://reader.example/planned" };
+        db.Users.AddRange(user, other);
+        db.MangaEntries.AddRange(due, recent, tracked, release, planned);
+        await db.SaveChangesAsync();
+        db.MangaDexLanguageLatestChapters.Add(new MangaDexLanguageLatestChapter { MangaEntryId = release.Id, Language = "en", LatestChapter = 12 });
+        db.UserMangaEntries.AddRange(
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = due.Id, ReadingStatus = "paused", CurrentChapter = "10", IsRead = true, LastExternalReaderVerifiedAt = DateTimeOffset.UtcNow.AddDays(-8) },
+            new UserMangaEntry { UserId = other.Id, MangaEntryId = due.Id, ReadingStatus = "reading", LastExternalReaderVerifiedAt = DateTimeOffset.UtcNow },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = recent.Id, ReadingStatus = "reading", LastExternalReaderVerifiedAt = DateTimeOffset.UtcNow.AddDays(-2) },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = tracked.Id, ReadingStatus = "reading" },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = release.Id, ReadingStatus = "reading", CurrentChapter = "10", IsRead = true },
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = planned.Id, ReadingStatus = "planned" });
+        await db.SaveChangesAsync();
+        var service = CreateShelfService(db);
+
+        var updates = await service.ListAsync(user.Id, null, "updates", 0, 20, CancellationToken.None);
+        var summary = await service.GetSectionSummaryAsync(user.Id, CancellationToken.None);
+        Assert.Equal(["New release", "Due linked"], updates.Select(entry => entry.Title));
+        Assert.Equal(2, summary.Updates);
+        Assert.Equal(1, summary.NewReleases);
+        Assert.Equal(1, summary.Untracked);
+        Assert.Empty(await service.ListAsync(other.Id, null, "updates", 0, 20, CancellationToken.None));
+
+        Assert.True(await service.RecordExternalReaderOpenedAsync(user.Id, due.Id, CancellationToken.None));
+        Assert.True(await service.UpdateExternalReaderProgressAsync(user.Id, due.Id, new ExternalReaderProgressRequest("10", "10"), CancellationToken.None));
+        Assert.Equal(["New release"], (await service.ListAsync(user.Id, null, "updates", 0, 20, CancellationToken.None)).Select(entry => entry.Title));
+    }
+
+    [Fact]
     public async Task ListAsync_ExternalLatestChapterAppearsOnlyAsANewReleaseWhenTheWeeklyCheckIsDue()
     {
         await using var db = TestDb.Create();

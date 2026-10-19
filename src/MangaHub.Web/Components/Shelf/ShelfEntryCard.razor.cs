@@ -76,7 +76,7 @@ public partial class ShelfEntryCard
     private string ProgressTileClass => HasNewChapters ? "mh-entry-stat-tile mh-entry-release-tile" : "mh-entry-stat-tile";
     private string ProgressHint => !HasMangaDexLink && HasNewChapters
         ? $"{NewChapterCount} found externally"
-        : !HasMangaDexLink && Entry.IsManualReleaseCheckDue
+        : Entry.IsManualReleaseCheckDue && !HasNewChapters
         ? "Check external reader"
         : !HasMangaDexLink
         ? "MangaDex sync unavailable"
