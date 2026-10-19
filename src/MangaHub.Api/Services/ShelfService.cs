@@ -14,7 +14,9 @@ public sealed class ShelfService(
     UserRepository users,
     UsageTrackingService? usage = null,
     IOptions<MangaHubOptions>? options = null,
-    NotificationService? notifications = null)
+    NotificationService? notifications = null,
+    MangaDexTranslationCoverageService? coverage = null,
+    ILogger<ShelfService>? logger = null)
 {
     private DateTimeOffset ManualCheckDueBefore => DateTimeOffset.UtcNow.AddDays(-Math.Clamp(options?.Value.ExternalReaderCheckIntervalDays ?? 7, 1, 90));
 
@@ -102,6 +104,12 @@ public sealed class ShelfService(
         entry.ExternalReaderCheckPendingAt = null;
         entry.UpdatedAt = now;
         await shelf.SaveChangesAsync(cancellationToken);
+        if (coverage is not null && !string.IsNullOrWhiteSpace(request.LatestChapter))
+        {
+            try { await coverage.RunAsync(mangaEntryId, cancellationToken); }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+            catch (Exception ex) { logger?.LogWarning(ex, "Could not refresh language coverage after external check-in for {MangaEntryId}", mangaEntryId); }
+        }
         if (notifications is not null)
         {
             await notifications.MarkReleaseNotificationsReadThroughAsync(userId, entry.MangaEntryId, entry.CurrentChapter, cancellationToken);

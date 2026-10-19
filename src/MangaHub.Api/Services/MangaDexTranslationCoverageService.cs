@@ -19,13 +19,16 @@ public sealed class MangaDexTranslationCoverageService(
 {
     private const decimal GapThreshold = 2m;
 
-    public async Task<TranslationCoverageCheckResult> RunAsync(CancellationToken cancellationToken)
+    public Task<TranslationCoverageCheckResult> RunAsync(CancellationToken cancellationToken) => RunAsync(null, cancellationToken);
+
+    public async Task<TranslationCoverageCheckResult> RunAsync(Guid? mangaEntryId, CancellationToken cancellationToken)
     {
         var shelves = await (
             from shelf in db.UserMangaEntries.AsNoTracking()
             join user in db.Users.AsNoTracking() on shelf.UserId equals user.Id
             join manga in db.MangaEntries.AsNoTracking() on shelf.MangaEntryId equals manga.Id
             where manga.MangaDexId != ""
+                && (mangaEntryId == null || manga.Id == mangaEntryId)
                 && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
             select new ShelfLanguageContext(manga.Id, manga.Title, manga.FallbackReaderUrl, user.PreferredLanguage, shelf.ExternalReaderLatestChapter))
             .ToListAsync(cancellationToken);
@@ -138,6 +141,23 @@ public sealed class MangaDexTranslationCoverageService(
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("MangaDex translation coverage checked {MangaCount} manga, opened or refreshed {IssueCount} issues, and resolved {ResolvedCount} recovered issues.", evaluated, openedOrUpdated, resolved);
         return new TranslationCoverageCheckResult(evaluated, openedOrUpdated, resolved);
+    }
+
+    public async Task<bool> HasSufficientExternalCoverageAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken)
+    {
+        var shelf = await db.UserMangaEntries.AsNoTracking()
+            .Where(entry => entry.UserId == userId && entry.MangaEntryId == mangaEntryId && entry.MangaEntry != null)
+            .Select(entry => new { entry.ExternalReaderLatestChapter, entry.MangaEntry!.FallbackReaderUrl })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (shelf is null || string.IsNullOrWhiteSpace(shelf.FallbackReaderUrl)
+            || !decimal.TryParse(shelf.ExternalReaderLatestChapter?.Trim().Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var externalLatest)
+            || externalLatest < 0) return false;
+
+        var latest = await db.MangaDexLanguageLatestChapters.AsNoTracking()
+            .Where(chapter => chapter.MangaEntryId == mangaEntryId)
+            .Select(chapter => (decimal?)chapter.LatestChapter)
+            .MaxAsync(cancellationToken);
+        return latest is not null && latest.Value - externalLatest <= GapThreshold;
     }
 
     private static TranslationCoverageEvaluation Evaluate(ShelfLanguageContext shelf, IReadOnlyList<MangaDexLanguageLatestChapter> latest, decimal allLanguageLatest)

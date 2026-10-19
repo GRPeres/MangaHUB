@@ -21,7 +21,8 @@ public sealed class ReaderService(
     MangaSourceRegistry sources,
     NotificationService? notifications = null,
     IssueReportingService? issues = null,
-    ArchiveRecoveryTelemetryService? archiveTelemetry = null)
+    ArchiveRecoveryTelemetryService? archiveTelemetry = null,
+    MangaDexTranslationCoverageService? coverage = null)
 {
     private const string MangaDexCacheSource = "mangadex-cache";
 
@@ -547,7 +548,11 @@ public sealed class ReaderService(
         var shelfEntry = await shelf.GetWithMangaAsync(userId, entryId, cancellationToken);
         var manga = shelfEntry?.MangaEntry;
         if (manga is null || string.IsNullOrWhiteSpace(manga.MangaDexId)) return manga?.FallbackReaderUrl ?? "";
-        if (issues is not null)
+        if (coverage is not null && await coverage.HasSufficientExternalCoverageAsync(userId, entryId, cancellationToken))
+        {
+            await coverage.RunAsync(entryId, cancellationToken);
+        }
+        else if (issues is not null)
         {
             await issues.OpenMangaDexLanguageCoverageIssueAsync(userId, manga, LanguagePreferences.Parse(preferredLanguages), availableLanguages, cancellationToken);
         }

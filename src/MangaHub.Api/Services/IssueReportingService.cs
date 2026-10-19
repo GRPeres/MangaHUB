@@ -215,7 +215,6 @@ public sealed class IssueReportingService(
         }
         else
         {
-            issue.MetadataJson = context;
             issue.UpdatedAt = now;
         }
 

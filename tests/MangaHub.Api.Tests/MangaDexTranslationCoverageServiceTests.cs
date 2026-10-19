@@ -1,4 +1,6 @@
 using MangaHub.Api.Services;
+using MangaHub.Api.Repositories;
+using MangaHub.Core.Dto;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
 using MangaHub.Infrastructure;
@@ -8,6 +10,48 @@ namespace MangaHub.Api.Tests;
 
 public sealed class MangaDexTranslationCoverageServiceTests
 {
+    [Fact]
+    public async Task ExternalCheckIn_ReevaluatesOnlyThatMangaAndKeepsOtherUsersGaps()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "Linked", MangaDexId = "id", FallbackReaderUrl = "https://example.com" };
+        var otherManga = new MangaEntry { Title = "Other", MangaDexId = "other" };
+        var one = new MangaUser { Username = "one", PasswordHash = "hash", PreferredLanguage = "en" };
+        var two = new MangaUser { Username = "two", PasswordHash = "hash", PreferredLanguage = "en" };
+        db.AddRange(manga, otherManga, one, two,
+            new UserMangaEntry { UserId = one.Id, MangaEntryId = manga.Id, ReadingStatus = "reading", CurrentChapter = "240" },
+            new UserMangaEntry { UserId = two.Id, MangaEntryId = manga.Id, ReadingStatus = "reading", CurrentChapter = "240" },
+            new UserMangaEntry { UserId = one.Id, MangaEntryId = otherManga.Id, ReadingStatus = "reading" },
+            new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "en", LatestChapter = 240 },
+            new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "es-la", LatestChapter = 258 },
+            new MangaDexLanguageLatestChapter { MangaEntryId = otherManga.Id, Language = "fr", LatestChapter = 20 });
+        await db.SaveChangesAsync();
+        var coverage = CreateService(db);
+        await coverage.RunAsync(manga.Id, CancellationToken.None);
+        var issue = Assert.Single(db.AdminIssues);
+        Assert.Equal("open", issue.Status);
+        var shelf = new ShelfService(new ShelfRepository(db), new CatalogRepository(db), new UserRepository(db), coverage: coverage);
+
+        Assert.True(await shelf.UpdateExternalReaderProgressAsync(one.Id, manga.Id, new ExternalReaderProgressRequest("240", "258"), CancellationToken.None));
+        Assert.True(await coverage.HasSufficientExternalCoverageAsync(one.Id, manga.Id, CancellationToken.None));
+        Assert.False(await coverage.HasSufficientExternalCoverageAsync(two.Id, manga.Id, CancellationToken.None));
+        Assert.Equal("open", issue.Status);
+        Assert.Single(db.AdminIssues);
+        Assert.True(await shelf.UpdateExternalReaderProgressAsync(two.Id, manga.Id, new ExternalReaderProgressRequest("240", "258"), CancellationToken.None));
+        Assert.Equal("resolved", issue.Status);
+    }
+
+    [Fact]
+    public async Task ExternalCoverage_DoesNotAssumeMissingMangaDexDataIsCaughtUp()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "Unknown", MangaDexId = "id", FallbackReaderUrl = "https://example.com" };
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash" };
+        db.AddRange(manga, user, new UserMangaEntry { UserId = user.Id, MangaEntryId = manga.Id, ReadingStatus = "reading", ExternalReaderLatestChapter = "258" });
+        await db.SaveChangesAsync();
+        Assert.False(await CreateService(db).HasSufficientExternalCoverageAsync(user.Id, manga.Id, CancellationToken.None));
+    }
+
     [Theory]
     [InlineData("20", true, false)]
     [InlineData("17", true, true)]
