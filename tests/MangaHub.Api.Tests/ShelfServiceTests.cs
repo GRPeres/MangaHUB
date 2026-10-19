@@ -109,6 +109,29 @@ public sealed class ShelfServiceTests
     }
 
     [Fact]
+    public async Task ExternalProgress_LinkedMangaMovesFromManualChecksToNewReleases()
+    {
+        await using var db = TestDb.Create();
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash", PreferredLanguage = "en" };
+        var manga = new MangaEntry { Title = "Linked external", MangaDexId = "linked", FallbackReaderUrl = "https://reader.example/title" };
+        db.Users.Add(user);
+        db.MangaEntries.Add(manga);
+        await db.SaveChangesAsync();
+        db.MangaDexLanguageLatestChapters.Add(new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "en", LatestChapter = 38 });
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = user.Id, MangaEntryId = manga.Id, ReadingStatus = "reading", CurrentChapter = "38", IsRead = true });
+        await db.SaveChangesAsync();
+        var service = CreateShelfService(db);
+
+        Assert.Equal(1, (await service.GetSectionSummaryAsync(user.Id, CancellationToken.None)).Untracked);
+        Assert.True(await service.UpdateExternalReaderProgressAsync(user.Id, manga.Id, new ExternalReaderProgressRequest("38", "50"), CancellationToken.None));
+        var updates = await service.ListAsync(user.Id, null, "updates", 0, 20, CancellationToken.None);
+        var summary = await service.GetSectionSummaryAsync(user.Id, CancellationToken.None);
+        Assert.Equal("50", Assert.Single(updates).ExternalReaderLatestChapter);
+        Assert.Equal(1, summary.NewReleases);
+        Assert.Equal(0, summary.Untracked);
+    }
+
+    [Fact]
     public async Task ListAsync_ExternalLatestChapterAppearsOnlyAsANewReleaseWhenTheWeeklyCheckIsDue()
     {
         await using var db = TestDb.Create();

@@ -1,6 +1,7 @@
 @page "/library"
 @page "/library/{RouteSection}"
 @using MangaHub.Web.API.Services
+@using MangaHub.Core.Services
 @inject AuthSessionService Auth
 @inject NavigationManager Navigation
 @inject AdminApiService AdminApi
@@ -1007,12 +1008,8 @@
     private static int Count(bool value) => value ? 1 : 0;
 
     private static bool HasNewChapters(MangaEntryResponse entry) =>
-        TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
-        && ((HasMangaDexLink(entry)
-                && entry.MangaDexPreferredLanguageLatestChapter is { } mangaDexLatest
-                && (mangaDexLatest > currentChapter || (mangaDexLatest == currentChapter && !entry.IsRead)))
-            || (TryGetCurrentChapterNumber(entry.ExternalReaderLatestChapter, out var externalLatest)
-                && externalLatest > currentChapter));
+        ShelfReleaseProgress.NewChapterCount(entry.CurrentChapter, entry.IsRead, HasMangaDexLink(entry),
+            entry.MangaDexPreferredLanguageLatestChapter, entry.ExternalReaderLatestChapter) > 0;
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         IsActivelyTracked(entry)

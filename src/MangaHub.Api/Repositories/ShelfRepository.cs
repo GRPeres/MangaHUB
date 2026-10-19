@@ -202,12 +202,8 @@ public sealed class ShelfRepository(MangaHubDbContext db)
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         IsActivelyTracked(entry)
-        && TryGetCurrentChapterNumber(entry.CurrentChapter, out var currentChapter)
-        && ((entry.MangaDexPreferredLanguageLatestChapter is { } mangaDexLatest
-                && !string.IsNullOrWhiteSpace(entry.MangaDexId)
-                && (mangaDexLatest > currentChapter || (mangaDexLatest == currentChapter && !entry.IsRead)))
-            || (TryGetCurrentChapterNumber(entry.ExternalReaderLatestChapter, out var externalLatest)
-                && externalLatest > currentChapter));
+        && ShelfReleaseProgress.NewChapterCount(entry.CurrentChapter, entry.IsRead,
+            !string.IsNullOrWhiteSpace(entry.MangaDexId), entry.MangaDexPreferredLanguageLatestChapter, entry.ExternalReaderLatestChapter) > 0;
 
     private static bool NeedsManualReleaseCheck(MangaEntryResponse entry, DateTimeOffset dueBefore) =>
         IsActivelyTracked(entry)
@@ -234,19 +230,6 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     private static bool IsActivelyTracked(MangaEntryResponse entry) =>
         string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
         || string.Equals(entry.ReadingStatus, "paused", StringComparison.OrdinalIgnoreCase);
-
-    private static bool TryGetCurrentChapterNumber(string currentChapter, out decimal chapter)
-    {
-        chapter = 0;
-        if (string.IsNullOrWhiteSpace(currentChapter)) return false;
-
-        var chapterText = new string(currentChapter
-            .SkipWhile(value => !char.IsDigit(value))
-            .TakeWhile(value => char.IsDigit(value) || value is '.' or ',')
-            .ToArray())
-            .Replace(',', '.');
-        return decimal.TryParse(chapterText, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out chapter);
-    }
 
     public Task<UserMangaEntry?> GetAsync(Guid userId, Guid mangaEntryId, CancellationToken cancellationToken) =>
         db.UserMangaEntries.FirstOrDefaultAsync(x => x.UserId == userId && x.MangaEntryId == mangaEntryId, cancellationToken);

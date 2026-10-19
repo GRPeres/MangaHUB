@@ -3,6 +3,7 @@ using MangaHub.Web.API.DTOs;
 using MangaHub.Web.Components.Design;
 using MudBlazor;
 using System.Globalization;
+using MangaHub.Core.Services;
 
 namespace MangaHub.Web.Components.Shelf;
 
@@ -50,24 +51,11 @@ public partial class ShelfEntryCard
     private string CurrentChapterValue => string.IsNullOrWhiteSpace(Entry.CurrentChapter) ? "Not started" : $"Ch. {Entry.CurrentChapter}";
     private decimal? PreferredLatestChapter => Entry.MangaDexPreferredLanguageLatestChapter;
     private decimal? ExternalLatestChapter => TryGetChapterNumber(Entry.ExternalReaderLatestChapter);
-    private string LatestChapterValue => PreferredLatestChapter is not null
-        ? $"Ch. {PreferredLatestChapter.Value:0.###}"
-        : ExternalLatestChapter is not null ? $"Ch. {ExternalLatestChapter.Value:0.###}"
+    private decimal? LatestChapter => ShelfReleaseProgress.LatestChapter(HasMangaDexLink, PreferredLatestChapter, Entry.ExternalReaderLatestChapter);
+    private string LatestChapterValue => LatestChapter is not null
+        ? $"Ch. {LatestChapter.Value:0.###}"
         : Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
-    private int NewChapterCount
-    {
-        get
-        {
-            if (!TryGetCurrentChapterNumber(out var currentChapter)) return 0;
-
-            var latestChapter = HasMangaDexLink ? PreferredLatestChapter : ExternalLatestChapter;
-            if (latestChapter is null) return 0;
-            var chapterGap = latestChapter.Value - currentChapter;
-            if (chapterGap > 0) return (int)Math.Ceiling(chapterGap);
-
-            return HasMangaDexLink && chapterGap == 0 && !Entry.IsRead ? 1 : 0;
-        }
-    }
+    private int NewChapterCount => ShelfReleaseProgress.NewChapterCount(Entry.CurrentChapter, Entry.IsRead, HasMangaDexLink, PreferredLatestChapter, Entry.ExternalReaderLatestChapter);
     private bool HasNewChapters => NewChapterCount > 0;
     private bool IsMangaDexSyncOverdue => HasMangaDexLink
         && Entry.MangaDexLastSyncedAt is not null
