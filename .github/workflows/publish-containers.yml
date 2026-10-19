@@ -63,3 +63,54 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  trigger-production-update:
+    name: Trigger production update
+    needs: publish
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Trigger Watchtower after all images publish
+        env:
+          WATCHTOWER_URL: ${{ secrets.WATCHTOWER_UPDATE_URL }}
+          WATCHTOWER_TOKEN: ${{ secrets.WATCHTOWER_API_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.WATCHTOWER_CF_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.WATCHTOWER_CF_CLIENT_SECRET }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          names = ('WATCHTOWER_URL', 'WATCHTOWER_TOKEN', 'CF_ACCESS_CLIENT_ID', 'CF_ACCESS_CLIENT_SECRET')
+          if any(not os.environ.get(name) for name in names):
+              print('::warning::Watchtower trigger is not configured; periodic polling remains active.')
+              sys.exit(0)
+
+          url = os.environ['WATCHTOWER_URL']
+          parsed = urllib.parse.urlsplit(url)
+          if parsed.scheme != 'https' or not parsed.hostname or parsed.path != '/v1/update' or parsed.query or parsed.fragment or parsed.username or parsed.password:
+              sys.exit('Watchtower URL must be HTTPS and point to /v1/update without query parameters.')
+
+          request = urllib.request.Request(url, headers={
+              'Authorization': 'Bearer ' + os.environ['WATCHTOWER_TOKEN'],
+              'CF-Access-Client-Id': os.environ['CF_ACCESS_CLIENT_ID'],
+              'CF-Access-Client-Secret': os.environ['CF_ACCESS_CLIENT_SECRET'],
+          })
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          try:
+              with urllib.request.build_opener(NoRedirect).open(request, timeout=900) as response:
+                  if response.status != 200:
+                      sys.exit(f'Watchtower returned HTTP {response.status}.')
+                  print('Watchtower update check completed; inspect Watchtower logs for the update results.')
+          except urllib.error.HTTPError as error:
+              sys.exit(f'Watchtower update request failed with HTTP {error.code}.')
+          except (urllib.error.URLError, TimeoutError, OSError) as error:
+              sys.exit(f'Watchtower update request failed: {type(error).__name__}.')
+          PY
