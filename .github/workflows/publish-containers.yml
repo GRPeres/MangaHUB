@@ -6,6 +6,9 @@ on:
     paths:
       - ".github/workflows/publish-containers.yml"
       - "src/**"
+      - "tests/**"
+      - "MangaHub.sln"
+      - "global.json"
       - "docker-compose.yml"
   workflow_dispatch:
 
@@ -22,8 +25,26 @@ env:
   IMAGE_PREFIX: ghcr.io/grperes
 
 jobs:
+  test:
+    name: Test solution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Run tests
+        run: dotnet test MangaHub.sln --configuration Release
+
   publish:
     name: Publish ${{ matrix.name }}
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
