@@ -85,7 +85,7 @@
                 </div>
 
                 <NavRailButton Route="" Label="Home" Icon="@Icons.Material.Filled.Dashboard" Expanded="@_drawerExpanded" IsActive="@IsActive("")" OnNavigate="Navigate" />
-                <NavRailButton Route="library" Label="Shelf" Icon="@Icons.Material.Filled.AutoStories" Expanded="@_drawerExpanded" IsActive="@IsActive("library")" OnNavigate="Navigate" />
+                <NavRailButton Route="library" Label="Shelf" Icon="@Icons.Material.Filled.AutoStories" Expanded="@_drawerExpanded" IsActive="@IsActive("library")" BadgeCount="@_shelfUpdateCount" OnNavigate="Navigate" />
                 @if (IsAdmin)
                 {
                     <NavRailButton Route="admin/catalog" Label="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="@_drawerExpanded" IsActive="@IsAdminSectionActive" BadgeCount="@_openAdminIssueCount" OnNavigate="Navigate" />
@@ -117,6 +117,10 @@
             <button type="button" class="@MobileNavClass("library")" @onclick="@(() => Navigate("library"))">
                 <MudIcon Icon="@Icons.Material.Filled.AutoStories" />
                 <span>Shelf</span>
+                @if (_shelfUpdateCount > 0)
+                {
+                    <span class="mh-mobile-nav-attention-count" role="status" aria-label="@($"{_shelfUpdateCount} shelf updates need attention")">@_shelfUpdateCount</span>
+                }
             </button>
             @if (IsAdmin)
             {

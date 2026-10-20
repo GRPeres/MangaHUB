@@ -15,6 +15,7 @@ public partial class MainLayout : IDisposable
     [Inject] private ThemePreferenceService ThemePreference { get; set; } = default!;
     [Inject] private NotificationApiService Notifications { get; set; } = default!;
     [Inject] private AdminApiService AdminApi { get; set; } = default!;
+    [Inject] private MangaApiService MangaApi { get; set; } = default!;
     [Inject] private Microsoft.JSInterop.IJSRuntime JS { get; set; } = default!;
     [Inject] private MessageService Messages { get; set; } = default!;
     [Inject] private ShelfApiService ShelfApi { get; set; } = default!;
@@ -30,6 +31,7 @@ public partial class MainLayout : IDisposable
     private List<MangaNotificationResponse> _notifications = [];
     private int _unreadNotificationCount;
     private int _openAdminIssueCount;
+    private int _shelfUpdateCount;
     private bool _phoneNotificationsEnabled;
     private List<WebPushSubscriptionResponse> _pushSubscriptions = [];
     private bool _pushSubscriptionsOpen;
@@ -59,6 +61,7 @@ public partial class MainLayout : IDisposable
         _currentUser = await Auth.GetCurrentUserAsync();
         await LoadNotificationsAsync();
         await LoadAdminIssueCountAsync();
+        await LoadShelfUpdateCountAsync();
         GuardCurrentRoute();
     }
 
@@ -325,6 +328,7 @@ public partial class MainLayout : IDisposable
     {
         GuardCurrentRoute();
         _ = LoadAdminIssueCountAsync();
+        _ = LoadShelfUpdateCountAsync();
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -384,6 +388,7 @@ public partial class MainLayout : IDisposable
         _currentUser = Auth.CurrentUser;
         _ = LoadNotificationsAsync();
         _ = LoadAdminIssueCountAsync();
+        _ = LoadShelfUpdateCountAsync();
         _ = CheckExternalReaderCheckInsAsync();
         _ = InvokeAsync(StateHasChanged);
     }
@@ -393,6 +398,11 @@ public partial class MainLayout : IDisposable
         if ((scope & AppRefreshScope.Notifications) != 0)
         {
             _ = LoadNotificationsAsync();
+        }
+
+        if ((scope & AppRefreshScope.Shelf) != 0)
+        {
+            _ = LoadShelfUpdateCountAsync();
         }
 
         _ = InvokeAsync(StateHasChanged);
@@ -440,6 +450,26 @@ public partial class MainLayout : IDisposable
         catch (HttpRequestException)
         {
             _openAdminIssueCount = 0;
+        }
+    }
+
+    private async Task LoadShelfUpdateCountAsync()
+    {
+        if (_currentUser is null)
+        {
+            _shelfUpdateCount = 0;
+            return;
+        }
+
+        try
+        {
+            var summary = await MangaApi.GetShelfSectionSummaryAsync();
+            _shelfUpdateCount = summary?.Updates ?? 0;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (HttpRequestException)
+        {
+            _shelfUpdateCount = 0;
         }
     }
 
