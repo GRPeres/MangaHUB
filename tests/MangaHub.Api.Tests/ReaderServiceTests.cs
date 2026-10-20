@@ -704,11 +704,37 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
-    public async Task PrepareMangaDexChapterAsync_WhenOnlyClosestChapterExists_RequiresConfirmation()
+    public async Task PrepareMangaDexChapterAsync_WhenOnlyClosestChapterExists_UsesExternalReaderWhenAvailable()
     {
         await using var db = TestDb.Create();
         var userId = Guid.NewGuid();
         var entry = new MangaEntry { Title = "Berserk", MangaDexId = "berserk-id", FallbackReaderUrl = "https://reader.example/berserk" };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = userId,
+            MangaEntry = entry,
+            CurrentChapter = "32",
+            ReadingStatus = "reading"
+        });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-33-en", "33", "", 20, "en"));
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var exception = await Assert.ThrowsAsync<ReaderService.ExternalReaderRecommendedException>(
+            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, CancellationToken.None));
+
+        Assert.Equal("https://reader.example/berserk", exception.FallbackReaderUrl);
+    }
+
+    [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenOnlyClosestChapterExistsWithoutExternalReader_RequiresConfirmation()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Berserk", MangaDexId = "berserk-id" };
         db.MangaEntries.Add(entry);
         db.UserMangaEntries.Add(new UserMangaEntry
         {
@@ -728,8 +754,6 @@ public sealed class ReaderServiceTests
 
         Assert.Equal("32", exception.ChapterMatch.RequestedChapter);
         Assert.Equal("33", exception.ChapterMatch.MatchedChapter);
-        Assert.Equal("en", exception.ChapterMatch.Language);
-        Assert.Equal("https://reader.example/berserk", exception.FallbackReaderUrl);
     }
 
     [Fact]

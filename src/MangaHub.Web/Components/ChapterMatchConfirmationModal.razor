@@ -8,10 +8,6 @@
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Continuing updates your reading progress to the proposed chapter.</MudText>
                 <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="OnCancel">Keep current chapter</MudButton>
-                    @if (HasExternalReader)
-                    {
-                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.OpenInNew" OnClick="OnExternalReader">Read externally</MudButton>
-                    }
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnConfirm">Use chapter @MatchedChapter</MudButton>
                 </MudStack>
             </MudStack>
@@ -24,8 +20,6 @@
     [Parameter] public string RequestedChapter { get; set; } = "";
     [Parameter] public string MatchedChapter { get; set; } = "";
     [Parameter] public string Language { get; set; } = "";
-    [Parameter] public bool HasExternalReader { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnConfirm { get; set; }
-    [Parameter] public EventCallback OnExternalReader { get; set; }
 }
