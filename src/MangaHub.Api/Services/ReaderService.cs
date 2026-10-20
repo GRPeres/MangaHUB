@@ -291,6 +291,10 @@ public sealed class ReaderService(
                 && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter)
                 && !HasExactChapter(sourceChapter.Number, shelfEntry.CurrentChapter))
             {
+                if (IsHttpUrl(shelfEntry.MangaEntry.FallbackReaderUrl))
+                {
+                    throw new ExternalReaderRecommendedException(shelfEntry.MangaEntry.FallbackReaderUrl);
+                }
                 throw new MangaDexClosestChapterConfirmationRequiredException(
                     shelfEntry.CurrentChapter,
                     sourceChapter.Number,
@@ -759,6 +763,10 @@ public sealed class ReaderService(
     private static bool IsCompletionStatus(string? status) =>
         status?.Trim().ToLowerInvariant() is "finished" or "complete" or "completed" or "done" or "ended";
 
+    private static bool IsHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
     private static string ReaderModeQuery(MangaEntry entry) => UsesVerticalReader(entry) ? "&vertical=true" : "";
 
     private static bool UsesVerticalReader(MangaEntry entry) =>
@@ -1002,6 +1010,11 @@ public sealed class ReaderService(
         string language) : Exception
     {
         public ReaderChapterMatch ChapterMatch { get; } = new(requestedChapter, matchedChapter, language);
+    }
+
+    public sealed class ExternalReaderRecommendedException(string fallbackReaderUrl) : Exception
+    {
+        public string FallbackReaderUrl { get; } = fallbackReaderUrl;
     }
 
     public sealed class MangaDexChapterJumpConfirmationRequiredException(

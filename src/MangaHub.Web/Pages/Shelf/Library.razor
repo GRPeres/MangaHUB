@@ -625,6 +625,12 @@
                 var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
                 if (completedPreparation?.Launch is null)
                 {
+                    if (completedPreparation?.OpenExternalReader == true && IsHttpUrl(completedPreparation.FallbackReaderUrl))
+                    {
+                        await JS.InvokeVoidAsync("mangaHubExternalReader.open", completedPreparation.FallbackReaderUrl);
+                        try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId); } catch (HttpRequestException) { }
+                        return;
+                    }
                     if (completedPreparation?.ChapterJump is not null)
                     {
                         chapterJumpEntryId = entryId;
@@ -926,7 +932,8 @@
             section.Icon,
             section.Key == "updates" ? Color.Error : Color.Primary,
             IsPrimarySection(section.Key),
-            SectionCount(section.Key)))
+            SectionCount(section.Key),
+            BadgeCount: section.Key == "updates" ? sectionSummary.Updates : null))
         .ToList();
 
     private int SectionCount(string section) => section switch

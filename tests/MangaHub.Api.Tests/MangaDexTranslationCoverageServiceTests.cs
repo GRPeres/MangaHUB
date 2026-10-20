@@ -11,7 +11,7 @@ namespace MangaHub.Api.Tests;
 public sealed class MangaDexTranslationCoverageServiceTests
 {
     [Fact]
-    public async Task ExternalCheckIn_ReevaluatesOnlyThatMangaAndKeepsOtherUsersGaps()
+    public async Task ExternalCheckIn_ReevaluatesOnlyThatMangaAndMakesTheSharedFallbackCoverAllUsers()
     {
         await using var db = TestDb.Create();
         var manga = new MangaEntry { Title = "Linked", MangaDexId = "id", FallbackReaderUrl = "https://example.com" };
@@ -34,8 +34,8 @@ public sealed class MangaDexTranslationCoverageServiceTests
 
         Assert.True(await shelf.UpdateExternalReaderProgressAsync(one.Id, manga.Id, new ExternalReaderProgressRequest("240", "258"), CancellationToken.None));
         Assert.True(await coverage.HasSufficientExternalCoverageAsync(one.Id, manga.Id, CancellationToken.None));
-        Assert.False(await coverage.HasSufficientExternalCoverageAsync(two.Id, manga.Id, CancellationToken.None));
-        Assert.Equal("open", issue.Status);
+        Assert.True(await coverage.HasSufficientExternalCoverageAsync(two.Id, manga.Id, CancellationToken.None));
+        Assert.Equal("resolved", issue.Status);
         Assert.Single(db.AdminIssues);
         Assert.True(await shelf.UpdateExternalReaderProgressAsync(two.Id, manga.Id, new ExternalReaderProgressRequest("240", "258"), CancellationToken.None));
         Assert.Equal("resolved", issue.Status);
@@ -71,7 +71,7 @@ public sealed class MangaDexTranslationCoverageServiceTests
     }
 
     [Fact]
-    public async Task RunAsync_ExternalCoverageIsPerUserAndResolvesWhenEveryoneIsCovered()
+    public async Task RunAsync_ExternalCoverageIsSharedWhenTheCatalogFallbackCoversTheManga()
     {
         await using var db = TestDb.Create();
         var manga = new MangaEntry { Title = "External", MangaDexId = "id", FallbackReaderUrl = "https://example.com" };
@@ -82,11 +82,7 @@ public sealed class MangaDexTranslationCoverageServiceTests
         db.AddRange(manga, one, two, first, second, new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "en", LatestChapter = 10 }, new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "fr", LatestChapter = 20 });
         await db.SaveChangesAsync();
         await CreateService(db).RunAsync(CancellationToken.None);
-        Assert.Equal("open", Assert.Single(db.AdminIssues).Status);
-        second.ExternalReaderLatestChapter = "20";
-        await db.SaveChangesAsync();
-        await CreateService(db).RunAsync(CancellationToken.None);
-        Assert.Equal("resolved", Assert.Single(db.AdminIssues).Status);
+        Assert.Empty(db.AdminIssues);
     }
     [Fact]
     public async Task RunAsync_UsesEveryPreferredLanguageAndCreatesOneRepairableIssue()

@@ -262,7 +262,8 @@ public sealed record ReaderPreparationStatus(
     ReaderChapterMatch? ChapterMatch = null,
     ReaderChapterJump? ChapterJump = null,
     bool IsMangaDexUnavailable = false,
-    string FallbackReaderUrl = "");
+    string FallbackReaderUrl = "",
+    bool OpenExternalReader = false);
 public sealed record CachedMangaDexChapterResponse(Guid Id, string ChapterNumber, string Language, string Title, int PageCount, DateTimeOffset CachedAt, bool IsManual);
 public sealed record MangaDexCacheResponse(string MangaDexId, List<CachedMangaDexChapterResponse> Chapters);
 public sealed record MangaDexLanguagesResponse(string MangaDexId, List<string> Languages);

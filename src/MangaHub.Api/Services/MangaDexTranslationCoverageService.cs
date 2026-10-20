@@ -67,8 +67,18 @@ public sealed class MangaDexTranslationCoverageService(
 
             evaluated++;
             var allLanguageLatest = latest.Max(item => item.LatestChapter);
+            // The fallback URL is catalog-wide. Once any shelf owner confirms a newer
+            // chapter from it, that source is usable coverage for this manga as a whole.
+            var latestExternalReaderChapter = mangaShelves
+                .Where(item => !string.IsNullOrWhiteSpace(item.FallbackReaderUrl))
+                .Select(item => ParseExternalChapter(item.ExternalReaderLatestChapter))
+                .Where(chapter => chapter is not null)
+                .Select(chapter => chapter!.Value)
+                .DefaultIfEmpty()
+                .Max();
+            decimal? externalCoverage = latestExternalReaderChapter > 0m ? latestExternalReaderChapter : null;
             var affected = mangaShelves
-                .Select(item => Evaluate(item, latest, allLanguageLatest))
+                .Select(item => Evaluate(item, latest, allLanguageLatest, externalCoverage))
                 .Where(item => item.Gap > GapThreshold)
                 .GroupBy(item => string.Join(",", item.PreferredLanguages), StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.OrderByDescending(item => item.Gap).First())
@@ -149,9 +159,19 @@ public sealed class MangaDexTranslationCoverageService(
             .Where(entry => entry.UserId == userId && entry.MangaEntryId == mangaEntryId && entry.MangaEntry != null)
             .Select(entry => new { entry.ExternalReaderLatestChapter, entry.MangaEntry!.FallbackReaderUrl })
             .FirstOrDefaultAsync(cancellationToken);
-        if (shelf is null || string.IsNullOrWhiteSpace(shelf.FallbackReaderUrl)
-            || !decimal.TryParse(shelf.ExternalReaderLatestChapter?.Trim().Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var externalLatest)
-            || externalLatest < 0) return false;
+        if (shelf is null || string.IsNullOrWhiteSpace(shelf.FallbackReaderUrl)) return false;
+
+        var externalValues = await db.UserMangaEntries.AsNoTracking()
+            .Where(entry => entry.MangaEntryId == mangaEntryId && entry.MangaEntry != null && entry.MangaEntry.FallbackReaderUrl != "")
+            .Select(entry => entry.ExternalReaderLatestChapter)
+            .ToListAsync(cancellationToken);
+        var externalLatest = externalValues
+            .Select(ParseExternalChapter)
+            .Where(chapter => chapter is not null)
+            .Select(chapter => chapter!.Value)
+            .DefaultIfEmpty(-1m)
+            .Max();
+        if (externalLatest < 0m) return false;
 
         var latest = await db.MangaDexLanguageLatestChapters.AsNoTracking()
             .Where(chapter => chapter.MangaEntryId == mangaEntryId)
@@ -160,19 +180,22 @@ public sealed class MangaDexTranslationCoverageService(
         return latest is not null && latest.Value - externalLatest <= GapThreshold;
     }
 
-    private static TranslationCoverageEvaluation Evaluate(ShelfLanguageContext shelf, IReadOnlyList<MangaDexLanguageLatestChapter> latest, decimal allLanguageLatest)
+    private static TranslationCoverageEvaluation Evaluate(ShelfLanguageContext shelf, IReadOnlyList<MangaDexLanguageLatestChapter> latest, decimal allLanguageLatest, decimal? externalCoverage)
     {
         var preferredLanguages = LanguagePreferences.Parse(shelf.PreferredLanguage);
         var preferredLatest = latest
             .Where(item => LanguagePreferences.Contains(preferredLanguages, item.Language))
             .Select(item => (decimal?)item.LatestChapter)
             .Max();
-        decimal? externalLatest = !string.IsNullOrWhiteSpace(shelf.FallbackReaderUrl)
-            && decimal.TryParse(shelf.ExternalReaderLatestChapter?.Trim().Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed)
-            && parsed >= 0 ? parsed : null;
+        var externalLatest = !string.IsNullOrWhiteSpace(shelf.FallbackReaderUrl) ? externalCoverage : null;
         var readableLatest = externalLatest.HasValue && (!preferredLatest.HasValue || externalLatest.Value > preferredLatest.Value) ? externalLatest : preferredLatest;
         return new TranslationCoverageEvaluation(preferredLanguages, preferredLatest, externalLatest, readableLatest, allLanguageLatest - (readableLatest ?? 0m));
     }
+
+    private static decimal? ParseExternalChapter(string? value) =>
+        decimal.TryParse(value?.Trim().Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed) && parsed >= 0
+            ? parsed
+            : null;
 
     private static string GetPriority(decimal maximumGap) => maximumGap switch
     {

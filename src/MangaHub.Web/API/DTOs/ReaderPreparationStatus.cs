@@ -18,4 +18,5 @@ public sealed record ReaderPreparationStatus(
     ReaderChapterMatch? ChapterMatch = null,
     ReaderChapterJump? ChapterJump = null,
     bool IsMangaDexUnavailable = false,
-    string FallbackReaderUrl = "");
+    string FallbackReaderUrl = "",
+    bool OpenExternalReader = false);

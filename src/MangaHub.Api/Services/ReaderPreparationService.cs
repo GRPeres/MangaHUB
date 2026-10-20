@@ -279,6 +279,16 @@ public sealed class ReaderPreparationService(
                 ChapterMatch = ex.ChapterMatch
             });
         }
+        catch (ReaderService.ExternalReaderRecommendedException ex)
+        {
+            Update(jobId, status => status with
+            {
+                Stage = "Opening the external reader",
+                IsComplete = true,
+                FallbackReaderUrl = ex.FallbackReaderUrl,
+                OpenExternalReader = true
+            });
+        }
         catch (ReaderService.MangaDexChapterJumpConfirmationRequiredException ex)
         {
             Update(jobId, status => status with
