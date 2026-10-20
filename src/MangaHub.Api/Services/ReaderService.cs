@@ -294,7 +294,8 @@ public sealed class ReaderService(
                 throw new MangaDexClosestChapterConfirmationRequiredException(
                     shelfEntry.CurrentChapter,
                     sourceChapter.Number,
-                    NormalizeLanguage(sourceChapter.Language));
+                    NormalizeLanguage(sourceChapter.Language),
+                    shelfEntry.MangaEntry.FallbackReaderUrl);
             }
 
             var selectedSourceChapter = sourceChapter!;
@@ -999,9 +1000,11 @@ public sealed class ReaderService(
     public sealed class MangaDexClosestChapterConfirmationRequiredException(
         string requestedChapter,
         string matchedChapter,
-        string language) : Exception
+        string language,
+        string fallbackReaderUrl) : Exception
     {
         public ReaderChapterMatch ChapterMatch { get; } = new(requestedChapter, matchedChapter, language);
+        public string FallbackReaderUrl { get; } = fallbackReaderUrl;
     }
 
     public sealed class MangaDexChapterJumpConfirmationRequiredException(

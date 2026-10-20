@@ -112,8 +112,10 @@
                               RequestedChapter="@(chapterMatch?.RequestedChapter ?? "")"
                               MatchedChapter="@(chapterMatch?.MatchedChapter ?? "")"
                               Language="@LanguageLabel(chapterMatch?.Language ?? "")"
+                              HasExternalReader="@IsHttpUrl(chapterMatchExternalReaderUrl)"
                               OnCancel="CancelChapterMatch"
-                              OnConfirm="ConfirmChapterMatch" />
+                              OnConfirm="ConfirmChapterMatch"
+                              OnExternalReader="OpenChapterMatchExternalReader" />
 
 <ChapterJumpWarningModal Open="@(chapterJumpEntryId is not null && chapterJump is not null)"
                          CurrentChapter="@(chapterJump?.CurrentChapter ?? "")"
@@ -272,6 +274,7 @@
     private bool confirmLanguageFallbackRemoval;
     private Guid? chapterMatchEntryId;
     private ReaderChapterMatch? chapterMatch;
+    private string chapterMatchExternalReaderUrl = "";
     private Guid? chapterJumpEntryId;
     private ReaderChapterJump? chapterJump;
     [SupplyParameterFromQuery(Name = "readEntryId")] public Guid? NotificationEntryId { get; set; }
@@ -635,6 +638,7 @@
                     {
                         chapterMatchEntryId = entryId;
                         chapterMatch = completedPreparation.ChapterMatch;
+                        chapterMatchExternalReaderUrl = completedPreparation.FallbackReaderUrl;
                         return;
                     }
                     if (completedPreparation?.AvailableLanguages is { Count: > 0 })
@@ -826,6 +830,7 @@
     {
         chapterMatchEntryId = null;
         chapterMatch = null;
+        chapterMatchExternalReaderUrl = "";
     }
 
     private async Task ConfirmChapterMatch()
@@ -838,6 +843,19 @@
         var language = chapterMatch.Language;
         CancelChapterMatch();
         await Read(entryId, language, allowLanguageFallback: true, allowChapterJump: true);
+    }
+
+    private async Task OpenChapterMatchExternalReader()
+    {
+        if (chapterMatchEntryId is not { } entryId || !IsHttpUrl(chapterMatchExternalReaderUrl))
+        {
+            return;
+        }
+
+        var url = chapterMatchExternalReaderUrl;
+        CancelChapterMatch();
+        await JS.InvokeVoidAsync("mangaHubExternalReader.open", url);
+        try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId); } catch (HttpRequestException) { }
     }
 
     private void CancelChapterJump()

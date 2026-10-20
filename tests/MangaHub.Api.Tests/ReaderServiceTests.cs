@@ -708,7 +708,7 @@ public sealed class ReaderServiceTests
     {
         await using var db = TestDb.Create();
         var userId = Guid.NewGuid();
-        var entry = new MangaEntry { Title = "Berserk", MangaDexId = "berserk-id" };
+        var entry = new MangaEntry { Title = "Berserk", MangaDexId = "berserk-id", FallbackReaderUrl = "https://reader.example/berserk" };
         db.MangaEntries.Add(entry);
         db.UserMangaEntries.Add(new UserMangaEntry
         {
@@ -729,6 +729,7 @@ public sealed class ReaderServiceTests
         Assert.Equal("32", exception.ChapterMatch.RequestedChapter);
         Assert.Equal("33", exception.ChapterMatch.MatchedChapter);
         Assert.Equal("en", exception.ChapterMatch.Language);
+        Assert.Equal("https://reader.example/berserk", exception.FallbackReaderUrl);
     }
 
     [Fact]

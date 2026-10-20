@@ -276,7 +276,8 @@ public sealed class ReaderPreparationService(
                 IsComplete = true,
                 IsFailed = true,
                 Error = "The recorded chapter could not be matched exactly.",
-                ChapterMatch = ex.ChapterMatch
+                ChapterMatch = ex.ChapterMatch,
+                FallbackReaderUrl = ex.FallbackReaderUrl
             });
         }
         catch (ReaderService.MangaDexChapterJumpConfirmationRequiredException ex)
