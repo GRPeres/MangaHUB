@@ -926,7 +926,8 @@
             section.Icon,
             section.Key == "updates" ? Color.Error : Color.Primary,
             IsPrimarySection(section.Key),
-            SectionCount(section.Key)))
+            SectionCount(section.Key),
+            BadgeCount: section.Key == "updates" ? sectionSummary.Updates : null))
         .ToList();
 
     private int SectionCount(string section) => section switch
