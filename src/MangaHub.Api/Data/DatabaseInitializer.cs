@@ -309,6 +309,91 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "LastExternalReaderOpenedAt" timestamp with time zone NULL;
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "LastExternalReaderVerifiedAt" timestamp with time zone NULL;
             ALTER TABLE user_manga_entries ADD COLUMN IF NOT EXISTS "ExternalReaderCheckPendingAt" timestamp with time zone NULL;
+
+            CREATE OR REPLACE FUNCTION mangahub_current_chapter_is_later(current_value text, latest_value text)
+            RETURNS boolean
+            LANGUAGE plpgsql
+            AS $$
+            DECLARE
+                current_match text[];
+                latest_match text[];
+                current_parts integer[];
+                latest_parts integer[];
+                part_index integer;
+                current_part integer;
+                latest_part integer;
+                part_count integer;
+            BEGIN
+                current_match := regexp_match(COALESCE(current_value, ''), '[0-9]+[.,0-9]*');
+                IF current_match IS NULL THEN
+                    RETURN false;
+                END IF;
+
+                IF NULLIF(btrim(COALESCE(latest_value, '')), '') IS NULL THEN
+                    RETURN true;
+                END IF;
+
+                latest_match := regexp_match(latest_value, '[0-9]+[.,0-9]*');
+                IF latest_match IS NULL THEN
+                    RETURN true;
+                END IF;
+
+                current_parts := regexp_split_to_array(replace(current_match[1], ',', '.'), '[.]')::integer[];
+                latest_parts := regexp_split_to_array(replace(latest_match[1], ',', '.'), '[.]')::integer[];
+                part_count := GREATEST(array_length(current_parts, 1), array_length(latest_parts, 1));
+
+                FOR part_index IN 1..part_count LOOP
+                    current_part := COALESCE(current_parts[part_index], -1);
+                    latest_part := COALESCE(latest_parts[part_index], -1);
+                    IF current_part > latest_part THEN
+                        RETURN true;
+                    ELSIF current_part < latest_part THEN
+                        RETURN false;
+                    END IF;
+                END LOOP;
+
+                RETURN false;
+            END;
+            $$;
+
+            CREATE OR REPLACE FUNCTION mangahub_sync_external_reader_latest_chapter()
+            RETURNS trigger
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1
+                    FROM manga_entries
+                    WHERE "Id" = NEW."MangaEntryId"
+                      AND "FallbackReaderUrl" <> ''
+                )
+                AND mangahub_current_chapter_is_later(NEW."CurrentChapter", NEW."ExternalReaderLatestChapter") THEN
+                    NEW."ExternalReaderLatestChapter" := btrim(NEW."CurrentChapter");
+                END IF;
+                RETURN NEW;
+            END;
+            $$;
+
+            DROP TRIGGER IF EXISTS tr_mangahub_sync_external_reader_latest_chapter ON user_manga_entries;
+            CREATE TRIGGER tr_mangahub_sync_external_reader_latest_chapter
+            BEFORE INSERT OR UPDATE OF "CurrentChapter", "ExternalReaderLatestChapter" ON user_manga_entries
+            FOR EACH ROW
+            EXECUTE FUNCTION mangahub_sync_external_reader_latest_chapter();
+
+            WITH first_apply AS (
+                INSERT INTO app_migrations ("Name")
+                VALUES ('external-reader-latest-chapter-floor-v1')
+                ON CONFLICT ("Name") DO NOTHING
+                RETURNING "Name"
+            )
+            UPDATE user_manga_entries AS shelf
+            SET "ExternalReaderLatestChapter" = shelf."CurrentChapter"
+            FROM manga_entries AS manga
+            WHERE manga."Id" = shelf."MangaEntryId"
+              AND manga."FallbackReaderUrl" <> ''
+              AND mangahub_current_chapter_is_later(shelf."CurrentChapter", shelf."ExternalReaderLatestChapter")
+              AND EXISTS (SELECT 1 FROM first_apply);
+
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "Language" character varying(16) NOT NULL DEFAULT 'en';
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "ImageQuality" character varying(20) NOT NULL DEFAULT 'original';
             ALTER TABLE chapters ADD COLUMN IF NOT EXISTS "LastAccessedAt" timestamp with time zone NULL;
