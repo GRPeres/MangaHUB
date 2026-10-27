@@ -182,6 +182,10 @@ else
                             <MudStack Spacing="1">
                                 <MudText Typo="Typo.body2"><strong>@failure.Type</strong> failed during a @failure.Trigger run on @failure.FailedAt.</MudText>
                                 <MudText Typo="Typo.body2">@failure.Error</MudText>
+                                @if (CanRetryMaintenanceFailure)
+                                {
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Replay" Disabled="@saving" OnClick="RetryMaintenanceFailureAsync">@(saving ? "Queueing..." : "Retry this task")</MudButton>
+                                }
                             </MudStack>
                         }
                         else
@@ -317,6 +321,7 @@ else
     private bool IsMaintenanceFailureIssue => string.Equals(selected?.Kind, "maintenance-failure", StringComparison.OrdinalIgnoreCase);
     private bool IsDuplicateCatalogIssue => string.Equals(selected?.Kind, "duplicate-catalog-id", StringComparison.OrdinalIgnoreCase);
     private bool CanReintegrate => IsOpen && !string.IsNullOrWhiteSpace(selected?.MyAnimeListId) && string.IsNullOrWhiteSpace(selected?.MangaDexId);
+    private bool CanRetryMaintenanceFailure => IsOpen && MaintenanceFailure is { } failure && RetryableMaintenanceJobTypes.Contains(failure.Type);
     private string SelectedIssueLabel => ExternalReaderIssue?.Heading ?? (selected is null ? "Issue" : IssueLabel(selected.Kind));
     private string ExternalReaderReplacementLabel => ExternalReaderIssue?.IsMangaDexUnavailable == true
         ? "Keep or replace the external reader URL"
@@ -338,6 +343,12 @@ else
     private string MangaDexSearchUrl => selected is null ? "" : BuildMangaDexSearchUrl(selected);
     private string MalSearchUrl => selected is null ? "" : BuildMalSearchUrl(selected);
     private string MangaUpdatesSearchUrl => selected is null ? "" : BuildMangaUpdatesSearchUrl(selected);
+    private static readonly HashSet<string> RetryableMaintenanceJobTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "release-sync", "mangadex-status-sync", "mangadex-language-coverage-check", "mangadex-identity-audit",
+        "mangadex-release-stall-check", "prefetch", "mangadex-cache-cleanup", "mangadex-archive-integrity-check",
+        "mangaupdates-sync", "catalog-id-enrichment", "library-scan", "idle-backfill"
+    };
     private ExternalReaderIssueDetail? ExternalReaderIssue
     {
         get
@@ -617,6 +628,27 @@ else
 
             Messages.Info(result.Value.Message, "MAL metadata saved");
             await OpenIssueAsync(selected.Id);
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+    private async Task RetryMaintenanceFailureAsync()
+    {
+        if (!CanRetryMaintenanceFailure || MaintenanceFailure is not { } failure) return;
+        saving = true;
+        try
+        {
+            var job = await AdminApi.QueueMaintenanceJobAsync(failure.Type);
+            if (job is null)
+            {
+                Messages.Error("This maintenance task could not be queued.", "Retry unavailable");
+                return;
+            }
+
+            Messages.Success($"{job.Type} is {job.Status}.", "Retry queued");
+            await LoadAsync();
         }
         finally
         {
