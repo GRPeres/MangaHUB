@@ -167,6 +167,34 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task MarkMangaDexUnavailableAsync_WithExternalReader_PreservesMangaDexIdentityAndLatestChapter()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry
+        {
+            Title = "Fallback reader",
+            MangaDexId = "still-linked-id",
+            MangaDexLatestChapter = 42m,
+            FallbackReaderUrl = "https://reader.example/manga/fallback"
+        };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library");
+
+        var fallbackUrl = await service.MarkMangaDexUnavailableAsync(userId, entry.Id, CancellationToken.None);
+
+        var saved = await db.MangaEntries.FindAsync(entry.Id);
+        Assert.Equal(entry.FallbackReaderUrl, fallbackUrl);
+        Assert.NotNull(saved);
+        Assert.Equal("still-linked-id", saved.MangaDexId);
+        Assert.Equal(42m, saved.MangaDexLatestChapter);
+        Assert.NotNull(saved.MangaDexLastSyncedAt);
+        Assert.Empty(db.AdminIssues);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_WhenMangaDexHasNoNextChapter_UsesTheIndexedDataSaverArchive()
     {
         await using var db = TestDb.Create();

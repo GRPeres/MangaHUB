@@ -530,6 +530,21 @@ public sealed class ReaderService(
         var manga = shelfEntry?.MangaEntry;
         if (manga is null || string.IsNullOrWhiteSpace(manga.MangaDexId)) return manga?.FallbackReaderUrl ?? "";
 
+        if (IsHttpUrl(manga.FallbackReaderUrl))
+        {
+            // A working fallback is a deliberate alternate reader, not an identity failure. Keep
+            // the MangaDex identity and last-known release data so future syncs can recover it.
+            manga.MangaDexLastSyncedAt = DateTimeOffset.UtcNow;
+            manga.UpdatedAt = DateTimeOffset.UtcNow;
+            var resolvedOldUnavailableIssue = issues is not null
+                && await issues.ResolveMangaDexUnavailableIssueWhenFallbackWorksAsync(manga.Id, cancellationToken);
+            if (!resolvedOldUnavailableIssue)
+            {
+                await shelf.SaveChangesAsync(cancellationToken);
+            }
+            return manga.FallbackReaderUrl;
+        }
+
         var previousMangaDexId = manga.MangaDexId;
         manga.MangaDexId = "";
         manga.MangaDexLatestChapter = null;

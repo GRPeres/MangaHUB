@@ -176,6 +176,19 @@ public sealed class IssueReportingService(
         await issues.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> ResolveMangaDexUnavailableIssueWhenFallbackWorksAsync(Guid mangaEntryId, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetOpenAsync(AdminIssueTypes.ExternalReaderLink, AdminIssueTypes.CatalogManga, mangaEntryId, cancellationToken);
+        if (issue is null || issue.Reports.Count > 0 || !HasMangaDexUnavailableReason(issue.MetadataJson)) return false;
+
+        issue.Status = "resolved";
+        issue.ResolvedAt = DateTimeOffset.UtcNow;
+        issue.ResolutionNote = "A valid external reader is available; MangaDex remains linked for future checks.";
+        issue.UpdatedAt = DateTimeOffset.UtcNow;
+        await issues.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task OpenMangaDexLanguageCoverageIssueAsync(Guid userId, MangaEntry manga, IReadOnlyList<string> preferredLanguages, IReadOnlyList<string> availableLanguages, CancellationToken cancellationToken)
     {
         var kind = AdminIssueTypes.MangaDexLanguageCoverage;
@@ -625,4 +638,18 @@ public sealed class IssueReportingService(
 
     private static bool IsHttpUrl(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    private static bool HasMangaDexUnavailableReason(string metadataJson)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            return document.RootElement.TryGetProperty("reason", out var reason)
+                && string.Equals(reason.GetString(), "mangadex-no-chapters", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 }

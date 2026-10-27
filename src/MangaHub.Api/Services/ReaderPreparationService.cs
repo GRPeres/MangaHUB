@@ -248,7 +248,7 @@ public sealed class ReaderPreparationService(
                 Stage = "MangaDex has no readable chapters",
                 IsComplete = true,
                 IsFailed = true,
-                Error = "MangaDex has no readable chapters for this manga. It was marked untracked for review.",
+                Error = "MangaDex has no readable chapters for this manga right now.",
                 IsMangaDexUnavailable = true,
                 FallbackReaderUrl = fallbackReaderUrl
             });
