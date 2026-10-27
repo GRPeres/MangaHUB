@@ -30,7 +30,7 @@ public sealed class MangaDexTranslationCoverageService(
             where manga.MangaDexId != ""
                 && (mangaEntryId == null || manga.Id == mangaEntryId)
                 && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
-            select new ShelfLanguageContext(manga.Id, manga.Title, manga.FallbackReaderUrl, user.PreferredLanguage, shelf.ExternalReaderLatestChapter))
+            select new ShelfLanguageContext(manga.Id, manga.Title, manga.FallbackReaderUrl, user.PreferredLanguage, shelf.CurrentChapter, shelf.ExternalReaderLatestChapter))
             .ToListAsync(cancellationToken);
 
         if (shelves.Count == 0)
@@ -67,11 +67,12 @@ public sealed class MangaDexTranslationCoverageService(
 
             evaluated++;
             var allLanguageLatest = latest.Max(item => item.LatestChapter);
-            // The fallback URL is catalog-wide. Once any shelf owner confirms a newer
-            // chapter from it, that source is usable coverage for this manga as a whole.
+            // The fallback URL is catalog-wide. A reader's recorded progress proves the
+            // external source reaches that chapter, even when they did not enter the
+            // optional newest chapter they saw during the check-in.
             var latestExternalReaderChapter = mangaShelves
                 .Where(item => !string.IsNullOrWhiteSpace(item.FallbackReaderUrl))
-                .Select(item => ParseExternalChapter(item.ExternalReaderLatestChapter))
+                .Select(item => ExternalCoverage(item.CurrentChapter, item.ExternalReaderLatestChapter))
                 .Where(chapter => chapter is not null)
                 .Select(chapter => chapter!.Value)
                 .DefaultIfEmpty()
@@ -157,16 +158,16 @@ public sealed class MangaDexTranslationCoverageService(
     {
         var shelf = await db.UserMangaEntries.AsNoTracking()
             .Where(entry => entry.UserId == userId && entry.MangaEntryId == mangaEntryId && entry.MangaEntry != null)
-            .Select(entry => new { entry.ExternalReaderLatestChapter, entry.MangaEntry!.FallbackReaderUrl })
+            .Select(entry => new { entry.CurrentChapter, entry.ExternalReaderLatestChapter, entry.MangaEntry!.FallbackReaderUrl })
             .FirstOrDefaultAsync(cancellationToken);
         if (shelf is null || string.IsNullOrWhiteSpace(shelf.FallbackReaderUrl)) return false;
 
         var externalValues = await db.UserMangaEntries.AsNoTracking()
             .Where(entry => entry.MangaEntryId == mangaEntryId && entry.MangaEntry != null && entry.MangaEntry.FallbackReaderUrl != "")
-            .Select(entry => entry.ExternalReaderLatestChapter)
+            .Select(entry => new { entry.CurrentChapter, entry.ExternalReaderLatestChapter })
             .ToListAsync(cancellationToken);
         var externalLatest = externalValues
-            .Select(ParseExternalChapter)
+            .Select(entry => ExternalCoverage(entry.CurrentChapter, entry.ExternalReaderLatestChapter))
             .Where(chapter => chapter is not null)
             .Select(chapter => chapter!.Value)
             .DefaultIfEmpty(-1m)
@@ -196,6 +197,16 @@ public sealed class MangaDexTranslationCoverageService(
         decimal.TryParse(value?.Trim().Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed) && parsed >= 0
             ? parsed
             : null;
+
+    private static decimal? ExternalCoverage(string? currentChapter, string? latestChapter)
+    {
+        var coverage = new[] { ParseExternalChapter(currentChapter), ParseExternalChapter(latestChapter) }
+            .Where(chapter => chapter is not null)
+            .Select(chapter => chapter!.Value)
+            .DefaultIfEmpty()
+            .Max();
+        return coverage > 0m ? coverage : null;
+    }
 
     private static string GetPriority(decimal maximumGap) => maximumGap switch
     {
@@ -236,7 +247,7 @@ public sealed class MangaDexTranslationCoverageService(
         return canonicalIssues;
     }
 
-    private sealed record ShelfLanguageContext(Guid MangaEntryId, string Title, string FallbackReaderUrl, string PreferredLanguage, string ExternalReaderLatestChapter);
+    private sealed record ShelfLanguageContext(Guid MangaEntryId, string Title, string FallbackReaderUrl, string PreferredLanguage, string CurrentChapter, string ExternalReaderLatestChapter);
     private sealed record TranslationCoverageEvaluation(IReadOnlyList<string> PreferredLanguages, decimal? PreferredLatest, decimal? ExternalLatest, decimal? ReadableLatest, decimal Gap);
 }
 

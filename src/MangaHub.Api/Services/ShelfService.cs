@@ -104,7 +104,7 @@ public sealed class ShelfService(
         entry.ExternalReaderCheckPendingAt = null;
         entry.UpdatedAt = now;
         await shelf.SaveChangesAsync(cancellationToken);
-        if (coverage is not null && !string.IsNullOrWhiteSpace(request.LatestChapter))
+        if (coverage is not null)
         {
             try { await coverage.RunAsync(mangaEntryId, cancellationToken); }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }

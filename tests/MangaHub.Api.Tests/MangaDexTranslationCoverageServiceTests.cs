@@ -84,6 +84,27 @@ public sealed class MangaDexTranslationCoverageServiceTests
         await CreateService(db).RunAsync(CancellationToken.None);
         Assert.Empty(db.AdminIssues);
     }
+
+    [Fact]
+    public async Task RunAsync_UsesRecordedCurrentChapterAsExternalCoverageWhenLatestIsNotProvided()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "Fallback progress", MangaDexId = "id", FallbackReaderUrl = "https://example.com" };
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash", PreferredLanguage = "en" };
+        db.AddRange(
+            manga,
+            user,
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = manga.Id, ReadingStatus = "reading", CurrentChapter = "146" },
+            new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "en", LatestChapter = 143 },
+            new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "fr", LatestChapter = 147 });
+        await db.SaveChangesAsync();
+
+        var coverage = CreateService(db);
+        await coverage.RunAsync(CancellationToken.None);
+
+        Assert.Empty(db.AdminIssues);
+        Assert.True(await coverage.HasSufficientExternalCoverageAsync(user.Id, manga.Id, CancellationToken.None));
+    }
     [Fact]
     public async Task RunAsync_UsesEveryPreferredLanguageAndCreatesOneRepairableIssue()
     {
