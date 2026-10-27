@@ -440,6 +440,14 @@
                     return;
                 }
 
+                if (completedPreparation?.IsMangaDexUnavailable == true
+                    && IsHttpUrl(completedPreparation.FallbackReaderUrl))
+                {
+                    await JS.InvokeVoidAsync("mangaHubExternalReader.open", completedPreparation.FallbackReaderUrl);
+                    try { await ShelfApi.RecordExternalReaderOpenedAsync(EntryId.Value); } catch (HttpRequestException) { }
+                    return;
+                }
+
                 if (next && IsNoLaterChapter(completedPreparation))
                 {
                     Messages.Warning("You've read all available chapters.", "All caught up");
