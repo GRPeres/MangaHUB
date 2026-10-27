@@ -8,7 +8,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, AdminOperationsService operations, IssueReportingService issues, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
+public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, AdminOperationsService operations, IssueReportingService issues, CatalogService catalog, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
 {
     [HttpGet("users")]
     public async Task<IActionResult> Users(CancellationToken cancellationToken)
@@ -184,6 +184,37 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
         var result = await issues.ReintegrateWithSelectedMetadataAsync(user.Id, issueId, request, cancellationToken);
         return result is null ? BadRequest("Select a valid MyAnimeList result for this open external reader issue.") : Ok(result);
+    }
+
+    [HttpPost("issues/{issueId:guid}/resolve-catalog-registration")]
+    public async Task<IActionResult> ResolveCatalogRegistration(Guid issueId, [FromBody] MangaEntryRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!await issues.IsOpenCatalogRegistrationFailureAsync(issueId, cancellationToken))
+        {
+            return BadRequest("This catalog-registration issue is no longer open.");
+        }
+
+        try
+        {
+            var created = await catalog.CreateAsync(user.Id, request, cancellationToken);
+            if (!await issues.ResolveCatalogRegistrationFailureAsync(user.Id, issueId, created.Title, cancellationToken))
+            {
+                return BadRequest("This catalog-registration issue is no longer open.");
+            }
+
+            return Ok(created);
+        }
+        catch (CatalogDuplicateIdentityException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (CatalogIdentityResolutionException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost("issues/{issueId:guid}/merge-duplicates")]

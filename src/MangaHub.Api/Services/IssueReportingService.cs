@@ -314,6 +314,35 @@ public sealed class IssueReportingService(
         return true;
     }
 
+    public async Task<bool> ResolveCatalogRegistrationFailureAsync(Guid adminUserId, Guid issueId, string title, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        if (issue is null
+            || issue.Status != "open"
+            || !string.Equals(issue.Kind, AdminIssueTypes.CatalogRegistrationFailure, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        await CloseAsync(
+            issue,
+            adminUserId,
+            "resolved",
+            $"Created catalog entry '{title.Trim()}'.",
+            "Catalog registration repaired",
+            "An admin completed the catalog registration for",
+            cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> IsOpenCatalogRegistrationFailureAsync(Guid issueId, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        return issue is not null
+            && issue.Status == "open"
+            && string.Equals(issue.Kind, AdminIssueTypes.CatalogRegistrationFailure, StringComparison.OrdinalIgnoreCase);
+    }
+
     public async Task<MangaDexCatalogMatch?> ReintegrateWithMangaDexAsync(Guid adminUserId, Guid issueId, CancellationToken cancellationToken)
     {
         var issue = await issues.GetDetailsAsync(issueId, cancellationToken);

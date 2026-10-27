@@ -190,6 +190,25 @@ public sealed class CatalogServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_AllowsMetadataSelectionWithAnExternalReaderWhenMangaDexCannotConfirmIt()
+    {
+        await using var db = TestDb.Create();
+        var service = CreateService(db, new FakeOpenLibrary(null));
+
+        var created = await service.CreateAsync(
+            Guid.NewGuid(),
+            Request(
+                metadataSource: "myanimelist",
+                myAnimeListId: "12345",
+                fallbackReaderUrl: "https://reader.example.com/unresolved"),
+            CancellationToken.None);
+
+        Assert.Equal("12345", created.MyAnimeListId);
+        Assert.Equal("https://reader.example.com/unresolved", created.FallbackReaderUrl);
+        Assert.Empty(created.MangaDexId);
+    }
+
+    [Fact]
     public async Task CreateAsync_WaitsForMangaDexIdentityBeforeCheckingForDuplicates()
     {
         await using var db = TestDb.Create();

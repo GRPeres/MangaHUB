@@ -154,7 +154,9 @@ public sealed class CatalogService(
     private async Task<ReaderLinks> ResolveReaderLinksForCreateAsync(MangaEntryRequest entry, CancellationToken cancellationToken)
     {
         var readerLinks = ResolveReaderLinks(entry);
-        if (!string.IsNullOrWhiteSpace(readerLinks.MangaDexId) || IsManualUntrackedEntry(entry))
+        if (!string.IsNullOrWhiteSpace(readerLinks.MangaDexId)
+            || !string.IsNullOrWhiteSpace(readerLinks.FallbackReaderUrl)
+            || IsManualUntrackedEntry(entry))
         {
             return readerLinks;
         }

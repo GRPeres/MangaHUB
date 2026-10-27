@@ -194,6 +194,66 @@ else
                         }
                     </MudAlert>
                 }
+                @if (IsCatalogRegistrationFailureIssue)
+                {
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.subtitle2">Finish this catalog registration</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Select the correct MyAnimeList result, then either retry MangaDex matching or save it with a verified external reader.</MudText>
+                            </MudStack>
+                            <div class="mh-issue-metadata-anchor">
+                                <MangaDebouncedSearch @bind-Value="metadataQuery"
+                                                      Label="Find the correct manga on MyAnimeList"
+                                                      AriaLabel="Search MyAnimeList metadata"
+                                                      IsLoading="@isSearchingMetadata"
+                                                      Disabled="@(!IsOpen || saving)"
+                                                      OnSearch="SearchMetadataAsync" />
+                                <MudPopover Open="@(isSearchingMetadata || metadataResults.Count > 0 || !string.IsNullOrWhiteSpace(metadataMessage))"
+                                            AnchorOrigin="Origin.BottomLeft"
+                                            TransformOrigin="Origin.TopLeft"
+                                            Class="mh-issue-metadata-popover">
+                                    <MudPaper Elevation="8" Outlined="true" Class="pa-2 mh-issue-metadata-results">
+                                        @if (isSearchingMetadata)
+                                        {
+                                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center"><MudProgressCircular Indeterminate="true" Size="Size.Small" /><MudText Typo="Typo.caption">Searching MyAnimeList...</MudText></MudStack>
+                                        }
+                                        else if (metadataResults.Count > 0)
+                                        {
+                                            <MudStack Spacing="1">
+                                                @foreach (var item in metadataResults.Take(6))
+                                                {
+                                                    <MudButton Variant="Variant.Text" Color="Color.Inherit" FullWidth="true" Class="justify-start text-left" Disabled="@saving" OnClick="() => SelectCatalogRegistrationMetadata(item)">
+                                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="w-100">
+                                                            @if (!string.IsNullOrWhiteSpace(item.CoverUrl)) { <img src="@item.CoverUrl" alt="" class="mh-issue-metadata-cover" /> }
+                                                            <MudStack Spacing="0" Class="flex-grow-1 overflow-hidden">
+                                                                <MudText Typo="Typo.body2" Class="text-truncate">@item.Title</MudText>
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">MAL #@item.MyAnimeListId · @item.Authors</MudText>
+                                                            </MudStack>
+                                                        </MudStack>
+                                                    </MudButton>
+                                                }
+                                            </MudStack>
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(metadataMessage))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@metadataMessage</MudText>
+                                        }
+                                    </MudPaper>
+                                </MudPopover>
+                            </div>
+                            @if (catalogRegistrationMetadata is { } metadata)
+                            {
+                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Selected: <strong>@metadata.Title</strong> (MAL #@metadata.MyAnimeListId).</MudAlert>
+                                <MudTextField T="string" @bind-Value="catalogRegistrationFallbackUrl" Label="External reader URL" HelperText="Optional. Supplying a valid URL creates this title as an external-reader entry instead of requiring MangaDex." Variant="Variant.Outlined" Disabled="@saving" />
+                                <MudStack Row="true" Spacing="1" Class="flex-wrap">
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@saving" OnClick="RetryCatalogRegistrationAsync">@(saving ? "Saving..." : "Retry with MangaDex")</MudButton>
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(saving || !IsHttpUrl(catalogRegistrationFallbackUrl))" OnClick="CreateExternalCatalogRegistrationAsync">@(saving ? "Saving..." : "Create with external reader")</MudButton>
+                                </MudStack>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
                 @if (IsExternalReaderRepairIssue)
                 {
                     <MudTextField T="string" @bind-Value="replacementUrl" Label="@ExternalReaderReplacementLabel" HelperText="@ExternalReaderReplacementHelp" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
@@ -300,6 +360,8 @@ else
     private string metadataQuery = "";
     private string metadataMessage = "";
     private List<MetadataResult> metadataResults = [];
+    private MetadataResult? catalogRegistrationMetadata;
+    private string catalogRegistrationFallbackUrl = "";
     private bool loading = true;
     private bool saving;
     private string identityChoice = "";
@@ -319,6 +381,7 @@ else
     private bool IsReleaseStallIssue => string.Equals(selected?.Kind, "mangadex-release-stalled", StringComparison.OrdinalIgnoreCase);
     private bool IsMangaDexIdentityMismatchIssue => string.Equals(selected?.Kind, "mangadex-identity-mismatch", StringComparison.OrdinalIgnoreCase);
     private bool IsMaintenanceFailureIssue => string.Equals(selected?.Kind, "maintenance-failure", StringComparison.OrdinalIgnoreCase);
+    private bool IsCatalogRegistrationFailureIssue => string.Equals(selected?.Kind, "catalog-registration-failure", StringComparison.OrdinalIgnoreCase);
     private bool IsDuplicateCatalogIssue => string.Equals(selected?.Kind, "duplicate-catalog-id", StringComparison.OrdinalIgnoreCase);
     private bool CanReintegrate => IsOpen && !string.IsNullOrWhiteSpace(selected?.MyAnimeListId) && string.IsNullOrWhiteSpace(selected?.MangaDexId);
     private bool CanRetryMaintenanceFailure => IsOpen && MaintenanceFailure is { } failure && RetryableMaintenanceJobTypes.Contains(failure.Type);
@@ -495,8 +558,8 @@ else
     private void ToggleGroup(string kind) { if (!collapsedGroups.Add(kind)) collapsedGroups.Remove(kind); }
     private void CollapseAll() { foreach (var group in IssueGroups) collapsedGroups.Add(group.Key); }
     private void ExpandAll() => collapsedGroups.Clear();
-    private async Task OpenIssueAsync(Guid id) { selected = await AdminApi.GetIssueAsync(id); if (selected is null) Messages.Error("Could not load this issue."); else { replacementUrl = selected.FallbackReaderUrl; replacementCoverUrl = selected.CoverUrl; resolutionNote = selected.ResolutionNote; metadataQuery = selected.Title; metadataResults = []; metadataMessage = ""; } }
-    private void CloseIssue() { selected = null; metadataResults = []; metadataMessage = ""; identityChoice = ""; identityCandidate = null; }
+    private async Task OpenIssueAsync(Guid id) { selected = await AdminApi.GetIssueAsync(id); if (selected is null) Messages.Error("Could not load this issue."); else { replacementUrl = selected.FallbackReaderUrl; replacementCoverUrl = selected.CoverUrl; resolutionNote = selected.ResolutionNote; metadataQuery = selected.Title; metadataResults = []; metadataMessage = ""; catalogRegistrationMetadata = null; catalogRegistrationFallbackUrl = ""; } }
+    private void CloseIssue() { selected = null; metadataResults = []; metadataMessage = ""; catalogRegistrationMetadata = null; catalogRegistrationFallbackUrl = ""; identityChoice = ""; identityCandidate = null; }
     private void SelectIdentityChoice(string choice) { identityChoice = choice; identityCandidate = null; }
     private Task ConfirmIdentityChoiceAsync() => identityChoice == "mangadex" ? RepairMalIdentityAsync() : RepairMangaDexIdentityAsync();
     private async Task ResolveAsync() { if (selected is null) return; saving = true; try { if (await AdminApi.ResolveIssueAsync(selected.Id, new(replacementUrl, resolutionNote))) { Messages.Success("The shared link was repaired and reporters were notified.", "Issue resolved"); CloseIssue(); await LoadAsync(); } else Messages.Error("Enter a valid replacement URL.", "Could not resolve issue"); } finally { saving = false; } }
@@ -602,6 +665,49 @@ else
             if (searchVersion == metadataSearchVersion) isSearchingMetadata = false;
         }
     }
+    private void SelectCatalogRegistrationMetadata(MetadataResult metadata)
+    {
+        catalogRegistrationMetadata = metadata;
+        metadataQuery = metadata.Title;
+        metadataResults = [];
+        metadataMessage = "";
+    }
+    private Task RetryCatalogRegistrationAsync() => ResolveCatalogRegistrationAsync(false);
+    private Task CreateExternalCatalogRegistrationAsync() => ResolveCatalogRegistrationAsync(true);
+    private async Task ResolveCatalogRegistrationAsync(bool useExternalReader)
+    {
+        if (selected is null || !IsCatalogRegistrationFailureIssue || !IsOpen || saving || catalogRegistrationMetadata is not { } metadata) return;
+        if (useExternalReader && !IsHttpUrl(catalogRegistrationFallbackUrl))
+        {
+            Messages.Warning("Enter a valid external reader URL.", "External reader required");
+            return;
+        }
+
+        saving = true;
+        try
+        {
+            var request = new MangaEntryRequest(
+                metadata.Title, metadata.Authors, metadata.Category, metadata.Description, metadata.CoverUrl,
+                metadata.OpenLibraryKey, metadata.FirstPublishYear, "", "", null, "", metadata.Source,
+                metadata.MyAnimeListId, metadata.MediaType, metadata.PublishingStatus, metadata.ChapterCount,
+                metadata.VolumeCount, "", useExternalReader ? catalogRegistrationFallbackUrl.Trim() : "",
+                useExternalReader ? "external" : "mangahub");
+            var result = await AdminApi.ResolveCatalogRegistrationIssueAsync(selected.Id, request);
+            if (result.Value is null)
+            {
+                Messages.Error(string.IsNullOrWhiteSpace(result.Error) ? "The catalog entry could not be created." : result.Error, "Registration still needs review");
+                return;
+            }
+
+            Messages.Success($"Created {result.Value.Title}. The registration issue was resolved.", "Catalog registration repaired");
+            CloseIssue();
+            await LoadAsync();
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
     private async Task ReintegrateWithMetadataAsync(MetadataResult metadata)
     {
         if (selected is null || !IsOpen || saving) return;
@@ -688,6 +794,8 @@ else
     private static string GroupStatusLabel(IGrouping<string, AdminIssueListItemResponse> group) => group.Any(item => item.Status == "open") ? "Open" : group.Any(item => item.Status == "resolved") ? "Resolved" : "Dismissed";
     private static string ReasonLabel(string reason) => reason switch { "create-failed" => "Registration failed", "language-coverage" => "Preferred language unavailable", "title" => "Wrong title", "description" => "Wrong description", "category" => "Wrong categories or format", "release-status" => "Wrong release status", "wrong-manga" => "Wrong manga", "wrong-image" => "Wrong cover", "missing" => "Cover missing", "low-quality" => "Poor image quality", "obsolete" => "Obsolete or unhelpful", "unsafe" => "Potentially unsafe", "broken" => "Broken link or image", _ => "Other problem" };
     private static string DisplayIdentifier(string value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+    private static bool IsHttpUrl(string value) => Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     private static string SearchUrl(string baseUrl, AdminIssueDetailsResponse issue) => baseUrl + Uri.EscapeDataString(issue.Title + " manga read");
     private static string BuildMangaDexSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MangaDexId) ? SearchUrl("https://mangadex.org/search?q=", issue) : $"https://mangadex.org/title/{issue.MangaDexId}";
     private static string BuildMalSearchUrl(AdminIssueDetailsResponse issue) => string.IsNullOrWhiteSpace(issue.MyAnimeListId) ? SearchUrl("https://myanimelist.net/manga.php?q=", issue) : $"https://myanimelist.net/manga/{issue.MyAnimeListId}";

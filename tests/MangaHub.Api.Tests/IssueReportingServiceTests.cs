@@ -62,6 +62,28 @@ public sealed class IssueReportingServiceTests
     }
 
     [Fact]
+    public async Task ResolveCatalogRegistrationFailureAsync_ResolvesOnlyAnOpenRegistrationIssue()
+    {
+        await using var db = TestDb.Create();
+        var issue = new AdminIssue
+        {
+            Kind = AdminIssueTypes.CatalogRegistrationFailure,
+            SubjectType = AdminIssueTypes.CatalogAddition,
+            SubjectId = Guid.NewGuid(),
+            TitleSnapshot = "Unresolved title"
+        };
+        db.AdminIssues.Add(issue);
+        await db.SaveChangesAsync();
+
+        var resolved = await CreateService(db).ResolveCatalogRegistrationFailureAsync(
+            Guid.NewGuid(), issue.Id, "Correct title", CancellationToken.None);
+
+        Assert.True(resolved);
+        Assert.Equal("resolved", issue.Status);
+        Assert.Contains("Correct title", issue.ResolutionNote);
+    }
+
+    [Fact]
     public async Task CatalogMetadataReport_MergesReporterFeedback()
     {
         await using var db = TestDb.Create();
