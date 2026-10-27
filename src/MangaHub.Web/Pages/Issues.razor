@@ -92,8 +92,21 @@ else
     <div class="mh-modal-backdrop" @onclick="CloseIssue">
         <section class="mh-modal mh-issue-detail-modal" role="dialog" aria-modal="true" aria-labelledby="issue-detail-title" @onclick:stopPropagation="true">
             <MudStack Spacing="3">
-                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween"><MudStack Spacing="0"><MudText id="issue-detail-title" Typo="Typo.h2">@selected.Title</MudText><MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center"><MudText Typo="Typo.body2" Color="Color.Error">@IssueLabel(selected.Kind) · @selected.Reports.Count report@(selected.Reports.Count == 1 ? "" : "s")</MudText><MudChip T="string" Size="Size.Small" Color="@PriorityColor(selected.Priority)">@PriorityLabel(selected.Priority)</MudChip></MudStack></MudStack><MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseIssue" aria-label="Close issue" /></MudStack>
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween"><MudStack Spacing="0"><MudText id="issue-detail-title" Typo="Typo.h2">@selected.Title</MudText><MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center"><MudText Typo="Typo.body2" Color="Color.Error">@SelectedIssueLabel · @selected.Reports.Count report@(selected.Reports.Count == 1 ? "" : "s")</MudText><MudChip T="string" Size="Size.Small" Color="@PriorityColor(selected.Priority)">@PriorityLabel(selected.Priority)</MudChip></MudStack></MudStack><MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseIssue" aria-label="Close issue" /></MudStack>
                 @if (!string.IsNullOrWhiteSpace(selected.CoverUrl)) { <img class="mh-issue-cover" src="@selected.CoverUrl" alt="" /> }
+                @if (ExternalReaderIssue is { } externalReaderIssue)
+                {
+                    <MudAlert Severity="@externalReaderIssue.Severity" Variant="Variant.Outlined">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.subtitle2">@externalReaderIssue.Heading</MudText>
+                            <MudText Typo="Typo.body2">@externalReaderIssue.Explanation</MudText>
+                            @if (!string.IsNullOrWhiteSpace(externalReaderIssue.PreviousMangaDexId))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Previous MangaDex ID: @externalReaderIssue.PreviousMangaDexId</MudText>
+                            }
+                        </MudStack>
+                    </MudAlert>
+                }
                 @if (IsTranslationCoverageIssue)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
@@ -179,7 +192,7 @@ else
                 }
                 @if (IsExternalReaderRepairIssue)
                 {
-                    <MudTextField T="string" @bind-Value="replacementUrl" Label="Replacement external reader URL" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
+                    <MudTextField T="string" @bind-Value="replacementUrl" Label="@ExternalReaderReplacementLabel" HelperText="@ExternalReaderReplacementHelp" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
                     <MudStack Row="true" Spacing="1" Class="flex-wrap"><MudButton Href="@GoogleSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">Google</MudButton><MudButton Href="@DuckDuckGoSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">DuckDuckGo</MudButton><MudButton Href="@MangaDexSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaDex</MudButton><MudButton Href="@MalSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MAL</MudButton><MudButton Href="@MangaUpdatesSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaUpdates</MudButton></MudStack>
                 }
                 @if (IsCoverImageIssue)
@@ -192,8 +205,8 @@ else
                     <MudPaper Outlined="true" Class="pa-3">
                         <MudStack Spacing="2">
                             <MudStack Spacing="0">
-                                <MudText Typo="Typo.subtitle2">Restore the MangaHub reader</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Search MyAnimeList, select the correct manga, and MangaHub will try to restore its MangaDex reader.</MudText>
+                                <MudText Typo="Typo.subtitle2">@MangaHubRecoveryTitle</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@MangaHubRecoveryHelp</MudText>
                             </MudStack>
                             <div class="mh-issue-metadata-anchor">
                                 <MangaDebouncedSearch @bind-Value="metadataQuery"
@@ -304,6 +317,19 @@ else
     private bool IsMaintenanceFailureIssue => string.Equals(selected?.Kind, "maintenance-failure", StringComparison.OrdinalIgnoreCase);
     private bool IsDuplicateCatalogIssue => string.Equals(selected?.Kind, "duplicate-catalog-id", StringComparison.OrdinalIgnoreCase);
     private bool CanReintegrate => IsOpen && !string.IsNullOrWhiteSpace(selected?.MyAnimeListId) && string.IsNullOrWhiteSpace(selected?.MangaDexId);
+    private string SelectedIssueLabel => ExternalReaderIssue?.Heading ?? (selected is null ? "Issue" : IssueLabel(selected.Kind));
+    private string ExternalReaderReplacementLabel => ExternalReaderIssue?.IsMangaDexUnavailable == true
+        ? "Keep or replace the external reader URL"
+        : "Replacement external reader URL";
+    private string ExternalReaderReplacementHelp => ExternalReaderIssue?.IsMangaDexUnavailable == true
+        ? "MangaDex had no usable chapters. This link was not reported as broken."
+        : "Use a working page for this manga on an external reader.";
+    private string MangaHubRecoveryTitle => ExternalReaderIssue?.IsMangaDexUnavailable == true
+        ? "Try to restore the MangaHub reader"
+        : "Use MangaDex instead";
+    private string MangaHubRecoveryHelp => ExternalReaderIssue?.IsMangaDexUnavailable == true
+        ? "Optional: select the correct MyAnimeList record to find a replacement MangaDex link."
+        : "Optional: select the correct MyAnimeList record to replace this external reader with MangaDex.";
     private IEnumerable<IGrouping<string, AdminIssueListItemResponse>> IssueGroups => items
         .GroupBy(item => item.Kind, StringComparer.OrdinalIgnoreCase)
         .OrderByDescending(group => group.Max(item => item.UpdatedAt));
@@ -312,6 +338,45 @@ else
     private string MangaDexSearchUrl => selected is null ? "" : BuildMangaDexSearchUrl(selected);
     private string MalSearchUrl => selected is null ? "" : BuildMalSearchUrl(selected);
     private string MangaUpdatesSearchUrl => selected is null ? "" : BuildMangaUpdatesSearchUrl(selected);
+    private ExternalReaderIssueDetail? ExternalReaderIssue
+    {
+        get
+        {
+            if (!IsExternalReaderLinkIssue || selected is null) return null;
+
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(selected.MetadataJson);
+                var root = document.RootElement;
+                var reason = root.TryGetProperty("reason", out var reasonNode) ? reasonNode.GetString() : null;
+                var previousMangaDexId = root.TryGetProperty("previousMangaDexId", out var mangaDexNode) ? mangaDexNode.GetString() : null;
+                if (string.Equals(reason, "mangadex-no-chapters", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ExternalReaderIssueDetail(
+                        "MangaDex reader unavailable",
+                        "MangaDex returned no usable chapters for its previous link. The external reader was not reported as broken.",
+                        Severity.Warning,
+                        true,
+                        previousMangaDexId ?? "");
+                }
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // Older issue metadata can be malformed; reports still provide a useful fallback cause.
+            }
+
+            var reportReason = selected.Reports.OrderByDescending(report => report.CreatedAt).FirstOrDefault()?.Reason;
+            return reportReason switch
+            {
+                "broken" => new ExternalReaderIssueDetail("External reader link reported broken", "A reader could not open the external link. Replace it with a working page for this manga.", Severity.Error, false, ""),
+                "wrong-manga" => new ExternalReaderIssueDetail("External reader points to the wrong manga", "A reader reported that this link leads to a different title. Replace it with the correct manga page.", Severity.Error, false, ""),
+                "obsolete" => new ExternalReaderIssueDetail("External reader link is obsolete", "A reader reported that this page is no longer useful for following the manga. Update it to a current source.", Severity.Warning, false, ""),
+                "unsafe" => new ExternalReaderIssueDetail("External reader link needs safety review", "A reader flagged this external source as potentially unsafe. Verify it before keeping or replacing the link.", Severity.Error, false, ""),
+                "other" => new ExternalReaderIssueDetail("External reader needs review", "A reader reported a problem without selecting a more specific cause. Review the link and report note below.", Severity.Warning, false, ""),
+                _ => new ExternalReaderIssueDetail("External reader needs review", "No specific link failure was recorded. Review the link and any reports below.", Severity.Warning, false, "")
+            };
+        }
+    }
     private TranslationCoverageDetail? TranslationCoverage
     {
         get
@@ -603,4 +668,5 @@ else
     private sealed record ReleaseStallDetail(string LatestChapter, string InactiveDays, string LastObserved);
     private sealed record MangaDexIdentityMismatchDetail(string ExpectedMyAnimeListId, string LinkedMangaDexId, string LinkedMyAnimeListId, string LinkedTitle);
     private sealed record MaintenanceFailureDetail(string Type, string Trigger, string Error, string FailedAt);
+    private sealed record ExternalReaderIssueDetail(string Heading, string Explanation, Severity Severity, bool IsMangaDexUnavailable, string PreviousMangaDexId);
 }
