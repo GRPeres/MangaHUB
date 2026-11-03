@@ -15,6 +15,7 @@ builder.Services.AddHostedService<RemoteMaintenanceScheduleWorker>();
 builder.Services.AddHostedService<MaintenanceWatchdogWorker>();
 builder.Services.AddHostedService<UsageAnalyticsWorker>();
 builder.Services.AddHostedService<NotificationCleanupWorker>();
+builder.Services.AddHostedService<OneTimeTestAccountCleanupWorker>();
 builder.Services.AddHostedService<MaintenanceJobWorker>();
 
 var host = builder.Build();

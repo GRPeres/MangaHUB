@@ -45,7 +45,8 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
         string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsSessionValid(MangaUser user, DateTimeOffset? issuedAt) =>
-        user.SessionInvalidBefore is null || (issuedAt is not null && issuedAt > user.SessionInvalidBefore);
+        (user.TemporaryAccountExpiresAt is null || user.TemporaryAccountExpiresAt > DateTimeOffset.UtcNow)
+        && (user.SessionInvalidBefore is null || (issuedAt is not null && issuedAt > user.SessionInvalidBefore));
 
     private static string ReadBearerToken(HttpRequest request)
     {

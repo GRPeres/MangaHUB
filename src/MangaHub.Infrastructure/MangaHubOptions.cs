@@ -10,6 +10,9 @@ public sealed class MangaHubOptions
     public int InternalMaintenanceRequestTimeoutMinutes { get; set; } = 720;
     public int MaintenanceJobMaxConcurrency { get; set; } = 2;
     public int JwtExpiresMinutes { get; set; } = 60 * 24 * 7;
+    public int OneTimeTestAccountClaimMinutes { get; set; } = 15;
+    public int OneTimeTestAccountSessionMinutes { get; set; } = 120;
+    public int OneTimeTestAccountCleanupIntervalMinutes { get; set; } = 5;
     public bool SessionCookieSecure { get; set; }
     public string SessionCookieSameSite { get; set; } = "Lax";
     public string MyAnimeListClientId { get; set; } = "";

@@ -150,6 +150,31 @@
         @if (IsAdministrationSection && IsAdmin)
         {
             <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h2">One-time test account</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Creates a random password that is shown once. It must be claimed within 15 minutes, supports one login, and is removed after its short test session ends.</MudText>
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
+                        <MudSelect T="string" @bind-Value="testAccountRole" Label="Role" Variant="Variant.Outlined" Class="mh-admin-test-role">
+                            <MudSelectItem Value="@("user")">User</MudSelectItem>
+                            <MudSelectItem Value="@("admin")">Admin</MudSelectItem>
+                        </MudSelect>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(isCreatingTestAccount ? null : Icons.Material.Filled.PersonAdd)" Disabled="@isCreatingTestAccount" OnClick="CreateOneTimeTestAccount">
+                            @(isCreatingTestAccount ? "Creating..." : "Create test account")
+                        </MudButton>
+                    </MudStack>
+                    @if (testAccountCredentials is not null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                            <MudText Typo="Typo.subtitle2">Save these credentials now. The password is not stored or shown again.</MudText>
+                            <MudText Typo="Typo.body2">Username: <strong>@testAccountCredentials.Username</strong></MudText>
+                            <MudText Typo="Typo.body2">Password: <strong>@testAccountCredentials.Password</strong></MudText>
+                            <MudText Typo="Typo.caption">Claim before @testAccountCredentials.ExpiresAt.ToLocalTime().ToString("HH:mm").</MudText>
+                        </MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+
+            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
                 <MudStack Spacing="3">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap">
                         <MudStack Spacing="1">
@@ -253,6 +278,9 @@
     private bool isSavingAccount;
     private bool isSavingUsage;
     private bool isSavingNotificationCleanup;
+    private string testAccountRole = "user";
+    private OneTimeTestAccountCredentialsResponse? testAccountCredentials;
+    private bool isCreatingTestAccount;
 
     protected override void OnParametersSet()
     {
@@ -319,6 +347,28 @@
     private async Task MakeAdmin(UserAdminResponse user) => await SetRole(user, "admin");
 
     private async Task MakeUser(UserAdminResponse user) => await SetRole(user, "user");
+
+    private async Task CreateOneTimeTestAccount()
+    {
+        isCreatingTestAccount = true;
+        testAccountCredentials = null;
+        try
+        {
+            var result = await AdminApi.CreateOneTimeTestAccountAsync(testAccountRole);
+            if (result.Value is null)
+            {
+                Messages.Error(result.Error);
+                return;
+            }
+
+            testAccountCredentials = result.Value;
+            Messages.Success("One-time test account created.");
+        }
+        finally
+        {
+            isCreatingTestAccount = false;
+        }
+    }
 
     private async Task Logout()
     {

@@ -82,6 +82,7 @@ builder.Services.AddScoped<SessionCookieService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<AdminService>();
+builder.Services.AddScoped<OneTimeTestAccountService>();
 builder.Services.AddScoped<AdminOperationsService>();
 builder.Services.AddScoped<ArchiveRecoveryTelemetryService>();
 builder.Services.AddScoped<MaintenanceWatchdogService>();

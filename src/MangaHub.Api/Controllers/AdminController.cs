@@ -8,7 +8,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, AdminOperationsService operations, IssueReportingService issues, CatalogService catalog, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
+public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, OneTimeTestAccountService testAccounts, AdminOperationsService operations, IssueReportingService issues, CatalogService catalog, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
 {
     [HttpGet("users")]
     public async Task<IActionResult> Users(CancellationToken cancellationToken)
@@ -22,8 +22,30 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         {
             return StatusCode(StatusCodes.Status403Forbidden);
         }
+        if (user.TemporaryAccountExpiresAt is not null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
 
         return Ok(await admin.ListUsersAsync(cancellationToken));
+    }
+
+    [HttpPost("test-accounts")]
+    public async Task<IActionResult> CreateOneTimeTestAccount([FromBody] CreateOneTimeTestAccountRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (user.TemporaryAccountExpiresAt is not null) return StatusCode(StatusCodes.Status403Forbidden);
+
+        var result = await testAccounts.CreateAsync(user.Id, request, cancellationToken);
+        return result.Error switch
+        {
+            null => Ok(result.Credentials),
+            "bad_role" => BadRequest("Role must be admin or user."),
+            "active_account_exists" => Conflict("You already have an unclaimed one-time test account. Use it or wait for it to expire before creating another."),
+            _ => BadRequest()
+        };
     }
 
     [HttpGet("diagnostics/database")]
@@ -265,6 +287,10 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
             return Unauthorized();
         }
         if (!CurrentUserService.IsAdmin(user))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+        if (user.TemporaryAccountExpiresAt is not null)
         {
             return StatusCode(StatusCodes.Status403Forbidden);
         }

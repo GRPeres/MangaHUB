@@ -7,6 +7,8 @@ public sealed record ResetPasswordRequest(string Token, string NewPassword);
 public sealed record UpdateAccountRequest(string Email, string CurrentPassword = "", string NewPassword = "");
 public sealed record UserAdminResponse(Guid Id, string Username, string Role, DateTimeOffset CreatedAt);
 public sealed record UpdateUserRoleRequest(string Role);
+public sealed record CreateOneTimeTestAccountRequest(string Role);
+public sealed record OneTimeTestAccountCredentialsResponse(string Username, string Password, string Role, DateTimeOffset ExpiresAt);
 public sealed record UpdatePreferredLanguageRequest(string PreferredLanguage);
 public sealed record UpdateUsageAnalyticsRequest(bool Enabled);
 public sealed record UpdateNotificationPreferencesRequest(bool AutoDeleteReadNotifications);

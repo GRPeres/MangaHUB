@@ -9,6 +9,9 @@ public sealed class MangaUser
     public string PendingEmail { get; set; } = "";
     public DateTimeOffset? EmailConfirmedAt { get; set; }
     public DateTimeOffset? SessionInvalidBefore { get; set; }
+    public Guid? TemporaryAccountCreatedByUserId { get; set; }
+    public DateTimeOffset? TemporaryAccountExpiresAt { get; set; }
+    public int TemporaryAccountLoginCount { get; set; }
     public string GoogleSubject { get; set; } = "";
     public string Role { get; set; } = "user";
     public string PreferredLanguage { get; set; } = "en";

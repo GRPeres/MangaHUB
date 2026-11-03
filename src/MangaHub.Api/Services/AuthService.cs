@@ -50,6 +50,18 @@ public sealed class AuthService(UserRepository users, IPasswordHasher passwordHa
             return null;
         }
 
+        if (user.TemporaryAccountExpiresAt is { } temporaryExpiresAt)
+        {
+            if (temporaryExpiresAt <= DateTimeOffset.UtcNow || user.TemporaryAccountLoginCount >= 1)
+            {
+                return null;
+            }
+
+            user.TemporaryAccountLoginCount++;
+            user.TemporaryAccountExpiresAt = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(configuration.GetValue<int?>("MangaHub:OneTimeTestAccountSessionMinutes") ?? 120, 15, 480));
+            await users.SaveChangesAsync(cancellationToken);
+        }
+
         var token = tokens.CreateToken(user.Id, user.Username);
         return ApiMapping.ToUserResponse(user, token);
     }

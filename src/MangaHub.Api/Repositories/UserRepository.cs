@@ -30,6 +30,12 @@ public sealed class UserRepository(MangaHubDbContext db)
     public Task<int> CountAdminsAsync(CancellationToken cancellationToken) =>
         db.Users.CountAsync(x => x.Role == "admin", cancellationToken);
 
+    public Task<bool> HasUnclaimedTemporaryAccountAsync(Guid issuingAdminUserId, DateTimeOffset now, CancellationToken cancellationToken) =>
+        db.Users.AnyAsync(x => x.TemporaryAccountCreatedByUserId == issuingAdminUserId
+            && x.TemporaryAccountExpiresAt != null
+            && x.TemporaryAccountLoginCount == 0
+            && x.TemporaryAccountExpiresAt > now, cancellationToken);
+
     public Task<List<MangaUser>> ListAsync(CancellationToken cancellationToken) =>
         db.Users.AsNoTracking().OrderBy(x => x.Username).ToListAsync(cancellationToken);
 

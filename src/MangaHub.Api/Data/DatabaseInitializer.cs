@@ -20,6 +20,9 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "PendingEmail" character varying(320) NOT NULL DEFAULT '';
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "EmailConfirmedAt" timestamp with time zone NULL;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "SessionInvalidBefore" timestamp with time zone NULL;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS "TemporaryAccountCreatedByUserId" uuid NULL;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS "TemporaryAccountExpiresAt" timestamp with time zone NULL;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS "TemporaryAccountLoginCount" integer NOT NULL DEFAULT 0;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "GoogleSubject" character varying(255) NOT NULL DEFAULT '';
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "UsageAnalyticsEnabled" boolean NOT NULL DEFAULT false;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS "AutoDeleteReadNotifications" boolean NOT NULL DEFAULT true;
@@ -27,6 +30,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
 
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_users_Email" ON users ("Email") WHERE "Email" <> '';
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_users_GoogleSubject" ON users ("GoogleSubject") WHERE "GoogleSubject" <> '';
+            CREATE INDEX IF NOT EXISTS "IX_users_TemporaryAccountExpiresAt" ON users ("TemporaryAccountExpiresAt") WHERE "TemporaryAccountExpiresAt" IS NOT NULL;
+            CREATE INDEX IF NOT EXISTS "IX_users_TemporaryAccountCreatedByUserId_TemporaryAccountExpiresAt" ON users ("TemporaryAccountCreatedByUserId", "TemporaryAccountExpiresAt") WHERE "TemporaryAccountExpiresAt" IS NOT NULL;
             CREATE TABLE IF NOT EXISTS password_reset_tokens (
                 "Id" uuid PRIMARY KEY,
                 "UserId" uuid NOT NULL,

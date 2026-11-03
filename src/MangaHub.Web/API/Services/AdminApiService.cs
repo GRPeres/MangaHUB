@@ -10,6 +10,9 @@ public sealed class AdminApiService(ApiHttpClient api)
     public async Task<UserAdminResponse?> UpdateUserRoleAsync(Guid userId, string role) =>
         await api.SendAsync<UpdateUserRoleRequest, UserAdminResponse>(HttpMethod.Put, $"/api/admin/users/{userId}/role", new(role));
 
+    public Task<ApiCallResult<OneTimeTestAccountCredentialsResponse>> CreateOneTimeTestAccountAsync(string role) =>
+        api.SendWithResultAsync<object, OneTimeTestAccountCredentialsResponse>(HttpMethod.Post, "/api/admin/test-accounts", new { role });
+
     public Task<DiagnosticResult?> TestDatabaseAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/database");
     public Task<DiagnosticResult?> TestMangaDexAsync() => api.GetAsync<DiagnosticResult>("/api/admin/diagnostics/mangadex");
     public Task<OperationsOverviewResponse?> GetOperationsAsync() => api.GetAsync<OperationsOverviewResponse>("/api/admin/operations");
