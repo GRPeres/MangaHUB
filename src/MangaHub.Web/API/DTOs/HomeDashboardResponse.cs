@@ -16,7 +16,8 @@ public sealed record HomeDashboardMangaResponse(
     bool IsRead,
     string MangaDexId = "",
     string ExternalReaderLatestChapter = "",
-    DateTimeOffset? LastExternalReaderVerifiedAt = null);
+    DateTimeOffset? LastExternalReaderVerifiedAt = null,
+    bool CurrentChapterIsPreferredLanguage = false);
 
 public sealed record HomeDashboardResponse(
     HomeDashboardMangaResponse? ContinueReading,

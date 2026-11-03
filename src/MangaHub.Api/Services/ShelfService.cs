@@ -90,6 +90,7 @@ public sealed class ShelfService(
 
         var chapterChanged = !string.Equals(entry.CurrentChapter, currentChapter, StringComparison.Ordinal);
         entry.CurrentChapter = currentChapter;
+        if (chapterChanged) entry.CurrentChapterLanguage = "";
         if (!string.IsNullOrWhiteSpace(request.LatestChapter))
         {
             entry.ExternalReaderLatestChapter = request.LatestChapter.Trim();
@@ -156,6 +157,10 @@ public sealed class ShelfService(
         {
             var currentChapterChanged = !string.Equals(existingShelf.CurrentChapter, request.CurrentChapter.Trim(), StringComparison.Ordinal);
             TextRules.ApplyShelfRequest(existingShelf, request, manga);
+            if (currentChapterChanged)
+            {
+                existingShelf.CurrentChapterLanguage = "";
+            }
             if (currentChapterChanged && existingShelf.ReadingStatus != "done")
             {
                 existingShelf.IsRead = false;
@@ -185,6 +190,10 @@ public sealed class ShelfService(
 
         var currentChapterChanged = !string.Equals(shelfEntry.CurrentChapter, request.CurrentChapter.Trim(), StringComparison.Ordinal);
         TextRules.ApplyShelfRequest(shelfEntry, request, shelfEntry.MangaEntry);
+        if (currentChapterChanged)
+        {
+            shelfEntry.CurrentChapterLanguage = "";
+        }
         if (currentChapterChanged && shelfEntry.ReadingStatus != "done")
         {
             shelfEntry.IsRead = false;
@@ -437,6 +446,10 @@ public sealed class ShelfService(
                 {
                     var currentChapterChanged = !string.Equals(shelfEntry.CurrentChapter, importValues.CurrentChapter, StringComparison.Ordinal);
                     shelfEntry.CurrentChapter = importValues.CurrentChapter;
+                    if (currentChapterChanged)
+                    {
+                        shelfEntry.CurrentChapterLanguage = "";
+                    }
                     if (shelfEntry.ReadingStatus != "done" && currentChapterChanged)
                     {
                         shelfEntry.IsRead = false;

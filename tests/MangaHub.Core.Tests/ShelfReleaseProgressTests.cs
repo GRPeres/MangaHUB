@@ -11,12 +11,19 @@ public sealed class ShelfReleaseProgressTests
     [InlineData("38", true, true, null, "50", 12)]
     [InlineData("38", true, false, null, "50", 12)]
     [InlineData("38", true, true, 38, "", 0)]
-    [InlineData("38", false, true, 38, "", 1)]
-    [InlineData("38", false, true, 38, "37", 1)]
+    [InlineData("38", false, true, 38, "", 0)]
+    [InlineData("38", false, true, 38, "37", 0)]
     [InlineData("", false, true, 38, "50", 0)]
     public void CountsUnreadFromEitherSource(string current, bool read, bool hasMangaDex, int? mangaDex, string external, int expected)
     {
         Assert.Equal(expected, ShelfReleaseProgress.NewChapterCount(current, read, hasMangaDex, mangaDex, external));
+    }
+
+    [Fact]
+    public void CountsAnUnreadCurrentChapterOnlyWhenItUsesAPreferredLanguage()
+    {
+        Assert.Equal(1, ShelfReleaseProgress.NewChapterCount("38", false, true, 38, "", true));
+        Assert.Equal(0, ShelfReleaseProgress.NewChapterCount("38", false, true, 38, "", false));
     }
 
     [Fact]

@@ -89,7 +89,9 @@ public sealed class ShelfRepository(MangaHubDbContext db)
                 x.IsRead,
                 false,
                 x.LastExternalReaderVerifiedAt,
-                x.ExternalReaderLatestChapter))
+                x.ExternalReaderLatestChapter,
+                x.CurrentChapterLanguage,
+                languageCodes.Contains(x.CurrentChapterLanguage)))
             .ToListAsync(cancellationToken);
         var entriesById = entries.ToDictionary(entry => entry.Id);
         var manualReleaseCheckById = orderingEntriesWithReleaseState.ToDictionary(entry => entry.Id, entry => entry.IsManualReleaseCheckDue);
@@ -161,7 +163,9 @@ public sealed class ShelfRepository(MangaHubDbContext db)
             x.IsRead,
             false,
             x.LastExternalReaderVerifiedAt,
-            x.ExternalReaderLatestChapter));
+            x.ExternalReaderLatestChapter,
+            x.CurrentChapterLanguage,
+            languageCodes.Contains(x.CurrentChapterLanguage)));
 
     private static IEnumerable<MangaEntryResponse> FilterBySection(IEnumerable<MangaEntryResponse> entries, string? section) =>
         NormalizeSection(section) switch
@@ -203,7 +207,8 @@ public sealed class ShelfRepository(MangaHubDbContext db)
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         IsActivelyTracked(entry)
         && ShelfReleaseProgress.NewChapterCount(entry.CurrentChapter, entry.IsRead,
-            !string.IsNullOrWhiteSpace(entry.MangaDexId), entry.MangaDexPreferredLanguageLatestChapter, entry.ExternalReaderLatestChapter) > 0;
+            !string.IsNullOrWhiteSpace(entry.MangaDexId), entry.MangaDexPreferredLanguageLatestChapter, entry.ExternalReaderLatestChapter,
+            entry.CurrentChapterIsPreferredLanguage) > 0;
 
     private static bool NeedsManualReleaseCheck(MangaEntryResponse entry, DateTimeOffset dueBefore) =>
         IsActivelyTracked(entry)

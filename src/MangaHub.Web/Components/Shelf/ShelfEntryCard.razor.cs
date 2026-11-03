@@ -55,7 +55,7 @@ public partial class ShelfEntryCard
     private string LatestChapterValue => LatestChapter is not null
         ? $"Ch. {LatestChapter.Value:0.###}"
         : Entry.ChapterCount is null ? "Unknown" : $"Ch. {Entry.ChapterCount}";
-    private int NewChapterCount => ShelfReleaseProgress.NewChapterCount(Entry.CurrentChapter, Entry.IsRead, HasMangaDexLink, PreferredLatestChapter, Entry.ExternalReaderLatestChapter);
+    private int NewChapterCount => ShelfReleaseProgress.NewChapterCount(Entry.CurrentChapter, Entry.IsRead, HasMangaDexLink, PreferredLatestChapter, Entry.ExternalReaderLatestChapter, Entry.CurrentChapterIsPreferredLanguage);
     private bool HasNewChapters => NewChapterCount > 0;
     private bool IsMangaDexSyncOverdue => HasMangaDexLink
         && Entry.MangaDexLastSyncedAt is not null

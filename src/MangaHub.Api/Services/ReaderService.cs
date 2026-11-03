@@ -403,6 +403,7 @@ public sealed class ReaderService(
         {
             var startedReading = string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase);
             shelfEntry.CurrentChapter = cachedChapter.ChapterNumber;
+            shelfEntry.CurrentChapterLanguage = resolvedLanguage;
             shelfEntry.IsRead = false;
             if (string.Equals(shelfEntry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase))
             {

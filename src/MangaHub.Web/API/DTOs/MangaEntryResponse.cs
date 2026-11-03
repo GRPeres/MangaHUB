@@ -36,7 +36,9 @@ public sealed record MangaEntryResponse(
     bool IsRead = false,
     bool IsManualReleaseCheckDue = false,
     DateTimeOffset? LastExternalReaderVerifiedAt = null,
-    string ExternalReaderLatestChapter = "");
+    string ExternalReaderLatestChapter = "",
+    string CurrentChapterLanguage = "",
+    bool CurrentChapterIsPreferredLanguage = false);
 
 public sealed record ExternalReaderCheckInResponse(
     Guid MangaEntryId,

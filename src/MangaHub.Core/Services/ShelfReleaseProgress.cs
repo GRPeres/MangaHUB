@@ -11,13 +11,13 @@ public static class ShelfReleaseProgress
         return mangaDex is null ? external : external is null ? mangaDex : Math.Max(mangaDex.Value, external.Value);
     }
 
-    public static int NewChapterCount(string? current, bool isRead, bool hasMangaDex, decimal? mangaDexLatest, string? externalLatest)
+    public static int NewChapterCount(string? current, bool isRead, bool hasMangaDex, decimal? mangaDexLatest, string? externalLatest, bool currentChapterIsPreferredLanguage = false)
     {
         var currentChapter = ParseChapter(current);
         if (currentChapter is null) return 0;
         var latest = LatestChapter(hasMangaDex, mangaDexLatest, externalLatest);
         if (latest > currentChapter) return (int)Math.Ceiling(latest.Value - currentChapter.Value);
-        return hasMangaDex && mangaDexLatest == currentChapter && !isRead ? 1 : 0;
+        return hasMangaDex && mangaDexLatest == currentChapter && !isRead && currentChapterIsPreferredLanguage ? 1 : 0;
     }
 
     private static decimal? ParseChapter(string? value)

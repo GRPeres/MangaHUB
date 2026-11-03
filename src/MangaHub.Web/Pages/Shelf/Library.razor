@@ -1015,7 +1015,7 @@
 
     private static bool HasNewChapters(MangaEntryResponse entry) =>
         ShelfReleaseProgress.NewChapterCount(entry.CurrentChapter, entry.IsRead, HasMangaDexLink(entry),
-            entry.MangaDexPreferredLanguageLatestChapter, entry.ExternalReaderLatestChapter) > 0;
+            entry.MangaDexPreferredLanguageLatestChapter, entry.ExternalReaderLatestChapter, entry.CurrentChapterIsPreferredLanguage) > 0;
 
     private static bool IsReadingWithNewChapters(MangaEntryResponse entry) =>
         IsActivelyTracked(entry)
