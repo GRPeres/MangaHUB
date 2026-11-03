@@ -909,6 +909,77 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenReadingFallbackLanguage_PrefersItsContinuousNextSubchapter()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Cross-language subdivisions", MangaDexId = "cross-language-subdivisions-id" };
+        var series = new MangaSeries { Title = entry.Title, Source = "mangadex-cache", ExternalId = entry.MangaDexId };
+        var current = new MangaChapter { Series = series, SourceId = "chapter-35-1-es", ChapterNumber = "35.1", Language = "es", ImageQuality = "original", PageCount = 20 };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(series);
+        db.Chapters.Add(current);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "35.1", ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.AddRange([
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-36-en", "36", "", 20, "en"),
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-36-1-es", "36.1", "", 20, "es")
+        ]);
+        mangaDex.Pages["chapter-36-1-es"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/361.jpg")];
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var launch = await service.PrepareMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            current.Id,
+            null,
+            "en,pt-br",
+            allowLanguageFallback: false,
+            allowChapterJump: false,
+            CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Equal("36.1", launch.CurrentChapter);
+        Assert.Contains("language=es", launch.ReaderUrl);
+    }
+
+    [Fact]
+    public async Task PrepareMangaDexChapterAsync_CanSwitchFromFallbackSubchapterToTheNextPreferredChapter()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Cross-language chapter boundary", MangaDexId = "cross-language-boundary-id" };
+        var series = new MangaSeries { Title = entry.Title, Source = "mangadex-cache", ExternalId = entry.MangaDexId };
+        var current = new MangaChapter { Series = series, SourceId = "chapter-35-1-es", ChapterNumber = "35.1", Language = "es", ImageQuality = "original", PageCount = 20 };
+        db.MangaEntries.Add(entry);
+        db.Series.Add(series);
+        db.Chapters.Add(current);
+        db.UserMangaEntries.Add(new UserMangaEntry { UserId = userId, MangaEntry = entry, CurrentChapter = "35.1", ReadingStatus = "reading" });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-36-en", "36", "", 20, "en"));
+        mangaDex.Pages["chapter-36-en"] = [new MangaHub.Core.Sources.MangaPage(0, "https://uploads.mangadex.org/data/hash/360.jpg")];
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var launch = await service.PrepareMangaDexChapterAsync(
+            userId,
+            entry.Id,
+            current.Id,
+            null,
+            "en,pt-br",
+            allowLanguageFallback: false,
+            allowChapterJump: false,
+            CancellationToken.None);
+
+        Assert.NotNull(launch);
+        Assert.Equal("36", launch.CurrentChapter);
+        Assert.Contains("language=en", launch.ReaderUrl);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_WhenNextChapterSkipsDecimalSuffix_RequiresJumpConfirmation()
     {
         await using var db = TestDb.Create();
