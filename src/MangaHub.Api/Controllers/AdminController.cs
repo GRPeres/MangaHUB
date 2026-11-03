@@ -269,12 +269,13 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        var result = await admin.UpdateRoleAsync(userId, request, cancellationToken);
+        var result = await admin.UpdateRoleAsync(user.Id, userId, request, cancellationToken);
         return result.Error switch
         {
             null => Ok(result.User),
             "not_found" => NotFound(),
             "bad_role" => BadRequest("Role must be admin or user."),
+            "self_role_change" => BadRequest("You cannot change your own admin role."),
             "last_admin" => BadRequest("At least one admin must remain."),
             _ => BadRequest()
         };

@@ -12,8 +12,13 @@ public sealed class AdminService(UserRepository users)
         return allUsers.Select(ApiMapping.ToUserAdminResponse).ToList();
     }
 
-    public async Task<UpdateUserRoleResult> UpdateRoleAsync(Guid userId, UpdateUserRoleRequest request, CancellationToken cancellationToken)
+    public async Task<UpdateUserRoleResult> UpdateRoleAsync(Guid actingUserId, Guid userId, UpdateUserRoleRequest request, CancellationToken cancellationToken)
     {
+        if (actingUserId == userId)
+        {
+            return UpdateUserRoleResult.SelfRoleChange();
+        }
+
         var role = TextRules.NormalizeUserRole(request.Role);
         if (role is null)
         {
@@ -46,5 +51,6 @@ public sealed record UpdateUserRoleResult(UserAdminResponse? User, string? Error
     public static UpdateUserRoleResult Success(UserAdminResponse user) => new(user, null);
     public static UpdateUserRoleResult NotFound() => new(null, "not_found");
     public static UpdateUserRoleResult BadRole() => new(null, "bad_role");
+    public static UpdateUserRoleResult SelfRoleChange() => new(null, "self_role_change");
     public static UpdateUserRoleResult LastAdmin() => new(null, "last_admin");
 }

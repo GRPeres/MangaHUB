@@ -147,14 +147,14 @@
 
         }
 
-        @if (IsAccountSection && IsAdmin)
+        @if (IsAdministrationSection && IsAdmin)
         {
             <MudPaper Class="pa-4" Elevation="0" Outlined="true">
                 <MudStack Spacing="3">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap">
                         <MudStack Spacing="1">
-                            <MudText Typo="Typo.h2">Users</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Admins can promote or demote accounts.</MudText>
+                            <MudText Typo="Typo.h2">User roles</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Admins can promote or demote other accounts. Your own admin role is protected.</MudText>
                         </MudStack>
                         <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadUsers">Refresh users</MudButton>
                     </MudStack>
@@ -178,7 +178,11 @@
                             </MudTd>
                             <MudTd DataLabel="Created">@context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</MudTd>
                             <MudTd DataLabel="Actions">
-                                @if (context.Role == "admin")
+                                @if (context.Id == currentUser.Id)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Your account</MudText>
+                                }
+                                else if (context.Role == "admin")
                                 {
                                     <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Secondary" OnClick="() => MakeUser(context)">Make user</MudButton>
                                 }
@@ -201,20 +205,30 @@
     [SupplyParameterFromQuery(Name = "section")] public string? SectionQuery { get; set; }
 
     private string activeSection = "account";
-    private static readonly IReadOnlyList<SectionNavigationItem> SettingsSections =
-    [
-        new("account", "Account", Icons.Material.Filled.ManageAccounts),
-        new("reading", "Reading", Icons.Material.Filled.MenuBook),
-        new("other", "Other", Icons.Material.Filled.Tune)
-    ];
+    private IReadOnlyList<SectionNavigationItem> SettingsSections => IsAdmin
+        ?
+        [
+            new("account", "Account", Icons.Material.Filled.ManageAccounts),
+            new("reading", "Reading", Icons.Material.Filled.MenuBook),
+            new("other", "Other", Icons.Material.Filled.Tune),
+            new("administration", "Administration", Icons.Material.Filled.AdminPanelSettings)
+        ]
+        :
+        [
+            new("account", "Account", Icons.Material.Filled.ManageAccounts),
+            new("reading", "Reading", Icons.Material.Filled.MenuBook),
+            new("other", "Other", Icons.Material.Filled.Tune)
+        ];
 
     private bool IsAccountSection => activeSection == "account";
     private bool IsReadingSection => activeSection == "reading";
     private bool IsOtherSection => activeSection == "other";
+    private bool IsAdministrationSection => activeSection == "administration";
     private string SectionTitle => activeSection switch
     {
         "reading" => "Reading preferences",
         "other" => "Other preferences",
+        "administration" => "Administration",
         _ => "Account"
     };
     private string PageTitleText => $"{SectionTitle} | MangaHub";
@@ -259,7 +273,12 @@
             ? currentUser.PendingEmail
             : currentUser?.Email ?? "";
         preferredLanguages = ParseLanguages(currentUser?.PreferredLanguage);
-        if (IsAdmin)
+        if (!IsAdmin && IsAdministrationSection)
+        {
+            Navigation.NavigateTo("/account", replace: true);
+            return;
+        }
+        if (IsAdministrationSection)
         {
             await LoadUsers();
         }
@@ -275,11 +294,17 @@
     {
         "reading" => "reading",
         "other" => "other",
+        "administration" => "administration",
         _ => "account"
     };
 
     private async Task LoadUsers()
     {
+        if (!IsAdmin || !IsAdministrationSection)
+        {
+            users = [];
+            return;
+        }
         users = await AdminApi.GetUsersAsync();
     }
 

@@ -14,7 +14,7 @@ public sealed class AdminServiceTests
         var admin = await auth.RegisterAsync(new AuthRequest("delta", "secret"), CancellationToken.None);
         var service = new AdminService(new UserRepository(db));
 
-        var result = await service.UpdateRoleAsync(admin!.Id, new UpdateUserRoleRequest("user"), CancellationToken.None);
+        var result = await service.UpdateRoleAsync(Guid.NewGuid(), admin!.Id, new UpdateUserRoleRequest("user"), CancellationToken.None);
 
         Assert.Equal("last_admin", result.Error);
     }
@@ -29,9 +29,24 @@ public sealed class AdminServiceTests
         var user = await auth.RegisterAsync(new AuthRequest("beta", "secret"), CancellationToken.None);
         var service = new AdminService(users);
 
-        var result = await service.UpdateRoleAsync(user!.Id, new UpdateUserRoleRequest(" ADMIN "), CancellationToken.None);
+        var result = await service.UpdateRoleAsync(Guid.NewGuid(), user!.Id, new UpdateUserRoleRequest(" ADMIN "), CancellationToken.None);
 
         Assert.Null(result.Error);
         Assert.Equal("admin", result.User!.Role);
+    }
+
+    [Fact]
+    public async Task UpdateRoleAsync_PreventsAnAdminFromChangingTheirOwnRole()
+    {
+        await using var db = TestDb.Create();
+        var users = new UserRepository(db);
+        var auth = new AuthService(users, new FakePasswordHasher(), new FakeSessionTokenService());
+        var admin = await auth.RegisterAsync(new AuthRequest("delta", "secret"), CancellationToken.None);
+        var service = new AdminService(users);
+
+        var result = await service.UpdateRoleAsync(admin!.Id, admin.Id, new UpdateUserRoleRequest("user"), CancellationToken.None);
+
+        Assert.Equal("self_role_change", result.Error);
+        Assert.Equal("admin", (await users.GetByIdAsync(admin.Id, CancellationToken.None))!.Role);
     }
 }
