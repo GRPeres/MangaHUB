@@ -128,6 +128,10 @@ public sealed class ReaderService(
                         : await FindAvailableLanguagesBeforeNumberAsync(mangaDexId, current.ChapterNumber, preferredLanguages, cancellationToken);
                     if (!allowLanguageFallback && availableLanguages.Count > 0)
                     {
+                        if (updateReadingProgress && ParseChapterNumber(current.ChapterNumber) is { } currentNumber)
+                        {
+                            await shelf.ClampMangaDexLanguageLatestChaptersAsync(entry.Id, preferredLanguages, currentNumber, cancellationToken);
+                        }
                         throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
                     }
                     if (afterCachedChapterId is not null
@@ -166,6 +170,10 @@ public sealed class ReaderService(
                     var availableLanguages = await FindAvailableLanguagesAfterNumberAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
                     if (!allowLanguageFallback && availableLanguages.Count > 0)
                     {
+                        if (updateReadingProgress && ParseChapterNumber(shelfEntry.CurrentChapter) is { } currentNumber)
+                        {
+                            await shelf.ClampMangaDexLanguageLatestChaptersAsync(entry.Id, preferredLanguages, currentNumber, cancellationToken);
+                        }
                         throw new MangaDexLanguageFallbackRequiredException(availableLanguages);
                     }
 

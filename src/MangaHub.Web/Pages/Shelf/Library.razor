@@ -649,6 +649,7 @@
                         fallbackLanguages = completedPreparation.AvailableLanguages;
                         fallbackLanguage = fallbackLanguages[0];
                         languageFallbackExternalReaderUrl = completedPreparation.FallbackReaderUrl;
+                        await Load(refreshOfflineSnapshot: true);
                         return;
                     }
                     if (completedPreparation?.IsSeriesComplete == true)

@@ -578,6 +578,45 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenOnlyFallbackLanguagesHaveANextChapter_RepairsStalePreferredLanguageReleaseState()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Fallback-only release", MangaDexId = "fallback-only-id" };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = userId,
+            MangaEntry = entry,
+            CurrentChapter = "2",
+            IsRead = true,
+            ReadingStatus = "reading"
+        });
+        db.MangaDexLanguageLatestChapters.Add(new MangaDexLanguageLatestChapter
+        {
+            MangaEntryId = entry.Id,
+            Language = "en",
+            LatestChapter = 3,
+            SyncedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.AddRange([
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-2", "2", "Last English chapter", 20, "en"),
+            new MangaHub.Core.Sources.MangaSourceChapter("chapter-3-es", "3", "Siguiente", 20, "es")
+        ]);
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        var fallback = await Assert.ThrowsAsync<ReaderService.MangaDexLanguageFallbackRequiredException>(
+            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, "en", false, false, CancellationToken.None));
+
+        Assert.Equal(["es"], fallback.Languages);
+        var latest = db.MangaDexLanguageLatestChapters.Single();
+        Assert.Equal(2, latest.LatestChapter);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_WhenFinishedMangaHasNoNextChapter_MarksShelfEntryDone()
     {
         await using var db = TestDb.Create();
