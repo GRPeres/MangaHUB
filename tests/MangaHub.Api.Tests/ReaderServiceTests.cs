@@ -617,6 +617,41 @@ public sealed class ReaderServiceTests
     }
 
     [Fact]
+    public async Task PrepareMangaDexChapterAsync_WhenUnreadCurrentChapterHasNoRemainingPreferredRelease_RepairsStalePreferredLanguageReleaseState()
+    {
+        await using var db = TestDb.Create();
+        var userId = Guid.NewGuid();
+        var entry = new MangaEntry { Title = "Stale unread release", MangaDexId = "stale-unread-release-id" };
+        db.MangaEntries.Add(entry);
+        db.UserMangaEntries.Add(new UserMangaEntry
+        {
+            UserId = userId,
+            MangaEntry = entry,
+            CurrentChapter = "35.1",
+            IsRead = false,
+            ReadingStatus = "reading"
+        });
+        db.MangaDexLanguageLatestChapters.Add(new MangaDexLanguageLatestChapter
+        {
+            MangaEntryId = entry.Id,
+            Language = "en",
+            LatestChapter = 36,
+            SyncedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new MangaHub.Core.Sources.MangaSourceChapter("chapter-35-en", "35", "Last readable", 20, "en"));
+        var service = CreateReaderService(db, new FakeArchiveReader(), "library", mangaDex, new FakeMangaDexChapterCache());
+
+        await Assert.ThrowsAsync<ReaderService.MangaDexClosestChapterConfirmationRequiredException>(
+            () => service.PrepareMangaDexChapterAsync(userId, entry.Id, null, null, "en", false, false, CancellationToken.None));
+
+        var latest = db.MangaDexLanguageLatestChapters.Single();
+        Assert.Equal(35.1m, latest.LatestChapter);
+    }
+
+    [Fact]
     public async Task PrepareMangaDexChapterAsync_WhenFinishedMangaHasNoNextChapter_MarksShelfEntryDone()
     {
         await using var db = TestDb.Create();

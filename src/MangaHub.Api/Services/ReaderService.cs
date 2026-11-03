@@ -238,8 +238,10 @@ public sealed class ReaderService(
             var mangaDex = sources.Get("mangadex");
             progress?.Report(new ReaderPreparationProgress("Loading MangaDex chapter list", 8));
             var preferredChapters = await GetPreferredMangaDexChaptersAsync(mangaDexId, shelfEntry.CurrentChapter, preferredLanguages, cancellationToken);
-            if (preferredChapters.Count == 0
-                && (await mangaDex.GetChaptersAsync(mangaDexId, null, cancellationToken)).Count == 0)
+            var allChapters = preferredChapters.Count == 0
+                ? await mangaDex.GetChaptersAsync(mangaDexId, null, cancellationToken)
+                : null;
+            if (preferredChapters.Count == 0 && allChapters?.Count == 0)
             {
                 cachedChapter = FindCachedChapterForRemoteMiss(cachedSeries, shelfEntry, requestedChapter, preferredLanguages, quality);
                 if (cachedChapter is null)
@@ -247,6 +249,18 @@ public sealed class ReaderService(
                     throw new MangaDexUnavailableException();
                 }
             }
+
+            // The normal release sync and the reader both use page-bearing MangaDex chapters,
+            // but a previously stored release can still outlive a changed feed. Reconcile it
+            // here as well when reopening an unread current chapter, not only when seeking next.
+            if (isInitialTrackedChapterSelection
+                && updateReadingProgress
+                && ParseChapterNumber(shelfEntry.CurrentChapter) is { } currentNumber
+                && !preferredChapters.Any(chapter => IsSameOrLaterChapter(chapter.Number, shelfEntry.CurrentChapter)))
+            {
+                await shelf.ClampMangaDexLanguageLatestChaptersAsync(entry.Id, preferredLanguages, currentNumber, cancellationToken);
+            }
+
             if (isInitialTrackedChapterSelection
                 && !allowLanguageFallback
                 && !string.IsNullOrWhiteSpace(shelfEntry.CurrentChapter)
