@@ -8,6 +8,7 @@ public partial class CatalogEntryCard
 {
     [Parameter, EditorRequired] public CatalogMangaResponse Entry { get; set; } = default!;
     [Parameter] public string ActiveSourceFilter { get; set; } = "";
+    [Parameter] public bool CanManage { get; set; } = true;
     [Parameter] public EventCallback<CatalogMangaResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<CatalogMangaResponse> OnManageCache { get; set; }
     [Parameter] public EventCallback<string> OnSourceFilter { get; set; }

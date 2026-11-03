@@ -60,9 +60,12 @@
                 else
                 {
                     <MudMenuItem Disabled="true">@_currentUser.Username (@_currentUser.Role)</MudMenuItem>
-                    @if (IsAdmin)
+                    @if (CanViewAdminPanels)
                     {
                         <MudMenuItem Icon="@Icons.Material.Filled.AdminPanelSettings" OnClick="GoAdminManagement">Admin management</MudMenuItem>
+                    }
+                    @if (IsAdmin)
+                    {
                         <MudMenuItem Icon="@Icons.Material.Filled.BugReport" OnClick="GoBentoCardLab">Bento card lab</MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.NotificationsActive" OnClick="TestPhoneNotification">Test phone notification</MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Filled.Storage" OnClick="TestDatabase">Test database</MudMenuItem>
@@ -86,7 +89,7 @@
 
                 <NavRailButton Route="" Label="Home" Icon="@Icons.Material.Filled.Dashboard" Expanded="@_drawerExpanded" IsActive="@IsActive("")" OnNavigate="Navigate" />
                 <NavRailButton Route="library" Label="Shelf" Icon="@Icons.Material.Filled.AutoStories" Expanded="@_drawerExpanded" IsActive="@IsActive("library")" BadgeCount="@_shelfUpdateCount" OnNavigate="Navigate" />
-                @if (IsAdmin)
+                @if (CanViewAdminPanels)
                 {
                     <NavRailButton Route="admin/catalog" Label="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="@_drawerExpanded" IsActive="@IsAdminSectionActive" BadgeCount="@_openAdminIssueCount" OnNavigate="Navigate" />
                 }
@@ -122,7 +125,7 @@
                     <span class="mh-mobile-nav-attention-count" role="status" aria-label="@($"{_shelfUpdateCount} shelf updates need attention")">@_shelfUpdateCount</span>
                 }
             </button>
-            @if (IsAdmin)
+            @if (CanViewAdminPanels)
             {
                 <button type="button" class="@AdminMobileNavClass" @onclick="@(() => Navigate("admin/catalog"))">
                     <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />

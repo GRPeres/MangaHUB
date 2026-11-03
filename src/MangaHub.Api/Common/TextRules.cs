@@ -13,6 +13,9 @@ public static class TextRules
         return normalized is "admin" or "user" ? normalized : null;
     }
 
+    public static bool IsTestRole(string? role) =>
+        string.Equals(role, "test", StringComparison.OrdinalIgnoreCase);
+
     public static string NormalizeShelfStatus(string status)
     {
         var normalized = status.Trim().ToLowerInvariant();

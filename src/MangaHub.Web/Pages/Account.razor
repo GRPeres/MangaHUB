@@ -152,12 +152,8 @@
             <MudPaper Class="pa-4" Elevation="0" Outlined="true">
                 <MudStack Spacing="2">
                     <MudText Typo="Typo.h2">One-time test account</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Creates a random password that is shown once. It must be claimed within 15 minutes, supports one login, and is removed after its short test session ends.</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Creates a random password that is shown once. Test accounts can inspect shared admin screens but cannot change catalog, issue, job, or account data. They must be claimed within 15 minutes, support one login, and are removed after their short test session ends.</MudText>
                     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
-                        <MudSelect T="string" @bind-Value="testAccountRole" Label="Role" Variant="Variant.Outlined" Class="mh-admin-test-role">
-                            <MudSelectItem Value="@("user")">User</MudSelectItem>
-                            <MudSelectItem Value="@("admin")">Admin</MudSelectItem>
-                        </MudSelect>
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@(isCreatingTestAccount ? null : Icons.Material.Filled.PersonAdd)" Disabled="@isCreatingTestAccount" OnClick="CreateOneTimeTestAccount">
                             @(isCreatingTestAccount ? "Creating..." : "Create test account")
                         </MudButton>
@@ -278,7 +274,6 @@
     private bool isSavingAccount;
     private bool isSavingUsage;
     private bool isSavingNotificationCleanup;
-    private string testAccountRole = "user";
     private OneTimeTestAccountCredentialsResponse? testAccountCredentials;
     private bool isCreatingTestAccount;
 
@@ -354,7 +349,7 @@
         testAccountCredentials = null;
         try
         {
-            var result = await AdminApi.CreateOneTimeTestAccountAsync(testAccountRole);
+            var result = await AdminApi.CreateOneTimeTestAccountAsync();
             if (result.Value is null)
             {
                 Messages.Error(result.Error);

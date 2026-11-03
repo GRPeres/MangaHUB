@@ -85,7 +85,7 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         var result = await cache.ListAsync(entryId, language, cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }

@@ -31,18 +31,17 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     }
 
     [HttpPost("test-accounts")]
-    public async Task<IActionResult> CreateOneTimeTestAccount([FromBody] CreateOneTimeTestAccountRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateOneTimeTestAccount(CancellationToken cancellationToken)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
         if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
         if (user.TemporaryAccountExpiresAt is not null) return StatusCode(StatusCodes.Status403Forbidden);
 
-        var result = await testAccounts.CreateAsync(user.Id, request, cancellationToken);
+        var result = await testAccounts.CreateAsync(user.Id, cancellationToken);
         return result.Error switch
         {
             null => Ok(result.Credentials),
-            "bad_role" => BadRequest("Role must be admin or user."),
             "active_account_exists" => Conflict("You already have an unclaimed one-time test account. Use it or wait for it to expire before creating another."),
             _ => BadRequest()
         };
@@ -53,7 +52,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         var connected = await db.Database.CanConnectAsync(cancellationToken);
         return Ok(new DiagnosticResult(connected, connected ? "PostgreSQL is reachable." : "PostgreSQL could not be reached."));
     }
@@ -63,7 +62,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         try
         {
             using var response = await httpClients.CreateClient("mangadex-sync").GetAsync("/ping", cancellationToken);
@@ -80,7 +79,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         return Ok(await operations.GetOverviewAsync(cancellationToken));
     }
 
@@ -89,7 +88,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         return Ok(await operations.GetArchiveOverviewAsync(cancellationToken));
     }
 
@@ -107,7 +106,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         return Ok(await db.MangaEntries.CountAsync(cancellationToken));
     }
 
@@ -116,7 +115,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         return Ok(await operations.ListHistoryAsync(offset, limit, type, status, trigger, cancellationToken));
     }
 
@@ -125,7 +124,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         return Ok(await issues.ListAsync(status, offset, limit, cancellationToken));
     }
 
@@ -134,7 +133,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         return Ok(await issues.CountOpenAsync(cancellationToken));
     }
 
@@ -143,7 +142,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
-        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        if (!CurrentUserService.CanViewAdminPanels(user)) return StatusCode(StatusCodes.Status403Forbidden);
         var result = await issues.GetDetailsAsync(issueId, cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }

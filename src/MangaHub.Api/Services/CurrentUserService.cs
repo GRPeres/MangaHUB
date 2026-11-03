@@ -1,3 +1,4 @@
+using MangaHub.Api.Common;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
 using MangaHub.Infrastructure.Data;
@@ -43,6 +44,9 @@ public sealed class CurrentUserService(MangaHubDbContext db, ISessionTokenServic
 
     public static bool IsAdmin(MangaUser user) =>
         string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase);
+
+    public static bool CanViewAdminPanels(MangaUser user) =>
+        IsAdmin(user) || TextRules.IsTestRole(user.Role);
 
     private static bool IsSessionValid(MangaUser user, DateTimeOffset? issuedAt) =>
         (user.TemporaryAccountExpiresAt is null || user.TemporaryAccountExpiresAt > DateTimeOffset.UtcNow)

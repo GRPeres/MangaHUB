@@ -7,6 +7,7 @@ namespace MangaHub.Web.Components.Catalog;
 public partial class CatalogEntryCardMobile
 {
     [Parameter, EditorRequired] public CatalogMangaResponse Entry { get; set; } = default!;
+    [Parameter] public bool CanManage { get; set; } = true;
     [Parameter] public EventCallback<CatalogMangaResponse> OnEdit { get; set; }
     [Parameter] public EventCallback<CatalogMangaResponse> OnManageCache { get; set; }
     [Parameter] public EventCallback<string> OnCategoryFilter { get; set; }

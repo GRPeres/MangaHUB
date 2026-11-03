@@ -130,17 +130,21 @@
         </MangaBento>
 
         <MudCardActions Class="mh-bento-card-actions">
-            @if (HasMangaDexLink)
+            @if (CanManage && HasMangaDexLink)
             {
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="ManageCache">Manage cached chapters</MudButton>
             }
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
+            @if (CanManage)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="Edit">Edit metadata</MudButton>
+            }
         </MudCardActions>
     </MudCardContent>
 </MudCard>
 </div>
 
 <CatalogEntryCardMobile Entry="@Entry"
+                         CanManage="@CanManage"
                          OnEdit="@OnEdit"
                          OnManageCache="@OnManageCache"
                          OnCategoryFilter="@OnCategoryFilter" />

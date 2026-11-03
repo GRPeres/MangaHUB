@@ -17,17 +17,19 @@ public sealed class OneTimeTestAccountServiceTests
         var service = new OneTimeTestAccountService(users, new FakePasswordHasher(), Options.Create(new MangaHubOptions()));
         var issuerId = Guid.NewGuid();
 
-        var created = await service.CreateAsync(issuerId, new CreateOneTimeTestAccountRequest("admin"), CancellationToken.None);
-        var blocked = await service.CreateAsync(issuerId, new CreateOneTimeTestAccountRequest("user"), CancellationToken.None);
+        var created = await service.CreateAsync(issuerId, CancellationToken.None);
+        var blocked = await service.CreateAsync(issuerId, CancellationToken.None);
 
         Assert.Null(created.Error);
         Assert.NotNull(created.Credentials);
         Assert.StartsWith("test-", created.Credentials.Username);
-        Assert.StartsWith("Test!", created.Credentials.Password);
-        Assert.Equal("admin", created.Credentials.Role);
+        Assert.Matches("^[0-9A-F]{48}$", created.Credentials.Password);
+        Assert.Equal("test", created.Credentials.Role);
         var stored = await users.GetByUsernameAsync(created.Credentials.Username, CancellationToken.None);
         Assert.Equal(issuerId, stored!.TemporaryAccountCreatedByUserId);
         Assert.Equal(0, stored.TemporaryAccountLoginCount);
+        Assert.True(CurrentUserService.CanViewAdminPanels(stored));
+        Assert.False(CurrentUserService.IsAdmin(stored));
         Assert.Equal("active_account_exists", blocked.Error);
     }
 

@@ -30,6 +30,10 @@ else if (overview is not null)
                 <MudButton Class="mh-operations-refresh-desktop" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">Refresh</MudButton>
                 <MudIconButton Class="mh-operations-refresh-mobile" Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" OnClick="LoadAsync" aria-label="Refresh operations" />
             </section>
+            @if (!canManage)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Test accounts can inspect operations and history, but cannot queue or run maintenance.</MudAlert>
+            }
 
             <MangaBento Columns="4" Class="mh-operations-bento">
             <MangaBentoTile Scheme="deep" CornerIcon="@Icons.Material.Filled.Inventory2" ItemClass="mh-operations-stat-item"><div class="mh-operation-stat"><MudText Typo="Typo.overline">Catalog</MudText><MudText Typo="Typo.h3">@overview.CatalogCount</MudText><MudText Typo="Typo.caption">@overview.MangaDexLinkedCount MangaDex-linked</MudText></div></MangaBentoTile>
@@ -53,15 +57,15 @@ else if (overview is not null)
                     <MudText Typo="Typo.overline">Run maintenance</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">Requests are picked up by the worker within about 20 seconds.</MudText>
                     <MudStack Spacing="1">
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Sync" Disabled="@isQueueing" OnClick='@(() => QueueAsync("release-sync"))'>Refresh MangaDex releases</MudButton>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Link" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangadex-identity-audit"))'>Audit MangaDex links</MudButton>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PendingActions" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangadex-release-stall-check"))'>Check stalled MangaDex releases</MudButton>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.RestartAlt" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangadex-status-sync"))'>Refresh MangaDex statuses and repair shelves</MudButton>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.DeleteSweep" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangadex-cache-cleanup"))'>Trim read MangaDex cache</MudButton>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.FactCheck" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangadex-archive-integrity-check"))'>Verify archived CBZ samples</MudButton>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Update" Disabled="@isQueueing" OnClick='@(() => QueueAsync("mangaupdates-sync"))'>Refresh MangaUpdates</MudButton>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Link" Disabled="@isQueueing" OnClick='@(() => QueueAsync("catalog-id-enrichment"))'>Fill missing MangaDex and MangaUpdates IDs</MudButton>
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Folder" Disabled="@isQueueing" OnClick='@(() => QueueAsync("library-scan"))'>Scan local library</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Sync" Disabled="@(!canManage || isQueueing)" OnClick='@(() => QueueAsync("release-sync"))'>Refresh MangaDex releases</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Link" Disabled="@(!canManage || isQueueing)" OnClick='@(() => QueueAsync("mangadex-identity-audit"))'>Audit MangaDex links</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PendingActions" Disabled="@(!canManage || isQueueing)" OnClick='@(() => QueueAsync("mangadex-release-stall-check"))'>Check stalled MangaDex releases</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.RestartAlt" Disabled="@(!canManage || isQueueing)" OnClick='@(() => QueueAsync("mangadex-status-sync"))'>Refresh MangaDex statuses and repair shelves</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.DeleteSweep" Disabled="@(!canManage || isQueueing)" OnClick='@(() => QueueAsync("mangadex-cache-cleanup"))'>Trim read MangaDex cache</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.FactCheck" Disabled="@(!canManage || isQueueing)" OnClick='@(() => QueueAsync("mangadex-archive-integrity-check"))'>Verify archived CBZ samples</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Update" Disabled="@(!canManage || isQueueing)" OnClick='@(() => QueueAsync("mangaupdates-sync"))'>Refresh MangaUpdates</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Link" Disabled="@(!canManage || isQueueing)" OnClick='@(() => QueueAsync("catalog-id-enrichment"))'>Fill missing MangaDex and MangaUpdates IDs</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Folder" Disabled="@(!canManage || isQueueing)" OnClick='@(() => QueueAsync("library-scan"))'>Scan local library</MudButton>
                     </MudStack>
                 </div>
             </MangaBentoTile>
@@ -130,12 +134,13 @@ else if (overview is not null)
         ("library-scan", "Local library scan"),
         ("idle-backfill", "Idle backfill")
     ];
-    private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase) || string.Equals(user?.Role, "test", StringComparison.OrdinalIgnoreCase);
+    private bool canManage => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     protected override async Task OnInitializedAsync() { user = await Auth.GetCurrentUserAsync(); if (isAdmin) await LoadAsync(); else isLoading = false; }
     private async Task LoadAsync() { isLoading = true; try { overview = await AdminApi.GetOperationsAsync(); if (overview is null) { Messages.Error("Could not load operations."); return; } await ReloadHistoryAsync(); } finally { isLoading = false; } }
     private async Task ReloadHistoryAsync() { if (isLoadingHistory) return; isLoadingHistory = true; try { historyJobs = await AdminApi.GetMaintenanceHistoryAsync(0, HistoryPageSize, historyType, historyStatus, historyTrigger); hasMoreHistory = historyJobs.Count == HistoryPageSize; } finally { isLoadingHistory = false; } }
     private async Task LoadMoreHistoryAsync() { if (isLoadingMoreHistory) return; isLoadingMoreHistory = true; try { var older = await AdminApi.GetMaintenanceHistoryAsync(historyJobs.Count, HistoryPageSize, historyType, historyStatus, historyTrigger); historyJobs.AddRange(older); hasMoreHistory = older.Count == HistoryPageSize; } finally { isLoadingMoreHistory = false; } }
-    private async Task QueueAsync(string type) { isQueueing = true; try { var job = await AdminApi.QueueMaintenanceJobAsync(type); if (job is null) { Messages.Error("Could not queue maintenance."); return; } Messages.Success($"{JobLabel(job.Type)} is {job.Status}."); await LoadAsync(); } finally { isQueueing = false; } }
+    private async Task QueueAsync(string type) { if (!canManage) return; isQueueing = true; try { var job = await AdminApi.QueueMaintenanceJobAsync(type); if (job is null) { Messages.Error("Could not queue maintenance."); return; } Messages.Success($"{JobLabel(job.Type)} is {job.Status}."); await LoadAsync(); } finally { isQueueing = false; } }
     private static string FormatBytes(long bytes)
     {
         if (bytes < 1024) return $"{bytes} B";

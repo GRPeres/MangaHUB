@@ -45,6 +45,7 @@ public partial class MainLayout : IDisposable
     private bool _externalReaderLinkReportOpen;
     private bool _externalReaderLinkAlreadyReported;
     private bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private bool CanViewAdminPanels => IsAdmin || string.Equals(_currentUser?.Role, "test", StringComparison.OrdinalIgnoreCase);
     private bool IsLocalhost => Navigation.Uri.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("https://localhost", StringComparison.OrdinalIgnoreCase)
         || Navigation.Uri.StartsWith("http://127.0.0.1", StringComparison.OrdinalIgnoreCase)
@@ -436,7 +437,7 @@ public partial class MainLayout : IDisposable
 
     private async Task LoadAdminIssueCountAsync()
     {
-        if (!IsAdmin)
+        if (!CanViewAdminPanels)
         {
             _openAdminIssueCount = 0;
             return;

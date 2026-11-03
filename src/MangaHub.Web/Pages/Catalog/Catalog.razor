@@ -25,10 +25,13 @@
                     <MudSelectItem T="string" Value="@language.Code">@language.Label</MudSelectItem>
                 }
             </MudSelect>
-            <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
-                <MudMenuItem Icon="@Icons.Material.Filled.LibraryAdd" OnClick="OpenAddCatalog">Add manga</MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportCatalog">Import CSV</MudMenuItem>
-            </MudMenu>
+            @if (CanManageCatalog)
+            {
+                <MudMenu Label="Add" StartIcon="@Icons.Material.Filled.AddCircleOutline" Variant="Variant.Filled" Color="Color.Primary">
+                    <MudMenuItem Icon="@Icons.Material.Filled.LibraryAdd" OnClick="OpenAddCatalog">Add manga</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.UploadFile" OnClick="OpenImportCatalog">Import CSV</MudMenuItem>
+                </MudMenu>
+            }
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterList" OnClick="OpenFilters">@FilterButtonLabel</MudButton>
         </MudStack>
     </MudStack>
@@ -37,7 +40,7 @@
     {
         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">Sign in first to manage the catalog.</MudAlert>
     }
-    else if (!IsAdmin)
+    else if (!CanViewCatalog)
     {
         <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Admin permissions are required to manage catalog metadata.</MudAlert>
     }
@@ -64,7 +67,7 @@
             <MudStack Spacing="2">
                 @foreach (var item in FilteredCatalog)
                 {
-                    <CatalogEntryCard @key="item.Id" Entry="@item" ActiveSourceFilter="@sourceFilter" OnEdit="EditCatalog" OnManageCache="OpenCache" OnSourceFilter="ToggleSourceFilter" OnCategoryFilter="OpenCategoryFilter" />
+                    <CatalogEntryCard @key="item.Id" Entry="@item" ActiveSourceFilter="@sourceFilter" CanManage="@CanManageCatalog" OnEdit="EditCatalog" OnManageCache="OpenCache" OnSourceFilter="ToggleSourceFilter" OnCategoryFilter="OpenCategoryFilter" />
                 }
 
                 @if (hasMoreCatalog)
@@ -166,7 +169,8 @@
 
 @code {
     private UserResponse? currentUser;
-    private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private bool CanManageCatalog => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private bool CanViewCatalog => CanManageCatalog || string.Equals(currentUser?.Role, "test", StringComparison.OrdinalIgnoreCase);
     private List<CatalogMangaResponse> catalog = [];
     private const int PageSize = 24;
     private bool hasMoreCatalog;
@@ -199,7 +203,7 @@
         Refreshes.Changed += OnAppRefresh;
         currentUser = await Auth.GetCurrentUserAsync(forceRefresh: true);
         selectedLanguage = (currentUser?.PreferredLanguage ?? "en").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? "en";
-        if (!IsAdmin)
+        if (!CanViewCatalog)
         {
             return;
         }
@@ -253,7 +257,7 @@
 
     private async Task LoadCatalog()
     {
-        if (!IsAdmin)
+        if (!CanViewCatalog)
         {
             return;
         }
