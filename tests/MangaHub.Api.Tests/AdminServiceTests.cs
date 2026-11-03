@@ -49,4 +49,28 @@ public sealed class AdminServiceTests
         Assert.Equal("self_role_change", result.Error);
         Assert.Equal("admin", (await users.GetByIdAsync(admin.Id, CancellationToken.None))!.Role);
     }
+
+    [Fact]
+    public async Task DeleteTestAccountAsync_DeletesOnlyTemporaryTestAccounts()
+    {
+        await using var db = TestDb.Create();
+        var users = new UserRepository(db);
+        var auth = new AuthService(users, new FakePasswordHasher(), new FakeSessionTokenService());
+        var normalUser = await auth.RegisterAsync(new AuthRequest("delta", "secret"), CancellationToken.None);
+        var testUser = new MangaHub.Core.Models.MangaUser
+        {
+            Username = "test-account",
+            PasswordHash = "hash",
+            Role = "test",
+            TemporaryAccountCreatedByUserId = normalUser!.Id,
+            TemporaryAccountExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15)
+        };
+        await users.AddAsync(testUser, CancellationToken.None);
+        var service = new AdminService(users);
+
+        Assert.True(await service.DeleteTestAccountAsync(testUser.Id, CancellationToken.None));
+        Assert.Null(await users.GetByIdAsync(testUser.Id, CancellationToken.None));
+        Assert.False(await service.DeleteTestAccountAsync(normalUser.Id, CancellationToken.None));
+        Assert.NotNull(await users.GetByIdAsync(normalUser.Id, CancellationToken.None));
+    }
 }

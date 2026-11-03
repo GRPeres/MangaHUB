@@ -44,6 +44,9 @@ public sealed class AdminService(UserRepository users)
         await users.SaveChangesAsync(cancellationToken);
         return UpdateUserRoleResult.Success(ApiMapping.ToUserAdminResponse(targetUser));
     }
+
+    public Task<bool> DeleteTestAccountAsync(Guid userId, CancellationToken cancellationToken) =>
+        users.DeleteTemporaryTestAccountAsync(userId, cancellationToken);
 }
 
 public sealed record UpdateUserRoleResult(UserAdminResponse? User, string? Error)

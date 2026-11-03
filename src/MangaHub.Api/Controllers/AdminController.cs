@@ -321,4 +321,17 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
             _ => BadRequest()
         };
     }
+
+    [HttpDelete("users/{userId:guid}")]
+    public async Task<IActionResult> DeleteTestAccount(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user) || user.TemporaryAccountExpiresAt is not null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        return await admin.DeleteTestAccountAsync(userId, cancellationToken) ? NoContent() : NotFound();
+    }
 }

@@ -209,6 +209,12 @@
                                     {
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">Your account</MudText>
                                     }
+                                    else if (string.Equals(context.Role, "test", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" Disabled="@(deletingTestAccountId == context.Id)" OnClick="() => DeleteTestAccount(context)">
+                                            @(deletingTestAccountId == context.Id ? "Deleting..." : "Delete test account")
+                                        </MudButton>
+                                    }
                                     else if (context.Role == "admin")
                                     {
                                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Secondary" OnClick="() => MakeUser(context)">Make user</MudButton>
@@ -266,6 +272,7 @@
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private List<UserAdminResponse> users = [];
     private bool isLoadingUsers;
+    private Guid? deletingTestAccountId;
     private string message = "";
     private Severity messageSeverity = Severity.Info;
     private static readonly (string Code, string Label)[] AvailableLanguages =
@@ -371,6 +378,30 @@
     private async Task MakeAdmin(UserAdminResponse user) => await SetRole(user, "admin");
 
     private async Task MakeUser(UserAdminResponse user) => await SetRole(user, "user");
+
+    private async Task DeleteTestAccount(UserAdminResponse user)
+    {
+        if (!string.Equals(user.Role, "test", StringComparison.OrdinalIgnoreCase)) return;
+
+        deletingTestAccountId = user.Id;
+        try
+        {
+            if (!await AdminApi.DeleteTestAccountAsync(user.Id))
+            {
+                messageSeverity = Severity.Error;
+                message = "Could not delete the test account.";
+                return;
+            }
+
+            users.RemoveAll(item => item.Id == user.Id);
+            messageSeverity = Severity.Success;
+            message = $"Deleted test account {user.Username}.";
+        }
+        finally
+        {
+            deletingTestAccountId = null;
+        }
+    }
 
     private async Task CreateOneTimeTestAccount()
     {
