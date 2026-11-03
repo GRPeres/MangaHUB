@@ -185,35 +185,45 @@
                         <MudAlert Severity="@messageSeverity" Variant="Variant.Outlined">@message</MudAlert>
                     }
 
-                    <MudTable Items="@users" Dense="true" Hover="true">
-                        <HeaderContent>
-                            <MudTh>Username</MudTh>
-                            <MudTh>Role</MudTh>
-                            <MudTh>Created</MudTh>
-                            <MudTh></MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="Username">@context.Username</MudTd>
-                            <MudTd DataLabel="Role">
-                                <MudChip T="string" Size="Size.Small" Color="@(context.Role == "admin" ? Color.Secondary : Color.Primary)" Variant="Variant.Outlined">@context.Role</MudChip>
-                            </MudTd>
-                            <MudTd DataLabel="Created">@context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</MudTd>
-                            <MudTd DataLabel="Actions">
-                                @if (context.Id == currentUser.Id)
-                                {
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Your account</MudText>
-                                }
-                                else if (context.Role == "admin")
-                                {
-                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Secondary" OnClick="() => MakeUser(context)">Make user</MudButton>
-                                }
-                                else
-                                {
-                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="() => MakeAdmin(context)">Make admin</MudButton>
-                                }
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
+                    @if (isLoadingUsers)
+                    {
+                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" aria-label="Loading users" />
+                    }
+                    else
+                    {
+                        <MudTable Items="@users" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>Username</MudTh>
+                                <MudTh>Role</MudTh>
+                                <MudTh>Created</MudTh>
+                                <MudTh></MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Username">@context.Username</MudTd>
+                                <MudTd DataLabel="Role">
+                                    <MudChip T="string" Size="Size.Small" Color="@(context.Role == "admin" ? Color.Secondary : Color.Primary)" Variant="Variant.Outlined">@context.Role</MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Created">@context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</MudTd>
+                                <MudTd DataLabel="Actions">
+                                    @if (context.Id == currentUser.Id)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Your account</MudText>
+                                    }
+                                    else if (context.Role == "admin")
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Secondary" OnClick="() => MakeUser(context)">Make user</MudButton>
+                                    }
+                                    else
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="() => MakeAdmin(context)">Make admin</MudButton>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                            <NoRecordsContent>
+                                <MudText Color="Color.Secondary">No user accounts were returned.</MudText>
+                            </NoRecordsContent>
+                        </MudTable>
+                    }
                 </MudStack>
             </MudPaper>
         }
@@ -255,6 +265,7 @@
     private string PageTitleText => $"{SectionTitle} | MangaHub";
     private bool IsAdmin => string.Equals(currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private List<UserAdminResponse> users = [];
+    private bool isLoadingUsers;
     private string message = "";
     private Severity messageSeverity = Severity.Info;
     private static readonly (string Code, string Label)[] AvailableLanguages =
@@ -277,9 +288,18 @@
     private OneTimeTestAccountCredentialsResponse? testAccountCredentials;
     private bool isCreatingTestAccount;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         activeSection = NormalizeSection(SectionQuery);
+
+        if (IsAdministrationSection && IsAdmin)
+        {
+            await LoadUsers();
+        }
+        else if (!IsAdministrationSection)
+        {
+            users = [];
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -328,7 +348,16 @@
             users = [];
             return;
         }
-        users = await AdminApi.GetUsersAsync();
+
+        isLoadingUsers = true;
+        try
+        {
+            users = await AdminApi.GetUsersAsync();
+        }
+        finally
+        {
+            isLoadingUsers = false;
+        }
     }
 
     private async Task SetRole(UserAdminResponse user, string role)
