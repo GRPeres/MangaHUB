@@ -105,6 +105,34 @@ public sealed class MangaDexTranslationCoverageServiceTests
         Assert.Empty(db.AdminIssues);
         Assert.True(await coverage.HasSufficientExternalCoverageAsync(user.Id, manga.Id, CancellationToken.None));
     }
+
+    [Fact]
+    public async Task RunAsync_UsesCatalogVerifiedExternalCoverageForEveryReader()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry
+        {
+            Title = "Verified external source",
+            MangaDexId = "id",
+            FallbackReaderUrl = "https://example.com/read",
+            ExternalReaderLatestChapter = 20,
+            ExternalReaderLatestChapterObservedAt = DateTimeOffset.UtcNow
+        };
+        var user = new MangaUser { Username = "reader", PasswordHash = "hash", PreferredLanguage = "en" };
+        db.AddRange(
+            manga,
+            user,
+            new UserMangaEntry { UserId = user.Id, MangaEntryId = manga.Id, ReadingStatus = "reading" },
+            new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "en", LatestChapter = 10 },
+            new MangaDexLanguageLatestChapter { MangaEntryId = manga.Id, Language = "fr", LatestChapter = 20 });
+        await db.SaveChangesAsync();
+
+        var coverage = CreateService(db);
+        await coverage.RunAsync(CancellationToken.None);
+
+        Assert.Empty(db.AdminIssues);
+        Assert.True(await coverage.HasSufficientExternalCoverageAsync(user.Id, manga.Id, CancellationToken.None));
+    }
     [Fact]
     public async Task RunAsync_UsesEveryPreferredLanguageAndCreatesOneRepairableIssue()
     {

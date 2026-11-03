@@ -8,7 +8,7 @@ namespace MangaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, OneTimeTestAccountService testAccounts, AdminOperationsService operations, IssueReportingService issues, CatalogService catalog, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
+public sealed class AdminController(CurrentUserService currentUsers, AdminService admin, OneTimeTestAccountService testAccounts, AdminOperationsService operations, IssueReportingService issues, MangaDexTranslationCoverageService coverage, CatalogService catalog, MangaHubDbContext db, IHttpClientFactory httpClients) : ControllerBase
 {
     [HttpGet("users")]
     public async Task<IActionResult> Users(CancellationToken cancellationToken)
@@ -154,6 +154,22 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         if (user is null) return Unauthorized();
         if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
         return await issues.ResolveExternalReaderLinkAsync(user.Id, issueId, request, cancellationToken) ? NoContent() : BadRequest("Enter a valid replacement URL.");
+    }
+
+    [HttpPost("issues/{issueId:guid}/record-external-coverage")]
+    public async Task<IActionResult> RecordExternalReaderCoverage(Guid issueId, [FromBody] RecordExternalReaderCoverageRequest request, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return StatusCode(StatusCodes.Status403Forbidden);
+        var mangaEntryId = await issues.RecordExternalReaderCoverageAsync(issueId, request, cancellationToken);
+        if (mangaEntryId is null)
+        {
+            return BadRequest("Enter a valid non-negative chapter number for an issue with an external reader.");
+        }
+
+        await coverage.RunAsync(mangaEntryId, cancellationToken);
+        return NoContent();
     }
 
     [HttpPost("issues/{issueId:guid}/resolve-cover")]

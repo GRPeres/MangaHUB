@@ -155,6 +155,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "VolumeCount" integer NULL,
                 "MangaDexUrl" text NOT NULL,
                 "FallbackReaderUrl" text NOT NULL DEFAULT '',
+                "ExternalReaderLatestChapter" numeric(10,3) NULL,
+                "ExternalReaderLatestChapterObservedAt" timestamp with time zone NULL,
                 "ReaderPreference" character varying(20) NOT NULL DEFAULT 'mangahub',
                 "MangaDexId" character varying(80) NOT NULL,
                 "MangaDexLatestChapter" numeric(10,3) NULL,
@@ -189,6 +191,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapterPublishedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "FallbackReaderUrl" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ExternalReaderLatestChapter" numeric(10,3) NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ExternalReaderLatestChapterObservedAt" timestamp with time zone NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ReaderPreference" character varying(20) NOT NULL DEFAULT 'mangahub';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexUrl" text NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ALTER COLUMN "MangaDexUrl" SET DEFAULT '';
@@ -440,6 +444,7 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MyAnimeListId" ON manga_entries ("MyAnimeListId");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_Title" ON manga_entries ("Title");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLatestChapterObservedAt" ON manga_entries ("MangaDexLatestChapterObservedAt");
+            CREATE INDEX IF NOT EXISTS "IX_manga_entries_ExternalReaderLatestChapterObservedAt" ON manga_entries ("ExternalReaderLatestChapterObservedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLatestChapterPublishedAt" ON manga_entries ("MangaDexLatestChapterPublishedAt");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexNonHiatusSince" ON manga_entries ("MangaDexNonHiatusSince");
             CREATE INDEX IF NOT EXISTS "IX_manga_entries_MangaDexLastSyncedAt" ON manga_entries ("MangaDexLastSyncedAt");

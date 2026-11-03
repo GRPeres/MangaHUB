@@ -120,7 +120,7 @@ else
                                 <MudText Typo="Typo.body2">Latest in any MangaDex language: <strong class="mh-issue-chapter">Ch. @coverage.LatestChapter</strong>.</MudText>
                                 @foreach (var affected in coverage.AffectedLanguages)
                                 {
-                                    <MudText Typo="Typo.body2">@affected.Languages: latest readable <strong class="mh-issue-chapter">Ch. @affected.LatestChapter</strong>@(affected.IncludesExternal ? " (including external reader)" : "") · @affected.Gap chapters behind.</MudText>
+                                    <MudText Typo="Typo.body2">@affected.Languages: latest readable <strong class="mh-issue-chapter">Ch. @affected.LatestChapter</strong>@(affected.IncludesExternal ? $" (including external reader through Ch. {affected.ExternalLatestChapter})" : "") · @affected.Gap chapters behind.</MudText>
                                 }
                             </MudStack>
                         }
@@ -260,8 +260,27 @@ else
                 }
                 @if (IsExternalReaderRepairIssue)
                 {
-                    <MudTextField T="string" @bind-Value="replacementUrl" Label="@ExternalReaderReplacementLabel" HelperText="@ExternalReaderReplacementHelp" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
-                    <MudStack Row="true" Spacing="1" Class="flex-wrap"><MudButton Href="@GoogleSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">Google</MudButton><MudButton Href="@DuckDuckGoSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">DuckDuckGo</MudButton><MudButton Href="@MangaDexSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaDex</MudButton><MudButton Href="@MalSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MAL</MudButton><MudButton Href="@MangaUpdatesSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaUpdates</MudButton></MudStack>
+                    @if (ShouldOfferReplacementExternalReader)
+                    {
+                        <MudTextField T="string" @bind-Value="replacementUrl" Label="@ExternalReaderReplacementLabel" HelperText="@ExternalReaderReplacementHelp" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
+                        <MudStack Row="true" Spacing="1" Class="flex-wrap"><MudButton Href="@GoogleSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">Google</MudButton><MudButton Href="@DuckDuckGoSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">DuckDuckGo</MudButton><MudButton Href="@MangaDexSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaDex</MudButton><MudButton Href="@MalSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MAL</MudButton><MudButton Href="@MangaUpdatesSearchUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">MangaUpdates</MudButton></MudStack>
+                    }
+                    @if (IsTranslationCoverageIssue && HasExistingFallbackReader)
+                    {
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudStack Spacing="2">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.subtitle2">Verify the existing external reader</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">The shared source exists, but MangaHub only counts an external chapter after it has been confirmed. Record the newest chapter you verified there; the coverage check will resolve automatically once it is close enough.</MudText>
+                                </MudStack>
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="flex-wrap">
+                                    <MudNumericField T="decimal?" @bind-Value="confirmedExternalLatestChapter" Label="Verified through chapter" Variant="Variant.Outlined" Min="0" Step="0.001m" Disabled="@(!canManage || !IsOpen || saving)" />
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!canManage || !IsOpen || saving || confirmedExternalLatestChapter is null)" OnClick="RecordExternalCoverageAsync">@(saving ? "Saving..." : "Record coverage")</MudButton>
+                                    <MudButton Href="@selected.FallbackReaderUrl" Target="_blank" Rel="noopener" Variant="Variant.Outlined">Open source</MudButton>
+                                </MudStack>
+                            </MudStack>
+                        </MudPaper>
+                    }
                 }
                 @if (IsCoverImageIssue)
                 {
@@ -347,7 +366,7 @@ else
                 <MudTextField T="string" @bind-Value="resolutionNote" Label="Resolution note" Lines="2" Variant="Variant.Outlined" Disabled="@(!IsOpen)" />
                 <MudDivider />
                 @foreach (var report in selected.Reports) { <MudPaper Outlined="true" Class="pa-2"><MudText Typo="Typo.subtitle2">@ReasonLabel(report.Reason)</MudText>@if (!string.IsNullOrWhiteSpace(report.Note)) { <MudText Typo="Typo.body2">@report.Note</MudText> }<MudText Typo="Typo.caption" Color="Color.Secondary">Reported URL: @report.SnapshotValue</MudText></MudPaper> }
-                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">@if (selected.Status == "open") { <MudButton Variant="Variant.Text" Color="Color.Secondary" Disabled="@saving" OnClick="DismissAsync">Dismiss</MudButton>@if (IsExternalReaderRepairIssue) { <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@saving" OnClick="ResolveAsync">@(saving ? "Saving..." : "Save repair and resolve")</MudButton> }@if (IsCoverImageIssue) { <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@saving" OnClick="ResolveCoverAsync">@(saving ? "Saving..." : "Save cover and resolve")</MudButton> } } else { <MudButton Variant="Variant.Outlined" Disabled="@saving" OnClick="ReopenAsync">Reopen</MudButton> }</MudStack>
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">@if (selected.Status == "open") { <MudButton Variant="Variant.Text" Color="Color.Secondary" Disabled="@saving" OnClick="DismissAsync">Dismiss</MudButton>@if (CanResolveExternalReaderIssue) { <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@saving" OnClick="ResolveAsync">@(saving ? "Saving..." : "Save repair and resolve")</MudButton> }@if (IsCoverImageIssue) { <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@saving" OnClick="ResolveCoverAsync">@(saving ? "Saving..." : "Save cover and resolve")</MudButton> } } else { <MudButton Variant="Variant.Outlined" Disabled="@saving" OnClick="ReopenAsync">Reopen</MudButton> }</MudStack>
             </MudStack>
         </section>
     </div>
@@ -360,6 +379,7 @@ else
     private string status = "open";
     private string replacementUrl = "";
     private string replacementCoverUrl = "";
+    private decimal? confirmedExternalLatestChapter;
     private string resolutionNote = "";
     private string metadataQuery = "";
     private string metadataMessage = "";
@@ -380,6 +400,9 @@ else
     private bool IsExternalReaderRepairIssue => IsExternalReaderLinkIssue
         || string.Equals(selected?.Kind, "mangadex-language-coverage", StringComparison.OrdinalIgnoreCase)
         || string.Equals(selected?.Kind, "mangadex-translation-abandoned", StringComparison.OrdinalIgnoreCase);
+    private bool HasExistingFallbackReader => !string.IsNullOrWhiteSpace(selected?.FallbackReaderUrl);
+    private bool ShouldOfferReplacementExternalReader => IsExternalReaderLinkIssue || (IsTranslationCoverageIssue && !HasExistingFallbackReader);
+    private bool CanResolveExternalReaderIssue => IsExternalReaderRepairIssue && ShouldOfferReplacementExternalReader;
     private bool IsCoverImageIssue => string.Equals(selected?.Kind, "cover-image", StringComparison.OrdinalIgnoreCase);
     private bool IsTranslationCoverageIssue => string.Equals(selected?.Kind, "mangadex-language-coverage", StringComparison.OrdinalIgnoreCase)
         || string.Equals(selected?.Kind, "mangadex-translation-abandoned", StringComparison.OrdinalIgnoreCase);
@@ -474,8 +497,9 @@ else
                             : "preferred languages";
                         var preferred = group.TryGetProperty("latestReadableChapter", out var readableNode) && readableNode.ValueKind != System.Text.Json.JsonValueKind.Null ? FormatChapter(readableNode) : group.TryGetProperty("latestPreferredLanguageChapter", out var preferredNode) && preferredNode.ValueKind != System.Text.Json.JsonValueKind.Null ? FormatChapter(preferredNode) : "none";
                         var includesExternal = group.TryGetProperty("latestExternalReaderChapter", out var externalNode) && externalNode.ValueKind == System.Text.Json.JsonValueKind.Number;
+                        var externalLatest = includesExternal ? FormatChapter(externalNode) : "";
                         var gap = group.TryGetProperty("chaptersBehind", out var gapNode) ? FormatChapter(gapNode) : "?";
-                        return new TranslationCoverageLanguageDetail(languages, preferred, gap, includesExternal);
+                        return new TranslationCoverageLanguageDetail(languages, preferred, gap, includesExternal, externalLatest);
                     })
                     .ToList()
                     : [];
@@ -563,11 +587,40 @@ else
     private void ToggleGroup(string kind) { if (!collapsedGroups.Add(kind)) collapsedGroups.Remove(kind); }
     private void CollapseAll() { foreach (var group in IssueGroups) collapsedGroups.Add(group.Key); }
     private void ExpandAll() => collapsedGroups.Clear();
-    private async Task OpenIssueAsync(Guid id) { selected = await AdminApi.GetIssueAsync(id); if (selected is null) Messages.Error("Could not load this issue."); else { replacementUrl = selected.FallbackReaderUrl; replacementCoverUrl = selected.CoverUrl; resolutionNote = selected.ResolutionNote; metadataQuery = selected.Title; metadataResults = []; metadataMessage = ""; catalogRegistrationMetadata = null; catalogRegistrationFallbackUrl = ""; } }
+    private async Task OpenIssueAsync(Guid id) { selected = await AdminApi.GetIssueAsync(id); if (selected is null) Messages.Error("Could not load this issue."); else { replacementUrl = selected.FallbackReaderUrl; replacementCoverUrl = selected.CoverUrl; confirmedExternalLatestChapter = TranslationCoverage?.HighestExternalLatestChapter; resolutionNote = selected.ResolutionNote; metadataQuery = selected.Title; metadataResults = []; metadataMessage = ""; catalogRegistrationMetadata = null; catalogRegistrationFallbackUrl = ""; } }
     private void CloseIssue() { selected = null; metadataResults = []; metadataMessage = ""; catalogRegistrationMetadata = null; catalogRegistrationFallbackUrl = ""; identityChoice = ""; identityCandidate = null; }
     private void SelectIdentityChoice(string choice) { identityChoice = choice; identityCandidate = null; }
     private Task ConfirmIdentityChoiceAsync() => identityChoice == "mangadex" ? RepairMalIdentityAsync() : RepairMangaDexIdentityAsync();
     private async Task ResolveAsync() { if (!canManage || selected is null) return; saving = true; try { if (await AdminApi.ResolveIssueAsync(selected.Id, new(replacementUrl, resolutionNote))) { Messages.Success("The shared link was repaired and reporters were notified.", "Issue resolved"); CloseIssue(); await LoadAsync(); } else Messages.Error("Enter a valid replacement URL.", "Could not resolve issue"); } finally { saving = false; } }
+    private async Task RecordExternalCoverageAsync()
+    {
+        if (!canManage || selected is null || confirmedExternalLatestChapter is null) return;
+        saving = true;
+        try
+        {
+            if (!await AdminApi.RecordExternalReaderCoverageAsync(selected.Id, new(confirmedExternalLatestChapter.Value, resolutionNote)))
+            {
+                Messages.Error("Enter a valid non-negative chapter number.", "Could not record coverage");
+                return;
+            }
+
+            await OpenIssueAsync(selected.Id);
+            await LoadAsync();
+            if (selected?.Status == "resolved")
+            {
+                Messages.Success("The external source now covers the language gap. The issue was resolved.", "Coverage recorded");
+                CloseIssue();
+            }
+            else
+            {
+                Messages.Info("External coverage was recorded. The source still trails the newest MangaDex language.", "Coverage recorded");
+            }
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
     private async Task ResolveCoverAsync() { if (!canManage || selected is null) return; saving = true; try { if (await AdminApi.ResolveCoverImageIssueAsync(selected.Id, new(replacementCoverUrl, resolutionNote))) { Messages.Success("The shared cover was updated and reporters were notified.", "Issue resolved"); CloseIssue(); await LoadAsync(); } else Messages.Error("Enter a valid image URL, or leave it blank to remove the cover.", "Could not resolve issue"); } finally { saving = false; } }
     private async Task ReintegrateWithMangaDexAsync()
     {
@@ -808,8 +861,15 @@ else
     private static string FormatChapter(System.Text.Json.JsonElement value) => value.TryGetDecimal(out var chapter)
         ? chapter.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
         : value.ToString();
-    private sealed record TranslationCoverageDetail(string LatestChapter, List<TranslationCoverageLanguageDetail> AffectedLanguages);
-    private sealed record TranslationCoverageLanguageDetail(string Languages, string LatestChapter, string Gap, bool IncludesExternal);
+    private sealed record TranslationCoverageDetail(string LatestChapter, List<TranslationCoverageLanguageDetail> AffectedLanguages)
+    {
+        public decimal? HighestExternalLatestChapter => AffectedLanguages
+            .Where(item => item.IncludesExternal && decimal.TryParse(item.ExternalLatestChapter, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out _))
+            .Select(item => decimal.Parse(item.ExternalLatestChapter, System.Globalization.CultureInfo.InvariantCulture))
+            .DefaultIfEmpty()
+            .Max() is var latest && latest > 0m ? latest : null;
+    }
+    private sealed record TranslationCoverageLanguageDetail(string Languages, string LatestChapter, string Gap, bool IncludesExternal, string ExternalLatestChapter);
     private sealed record ReleaseStallDetail(string LatestChapter, string InactiveDays, string LastObserved);
     private sealed record MangaDexIdentityMismatchDetail(string ExpectedMyAnimeListId, string LinkedMangaDexId, string LinkedMyAnimeListId, string LinkedTitle);
     private sealed record MaintenanceFailureDetail(string Type, string Trigger, string Error, string FailedAt);

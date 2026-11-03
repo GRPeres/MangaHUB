@@ -301,6 +301,28 @@ public sealed class IssueReportingService(
         return true;
     }
 
+    public async Task<Guid?> RecordExternalReaderCoverageAsync(Guid issueId, RecordExternalReaderCoverageRequest request, CancellationToken cancellationToken)
+    {
+        if (request.LatestChapter < 0m || request.LatestChapter > 9_999_999.999m) return null;
+
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        if (issue is null
+            || issue.Status != "open"
+            || !string.Equals(issue.Kind, AdminIssueTypes.MangaDexLanguageCoverage, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var manga = await catalog.GetByIdAsync(issue.SubjectId, cancellationToken);
+        if (manga is null || !IsHttpUrl(manga.FallbackReaderUrl)) return null;
+
+        manga.ExternalReaderLatestChapter = request.LatestChapter;
+        manga.ExternalReaderLatestChapterObservedAt = DateTimeOffset.UtcNow;
+        manga.UpdatedAt = DateTimeOffset.UtcNow;
+        await catalog.SaveChangesAsync(cancellationToken);
+        return manga.Id;
+    }
+
     public async Task<bool> ResolveCoverImageAsync(Guid adminUserId, Guid issueId, ResolveCoverImageIssueRequest request, CancellationToken cancellationToken)
     {
         var issue = await issues.GetDetailsAsync(issueId, cancellationToken);

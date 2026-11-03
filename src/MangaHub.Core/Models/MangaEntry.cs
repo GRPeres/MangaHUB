@@ -18,6 +18,8 @@ public sealed class MangaEntry
     public int? ChapterCount { get; set; }
     public int? VolumeCount { get; set; }
     public string FallbackReaderUrl { get; set; } = "";
+    public decimal? ExternalReaderLatestChapter { get; set; }
+    public DateTimeOffset? ExternalReaderLatestChapterObservedAt { get; set; }
     public string ReaderPreference { get; set; } = global::MangaHub.Core.Models.ReaderPreference.MangaHub;
     public string MangaDexId { get; set; } = "";
     public decimal? MangaDexLatestChapter { get; set; }

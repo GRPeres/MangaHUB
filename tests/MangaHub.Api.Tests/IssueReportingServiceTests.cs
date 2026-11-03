@@ -381,6 +381,28 @@ public sealed class IssueReportingServiceTests
         Assert.Equal("resolved", issue.Status);
     }
 
+    [Fact]
+    public async Task RecordExternalReaderCoverageAsync_StoresSharedSourceCoverageForAnOpenCoverageIssue()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry { Title = "Coverage", FallbackReaderUrl = "https://example.com/read" };
+        var issue = new AdminIssue
+        {
+            Kind = AdminIssueTypes.MangaDexLanguageCoverage,
+            SubjectType = AdminIssueTypes.CatalogManga,
+            SubjectId = manga.Id,
+            TitleSnapshot = manga.Title
+        };
+        db.AddRange(manga, issue);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RecordExternalReaderCoverageAsync(issue.Id, new(123.5m), CancellationToken.None);
+
+        Assert.Equal(manga.Id, result);
+        Assert.Equal(123.5m, manga.ExternalReaderLatestChapter);
+        Assert.NotNull(manga.ExternalReaderLatestChapterObservedAt);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
