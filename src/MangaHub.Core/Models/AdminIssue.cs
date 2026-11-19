@@ -7,6 +7,9 @@ public sealed class AdminIssue
     public string SubjectType { get; set; } = "";
     public Guid SubjectId { get; set; }
     public string Status { get; set; } = "open";
+    public string ReviewState { get; set; } = "action_required";
+    public DateTimeOffset? SnoozedUntil { get; set; }
+    public DateTimeOffset? LastCheckedAt { get; set; }
     public string Priority { get; set; } = "normal";
     public string TitleSnapshot { get; set; } = "";
     public string MetadataJson { get; set; } = "{}";

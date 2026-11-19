@@ -487,6 +487,17 @@ public sealed class RemoteMaintenanceService(
 
                 if (latestChapter is not null)
                 {
+                    if (latestChapter > entry.MangaDexLatestChapter && latestPublishedAt is { } published
+                        && entry.MangaDexLatestChapterPublishedAt is { } previous
+                        && entry.MangaDexNonHiatusSince <= previous
+                        && (published - previous).TotalDays is >= 1 and <= 180)
+                    {
+                        var interval = (published - previous).TotalDays;
+                        var samples = Math.Min(entry.MangaDexReleaseIntervalSamples, 5);
+                        entry.MangaDexReleaseIntervalDays =
+                            ((entry.MangaDexReleaseIntervalDays ?? interval) * samples + interval) / (samples + 1);
+                        entry.MangaDexReleaseIntervalSamples = samples + 1;
+                    }
                     var latestWholeChapter = (int)Math.Floor(latestChapter.Value);
                     var latestChapterChanged = entry.MangaDexLatestChapter != latestChapter;
                     if (latestChapterChanged || entry.ChapterCount != latestWholeChapter)

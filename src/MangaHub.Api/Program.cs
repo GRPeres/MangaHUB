@@ -91,6 +91,8 @@ builder.Services.AddScoped<AdminIssueNotificationService>();
 builder.Services.AddScoped<MangaDexTranslationCoverageService>();
 builder.Services.AddScoped<MangaDexIdentityAuditService>();
 builder.Services.AddScoped<MangaDexReleaseStallService>();
+builder.Services.AddHostedService<IssueProposalScheduleWorker>();
+builder.Services.AddSingleton<ChatGptProposalProvider>();
 builder.Services.AddScoped<OpenLibraryService>();
 builder.Services.AddScoped<MangaDexCatalogMatchService>();
 builder.Services.AddScoped<MangaDexTitleMatchService>();

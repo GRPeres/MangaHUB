@@ -55,6 +55,7 @@ public sealed class MangaDexTranslationCoverageService(
         var openIssues = await db.AdminIssues
             .Where(issue => (issue.Kind == AdminIssueTypes.MangaDexLanguageCoverage || issue.Kind == AdminIssueTypes.MangaDexTranslationAbandoned)
                 && issue.SubjectType == AdminIssueTypes.CatalogManga
+                && (mangaEntryId == null || issue.SubjectId == mangaEntryId)
                 && issue.Status == "open")
             .ToListAsync(cancellationToken);
 
@@ -102,6 +103,7 @@ public sealed class MangaDexTranslationCoverageService(
                 if (coverageIssues.TryGetValue(mangaShelves.Key, out var recovered))
                 {
                     recovered.Status = "resolved";
+                    recovered.ReviewState = "auto_resolved";
                     recovered.ResolvedAt = now;
                     recovered.UpdatedAt = now;
                     recovered.ResolutionNote = "Recorded readable coverage, including any external reader, is within two chapters of the latest MangaDex language.";
@@ -135,8 +137,12 @@ public sealed class MangaDexTranslationCoverageService(
             });
 
             AdminIssue issue;
+            var shouldNotify = true;
             if (coverageIssues.TryGetValue(mangaShelves.Key, out var existing))
             {
+                shouldNotify = existing.Priority != priority
+                    || IssueEvidence.ReadNumber(existing.MetadataJson, "maximumChapterGap") is { } previousGap
+                        && maximumGap >= previousGap + 3;
                 existing.MetadataJson = metadata;
                 existing.Priority = priority;
                 existing.UpdatedAt = now;
@@ -144,6 +150,8 @@ public sealed class MangaDexTranslationCoverageService(
             }
             else
             {
+                if (await IssueEvidence.WasDismissedAsync(db, AdminIssueTypes.MangaDexLanguageCoverage, mangaShelves.Key, metadata,
+                    ["latestAnyLanguageChapter", "maximumChapterGap", "fallbackReaderUrl"], cancellationToken)) continue;
                 issue = new AdminIssue
                 {
                     Kind = AdminIssueTypes.MangaDexLanguageCoverage,
@@ -156,7 +164,8 @@ public sealed class MangaDexTranslationCoverageService(
                 };
                 db.AdminIssues.Add(issue);
             }
-            await issueNotifications.NotifyCoverageGapAsync(issue, new MangaEntry { Id = mangaShelves.Key, Title = representative.Title }, maximumGap, priority, cancellationToken);
+            if (shouldNotify)
+                await issueNotifications.NotifyCoverageGapAsync(issue, new MangaEntry { Id = mangaShelves.Key, Title = representative.Title }, maximumGap, priority, cancellationToken);
             openedOrUpdated++;
         }
 

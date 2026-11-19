@@ -23,6 +23,8 @@ public sealed class MangaHubDbContext(DbContextOptions<MangaHubDbContext> option
     public DbSet<MaintenanceJob> MaintenanceJobs => Set<MaintenanceJob>();
     public DbSet<ArchiveRecoveryEvent> ArchiveRecoveryEvents => Set<ArchiveRecoveryEvent>();
     public DbSet<AdminIssue> AdminIssues => Set<AdminIssue>();
+    public DbSet<IssueProposalSchedule> IssueProposalSchedules => Set<IssueProposalSchedule>();
+    public DbSet<ScheduledIssueProposal> ScheduledIssueProposals => Set<ScheduledIssueProposal>();
     public DbSet<AdminIssueReport> AdminIssueReports => Set<AdminIssueReport>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

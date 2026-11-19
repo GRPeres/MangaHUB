@@ -114,8 +114,22 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "ResolvedByUserId" uuid NULL,
                 "ResolutionNote" text NOT NULL DEFAULT ''
             );
+            ALTER TABLE admin_issues ADD COLUMN IF NOT EXISTS "ReviewState" character varying(24) NOT NULL DEFAULT 'action_required';
+            ALTER TABLE admin_issues ADD COLUMN IF NOT EXISTS "SnoozedUntil" timestamp with time zone NULL;
+            ALTER TABLE admin_issues ADD COLUMN IF NOT EXISTS "LastCheckedAt" timestamp with time zone NULL;
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_admin_issues_OpenSubject" ON admin_issues ("Kind", "SubjectType", "SubjectId") WHERE "Status" = 'open';
             CREATE INDEX IF NOT EXISTS "IX_admin_issues_Status_UpdatedAt" ON admin_issues ("Status", "UpdatedAt");
+            CREATE TABLE IF NOT EXISTS "IssueProposalSchedules" (
+                "Id" integer PRIMARY KEY, "Enabled" boolean NOT NULL, "BatchIntervalMinutes" integer NOT NULL,
+                "RequestIntervalSeconds" integer NOT NULL, "GroupSize" integer NOT NULL,
+                "NextRunAt" timestamptz NULL, "RunId" uuid NULL, "LeaseUntil" timestamptz NULL, "LastError" text NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS "ScheduledIssueProposals" (
+                "Id" uuid PRIMARY KEY, "RunId" uuid NOT NULL, "GroupId" uuid NOT NULL, "EvidenceKey" text NOT NULL,
+                "Text" text NOT NULL, "ReviewedAt" timestamptz NULL
+            );
+            INSERT INTO "IssueProposalSchedules" ("Id","Enabled","BatchIntervalMinutes","RequestIntervalSeconds","GroupSize","LastError")
+            VALUES (1,false,1440,30,5,'') ON CONFLICT ("Id") DO NOTHING;
             CREATE TABLE IF NOT EXISTS admin_issue_reports (
                 "Id" uuid PRIMARY KEY,
                 "AdminIssueId" uuid NOT NULL,
@@ -190,6 +204,8 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "VolumeCount" integer NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapterPublishedAt" timestamp with time zone NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexReleaseIntervalDays" double precision NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexReleaseIntervalSamples" integer NOT NULL DEFAULT 0;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "FallbackReaderUrl" text NOT NULL DEFAULT '';
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ExternalReaderLatestChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "ExternalReaderLatestChapterObservedAt" timestamp with time zone NULL;

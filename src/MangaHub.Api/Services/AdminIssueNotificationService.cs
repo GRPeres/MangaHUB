@@ -33,7 +33,8 @@ public sealed class AdminIssueNotificationService(
         // Keep this compact because notifications.Type is deliberately limited to 40 characters.
         var type = $"adm-cov-{priority}";
         var alreadyNotified = await db.Notifications
-            .Where(notification => notification.Type == type)
+            .Where(notification => notification.Type == type && notification.MangaEntryId == manga.Id
+                && notification.ChapterNumber == maximumGap)
             .Select(notification => notification.UserId)
             .ToHashSetAsync(cancellationToken);
         var adminIds = await db.Users.AsNoTracking()

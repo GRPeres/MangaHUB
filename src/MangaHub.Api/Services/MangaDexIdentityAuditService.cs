@@ -15,14 +15,17 @@ public sealed class MangaDexIdentityAuditService(
     IMangaDexCatalogLookup mangaDexCatalog,
     ILogger<MangaDexIdentityAuditService> logger)
 {
-    public async Task<MangaDexIdentityAuditResult> RunAsync(CancellationToken cancellationToken)
+    public Task<MangaDexIdentityAuditResult> RunAsync(CancellationToken cancellationToken) => RunAsync(null, cancellationToken);
+
+    public async Task<MangaDexIdentityAuditResult> RunAsync(Guid? subjectId, CancellationToken cancellationToken)
     {
         var entries = await db.MangaEntries
-            .Where(entry => entry.MangaDexId != "" && entry.MyAnimeListId != "")
+            .Where(entry => (subjectId == null || entry.Id == subjectId) && entry.MangaDexId != "" && entry.MyAnimeListId != "")
             .ToListAsync(cancellationToken);
         var openIssues = await db.AdminIssues
             .Where(issue => issue.Kind == AdminIssueTypes.MangaDexIdentityMismatch
                 && issue.SubjectType == AdminIssueTypes.CatalogManga
+                && (subjectId == null || issue.SubjectId == subjectId)
                 && issue.Status == "open")
             .ToDictionaryAsync(issue => issue.SubjectId, cancellationToken);
 
@@ -59,6 +62,7 @@ public sealed class MangaDexIdentityAuditService(
                 if (openIssues.Remove(entry.Id, out var resolvedIssue))
                 {
                     resolvedIssue.Status = "resolved";
+                    resolvedIssue.ReviewState = "auto_resolved";
                     resolvedIssue.ResolvedAt = now;
                     resolvedIssue.UpdatedAt = now;
                     resolvedIssue.ResolutionNote = "MangaDex now reports the same MyAnimeList ID as this catalog entry.";
@@ -84,6 +88,8 @@ public sealed class MangaDexIdentityAuditService(
             }
             else
             {
+                if (await IssueEvidence.WasDismissedAsync(db, AdminIssueTypes.MangaDexIdentityMismatch, entry.Id, metadata,
+                    ["expectedMyAnimeListId", "linkedMangaDexId", "linkedMyAnimeListId"], cancellationToken)) continue;
                 db.AdminIssues.Add(new AdminIssue
                 {
                     Kind = AdminIssueTypes.MangaDexIdentityMismatch,

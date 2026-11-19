@@ -24,6 +24,8 @@ public sealed class MangaEntry
     public string MangaDexId { get; set; } = "";
     public decimal? MangaDexLatestChapter { get; set; }
     public DateTimeOffset? MangaDexLatestChapterPublishedAt { get; set; }
+    public double? MangaDexReleaseIntervalDays { get; set; }
+    public int MangaDexReleaseIntervalSamples { get; set; }
     public DateTimeOffset? MangaDexLatestChapterObservedAt { get; set; }
     public DateTimeOffset? MangaDexNonHiatusSince { get; set; }
     public DateTimeOffset? MangaDexLastSyncedAt { get; set; }

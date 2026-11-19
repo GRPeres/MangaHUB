@@ -16,12 +16,13 @@ public sealed class MaintenanceFailureIssueService(MangaHubDbContext db)
     public async Task RecordFailureAsync(MaintenanceJob job, CancellationToken cancellationToken)
     {
         var subjectId = GetSubjectId(job.Type);
-        var issue = await db.AdminIssues.FirstOrDefaultAsync(item =>
+        var related = db.AdminIssues.Where(item =>
             item.Kind == AdminIssueTypes.MaintenanceFailure
             && item.SubjectType == AdminIssueTypes.MaintenanceTask
-            && item.SubjectId == subjectId
-            && item.Status == "open", cancellationToken);
+            && item.SubjectId == subjectId);
+        var issue = await related.FirstOrDefaultAsync(item => item.Status == "open", cancellationToken);
         var now = DateTimeOffset.UtcNow;
+        var error = Limit(job.Error.Trim(), 2000);
         var metadata = JsonSerializer.Serialize(new
         {
             job.Type,
@@ -30,11 +31,19 @@ public sealed class MaintenanceFailureIssueService(MangaHubDbContext db)
             job.RequestedAt,
             job.StartedAt,
             job.CompletedAt,
-            error = Limit(job.Error, 2000)
+            error
         });
 
         if (issue is null)
         {
+            var previous = await related.OrderByDescending(item => item.UpdatedAt).ThenByDescending(item => item.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (previous is { Status: "dismissed", ResolvedAt: { } dismissedAt }
+                && HasSameError(previous.MetadataJson, error)
+                && !await db.MaintenanceJobs.AnyAsync(run => run.Type == job.Type && run.Status == "completed"
+                    && run.CompletedAt > dismissedAt && run.CompletedAt <= (job.CompletedAt ?? now), cancellationToken))
+                return;
+
             db.AdminIssues.Add(new AdminIssue
             {
                 Kind = AdminIssueTypes.MaintenanceFailure,
@@ -43,6 +52,7 @@ public sealed class MaintenanceFailureIssueService(MangaHubDbContext db)
                 Priority = GetPriority(job.Type),
                 TitleSnapshot = $"Maintenance task failed: {job.Type}",
                 MetadataJson = metadata,
+                LastCheckedAt = now,
                 ResolutionNote = "Review the latest error, then retry this task from Operations."
             });
             return;
@@ -50,6 +60,7 @@ public sealed class MaintenanceFailureIssueService(MangaHubDbContext db)
 
         issue.Priority = GetPriority(job.Type);
         issue.MetadataJson = metadata;
+        issue.LastCheckedAt = now;
         issue.UpdatedAt = now;
         issue.ResolutionNote = "The task failed again. Review the latest error, then retry it from Operations.";
     }
@@ -67,9 +78,24 @@ public sealed class MaintenanceFailureIssueService(MangaHubDbContext db)
         }
 
         issue.Status = "resolved";
+        issue.ReviewState = "auto_resolved";
+        issue.SnoozedUntil = null;
+        issue.LastCheckedAt = DateTimeOffset.UtcNow;
         issue.ResolvedAt = DateTimeOffset.UtcNow;
         issue.UpdatedAt = DateTimeOffset.UtcNow;
         issue.ResolutionNote = $"A later {job.Trigger} run completed successfully.";
+    }
+
+    private static bool HasSameError(string metadata, string error)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(metadata);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("error", out var value)
+                && value.ValueKind == JsonValueKind.String && value.GetString()?.Trim() == error;
+        }
+        catch (JsonException) { return false; }
     }
 
     private static string GetPriority(string type) => type is "release-sync" or "mangadex-status-sync" or "mangaupdates-sync"

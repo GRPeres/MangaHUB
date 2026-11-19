@@ -36,6 +36,24 @@ public sealed class AdminApiService(ApiHttpClient api)
     }
     public Task<MaintenanceJobResponse?> QueueMaintenanceJobAsync(string type) => api.SendAsync<object, MaintenanceJobResponse>(HttpMethod.Post, "/api/admin/operations/jobs", new { type });
     public Task<int> GetOpenIssueCountAsync() => api.GetAsync<int>("/api/admin/issues/open-count");
+    public sealed record IssueProposal(string Text);
+    public sealed record ScheduledDraft(Guid Id, string Text);
+    public sealed record ProposalSchedule(bool Enabled, int BatchIntervalMinutes, int RequestIntervalSeconds,
+        int GroupSize, DateTimeOffset? NextRunAt, bool Running, string LastError, List<ScheduledDraft> Drafts,
+        bool ChatGptConfigured = false, bool ChatGptCredentialPresent = false);
+    public Task<ProposalSchedule?> GetProposalScheduleAsync() => api.GetAsync<ProposalSchedule>("/api/admin/issues/proposal-schedule");
+    public Task<bool> SaveProposalScheduleAsync(bool enabled, int batchIntervalMinutes, int requestIntervalSeconds, int groupSize) =>
+        api.SendWithoutResponseAsync(HttpMethod.Post, "/api/admin/issues/proposal-schedule",
+            new { enabled, batchIntervalMinutes, requestIntervalSeconds, groupSize });
+    public Task<bool> ReviewScheduledDraftAsync(Guid id) =>
+        api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/admin/issues/proposal-schedule/{id}/review", new { });
+    public Task<ApiCallResult<IssueProposal>> SuggestIssueRepairsAsync(Guid[] ids) =>
+        api.SendWithResultAsync<Guid[], IssueProposal>(HttpMethod.Post, "/api/admin/issues/suggest-repairs", ids);
+    public Task<ApiCallResult<IssueProposal>> SuggestIssueRepairAsync(Guid id) =>
+        api.SendWithResultAsync<object, IssueProposal>(HttpMethod.Post, $"/api/admin/issues/{id}/suggest-repair", new { });
+    public Task<IssueHealthResponse?> GetIssueHealthAsync() => api.GetAsync<IssueHealthResponse>("/api/admin/issues/health");
+    public Task<int> ReviewIssuesAsync(Guid[] ids, string action, int days) =>
+        api.SendAsync<object, int>(HttpMethod.Post, "/api/admin/issues/batch", new { issueIds = ids, action, days });
     public async Task<List<AdminIssueListItemResponse>> GetIssuesAsync(string status = "open", int offset = 0, int limit = 40) =>
         await api.GetAsync<List<AdminIssueListItemResponse>>($"/api/admin/issues?status={Uri.EscapeDataString(status)}&offset={offset}&limit={limit}") ?? [];
     public Task<AdminIssueDetailsResponse?> GetIssueAsync(Guid issueId) => api.GetAsync<AdminIssueDetailsResponse>($"/api/admin/issues/{issueId}");

@@ -259,6 +259,8 @@ public sealed class IssueReportingService(
         return await issues.ListAsync(status, offset, limit, cancellationToken);
     }
 
+    public Task<IssueHealthResponse> GetHealthAsync(CancellationToken cancellationToken) => issues.GetHealthAsync(cancellationToken);
+
     public async Task<int> CountOpenAsync(CancellationToken cancellationToken)
     {
         await DiscoverDuplicateCatalogIssuesAsync(cancellationToken);
@@ -472,6 +474,8 @@ public sealed class IssueReportingService(
         manga.MangaDexId = normalizedId;
         manga.MangaDexLatestChapter = null;
         manga.MangaDexLatestChapterPublishedAt = null;
+        manga.MangaDexReleaseIntervalDays = null;
+        manga.MangaDexReleaseIntervalSamples = 0;
         manga.MangaDexLatestChapterObservedAt = null;
         manga.MangaDexNonHiatusSince = null;
         manga.MangaDexLastSyncedAt = null;
@@ -564,12 +568,51 @@ public sealed class IssueReportingService(
         return true;
     }
 
-    public async Task<bool> DismissAsync(Guid adminUserId, Guid issueId, DismissAdminIssueRequest request, CancellationToken cancellationToken)
+    public async Task<bool> DismissAsync(Guid adminUserId, Guid issueId, DismissAdminIssueRequest request, CancellationToken cancellationToken, bool confirmedCurrent = false)
     {
         var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
         if (issue is null || issue.Status != "open") return false;
+        if (confirmedCurrent && (issue.Kind != AdminIssueTypes.MangaDexReleaseStalled
+            || issue.SubjectType != AdminIssueTypes.CatalogManga)) return false;
+        if (confirmedCurrent)
+        {
+            await CloseAsync(issue, adminUserId, "dismissed", "An admin checked the available releases and confirmed this title is current.",
+                "Release status reviewed", "An admin confirmed the available releases for", cancellationToken);
+            return true;
+        }
         await CloseAsync(issue, adminUserId, "dismissed", request.ResolutionNote, "External reader report reviewed", "An admin reviewed the external reader report for", cancellationToken);
         return true;
+    }
+
+    public async Task<bool> MarkIntentionallyExternalAsync(Guid adminUserId, Guid issueId, CancellationToken cancellationToken)
+    {
+        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
+        if (issue is null || issue.Status != "open" || issue.SubjectType != AdminIssueTypes.CatalogManga
+            || issue.Kind != AdminIssueTypes.MangaDexReleaseStalled) return false;
+
+        var manga = await catalog.GetByIdAsync(issue.SubjectId, cancellationToken);
+        if (manga is null || !IsHttpUrl(manga.FallbackReaderUrl)) return false;
+
+        manga.ReaderPreference = ReaderPreference.External;
+        manga.UpdatedAt = DateTimeOffset.UtcNow;
+        await CloseAsync(issue, adminUserId, "dismissed", "External reader intentionally selected; MangaDex link retained.",
+            "Reader preference reviewed", "An admin selected the external reader for", cancellationToken);
+        return true;
+    }
+
+    public async Task<int> SnoozeAsync(Guid[] ids, int days, CancellationToken cancellationToken)
+    {
+        var until = DateTimeOffset.UtcNow.AddDays(days);
+        var changed = 0;
+        foreach (var id in ids.Distinct())
+        {
+            var issue = await issues.GetDetailsAsync(id, cancellationToken);
+            if (issue?.Status != "open") continue;
+            issue.SnoozedUntil = until;
+            changed++;
+        }
+        await issues.SaveChangesAsync(cancellationToken);
+        return changed;
     }
 
     public async Task<bool> ReopenAsync(Guid adminUserId, Guid issueId, CancellationToken cancellationToken)
@@ -577,6 +620,8 @@ public sealed class IssueReportingService(
         var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
         if (issue is null || issue.Status == "open") return false;
         issue.Status = "open";
+        issue.ReviewState = "action_required";
+        issue.SnoozedUntil = null;
         issue.ResolvedAt = null;
         issue.ResolvedByUserId = null;
         issue.ResolutionNote = "";
