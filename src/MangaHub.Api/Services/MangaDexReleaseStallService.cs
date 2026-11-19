@@ -65,6 +65,7 @@ public sealed class MangaDexReleaseStallService(MangaHubDbContext db, ILogger<Ma
             {
                 issue.MetadataJson = metadata;
                 issue.Priority = inactiveDays >= 90 ? "high" : "normal";
+                issue.TitleSnapshot = $"No MangaDex chapter for {inactiveDays:0} days: {manga.Title}";
                 issue.UpdatedAt = now;
             }
             openedOrUpdated++;

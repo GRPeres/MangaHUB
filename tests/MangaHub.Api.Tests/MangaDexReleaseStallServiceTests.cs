@@ -86,6 +86,34 @@ public sealed class MangaDexReleaseStallServiceTests
     }
 
     [Fact]
+    public async Task RunAsync_RefreshesAnExistingIssueTitleWithTheCurrentInactiveDays()
+    {
+        await using var db = TestDb.Create();
+        var manga = new MangaEntry
+        {
+            Title = "Still quiet",
+            MangaDexId = "manga-id",
+            PublishingStatus = "ongoing",
+            MangaDexLatestChapter = 42,
+            MangaDexLatestChapterObservedAt = DateTimeOffset.UtcNow.AddDays(-45),
+            MangaDexNonHiatusSince = DateTimeOffset.UtcNow.AddDays(-60)
+        };
+        var issue = new AdminIssue
+        {
+            Kind = AdminIssueTypes.MangaDexReleaseStalled,
+            SubjectType = AdminIssueTypes.CatalogManga,
+            SubjectId = manga.Id,
+            TitleSnapshot = "No MangaDex chapter for 30 days: Still quiet"
+        };
+        db.AddRange(manga, issue);
+        await db.SaveChangesAsync();
+
+        await CreateService(db).RunAsync(CancellationToken.None);
+
+        Assert.Matches(@"^No MangaDex chapter for 4[45] days: Still quiet$", issue.TitleSnapshot);
+    }
+
+    [Fact]
     public async Task RunAsync_UsesMangaDexPublishDateInsteadOfTheFirstObservedDate()
     {
         await using var db = TestDb.Create();
