@@ -108,6 +108,37 @@
                          CompletedPages="@(readerPreparation?.CompletedPages ?? 0)"
                          TotalPages="@(readerPreparation?.TotalPages ?? 0)" />
 
+@if (pendingReaderChoice is not null)
+{
+    <div class="mh-modal-backdrop">
+        <section class="mh-modal" role="dialog" aria-modal="true" aria-labelledby="reader-choice-title">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mh-modal-header">
+                    <MudStack Spacing="1">
+                        <MudText id="reader-choice-title" Typo="Typo.h2">Choose a reader</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@pendingReaderChoice.Options.Title is available through more than one reader. Choose where to continue.</MudText>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Secondary" OnClick="CancelReaderChoice" aria-label="Close reader choice" />
+                </MudStack>
+                <MudStack Spacing="2">
+                    @if (pendingReaderChoice.Options.HasMangaDex)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoStories" OnClick="ReadWithMangaDex">MangaHub reader</MudButton>
+                    }
+                    @if (CanUseLocalReader(pendingReaderChoice.Options, pendingReaderChoice.RequestedChapter))
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="ReadFromLocalLibrary">Local library</MudButton>
+                    }
+                    @if (HasExternalReader(pendingReaderChoice.Options))
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.OpenInNew" OnClick="ReadWithExternalReader">External reader</MudButton>
+                    }
+                </MudStack>
+            </MudStack>
+        </section>
+    </div>
+}
+
 <ChapterMatchConfirmationModal Open="@(chapterMatchEntryId is not null && chapterMatch is not null)"
                               RequestedChapter="@(chapterMatch?.RequestedChapter ?? "")"
                               MatchedChapter="@(chapterMatch?.MatchedChapter ?? "")"
@@ -265,6 +296,7 @@
     private bool filtersOpen;
     private bool isPreparingReader;
     private ReaderPreparationStatus? readerPreparation;
+    private PendingReaderChoice? pendingReaderChoice;
     private Guid? languageFallbackEntryId;
     private List<string> fallbackLanguages = [];
     private string fallbackLanguage = "";
@@ -587,7 +619,7 @@
     private string PreferredLanguages => string.IsNullOrWhiteSpace(currentUser?.PreferredLanguage) ? "en" : currentUser.PreferredLanguage;
     private string PreferredLanguage => PreferredLanguages.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? "en";
 
-    private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false, bool allowChapterJump = false, string? requestedChapter = null)
+    private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false, bool allowChapterJump = false, string? requestedChapter = null, ReaderRoute? route = null)
     {
         if (!IsAdmin)
         {
@@ -595,8 +627,6 @@
             return;
         }
 
-        isPreparingReader = true;
-        await InvokeAsync(StateHasChanged);
         try
         {
             var options = await MangaApi.GetReadOptionsAsync(entryId);
@@ -606,14 +636,29 @@
                 return;
             }
 
-            if (options.HasLocal && string.IsNullOrWhiteSpace(requestedChapter))
+            if (route is null && HasMultipleReaderRoutes(options, requestedChapter))
+            {
+                pendingReaderChoice = new PendingReaderChoice(entryId, options, language, allowLanguageFallback, allowChapterJump, requestedChapter);
+                return;
+            }
+
+            var selectedRoute = route ?? DefaultReaderRoute(options, requestedChapter);
+            if (selectedRoute == ReaderRoute.External && HasExternalReader(options))
+            {
+                await OpenExternalReaderUrlAsync(entryId, options.FallbackReaderUrl);
+                return;
+            }
+
+            if (selectedRoute == ReaderRoute.Local && CanUseLocalReader(options, requestedChapter))
             {
                 Navigation.NavigateTo(options.LocalReaderUrl);
                 return;
             }
 
-            if (options.HasMangaDex)
+            if (selectedRoute == ReaderRoute.MangaDex && options.HasMangaDex)
             {
+                isPreparingReader = true;
+                await InvokeAsync(StateHasChanged);
                 var imageQuality = MangaHub.Web.Services.ReaderSettings.Normalize(await ReaderSettings.GetAsync()).ImageQuality;
                 readerPreparation = await MangaApi.StartMangaDexPreparationAsync(entryId, language: language ?? PreferredLanguages, imageQuality: imageQuality, allowLanguageFallback: allowLanguageFallback, allowChapterJump: allowChapterJump, requestedChapter: requestedChapter);
                 if (readerPreparation is null)
@@ -627,8 +672,7 @@
                 {
                     if (completedPreparation?.OpenExternalReader == true && IsHttpUrl(completedPreparation.FallbackReaderUrl))
                     {
-                        await JS.InvokeVoidAsync("mangaHubExternalReader.open", completedPreparation.FallbackReaderUrl);
-                        try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId); } catch (HttpRequestException) { }
+                        await OpenExternalReaderUrlAsync(entryId, completedPreparation.FallbackReaderUrl);
                         return;
                     }
                     if (completedPreparation?.ChapterJump is not null)
@@ -663,8 +707,7 @@
                         await Load();
                         if (IsHttpUrl(completedPreparation.FallbackReaderUrl))
                         {
-                            await JS.InvokeVoidAsync("mangaHubExternalReader.open", completedPreparation.FallbackReaderUrl);
-                            try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId); } catch (HttpRequestException) { }
+                            await OpenExternalReaderUrlAsync(entryId, completedPreparation.FallbackReaderUrl);
                         }
                         else
                         {
@@ -686,13 +729,58 @@
                 return;
             }
 
-            ShowWarning("No MangaDex URL or local series is registered for this manga yet.");
+            ShowWarning("No configured reader is available for this manga yet.");
         }
         finally
         {
             isPreparingReader = false;
             readerPreparation = null;
         }
+    }
+
+    private static bool HasExternalReader(ReadOptions options) => IsHttpUrl(options.FallbackReaderUrl);
+
+    private static bool CanUseLocalReader(ReadOptions options, string? requestedChapter) =>
+        options.HasLocal && string.IsNullOrWhiteSpace(requestedChapter);
+
+    private static bool HasMultipleReaderRoutes(ReadOptions options, string? requestedChapter)
+    {
+        var routes = (options.HasMangaDex ? 1 : 0)
+            + (CanUseLocalReader(options, requestedChapter) ? 1 : 0)
+            + (HasExternalReader(options) ? 1 : 0);
+        return routes > 1;
+    }
+
+    private static ReaderRoute DefaultReaderRoute(ReadOptions options, string? requestedChapter) =>
+        CanUseLocalReader(options, requestedChapter)
+            ? ReaderRoute.Local
+            : options.HasMangaDex
+                ? ReaderRoute.MangaDex
+                : ReaderRoute.External;
+
+    private void CancelReaderChoice() => pendingReaderChoice = null;
+
+    private async Task ReadWithMangaDex() => await ContinueReaderChoice(ReaderRoute.MangaDex);
+
+    private async Task ReadFromLocalLibrary() => await ContinueReaderChoice(ReaderRoute.Local);
+
+    private async Task ReadWithExternalReader() => await ContinueReaderChoice(ReaderRoute.External);
+
+    private async Task ContinueReaderChoice(ReaderRoute route)
+    {
+        if (pendingReaderChoice is not { } choice)
+        {
+            return;
+        }
+
+        CancelReaderChoice();
+        await Read(choice.EntryId, choice.Language, choice.AllowLanguageFallback, choice.AllowChapterJump, choice.RequestedChapter, route);
+    }
+
+    private async Task OpenExternalReaderUrlAsync(Guid entryId, string url)
+    {
+        await JS.InvokeVoidAsync("mangaHubExternalReader.open", url);
+        try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId); } catch (HttpRequestException) { }
     }
 
     private async Task<ReaderPreparationStatus?> WaitForReaderPreparationAsync(Guid jobId)
@@ -797,7 +885,7 @@
         }
 
         CancelLanguageFallback();
-        await Read(entryId, fallbackLanguage, allowLanguageFallback: true);
+        await Read(entryId, fallbackLanguage, allowLanguageFallback: true, route: ReaderRoute.MangaDex);
     }
 
     private async Task OpenExternalFallbackFromLanguageChoice()
@@ -805,8 +893,7 @@
         if (languageFallbackEntryId is not { } entryId || !IsHttpUrl(languageFallbackExternalReaderUrl)) return;
         var url = languageFallbackExternalReaderUrl;
         CancelLanguageFallback();
-        await JS.InvokeVoidAsync("mangaHubExternalReader.open", url);
-        try { await ShelfApi.RecordExternalReaderOpenedAsync(entryId); } catch (HttpRequestException) { }
+        await OpenExternalReaderUrlAsync(entryId, url);
     }
 
     private async Task RemoveLanguageUnavailableFromShelf()
@@ -843,7 +930,7 @@
 
         var language = chapterMatch.Language;
         CancelChapterMatch();
-        await Read(entryId, language, allowLanguageFallback: true, allowChapterJump: true);
+        await Read(entryId, language, allowLanguageFallback: true, allowChapterJump: true, route: ReaderRoute.MangaDex);
     }
 
     private void CancelChapterJump()
@@ -861,7 +948,7 @@
 
         var language = chapterJump.Language;
         CancelChapterJump();
-        await Read(entryId, language, allowLanguageFallback: true, allowChapterJump: true);
+        await Read(entryId, language, allowLanguageFallback: true, allowChapterJump: true, route: ReaderRoute.MangaDex);
     }
 
     private async Task ReadChapterJumpAlternative(string language)
@@ -872,7 +959,7 @@
         }
 
         CancelChapterJump();
-        await Read(entryId, language);
+        await Read(entryId, language, route: ReaderRoute.MangaDex);
     }
 
     private static readonly (string Code, string Label)[] ReaderLanguages =
@@ -1085,5 +1172,20 @@
 
         return "Manual";
     }
+
+    private enum ReaderRoute
+    {
+        MangaDex,
+        Local,
+        External
+    }
+
+    private sealed record PendingReaderChoice(
+        Guid EntryId,
+        ReadOptions Options,
+        string? Language,
+        bool AllowLanguageFallback,
+        bool AllowChapterJump,
+        string? RequestedChapter);
 
 }
