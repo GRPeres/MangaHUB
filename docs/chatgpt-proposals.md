@@ -33,3 +33,11 @@ fallback is used for scheduled requests when the credential path is configured.
 
 See [OpenAI's self-hosted setup](https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms)
 and [preview limits](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations).
+
+## Optional hiatus research
+
+Use **Web research for stalled releases** in **Admin > Issues > Proposal schedule**.
+It defaults to on, but runs only when automatic proposals are enabled. The selected OpenAI model
+and account must support web search; unsupported requests appear as run errors.
+Drafts show cited links and must be reviewed by an admin. Missing citations
+produce an uncertain result. Research never changes publication status.

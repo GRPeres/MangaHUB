@@ -4,6 +4,7 @@ public sealed class IssueProposalSchedule
 {
     public int Id { get; set; } = 1;
     public bool Enabled { get; set; }
+    public bool WebResearchEnabled { get; set; } = true;
     public int BatchIntervalMinutes { get; set; } = 1440;
     public int RequestIntervalSeconds { get; set; } = 30;
     public int GroupSize { get; set; } = 5;

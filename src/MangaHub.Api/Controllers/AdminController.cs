@@ -132,7 +132,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
     public async Task<IActionResult> SuggestIssueRepair(Guid issueId, [FromServices] IConfiguration configuration,
         CancellationToken cancellationToken) => await SuggestIssueRepairs([issueId], configuration, cancellationToken);
 
-    public sealed record ProposalScheduleSettings(bool Enabled, int BatchIntervalMinutes, int RequestIntervalSeconds, int GroupSize);
+    public sealed record ProposalScheduleSettings(bool Enabled, int BatchIntervalMinutes, int RequestIntervalSeconds, int GroupSize, bool? WebResearchEnabled = null);
 
     [HttpGet("issues/proposal-schedule")]
     public async Task<IActionResult> GetProposalSchedule([FromServices] ChatGptProposalProvider chatGpt, CancellationToken cancellationToken)
@@ -144,7 +144,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         var drafts = await db.ScheduledIssueProposals.AsNoTracking().Where(row => row.ReviewedAt == null && row.Text != "")
             .OrderBy(row => row.Id).Select(row => new { row.Id, row.Text }).ToListAsync(cancellationToken);
         return Ok(new { schedule.Enabled, schedule.BatchIntervalMinutes, schedule.RequestIntervalSeconds,
-            schedule.GroupSize, schedule.NextRunAt, running = schedule.RunId != null, schedule.LastError, drafts,
+            schedule.GroupSize, schedule.WebResearchEnabled, schedule.NextRunAt, running = schedule.RunId != null, schedule.LastError, drafts,
             chatGptConfigured = chatGpt.Enabled, chatGptCredentialPresent = chatGpt.IsConnected });
     }
 
@@ -162,6 +162,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         row.BatchIntervalMinutes = settings.BatchIntervalMinutes;
         row.RequestIntervalSeconds = settings.RequestIntervalSeconds;
         row.GroupSize = settings.GroupSize;
+        if (settings.WebResearchEnabled is { } webResearch) row.WebResearchEnabled = webResearch;
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }

@@ -13,7 +13,7 @@ public sealed class ChatGptProposalProvider(IConfiguration configuration, IHttpC
 
     private sealed record Credentials(string client_id, string access_token, string refresh_token, DateTimeOffset expires_at);
 
-    public async Task<string> DraftAsync(string model, string instructions, string input, CancellationToken token)
+    public async Task<string> DraftAsync(string model, string instructions, string input, CancellationToken token, bool webResearch = false)
     {
         var credentials = await GetCredentialsAsync(token);
         using var client = clients.CreateClient();
@@ -23,7 +23,8 @@ public sealed class ChatGptProposalProvider(IConfiguration configuration, IHttpC
         request.Content = JsonContent.Create(new
         {
             model, store = false, stream = true, instructions,
-            input = new[] { new { role = "user", content = input } }
+            input = new[] { new { role = "user", content = input } },
+            tools = webResearch ? new[] { new { type = "web_search" } } : []
         });
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
         response.EnsureSuccessStatusCode();
@@ -42,7 +43,7 @@ public sealed class ChatGptProposalProvider(IConfiguration configuration, IHttpC
                     break;
                 case "response.completed":
                     if (string.IsNullOrWhiteSpace(result.ToString())) throw new InvalidOperationException("ChatGPT returned no proposal.");
-                    return result.ToString();
+                    return webResearch ? IssueProposalResearch.AttachSources(node.GetProperty("response"), result.ToString()) : result.ToString();
                 case "response.failed":
                 case "response.incomplete":
                 case "error":

@@ -128,8 +128,9 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "Id" uuid PRIMARY KEY, "RunId" uuid NOT NULL, "GroupId" uuid NOT NULL, "EvidenceKey" text NOT NULL,
                 "Text" text NOT NULL, "ReviewedAt" timestamptz NULL
             );
-            INSERT INTO "IssueProposalSchedules" ("Id","Enabled","BatchIntervalMinutes","RequestIntervalSeconds","GroupSize","LastError")
-            VALUES (1,false,1440,30,5,'') ON CONFLICT ("Id") DO NOTHING;
+            ALTER TABLE "IssueProposalSchedules" ADD COLUMN IF NOT EXISTS "WebResearchEnabled" boolean NOT NULL DEFAULT true;
+            INSERT INTO "IssueProposalSchedules" ("Id","Enabled","BatchIntervalMinutes","RequestIntervalSeconds","GroupSize","LastError","WebResearchEnabled")
+            VALUES (1,false,1440,30,5,'',true) ON CONFLICT ("Id") DO NOTHING;
             CREATE TABLE IF NOT EXISTS admin_issue_reports (
                 "Id" uuid PRIMARY KEY,
                 "AdminIssueId" uuid NOT NULL,

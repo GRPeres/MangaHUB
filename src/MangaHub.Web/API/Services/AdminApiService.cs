@@ -40,11 +40,11 @@ public sealed class AdminApiService(ApiHttpClient api)
     public sealed record ScheduledDraft(Guid Id, string Text);
     public sealed record ProposalSchedule(bool Enabled, int BatchIntervalMinutes, int RequestIntervalSeconds,
         int GroupSize, DateTimeOffset? NextRunAt, bool Running, string LastError, List<ScheduledDraft> Drafts,
-        bool ChatGptConfigured = false, bool ChatGptCredentialPresent = false);
+        bool ChatGptConfigured = false, bool ChatGptCredentialPresent = false, bool WebResearchEnabled = true);
     public Task<ProposalSchedule?> GetProposalScheduleAsync() => api.GetAsync<ProposalSchedule>("/api/admin/issues/proposal-schedule");
-    public Task<bool> SaveProposalScheduleAsync(bool enabled, int batchIntervalMinutes, int requestIntervalSeconds, int groupSize) =>
+    public Task<bool> SaveProposalScheduleAsync(bool enabled, int batchIntervalMinutes, int requestIntervalSeconds, int groupSize, bool webResearchEnabled) =>
         api.SendWithoutResponseAsync(HttpMethod.Post, "/api/admin/issues/proposal-schedule",
-            new { enabled, batchIntervalMinutes, requestIntervalSeconds, groupSize });
+            new { enabled, batchIntervalMinutes, requestIntervalSeconds, groupSize, webResearchEnabled });
     public Task<bool> ReviewScheduledDraftAsync(Guid id) =>
         api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/admin/issues/proposal-schedule/{id}/review", new { });
     public Task<ApiCallResult<IssueProposal>> SuggestIssueRepairsAsync(Guid[] ids) =>
