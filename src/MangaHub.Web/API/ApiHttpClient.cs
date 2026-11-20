@@ -32,12 +32,17 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         await AddAuthorizationAsync(request);
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
         using var response = await http.SendAsync(request);
+        var mediaType = response.Content.Headers.ContentType?.MediaType;
+        if (string.Equals(mediaType, "text/html", StringComparison.OrdinalIgnoreCase))
+            return new ApiCallResult<TResponse>(default, (int)response.StatusCode, DescribeUnexpectedResponse(response));
         if (response.IsSuccessStatusCode)
         {
             return new ApiCallResult<TResponse>(await ReadJsonOrDefaultAsync<TResponse>(response), (int)response.StatusCode, "");
         }
 
         var body = await response.Content.ReadAsStringAsync();
+        if (body.AsSpan().TrimStart().StartsWith("<", StringComparison.Ordinal))
+            return new ApiCallResult<TResponse>(default, (int)response.StatusCode, DescribeUnexpectedResponse(response));
         return new ApiCallResult<TResponse>(default, (int)response.StatusCode, ReadErrorMessage(body));
     }
 
@@ -90,6 +95,16 @@ public sealed class ApiHttpClient(HttpClient http, SessionTokenStore tokens)
         return string.IsNullOrWhiteSpace(json)
             ? default
             : JsonSerializer.Deserialize<TResponse>(json, JsonSerializerOptions.Web);
+    }
+
+    private static string DescribeUnexpectedResponse(HttpResponseMessage response)
+    {
+        var status = (int)response.StatusCode;
+        var reason = status is 408 or 504 or 522 or 524
+            ? "The request timed out. Refresh before retrying to check whether the operation completed."
+            : "The server or gateway returned a web page instead of a MangaHub API response.";
+        var ray = response.Headers.TryGetValues("CF-Ray", out var values) ? values.FirstOrDefault() : null;
+        return $"HTTP {status}: {reason}" + (string.IsNullOrWhiteSpace(ray) ? "" : $" Cloudflare Ray: {ray}.");
     }
 
     private static string ReadErrorMessage(string body)

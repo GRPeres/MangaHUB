@@ -404,39 +404,38 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         if (string.IsNullOrWhiteSpace(model) || (chatGpt.Enabled ? !chatGpt.IsConnected : string.IsNullOrWhiteSpace(key)))
             return BadRequest("Issue proposals are not configured.");
 
-        var packets = new List<object>();
-        var sources = new List<(Guid Id, string Snapshot, string? Candidate, string? ExpectedMal, string Kind)>();
-        var schedule = await db.IssueProposalSchedules.AsNoTracking().SingleAsync(cancellationToken);
-        var research = false;
-        foreach (var issueId in issueIds.Distinct())
-        {
-        var issue = await issues.GetDetailsAsync(issueId, cancellationToken);
-        if (issue is null || issue.Status != "open"
-            || issue.Kind is not ("mangadex-release-stalled" or "mangadex-identity-mismatch" or "mangadex-language-coverage")) continue;
-        var data = IssueProposalEvidence.ReadIssueFacts(issue.MetadataJson);
-        var catalogEvidence = await IssueProposalEvidence.ReadCatalogAsync(db, issue.SubjectId, cancellationToken);
-        research |= schedule.WebResearchEnabled && issue.Kind is "mangadex-release-stalled" or "mangadex-language-coverage";
-        string? candidate = null;
-        var mal = data.GetValueOrDefault("expectedMyAnimeListId");
-        if (issue.Kind == "mangadex-identity-mismatch" && !string.IsNullOrWhiteSpace(mal))
-        {
-            var (match, _) = await issues.RepairMangaDexIdentityAsync(user.Id, issueId, cancellationToken, preview: true, confirmedMalId: mal);
-            candidate = match?.Id;
-        }
-        sources.Add((issueId, IssueProposalActions.Fingerprint(issue.MetadataJson), candidate, mal, issue.Kind));
-        packets.Add(new { number = packets.Count + 1, issue.Kind, issue.Title, evidence = data,
-            catalog = catalogEvidence, verifiedReplacementId = candidate });
-        }
-        if (packets.Count == 0) return Ok(new { text = "No eligible open issues remain in this group." });
-
-        var instructions = IssueProposalActions.Instructions + (research ? "\n" + IssueProposalResearch.Instructions : "");
-        var input = System.Text.Json.JsonSerializer.Serialize(packets);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(45));
+        timeout.CancelAfter(TimeSpan.FromSeconds(60));
+        var stage = "collecting issue evidence";
         try
         {
-            if (chatGpt.Enabled)
-                return await SaveManualProposalAsync(await chatGpt.DraftAsync(model, instructions, input, timeout.Token, research), sources, cancellationToken);
+            var packets = new List<object>();
+            var sources = new List<(Guid Id, string Snapshot, string? Candidate, string? ExpectedMal, string Kind)>();
+            var schedule = await db.IssueProposalSchedules.AsNoTracking().SingleAsync(timeout.Token);
+            var research = false;
+            foreach (var issueId in issueIds.Distinct())
+            {
+                var issue = await issues.GetDetailsAsync(issueId, timeout.Token);
+                if (issue is null || issue.Status != "open"
+                    || issue.Kind is not ("mangadex-release-stalled" or "mangadex-identity-mismatch" or "mangadex-language-coverage")) continue;
+                var data = IssueProposalEvidence.ReadIssueFacts(issue.MetadataJson);
+                var catalogEvidence = await IssueProposalEvidence.ReadCatalogAsync(db, issue.SubjectId, timeout.Token);
+                research |= schedule.WebResearchEnabled && issue.Kind is "mangadex-release-stalled" or "mangadex-language-coverage";
+                string? candidate = null;
+                var mal = data.GetValueOrDefault("expectedMyAnimeListId");
+                if (issue.Kind == "mangadex-identity-mismatch" && !string.IsNullOrWhiteSpace(mal))
+                {
+                    var (match, _) = await issues.RepairMangaDexIdentityAsync(user.Id, issueId, timeout.Token, preview: true, confirmedMalId: mal);
+                    candidate = match?.Id;
+                }
+                sources.Add((issueId, IssueProposalActions.Fingerprint(issue.MetadataJson), candidate, mal, issue.Kind));
+                packets.Add(new { number = packets.Count + 1, issue.Kind, issue.Title, evidence = data,
+                    catalog = catalogEvidence, verifiedReplacementId = candidate });
+            }
+            if (packets.Count == 0) return Ok(new { text = "No eligible open issues remain in this group." });
+            var instructions = IssueProposalActions.Instructions + (research ? "\n" + IssueProposalResearch.Instructions : "");
+            var input = System.Text.Json.JsonSerializer.Serialize(packets);
+            stage = "waiting for the proposal provider";
 
             using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/responses");
             request.Headers.Authorization = new("Bearer", key);
@@ -445,7 +444,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
                 tools = research ? new[] { new { type = "web_search" } } : [] });
             using var client = httpClients.CreateClient();
             using var response = await client.SendAsync(request, timeout.Token);
-            if (!response.IsSuccessStatusCode) return StatusCode(502, "The proposal provider did not return a successful response.");
+            if (!response.IsSuccessStatusCode) return StatusCode(502, $"The proposal provider returned HTTP {(int)response.StatusCode}.");
             using var result = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
             var text = string.Join("\n", result.RootElement.GetProperty("output").EnumerateArray()
                 .Where(item => item.TryGetProperty("content", out var body) && body.ValueKind == System.Text.Json.JsonValueKind.Array)
@@ -455,10 +454,17 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
             if (string.IsNullOrWhiteSpace(text)) return StatusCode(502, "No proposal was returned.");
             return await SaveManualProposalAsync(research ? IssueProposalResearch.AttachSources(result.RootElement, text) : text, sources, cancellationToken);
         }
-        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException or IOException or UnauthorizedAccessException
-            || ex is OperationCanceledException && !cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return StatusCode(502, "The proposal provider could not be reached or returned invalid data.");
+            return StatusCode(504, $"The draft timed out while {stage}. Try fewer issues per request or turn off web research for this test.");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is { } status)
+        {
+            return StatusCode(502, $"An upstream service returned HTTP {(int)status} while {stage}.");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            return StatusCode(502, $"The draft failed while {stage}.");
         }
     }
 
