@@ -47,7 +47,7 @@ def main():
             self.send_header("Cache-Control", "no-store")
             self.send_header("Referrer-Policy", "no-referrer")
             self.end_headers()
-            self.wfile.write(b"Return to the MangaHub setup terminal.")
+            self.wfile.write(b"Browser step complete. Return to the MangaHub setup terminal to check whether authorization succeeded.")
 
     with HTTPServer(("127.0.0.1", 0), Callback) as server:
         server.timeout = 1
@@ -79,7 +79,7 @@ def main():
     id_token = tokens["id_token"]
     key = jwt.PyJWKClient(discovery["jwks_uri"], timeout=20).get_signing_key_from_jwt(id_token)
     identity = jwt.decode(id_token, key.key, algorithms=["RS256"], issuer=ISSUER, audience=client_id,
-        options={"require": ["exp", "sub", "nonce"]})
+        options={"require": ["exp", "sub", "nonce"]}, leeway=60)
     scopes = tokens.get("scope", "").split()
     if not hmac.compare_digest(identity["nonce"], nonce) or "chatgpt.tokens.use.direct" not in scopes:
         raise RuntimeError("Identity or ChatGPT plan permission could not be verified.")
@@ -93,5 +93,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except jwt.ImmatureSignatureError:
+        raise SystemExit("The token is dated ahead of this computer. Sync the Windows clock, then sign in again.") from None
     except Exception as exc:
         raise SystemExit(f"MangaHub authorization failed ({type(exc).__name__}).") from None

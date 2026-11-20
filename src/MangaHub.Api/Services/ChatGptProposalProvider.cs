@@ -10,10 +10,32 @@ public sealed class ChatGptProposalProvider(IConfiguration configuration, IHttpC
     private string? Path => configuration["MangaHub:IssueProposals:ChatGptCredentialFile"];
     public bool Enabled => !string.IsNullOrWhiteSpace(Path);
     public bool IsConnected => Enabled && File.Exists(Path);
+    private DateTimeOffset? lastVerifiedAt;
+    private readonly object statusLock = new();
+
+    public DateTimeOffset? LastVerifiedAt
+    {
+        get { lock (statusLock) return IsConnected ? lastVerifiedAt : null; }
+    }
 
     private sealed record Credentials(string client_id, string access_token, string refresh_token, DateTimeOffset expires_at);
 
     public async Task<string> DraftAsync(string model, string instructions, string input, CancellationToken token, bool webResearch = false)
+    {
+        try
+        {
+            var text = await SendDraftAsync(model, instructions, input, token, webResearch);
+            lock (statusLock) lastVerifiedAt = DateTimeOffset.UtcNow;
+            return text;
+        }
+        catch
+        {
+            lock (statusLock) lastVerifiedAt = null;
+            throw;
+        }
+    }
+
+    private async Task<string> SendDraftAsync(string model, string instructions, string input, CancellationToken token, bool webResearch)
     {
         var credentials = await GetCredentialsAsync(token);
         using var client = clients.CreateClient();

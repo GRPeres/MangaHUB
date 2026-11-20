@@ -1,4 +1,8 @@
 .mh-issues-overview { display: grid; gap: .85rem; }
+.mh-proposal-indicator { display: inline-flex; position: relative; }
+.mh-proposal-dot { position: absolute; right: 4px; bottom: 4px; width: 9px; height: 9px; border: 1px solid var(--mud-palette-surface); border-radius: 50%; background: var(--mud-palette-text-disabled); pointer-events: none; }
+.mh-proposal-status { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--mud-palette-text-disabled); }
+.mh-proposal-dot.verified, .mh-proposal-status.verified { background: var(--mud-palette-success); }
 .mh-issues-title { display: flex; align-items: center; justify-content: space-between; gap: .35rem 1rem; flex-wrap: wrap; }
 .mh-issues-controls { display: grid; grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr); align-items: center; gap: .75rem 1.25rem; padding-top: .7rem; border-top: 1px solid var(--mud-palette-divider); }
 .mh-issues-health { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem 1rem; margin: 0; }

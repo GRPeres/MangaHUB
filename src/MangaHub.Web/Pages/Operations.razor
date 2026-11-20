@@ -5,6 +5,9 @@
 @inject AuthSessionService Auth
 @inject AdminApiService AdminApi
 @inject MessageService Messages
+@inject NotificationApiService Notifications
+@inject Microsoft.JSInterop.IJSRuntime JS
+@inject AppRefreshService Refreshes
 
 <PageTitle>Operations</PageTitle>
 
@@ -35,6 +38,21 @@ else if (overview is not null)
                 <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Test accounts can inspect operations and history, but cannot queue or run maintenance.</MudAlert>
             }
 
+            @if (canManage)
+            {
+                <MudPaper Outlined="true" Elevation="0" Class="pa-4">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h6">Diagnostics</MudText>
+                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Storage" OnClick="TestDatabase">Test database</MudButton>
+                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.CloudSync" OnClick="TestMangaDex">Test MangaDex connection</MudButton>
+                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.NotificationsActive" OnClick="TestPhoneNotification">Test phone notification</MudButton>
+                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Science" Disabled="@testingChatGpt" OnClick="TestChatGptAsync">@(testingChatGpt ? "Testing ChatGPT..." : "Test ChatGPT connection")</MudButton>
+                            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.BugReport" Href="/bento-card-lab">Bento card lab</MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            }
             <MangaBento Columns="4" Class="mh-operations-bento">
             <MangaBentoTile Scheme="deep" CornerIcon="@Icons.Material.Filled.Inventory2" ItemClass="mh-operations-stat-item"><div class="mh-operation-stat"><MudText Typo="Typo.overline">Catalog</MudText><MudText Typo="Typo.h3">@overview.CatalogCount</MudText><MudText Typo="Typo.caption">@overview.MangaDexLinkedCount MangaDex-linked</MudText></div></MangaBentoTile>
             <MangaBentoTile Scheme="primary" CornerIcon="@Icons.Material.Filled.Storage" ItemClass="mh-operations-stat-item"><div class="mh-operation-stat"><MudText Typo="Typo.overline">Storage</MudText><MudText Typo="Typo.h3">@overview.CachedChapterCount</MudText><MudText Typo="Typo.caption">@FormatBytes(overview.CacheBytes) local</MudText></div></MangaBentoTile>
@@ -136,6 +154,57 @@ else if (overview is not null)
     ];
     private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase) || string.Equals(user?.Role, "test", StringComparison.OrdinalIgnoreCase);
     private bool canManage => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    private bool testingChatGpt;
+
+    private async Task TestPhoneNotification()
+    {
+        var result = await Notifications.SendTestPushAsync();
+        var localNotificationShown = false;
+        if (result?.Success == true)
+        {
+            try
+            {
+                localNotificationShown = await JS.InvokeAsync<bool>("mangaHubPush.showTestNotification", Array.Empty<object?>());
+            }
+            catch
+            {
+                // The server result remains useful when this browser blocks local notifications.
+            }
+        }
+        var message = result?.Message ?? "The phone notification test did not complete.";
+        if (result?.Success == true && !localNotificationShown)
+        {
+            message += " This browser did not confirm a local notification. Check browser and operating-system notification permissions.";
+        }
+        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error, message, "Phone notification test");
+        Refreshes.Notify(AppRefreshScope.Notifications);
+    }
+
+    private async Task TestDatabase()
+    {
+        var result = await AdminApi.TestDatabaseAsync();
+        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error, result?.Message ?? "Database test failed.", "Database test");
+    }
+
+    private async Task TestMangaDex()
+    {
+        var result = await AdminApi.TestMangaDexAsync();
+        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error, result?.Message ?? "MangaDex test failed.", "MangaDex test");
+    }
+
+    private async Task TestChatGptAsync()
+    {
+        if (!canManage || testingChatGpt) return;
+        testingChatGpt = true;
+        try
+        {
+            var result = await AdminApi.TestChatGptConnectionAsync();
+            if (result.Value?.LastVerifiedAt is not null) Messages.Success("ChatGPT answered using the configured model.");
+            else Messages.Warning(result.Error ?? "ChatGPT connection could not be verified.");
+        }
+        catch (HttpRequestException) { Messages.Warning("The connection test could not reach the server."); }
+        finally { testingChatGpt = false; }
+    }
     protected override async Task OnInitializedAsync() { user = await Auth.GetCurrentUserAsync(); if (isAdmin) await LoadAsync(); else isLoading = false; }
     private async Task LoadAsync() { isLoading = true; try { overview = await AdminApi.GetOperationsAsync(); if (overview is null) { Messages.Error("Could not load operations."); return; } await ReloadHistoryAsync(); } finally { isLoading = false; } }
     private async Task ReloadHistoryAsync() { if (isLoadingHistory) return; isLoadingHistory = true; try { historyJobs = await AdminApi.GetMaintenanceHistoryAsync(0, HistoryPageSize, historyType, historyStatus, historyTrigger); hasMoreHistory = historyJobs.Count == HistoryPageSize; } finally { isLoadingHistory = false; } }

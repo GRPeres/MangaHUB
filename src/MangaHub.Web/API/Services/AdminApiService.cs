@@ -37,7 +37,11 @@ public sealed class AdminApiService(ApiHttpClient api)
     public Task<MaintenanceJobResponse?> QueueMaintenanceJobAsync(string type) => api.SendAsync<object, MaintenanceJobResponse>(HttpMethod.Post, "/api/admin/operations/jobs", new { type });
     public Task<int> GetOpenIssueCountAsync() => api.GetAsync<int>("/api/admin/issues/open-count");
     public sealed record IssueProposal(string Text);
-    public sealed record ScheduledDraft(Guid Id, string Text);
+    public sealed record ChatGptStatus(bool Enabled, bool CredentialPresent, DateTimeOffset? LastVerifiedAt);
+    public Task<ChatGptStatus?> GetChatGptStatusAsync() => api.GetAsync<ChatGptStatus>("/api/admin/issues/chatgpt-status");
+    public Task<ApiCallResult<ChatGptStatus>> TestChatGptConnectionAsync() =>
+        api.SendWithResultAsync<object, ChatGptStatus>(HttpMethod.Post, "/api/admin/issues/chatgpt-test", new { });
+    public sealed record ScheduledDraft(Guid Id, string Text, bool Manual = false);
     public sealed record ProposalSchedule(bool Enabled, int BatchIntervalMinutes, int RequestIntervalSeconds,
         int GroupSize, DateTimeOffset? NextRunAt, bool Running, string LastError, List<ScheduledDraft> Drafts,
         bool ChatGptConfigured = false, bool ChatGptCredentialPresent = false, bool WebResearchEnabled = true);

@@ -276,7 +276,6 @@ public partial class MainLayout : IDisposable
     private void GoHome() => Navigation.NavigateTo("");
     private void GoLibrary() => Navigate("library");
     private void GoAccount() => Navigate("account");
-    private void GoBentoCardLab() => Navigate("bento-card-lab");
     private void GoAdminManagement() => Navigate("admin/catalog");
     private void OpenPushSubscriptions() => _pushSubscriptionsOpen = true;
 
@@ -561,42 +560,6 @@ public partial class MainLayout : IDisposable
         Messages.Show(removed ? MessageLevel.Success : MessageLevel.Error,
             removed ? $"{(string.IsNullOrWhiteSpace(subscription.DeviceLabel) ? "The device" : subscription.DeviceLabel)} will no longer receive phone notifications." : "The phone subscription could not be removed.",
             "Phone notifications");
-    }
-
-    private async Task TestPhoneNotification()
-    {
-        var result = await Notifications.SendTestPushAsync();
-        var localNotificationShown = false;
-        if (result?.Success == true)
-        {
-            try
-            {
-                localNotificationShown = await JS.InvokeAsync<bool>("mangaHubPush.showTestNotification", Array.Empty<object?>());
-            }
-            catch
-            {
-                // The server result remains useful when this browser blocks local notifications.
-            }
-        }
-        var message = result?.Message ?? "The phone notification test did not complete.";
-        if (result?.Success == true && !localNotificationShown)
-        {
-            message += " This browser did not confirm a local notification. Check browser and operating-system notification permissions.";
-        }
-        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error, message, "Phone notification test");
-        await LoadNotificationsAsync();
-    }
-
-    private async Task TestDatabase()
-    {
-        var result = await AdminApi.TestDatabaseAsync();
-        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error, result?.Message ?? "Database test failed.", "Database test");
-    }
-
-    private async Task TestMangaDex()
-    {
-        var result = await AdminApi.TestMangaDexAsync();
-        Messages.Show(result?.Success == true ? MessageLevel.Success : MessageLevel.Error, result?.Message ?? "MangaDex test failed.", "MangaDex test");
     }
 
     public void Dispose()

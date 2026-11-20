@@ -1,8 +1,8 @@
 # ChatGPT plan for scheduled issue proposals
 
 This connection is for a private self-hosted MangaHub installation. It uses
-MangaHub's own OpenAI authorization, not a Codex login file. The manual draft
-buttons still use the separately configured API-key provider.
+MangaHub's own OpenAI authorization, not a Codex login file. With the credential
+path configured, manual and scheduled drafts both use the ChatGPT connection.
 
 1. On the computer where you will sign in, use Python 3 and install the crypto
    dependency in a virtual environment: `python -m pip install "PyJWT[crypto]"`.
@@ -21,22 +21,23 @@ buttons still use the separately configured API-key provider.
    MangaHub__IssueProposals__Model: "<model eligible for your ChatGPT plan>"
    ```
 
-5. Open **Admin > Issues > Proposal schedule**, verify the credential is
-   installed, and enable scheduling. Only the NAS should use the transferred
+5. Run **Admin > Operations > Diagnostics > Test ChatGPT connection**. Then
+   open **Admin > Issues > AI proposals > Schedule** to enable scheduling.
+   Only the NAS should use the transferred
    session. Remove the local copy after the transfer.
 
 To disconnect, disable the schedule, remove the credential file from the
 mounted directory, and revoke MangaHub's access in ChatGPT settings. To
 reconnect, authorize a new credential file and install it again. The status
-indicator confirms file presence, not provider authorization. No API-key
-fallback is used for scheduled requests when the credential path is configured.
+indicator is green after a successful provider request. No API-key fallback
+is used when the credential path is configured.
 
 See [OpenAI's self-hosted setup](https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms)
 and [preview limits](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations).
 
 ## Optional hiatus research
 
-Use **Web research for stalled releases** in **Admin > Issues > Proposal schedule**.
+Use **Web research for stalled releases** in **Admin > Issues > AI proposals > Schedule**.
 It defaults to on, but runs only when automatic proposals are enabled. The selected OpenAI model
 and account must support web search; unsupported requests appear as run errors.
 Drafts show cited links and must be reviewed by an admin. Missing citations

@@ -36,12 +36,12 @@ else
                         @if (canManage)
                         {
                             <MudTooltip Text="@DraftActionLabel">
+                                <span class="mh-proposal-indicator">
                                 <MudIconButton Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Primary"
                                                Disabled="@(suggesting || (checkedIssues.Count > 0 && !ProposalCandidates.Any()))"
-                                               OnClick="() => showProposalBatch = true" aria-label="@DraftActionLabel" />
-                            </MudTooltip>
-                            <MudTooltip Text="Proposal schedule">
-                                <MudIconButton Icon="@Icons.Material.Filled.Schedule" OnClick="OpenProposalScheduleAsync" aria-label="Proposal schedule" />
+                                               OnClick="OpenProposalScheduleAsync" aria-label="@DraftActionLabel" />
+                                <span class="@(chatGptStatus?.LastVerifiedAt is not null ? "mh-proposal-dot verified" : "mh-proposal-dot")" aria-hidden="true"></span>
+                                </span>
                             </MudTooltip>
                         }
                         <MudTooltip Text="Refresh issues">
@@ -176,18 +176,99 @@ else
 @if (scheduleOpen && canManage)
 {
     <div class="mh-modal-backdrop">
-        <section class="mh-modal mh-issue-detail-modal" role="dialog" aria-modal="true" aria-labelledby="proposal-schedule-title">
-            <MudStack Spacing="2">
-                <MudText id="proposal-schedule-title" Typo="Typo.h6">Proposal schedule</MudText>
-                @if (proposalSchedule is { } schedule)
-                {
-                    <MudText Typo="Typo.body2">@(schedule.ChatGptConfigured
-                        ? schedule.ChatGptCredentialPresent ? "ChatGPT credential installed" : "ChatGPT setup required"
-                        : "Scheduled provider: OpenAI API key")</MudText>
-                    @if (schedule.ChatGptConfigured)
+        <section class="mh-modal mh-issue-detail-modal" role="dialog" aria-modal="true" aria-labelledby="proposal-title">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudText id="proposal-title" Typo="Typo.h6">AI proposals</MudText>
+                        <MudTooltip Text="@ChatGptStatusLabel">
+                            <span role="img" aria-label="@ChatGptStatusLabel" class="@(chatGptStatus?.LastVerifiedAt is not null ? "mh-proposal-status verified" : "mh-proposal-status")"></span>
+                        </MudTooltip>
+                    </MudStack>
+                    <MudStack Row="true" Spacing="0">
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Disabled="@scheduleBusy" OnClick="RefreshProposalInboxAsync" aria-label="Refresh drafts" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Disabled="@batchRunning" OnClick="() => scheduleOpen = false" aria-label="Close AI proposals" />
+                    </MudStack>
+                </MudStack>
+                <MudPaper Outlined="true" Elevation="0" Class="pa-4">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle1">Current drafts</MudText>
+                        @if (proposalRequestTitle is not null)
+                        {
+                            <MudPaper Outlined="true" Elevation="0" Class="pa-3">
+                                <MudStack Spacing="1" role="status" aria-live="polite">
+                                    <MudText Typo="Typo.subtitle2">@proposalRequestTitle</MudText>
+                                    @if (proposalRequestError is { } error)
+                                    {
+                                        <MudAlert Severity="Severity.Error" Dense="true">@error</MudAlert>
+                                    }
+                                    else if (batchRunning)
+                                    {
+                                        <MudText Typo="Typo.body2">@proposalRequestStatus</MudText>
+                                        <MudProgressLinear Indeterminate="true" aria-label="@proposalRequestStatus" />
+                                    }
+                                </MudStack>
+                            </MudPaper>
+                        }
+                        @if (proposalSchedule?.Running == true)
+                        {
+                            <MudProgressLinear Indeterminate="true" aria-label="Scheduled batch running" />
+                            <MudText Typo="Typo.body2">Scheduled batch running</MudText>
+                        }
+                        @if (proposalSchedule is { } inbox && inbox.Drafts.Count > 0)
+                        {
+                            <MudText Typo="Typo.body2">Automatic proposals wait until all drafts are reviewed.</MudText>
+                    @foreach (var draft in inbox.Drafts)
                     {
-                        <MudButton Href="https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms" Target="_blank" Rel="noopener noreferrer">ChatGPT connection setup</MudButton>
+                        var sections = draft.Text.Split("\n\nResearch sources:\n", 2, StringSplitOptions.None);
+                        <MudDivider />
+                        <MudText Typo="Typo.caption">@(draft.Manual ? "Manual draft" : "Scheduled draft")</MudText>
+                        <MudText Typo="Typo.body2" Style="white-space: pre-wrap; overflow-wrap: anywhere">@sections[0]</MudText>
+                        @if (sections.Length == 2)
+                        {
+                            <MudText Typo="Typo.subtitle2">Research sources</MudText>
+                            @foreach (var link in sections[1].Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                if (Uri.TryCreate(link, UriKind.Absolute, out var source) && source.Scheme is "https" or "http" && string.IsNullOrEmpty(source.UserInfo))
+                                {
+                                    <a href="@source.AbsoluteUri" target="_blank" rel="noopener noreferrer" style="overflow-wrap: anywhere">@source.AbsoluteUri</a>
+                                }
+                            }
+                        }
+                        <MudButton Disabled="@scheduleBusy" OnClick="() => ReviewScheduledDraftAsync(draft.Id)">Mark group reviewed</MudButton>
                     }
+                        }
+                        else if (!batchRunning && proposalRequestError is null && proposalSchedule?.Running != true)
+                        {
+                            <MudText Typo="Typo.body2">@(scheduleBusy ? "Loading drafts..." : proposalSchedule is null ? "Could not load drafts." : "No drafts awaiting review.")</MudText>
+                        }
+                    </MudStack>
+                </MudPaper>
+                <MudExpansionPanels>
+                    <MudExpansionPanel Text="Draft now">
+                        <MudStack Spacing="2">
+                <MudNumericField T="int" Label="Issues per request" @bind-Value="proposalLimit" Min="1" Max="10" Disabled="@batchRunning" />
+                <MudNumericField T="int" Label="Seconds between requests" @bind-Value="proposalDelay" Min="1" Max="120" Disabled="@batchRunning" />
+                @if (!batchRunning)
+                {
+                    <MudText Typo="Typo.body2">@(checkedIssues.Count == 0 ? "All eligible open issues" : "Selected eligible issues")</MudText>
+                }
+                <MudStack Row="true" Wrap="Wrap.Wrap">
+                    @if (batchRunning)
+                    {
+                        <MudButton OnClick="StopProposalBatch">Stop after current request</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="RunProposalBatchAsync">Start batch</MudButton>
+                    }
+                </MudStack>
+                        </MudStack>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Schedule">
+                        @if (proposalSchedule is { } schedule)
+                        {
+                            <MudStack Spacing="2">
                     <MudSwitch T="bool" @bind-Value="scheduleEnabled" Label="Enable automatic proposals" />
                     <MudSwitch T="bool" @bind-Value="scheduleWebResearchEnabled" Label="Web research for stalled releases" />
                     <MudNumericField T="int" Label="Minutes between batches" @bind-Value="scheduleBatchInterval" Min="5" Max="43200" />
@@ -209,63 +290,15 @@ else
                     {
                         <MudAlert Severity="Severity.Warning">@schedule.LastError</MudAlert>
                     }
-                    @foreach (var draft in schedule.Drafts)
-                    {
-                        var sections = draft.Text.Split("\n\nResearch sources:\n", 2, StringSplitOptions.None);
-                        <MudText Typo="Typo.body2" Style="white-space: pre-wrap; overflow-wrap: anywhere">@sections[0]</MudText>
-                        @if (sections.Length == 2)
-                        {
-                            <MudText Typo="Typo.subtitle2">Research sources</MudText>
-                            @foreach (var link in sections[1].Split('\n', StringSplitOptions.RemoveEmptyEntries))
-                            {
-                                if (Uri.TryCreate(link, UriKind.Absolute, out var source) && source.Scheme is "https" or "http" && string.IsNullOrEmpty(source.UserInfo))
+                                <MudButton Disabled="@scheduleBusy" Color="Color.Primary" OnClick="SaveProposalScheduleAsync">Save schedule</MudButton>
+                                @if (schedule.ChatGptConfigured)
                                 {
-                                    <a href="@source.AbsoluteUri" target="_blank" rel="noopener noreferrer" style="overflow-wrap: anywhere">@source.AbsoluteUri</a>
+                                    <MudButton Href="https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms" Target="_blank" Rel="noopener noreferrer">Connection setup</MudButton>
                                 }
-                            }
+                            </MudStack>
                         }
-                        <MudButton Disabled="@scheduleBusy" OnClick="() => ReviewScheduledDraftAsync(draft.Id)">Mark group reviewed</MudButton>
-                    }
-                    <MudButton Disabled="@scheduleBusy" Color="Color.Primary" OnClick="SaveProposalScheduleAsync">Save schedule</MudButton>
-                }
-                <MudStack Row="true">
-                    <MudButton Disabled="@scheduleBusy" OnClick="OpenProposalScheduleAsync">Refresh</MudButton>
-                    <MudButton OnClick="() => scheduleOpen = false">Close</MudButton>
-                </MudStack>
-            </MudStack>
-        </section>
-    </div>
-}
-
-@if (showProposalBatch && canManage)
-{
-    <div class="mh-modal-backdrop">
-        <section class="mh-modal mh-issue-detail-modal" role="dialog" aria-modal="true" aria-labelledby="proposal-batch-title">
-            <MudStack Spacing="2">
-                <MudText id="proposal-batch-title" Typo="Typo.h6">Draft proposals</MudText>
-                <MudText Typo="Typo.body2">Provider: OpenAI API key configured on the server</MudText>
-                <MudNumericField T="int" Label="Issues per request" @bind-Value="proposalLimit" Min="1" Max="10" Disabled="@batchRunning" />
-                <MudNumericField T="int" Label="Seconds between requests" @bind-Value="proposalDelay" Min="1" Max="120" Disabled="@batchRunning" />
-                @if (!batchRunning)
-                {
-                    <MudText Typo="Typo.body2">@(checkedIssues.Count == 0 ? "All eligible open issues" : "Selected eligible issues")</MudText>
-                }
-                @foreach (var outcome in proposalOutcomes)
-                {
-                    <MudText Typo="Typo.subtitle2">@outcome.Title</MudText>
-                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap; overflow-wrap: anywhere">@outcome.Text</MudText>
-                }
-                <MudStack Row="true" Wrap="Wrap.Wrap">
-                    @if (batchRunning)
-                    {
-                        <MudButton OnClick="StopProposalBatch">Stop after current request</MudButton>
-                    }
-                    else
-                    {
-                        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="RunProposalBatchAsync">Start batch</MudButton>
-                        <MudButton OnClick="() => showProposalBatch = false">Close</MudButton>
-                    }
-                </MudStack>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
             </MudStack>
         </section>
     </div>
@@ -638,6 +671,18 @@ else
     private int scheduleGroupSize;
     private AdminApiService.ProposalSchedule? proposalSchedule;
 
+    private async Task RefreshProposalInboxAsync()
+    {
+        if (!canManage || scheduleBusy) return;
+        scheduleBusy = true;
+        try
+        {
+            proposalSchedule = await AdminApi.GetProposalScheduleAsync();
+            chatGptStatus = await AdminApi.GetChatGptStatusAsync();
+        }
+        finally { scheduleBusy = false; }
+    }
+
     private async Task OpenProposalScheduleAsync()
     {
         if (!canManage) return;
@@ -646,6 +691,7 @@ else
         try
         {
             proposalSchedule = await AdminApi.GetProposalScheduleAsync();
+            chatGptStatus = await AdminApi.GetChatGptStatusAsync();
             if (proposalSchedule is not { } schedule) { Messages.Warning("Could not load proposal schedule."); return; }
             scheduleEnabled = schedule.Enabled;
             scheduleWebResearchEnabled = schedule.WebResearchEnabled;
@@ -680,12 +726,13 @@ else
         }
         finally { scheduleBusy = false; }
     }
-    private bool showProposalBatch;
     private bool batchRunning;
     private int proposalLimit = 5;
     private int proposalDelay = 5;
     private CancellationTokenSource? batchStop;
-    private readonly List<(string Title, string Text)> proposalOutcomes = [];
+    private string? proposalRequestTitle;
+    private string? proposalRequestStatus;
+    private string? proposalRequestError;
     private IEnumerable<AdminIssueListItemResponse> ProposalCandidates => items.Where(item =>
         checkedIssues.Contains(item.Id) && item.Status == "open"
         && item.Kind is "mangadex-release-stalled" or "mangadex-identity-mismatch");
@@ -702,7 +749,9 @@ else
         using var stop = new CancellationTokenSource();
         batchStop = stop;
         batchRunning = true;
-        proposalOutcomes.Clear();
+        proposalRequestTitle = "Preparing proposal batch";
+        proposalRequestStatus = "Finding eligible issues...";
+        proposalRequestError = null;
         try
         {
             if (all)
@@ -719,19 +768,35 @@ else
             if (groups.Length == 0) Messages.Info("No eligible open issues were found.");
             for (var i = 0; i < groups.Length && !stop.IsCancellationRequested; i++)
             {
-                if (i > 0) await Task.Delay(delay, stop.Token);
+                proposalRequestTitle = $"Request {i + 1} of {groups.Length} · {groups[i].Length} issues";
+                if (i > 0)
+                {
+                    proposalRequestStatus = $"Waiting {delay.TotalSeconds:0} seconds before sending...";
+                    StateHasChanged();
+                    await Task.Delay(delay, stop.Token);
+                }
+                proposalRequestStatus = "Request sent. Waiting for a response...";
+                StateHasChanged();
                 var result = await AdminApi.SuggestIssueRepairsAsync(groups[i]);
-                proposalOutcomes.Add(($"Request {i + 1} of {groups.Length} ({groups[i].Length} issues)", result.Value?.Text ?? result.Error ?? "No proposal was returned."));
+                if (result.Value is null)
+                    proposalRequestError = string.IsNullOrWhiteSpace(result.Error) ? "No proposal was returned." : result.Error;
+                else
+                {
+                    proposalRequestStatus = "Response received. Loading saved drafts...";
+                    StateHasChanged();
+                    await RefreshProposalInboxAsync();
+                }
                 StateHasChanged();
                 if (result.Value is null) break;
             }
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
-        catch (HttpRequestException) { Messages.Warning("The proposal request could not reach the server."); }
+        catch (HttpRequestException) { proposalRequestError = "The proposal request could not reach the server."; }
         finally
         {
             batchStop = null;
             batchRunning = false;
+            if (proposalRequestError is null) proposalRequestTitle = null;
         }
     }
     private Guid? proposalIssueId;
@@ -909,7 +974,11 @@ else
     private bool isSearchingMetadata;
     private int metadataSearchVersion;
     private string? expandedGroup;
-    private string DraftActionLabel => checkedIssues.Count == 0 ? "Draft proposals for all eligible issues" : "Draft proposals for selected issues";
+    private AdminApiService.ChatGptStatus? chatGptStatus;
+    private string DraftActionLabel => $"AI proposals · {ChatGptStatusLabel}";
+    private string ChatGptStatusLabel => chatGptStatus?.LastVerifiedAt is { } verified ? $"ChatGPT verified {verified.ToLocalTime():g}"
+            : chatGptStatus?.CredentialPresent == true ? " · ChatGPT credential installed, not verified"
+            : "ChatGPT not connected";
     private bool isAdmin => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase) || string.Equals(user?.Role, "test", StringComparison.OrdinalIgnoreCase);
     private bool canManage => string.Equals(user?.Role, "admin", StringComparison.OrdinalIgnoreCase);
     private bool IsOpen => selected?.Status == "open";
@@ -1113,6 +1182,7 @@ else
             var currentHealth = await summary;
             if (currentStatus != status) return;
             health = currentHealth;
+            if (canManage) chatGptStatus = await AdminApi.GetChatGptStatusAsync();
             items = page;
             hasMore = page.Count == PageSize;
         }
