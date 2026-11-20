@@ -7,4 +7,4 @@ public interface IMangaDexCatalogLookup
 }
 
 public sealed record MangaDexCatalogMatch(string Id, string Title);
-public sealed record MangaDexCatalogIdentity(string Id, string Title, string MyAnimeListId, List<string> AlternateTitles);
+public sealed record MangaDexCatalogIdentity(string Id, string Title, string MyAnimeListId, List<string> AlternateTitles, string MangaUpdatesId = "");

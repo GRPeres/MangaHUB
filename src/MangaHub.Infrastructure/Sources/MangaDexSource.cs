@@ -156,7 +156,8 @@ public sealed class MangaDexSource(HttpClient httpClient, IOptions<MangaHubOptio
         var myAnimeListId = attributes.TryGetProperty("links", out var links)
             ? ReadString(links, "mal")
             : "";
-        var identity = new MangaDexCatalogIdentity(idElement.GetString() ?? normalizedId, title, myAnimeListId, alternateTitles);
+        var identity = new MangaDexCatalogIdentity(idElement.GetString() ?? normalizedId, title, myAnimeListId, alternateTitles,
+            links.ValueKind == JsonValueKind.Object ? ReadString(links, "mu") : "");
         cache.Set(cacheKey, identity, TimeSpan.FromMinutes(Math.Max(1, options.Value.MangaDexReaderCacheMinutes)));
         return identity;
     }

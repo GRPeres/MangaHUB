@@ -86,7 +86,15 @@ public sealed class CatalogService(
         manga.OpenLibraryKey = entry.OpenLibraryKey.Trim();
         manga.FirstPublishYear = entry.FirstPublishYear;
         manga.MediaType = entry.MediaType.Trim();
-        manga.PublishingStatus = entry.PublishingStatus.Trim();
+        var publishingStatus = entry.PublishingStatus.Trim();
+        if (!string.Equals(manga.PublishingStatus, publishingStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            manga.PublishingHiatusOverride = string.Equals(publishingStatus, "hiatus", StringComparison.OrdinalIgnoreCase);
+            manga.PublishingHiatusSource = "";
+            manga.PublishingCompletionSource = "";
+            manga.MangaDexNonHiatusSince = null;
+        }
+        manga.PublishingStatus = publishingStatus;
         manga.ChapterCount = entry.ChapterCount;
         manga.VolumeCount = entry.VolumeCount;
         var readerLinks = ResolveReaderLinks(entry);

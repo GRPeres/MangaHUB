@@ -662,7 +662,8 @@ public sealed class IssueReportingService(
         manga.Category = request.Category.Trim();
         manga.Description = request.Description.Trim();
         manga.MediaType = request.MediaType.Trim();
-        manga.PublishingStatus = request.PublishingStatus.Trim();
+        if (!manga.PublishingHiatusOverride && manga.PublishingCompletionSource.Length == 0)
+            manga.PublishingStatus = request.PublishingStatus.Trim();
         manga.ChapterCount = request.ChapterCount;
         manga.VolumeCount = request.VolumeCount;
         manga.MetadataSource = "myanimelist";

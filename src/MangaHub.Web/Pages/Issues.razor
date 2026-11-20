@@ -223,6 +223,31 @@ else
                         var sections = draft.Text.Split("\n\nResearch sources:\n", 2, StringSplitOptions.None);
                         <MudDivider />
                         <MudText Typo="Typo.caption">@(draft.Manual ? "Manual draft" : "Scheduled draft")</MudText>
+                        @if (!string.IsNullOrWhiteSpace(draft.Title)) { <MudText Typo="Typo.subtitle2">@draft.Title</MudText> }
+                        @if (draft.Action == "repair_mangadex")
+                        {
+                            <MudText Typo="Typo.body2">Replace MangaDex ID with <strong>@draft.ReplacementId</strong>.</MudText>
+                        }
+                        else if (draft.Action == "snooze")
+                        {
+                            <MudText Typo="Typo.body2">Snooze this issue for <strong>@draft.SnoozeDays days</strong>.</MudText>
+                        }
+                        else if (draft.Action == "mark_hiatus")
+                        {
+                            <MudText Typo="Typo.body2">Set publication status to <strong>On hiatus</strong> and resolve this stalled-release issue.</MudText>
+                            @if (Uri.TryCreate(draft.SourceUrl, UriKind.Absolute, out var hiatusSource) && hiatusSource.Scheme is "https" or "http")
+                            {
+                                <a href="@hiatusSource.AbsoluteUri" target="_blank" rel="noopener noreferrer">Review the hiatus announcement</a>
+                            }
+                        }
+                        else if (AdditionalDraftAction(draft) is { } actionLabel)
+                        {
+                            <MudText Typo="Typo.body2"><strong>@actionLabel</strong></MudText>
+                            @if (Uri.TryCreate(draft.SourceUrl, UriKind.Absolute, out var evidenceSource) && evidenceSource.Scheme is "https" or "http")
+                            {
+                                <a href="@evidenceSource.AbsoluteUri" target="_blank" rel="noopener noreferrer">Review cited evidence</a>
+                            }
+                        }
                         <MudText Typo="Typo.body2" Style="white-space: pre-wrap; overflow-wrap: anywhere">@sections[0]</MudText>
                         @if (sections.Length == 2)
                         {
@@ -235,7 +260,13 @@ else
                                 }
                             }
                         }
-                        <MudButton Disabled="@scheduleBusy" OnClick="() => ReviewScheduledDraftAsync(draft.Id)">Mark group reviewed</MudButton>
+                        <MudStack Row="true" Wrap="Wrap.Wrap">
+                            @if (draft.Action is "repair_mangadex" or "snooze" or "mark_hiatus" || AdditionalDraftAction(draft) is not null)
+                            {
+                                <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@scheduleBusy" OnClick="() => ApproveDraftAsync(draft.Id)">Approve and apply</MudButton>
+                            }
+                            <MudButton Disabled="@scheduleBusy" OnClick="() => ReviewScheduledDraftAsync(draft.Id)">Leave unchanged</MudButton>
+                        </MudStack>
                     }
                         }
                         else if (!batchRunning && proposalRequestError is null && proposalSchedule?.Running != true)
@@ -270,7 +301,7 @@ else
                         {
                             <MudStack Spacing="2">
                     <MudSwitch T="bool" @bind-Value="scheduleEnabled" Label="Enable automatic proposals" />
-                    <MudSwitch T="bool" @bind-Value="scheduleWebResearchEnabled" Label="Web research for stalled releases" />
+                                <MudSwitch T="bool" @bind-Value="scheduleWebResearchEnabled" Label="Web research for release and language gaps" />
                     <MudNumericField T="int" Label="Minutes between batches" @bind-Value="scheduleBatchInterval" Min="5" Max="43200" />
                     <MudNumericField T="int" Label="Seconds between requests" @bind-Value="scheduleRequestInterval" Min="1" Max="3600" />
                     <MudNumericField T="int" Label="Issues per request" @bind-Value="scheduleGroupSize" Min="1" Max="10" />
@@ -726,6 +757,33 @@ else
         }
         finally { scheduleBusy = false; }
     }
+    private static string? AdditionalDraftAction(AdminApiService.ScheduledDraft draft) => draft.Action switch
+    {
+        "refresh_chapters" => "Refresh this title's MangaDex chapters and recheck coverage.",
+        "clear_hiatus" => "Clear the hiatus override and resume normal status sync.",
+        "mark_complete" => "Set publication status to Completed without changing shelf progress.",
+        "record_external" => $"Record the external listing through chapter {draft.ActionValue} ({draft.ActionLanguage}).",
+        "repair_mal" => $"Replace the MyAnimeList ID with {draft.ActionValue}.",
+        "repair_mangaupdates" => $"Replace the MangaUpdates ID with {draft.ActionValue} and refresh its chapter data.",
+        _ => null
+    };
+
+    private async Task ApproveDraftAsync(Guid id)
+    {
+        if (!canManage || scheduleBusy) return;
+        scheduleBusy = true;
+        try
+        {
+            var result = await AdminApi.ApproveScheduledDraftAsync(id);
+            if (result.Value is not { Applied: true } approval) { Messages.Warning(result.Error ?? "The proposal was not applied."); return; }
+            if (approval.Warning is { } warning) Messages.Warning(warning);
+            else Messages.Success("Proposal applied.");
+            await LoadAsync();
+            await OpenProposalScheduleAsync();
+        }
+        finally { scheduleBusy = false; }
+    }
+
     private bool batchRunning;
     private int proposalLimit = 5;
     private int proposalDelay = 5;
@@ -735,7 +793,7 @@ else
     private string? proposalRequestError;
     private IEnumerable<AdminIssueListItemResponse> ProposalCandidates => items.Where(item =>
         checkedIssues.Contains(item.Id) && item.Status == "open"
-        && item.Kind is "mangadex-release-stalled" or "mangadex-identity-mismatch");
+        && item.Kind is "mangadex-release-stalled" or "mangadex-identity-mismatch" or "mangadex-language-coverage");
 
     private void StopProposalBatch() => batchStop?.Cancel();
 
@@ -760,7 +818,7 @@ else
                 for (var offset = 0; !stop.IsCancellationRequested; offset += pageSize)
                 {
                     var page = await AdminApi.GetIssuesAsync("open", offset, pageSize);
-                    pending.AddRange(page.Where(item => item.Kind is "mangadex-release-stalled" or "mangadex-identity-mismatch"));
+                    pending.AddRange(page.Where(item => item.Kind is "mangadex-release-stalled" or "mangadex-identity-mismatch" or "mangadex-language-coverage"));
                     if (page.Count < pageSize) break;
                 }
             }

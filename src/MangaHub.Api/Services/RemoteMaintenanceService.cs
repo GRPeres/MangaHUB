@@ -338,7 +338,16 @@ public sealed class RemoteMaintenanceService(
         }
     }
 
-    private async Task SyncMangaDexCatalogAsync(bool force, CancellationToken cancellationToken)
+    public async Task<bool> RefreshMangaDexTitleAsync(Guid titleId, CancellationToken cancellationToken)
+    {
+        var started = DateTimeOffset.UtcNow;
+        await SyncMangaDexCatalogAsync(true, cancellationToken, titleId);
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MangaHubDbContext>();
+        return await db.MangaEntries.AnyAsync(entry => entry.Id == titleId && entry.MangaDexLastSyncedAt >= started, cancellationToken);
+    }
+
+    private async Task SyncMangaDexCatalogAsync(bool force, CancellationToken cancellationToken, Guid? titleId = null)
     {
         if (!options.Value.MangaDexEnabled)
         {
@@ -357,7 +366,7 @@ public sealed class RemoteMaintenanceService(
             : GetReleaseSyncBatchSize(totalLinkedEntries);
 
         var entries = await db.MangaEntries
-            .Where(entry => entry.MangaDexId != "" &&
+            .Where(entry => (titleId == null || entry.Id == titleId) && entry.MangaDexId != "" &&
                 (force
                     || entry.MangaDexLatestChapter == null
                     || !db.MangaDexLanguageLatestChapters.Any(latest => latest.MangaEntryId == entry.Id)
@@ -389,13 +398,15 @@ public sealed class RemoteMaintenanceService(
 
             try
             {
-                var sourceSeries = await mangaDex.GetSeriesAsync(entry.MangaDexId, cancellationToken);
+                var sourceSeries = titleId is null ? await mangaDex.GetSeriesAsync(entry.MangaDexId, cancellationToken) : null;
                 if (sourceSeries is not null && !string.IsNullOrWhiteSpace(sourceSeries.Status))
                 {
-                    var statusChanged = !string.Equals(entry.PublishingStatus, sourceSeries.Status, StringComparison.OrdinalIgnoreCase);
-                    entry.PublishingStatus = sourceSeries.Status;
+                    var effectiveStatus = entry.PublishingHiatusOverride ? "hiatus"
+                        : entry.PublishingCompletionSource.Length > 0 ? "completed" : sourceSeries.Status;
+                    var statusChanged = !string.Equals(entry.PublishingStatus, effectiveStatus, StringComparison.OrdinalIgnoreCase);
+                    entry.PublishingStatus = effectiveStatus;
 
-                    if (IsMangaDexHiatus(sourceSeries.Status))
+                    if (IsMangaDexHiatus(effectiveStatus))
                     {
                         entry.MangaDexNonHiatusSince = null;
                         var activeShelfEntries = await db.UserMangaEntries
@@ -409,7 +420,7 @@ public sealed class RemoteMaintenanceService(
                             paused++;
                         }
                     }
-                    else if (IsMangaDexOngoing(sourceSeries.Status))
+                    else if (IsMangaDexOngoing(effectiveStatus))
                     {
                         entry.MangaDexNonHiatusSince ??= syncedAt;
                         var resumableShelfEntries = await db.UserMangaEntries

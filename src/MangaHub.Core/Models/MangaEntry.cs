@@ -15,6 +15,13 @@ public sealed class MangaEntry
     public int? FirstPublishYear { get; set; }
     public string MediaType { get; set; } = "";
     public string PublishingStatus { get; set; } = "";
+    public bool PublishingHiatusOverride { get; set; }
+    public string PublishingHiatusSource { get; set; } = "";
+    public string PublishingCompletionSource { get; set; } = "";
+    public decimal? CitedExternalChapter { get; set; }
+    public string CitedExternalLanguage { get; set; } = "";
+    public string CitedExternalSource { get; set; } = "";
+    public DateTimeOffset? CitedExternalCheckedAt { get; set; }
     public int? ChapterCount { get; set; }
     public int? VolumeCount { get; set; }
     public string FallbackReaderUrl { get; set; } = "";

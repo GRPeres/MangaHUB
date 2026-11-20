@@ -35,6 +35,9 @@ public sealed class MangaDexTranslationCoverageService(
                 manga.Title,
                 manga.FallbackReaderUrl,
                 manga.ExternalReaderLatestChapter,
+                manga.CitedExternalChapter,
+                manga.CitedExternalLanguage,
+                manga.CitedExternalSource,
                 user.PreferredLanguage,
                 shelf.CurrentChapter,
                 shelf.ExternalReaderLatestChapter))
@@ -183,7 +186,10 @@ public sealed class MangaDexTranslationCoverageService(
                 entry.CurrentChapter,
                 entry.ExternalReaderLatestChapter,
                 entry.MangaEntry!.FallbackReaderUrl,
-                CatalogExternalReaderLatestChapter = entry.MangaEntry.ExternalReaderLatestChapter
+                CatalogExternalReaderLatestChapter = entry.MangaEntry.ExternalReaderLatestChapter,
+                entry.MangaEntry.CitedExternalChapter, entry.MangaEntry.CitedExternalLanguage,
+                entry.MangaEntry.CitedExternalSource,
+                PreferredLanguage = db.Users.Where(user => user.Id == userId).Select(user => user.PreferredLanguage).FirstOrDefault() ?? ""
             })
             .FirstOrDefaultAsync(cancellationToken);
         if (shelf is null || string.IsNullOrWhiteSpace(shelf.FallbackReaderUrl)) return false;
@@ -207,6 +213,9 @@ public sealed class MangaDexTranslationCoverageService(
             .Select(chapter => chapter!.Value)
             .DefaultIfEmpty(-1m)
             .Max();
+        var cited = CitedChapter(shelf.FallbackReaderUrl, shelf.CitedExternalSource, shelf.CitedExternalLanguage,
+            shelf.CitedExternalChapter, LanguagePreferences.Parse(shelf.PreferredLanguage));
+        if (cited is { } chapter) externalLatest = Math.Max(externalLatest, chapter);
         if (externalLatest < 0m) return false;
 
         var latest = await db.MangaDexLanguageLatestChapters.AsNoTracking()
@@ -224,9 +233,18 @@ public sealed class MangaDexTranslationCoverageService(
             .Select(item => (decimal?)item.LatestChapter)
             .Max();
         var externalLatest = !string.IsNullOrWhiteSpace(shelf.FallbackReaderUrl) ? externalCoverage : null;
+        var cited = CitedChapter(shelf.FallbackReaderUrl, shelf.CitedExternalSource, shelf.CitedExternalLanguage,
+            shelf.CitedExternalChapter, preferredLanguages);
+        if (cited is { } chapter && (externalLatest is null || chapter > externalLatest)) externalLatest = chapter;
         var readableLatest = externalLatest.HasValue && (!preferredLatest.HasValue || externalLatest.Value > preferredLatest.Value) ? externalLatest : preferredLatest;
         return new TranslationCoverageEvaluation(preferredLanguages, preferredLatest, externalLatest, readableLatest, allLanguageLatest - (readableLatest ?? 0m));
     }
+
+    private static decimal? CitedChapter(string fallback, string source, string language, decimal? chapter, IReadOnlyList<string> preferred) =>
+        chapter is not null && LanguagePreferences.Contains(preferred, language)
+        && Uri.TryCreate(fallback, UriKind.Absolute, out var reader)
+        && Uri.TryCreate(source, UriKind.Absolute, out var citation)
+        && string.Equals(reader.IdnHost, citation.IdnHost, StringComparison.OrdinalIgnoreCase) ? chapter : null;
 
     private static decimal? ParseExternalChapter(string? value) =>
         decimal.TryParse(value?.Trim().Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed) && parsed >= 0
@@ -287,6 +305,9 @@ public sealed class MangaDexTranslationCoverageService(
         string Title,
         string FallbackReaderUrl,
         decimal? CatalogExternalReaderLatestChapter,
+        decimal? CitedExternalChapter,
+        string CitedExternalLanguage,
+        string CitedExternalSource,
         string PreferredLanguage,
         string CurrentChapter,
         string ExternalReaderLatestChapter);

@@ -128,6 +128,16 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 "Id" uuid PRIMARY KEY, "RunId" uuid NOT NULL, "GroupId" uuid NOT NULL, "EvidenceKey" text NOT NULL,
                 "Text" text NOT NULL, "ReviewedAt" timestamptz NULL
             );
+            ALTER TABLE "ScheduledIssueProposals"
+                ADD COLUMN IF NOT EXISTS "IssueId" uuid NULL,
+                ADD COLUMN IF NOT EXISTS "Action" text NULL,
+                ADD COLUMN IF NOT EXISTS "EvidenceSnapshot" text NULL,
+                ADD COLUMN IF NOT EXISTS "ReplacementId" text NULL,
+                ADD COLUMN IF NOT EXISTS "ExpectedMalId" text NULL,
+                ADD COLUMN IF NOT EXISTS "SnoozeDays" integer NULL,
+                ADD COLUMN IF NOT EXISTS "SourceUrl" text NULL,
+                ADD COLUMN IF NOT EXISTS "ActionValue" text NULL,
+                ADD COLUMN IF NOT EXISTS "ActionLanguage" text NULL;
             ALTER TABLE "IssueProposalSchedules" ADD COLUMN IF NOT EXISTS "WebResearchEnabled" boolean NOT NULL DEFAULT true;
             INSERT INTO "IssueProposalSchedules" ("Id","Enabled","BatchIntervalMinutes","RequestIntervalSeconds","GroupSize","LastError","WebResearchEnabled")
             VALUES (1,false,1440,30,5,'',true) ON CONFLICT ("Id") DO NOTHING;
@@ -205,6 +215,13 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "VolumeCount" integer NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapter" numeric(10,3) NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexLatestChapterPublishedAt" timestamp with time zone NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "PublishingHiatusOverride" boolean NOT NULL DEFAULT false;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "PublishingHiatusSource" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "PublishingCompletionSource" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CitedExternalChapter" numeric NULL;
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CitedExternalLanguage" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CitedExternalSource" text NOT NULL DEFAULT '';
+            ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "CitedExternalCheckedAt" timestamptz NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexReleaseIntervalDays" double precision NULL;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "MangaDexReleaseIntervalSamples" integer NOT NULL DEFAULT 0;
             ALTER TABLE manga_entries ADD COLUMN IF NOT EXISTS "FallbackReaderUrl" text NOT NULL DEFAULT '';

@@ -25,4 +25,13 @@ public sealed class ScheduledIssueProposal
     public string EvidenceKey { get; set; } = "";
     public string Text { get; set; } = "";
     public DateTimeOffset? ReviewedAt { get; set; }
+    public Guid? IssueId { get; set; }
+    public string? Action { get; set; }
+    public string? EvidenceSnapshot { get; set; }
+    public string? ReplacementId { get; set; }
+    public string? ExpectedMalId { get; set; }
+    public int? SnoozeDays { get; set; }
+    public string? SourceUrl { get; set; }
+    public string? ActionValue { get; set; }
+    public string? ActionLanguage { get; set; }
 }
