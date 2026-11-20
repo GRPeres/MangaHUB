@@ -12,6 +12,8 @@ public sealed class ChatGptProposalProvider(IConfiguration configuration, IHttpC
     public bool IsConnected => Enabled && File.Exists(Path);
     private DateTimeOffset? lastVerifiedAt;
     private readonly object statusLock = new();
+    private readonly SemaphoreSlim automaticCheck = new(1);
+    private DateTimeOffset nextAutomaticCheck;
 
     public DateTimeOffset? LastVerifiedAt
     {
@@ -19,6 +21,27 @@ public sealed class ChatGptProposalProvider(IConfiguration configuration, IHttpC
     }
 
     private sealed record Credentials(string client_id, string access_token, string refresh_token, DateTimeOffset expires_at);
+
+    public async Task VerifyIfDueAsync(string? model, CancellationToken token)
+    {
+        if (!IsConnected || string.IsNullOrWhiteSpace(model) || !await automaticCheck.WaitAsync(0, token)) return;
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            if (now < nextAutomaticCheck || LastVerifiedAt is { } verified && now - verified < TimeSpan.FromMinutes(30)) return;
+            nextAutomaticCheck = now.AddMinutes(5);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeout.CancelAfter(TimeSpan.FromSeconds(15));
+            await DraftAsync(model, "Reply with only OK.", "Connection test.", timeout.Token);
+        }
+        catch (Exception ex) when (!token.IsCancellationRequested && ex is (HttpRequestException
+            or IOException or UnauthorizedAccessException or InvalidOperationException or JsonException
+            or KeyNotFoundException or OperationCanceledException))
+        {
+            // The status remains unverified; detailed errors are available in Operations.
+        }
+        finally { automaticCheck.Release(); }
+    }
 
     public async Task<string> DraftAsync(string model, string instructions, string input, CancellationToken token, bool webResearch = false)
     {
@@ -49,13 +72,28 @@ public sealed class ChatGptProposalProvider(IConfiguration configuration, IHttpC
             tools = webResearch ? new[] { new { type = "web_search" } } : []
         });
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            string? code = null;
+            if (response.Content.Headers.ContentType?.MediaType == "application/json")
+            {
+                try
+                {
+                    using var failure = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+                    code = ReadFailureCode(failure.RootElement);
+                }
+                catch (JsonException) { }
+            }
+            throw new ChatGptRequestException($"OpenAI returned HTTP {(int)response.StatusCode}", code, webResearch);
+        }
         using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(token));
         var result = new StringBuilder();
         while (await reader.ReadLineAsync(token) is { } line)
         {
-            if (!line.StartsWith("data: {", StringComparison.Ordinal)) continue;
-            using var evt = JsonDocument.Parse(line[6..]);
+            if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
+            var data = line[5..].TrimStart();
+            if (!data.StartsWith('{')) continue;
+            using var evt = JsonDocument.Parse(data);
             var node = evt.RootElement;
             switch (node.GetProperty("type").GetString())
             {
@@ -69,10 +107,23 @@ public sealed class ChatGptProposalProvider(IConfiguration configuration, IHttpC
                 case "response.failed":
                 case "response.incomplete":
                 case "error":
-                    throw new InvalidOperationException("ChatGPT could not complete the proposal.");
+                    throw new ChatGptRequestException("OpenAI did not complete the response", ReadFailureCode(node), webResearch);
             }
         }
-        throw new InvalidOperationException("ChatGPT proposal stream ended before completion.");
+        throw new ChatGptRequestException("The OpenAI stream ended before completion", null, webResearch);
+    }
+
+    private static string? ReadFailureCode(JsonElement node)
+    {
+        if (node.ValueKind != JsonValueKind.Object) return null;
+        if (node.TryGetProperty("response", out var response) && response.ValueKind == JsonValueKind.Object) node = response;
+        if (node.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.Object) node = error;
+        else if (node.TryGetProperty("incomplete_details", out var incomplete) && incomplete.ValueKind == JsonValueKind.Object) node = incomplete;
+        foreach (var field in new[] { "code", "reason" })
+            if (node.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.String
+                && value.GetString() is { Length: > 0 and <= 64 } code
+                && code.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '_' or '-')) return code;
+        return null;
     }
 
     private async Task<Credentials> GetCredentialsAsync(CancellationToken token)
@@ -118,3 +169,7 @@ public sealed class ChatGptProposalProvider(IConfiguration configuration, IHttpC
         finally { CredentialLock.Release(); }
     }
 }
+
+public sealed class ChatGptRequestException(string failure, string? code, bool webResearch)
+    : InvalidOperationException(failure + (code is null ? "" : $" ({code})")
+        + (webResearch ? " with web research enabled." : "."));

@@ -130,17 +130,20 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
 
     [HttpPost("issues/{issueId:guid}/suggest-repair")]
     public async Task<IActionResult> SuggestIssueRepair(Guid issueId, [FromServices] IConfiguration configuration,
-        [FromServices] ChatGptProposalProvider chatGpt, CancellationToken cancellationToken) =>
-        await SuggestIssueRepairs([issueId], configuration, chatGpt, cancellationToken);
+        [FromServices] ChatGptProposalProvider chatGpt, [FromQuery] bool? webResearch, CancellationToken cancellationToken) =>
+        await SuggestIssueRepairs([issueId], configuration, chatGpt, webResearch, cancellationToken);
 
     public sealed record ProposalScheduleSettings(bool Enabled, int BatchIntervalMinutes, int RequestIntervalSeconds, int GroupSize, bool? WebResearchEnabled = null);
 
-    [HttpGet("issues/chatgpt-status")]
-    public async Task<IActionResult> GetChatGptStatus([FromServices] ChatGptProposalProvider provider, CancellationToken cancellationToken)
+    [HttpPost("issues/chatgpt-status")]
+    public async Task<IActionResult> GetChatGptStatus([FromServices] ChatGptProposalProvider provider,
+        [FromServices] IConfiguration configuration, CancellationToken cancellationToken)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
         if (!CurrentUserService.IsAdmin(user)) return StatusCode(403);
+        Response.Headers.CacheControl = "no-store";
+        await provider.VerifyIfDueAsync(configuration["MangaHub:IssueProposals:Model"], cancellationToken);
         return Ok(new { provider.Enabled, credentialPresent = provider.IsConnected, provider.LastVerifiedAt });
     }
 
@@ -393,7 +396,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
 
     [HttpPost("issues/suggest-repairs")]
     public async Task<IActionResult> SuggestIssueRepairs([FromBody] Guid[] issueIds, [FromServices] IConfiguration configuration,
-        [FromServices] ChatGptProposalProvider chatGpt, CancellationToken cancellationToken)
+        [FromServices] ChatGptProposalProvider chatGpt, [FromQuery] bool? webResearch, CancellationToken cancellationToken)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null) return Unauthorized();
@@ -404,6 +407,13 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         if (string.IsNullOrWhiteSpace(model) || (chatGpt.Enabled ? !chatGpt.IsConnected : string.IsNullOrWhiteSpace(key)))
             return BadRequest("Issue proposals are not configured.");
 
+        var runId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var claimed = await db.IssueProposalSchedules.Where(row => row.Id == 1
+                && (row.RunId == null || row.LeaseUntil <= now))
+            .ExecuteUpdateAsync(update => update.SetProperty(row => row.RunId, runId)
+                .SetProperty(row => row.LeaseUntil, now.AddSeconds(90)), cancellationToken);
+        if (claimed != 1) return Conflict("Another proposal request or scheduled batch is already running.");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(60));
         var stage = "collecting issue evidence";
@@ -420,7 +430,7 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
                     || issue.Kind is not ("mangadex-release-stalled" or "mangadex-identity-mismatch" or "mangadex-language-coverage")) continue;
                 var data = IssueProposalEvidence.ReadIssueFacts(issue.MetadataJson);
                 var catalogEvidence = await IssueProposalEvidence.ReadCatalogAsync(db, issue.SubjectId, timeout.Token);
-                research |= schedule.WebResearchEnabled && issue.Kind is "mangadex-release-stalled" or "mangadex-language-coverage";
+                research |= (webResearch ?? schedule.WebResearchEnabled) && issue.Kind is "mangadex-release-stalled" or "mangadex-language-coverage";
                 string? candidate = null;
                 var mal = data.GetValueOrDefault("expectedMyAnimeListId");
                 if (issue.Kind == "mangadex-identity-mismatch" && !string.IsNullOrWhiteSpace(mal))
@@ -458,6 +468,10 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         {
             return StatusCode(504, $"The draft timed out while {stage}. Try fewer issues per request or turn off web research for this test.");
         }
+        catch (ChatGptRequestException ex)
+        {
+            return StatusCode(502, ex.Message);
+        }
         catch (HttpRequestException ex) when (ex.StatusCode is { } status)
         {
             return StatusCode(502, $"An upstream service returned HTTP {(int)status} while {stage}.");
@@ -465,6 +479,12 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             return StatusCode(502, $"The draft failed while {stage}.");
+        }
+        finally
+        {
+            await db.IssueProposalSchedules.Where(row => row.Id == 1 && row.RunId == runId)
+                .ExecuteUpdateAsync(update => update.SetProperty(row => row.RunId, (Guid?)null)
+                    .SetProperty(row => row.LeaseUntil, (DateTimeOffset?)null), CancellationToken.None);
         }
     }
 

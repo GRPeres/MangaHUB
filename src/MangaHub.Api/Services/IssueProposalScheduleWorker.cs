@@ -87,7 +87,8 @@ public sealed class IssueProposalScheduleWorker(IServiceScopeFactory scopes, ICo
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
         {
-            error = "The run stopped before all requests completed. Check the provider and API logs.";
+            error = ex is ChatGptRequestException ? ex.Message
+                : "The run stopped before all requests completed. Check the provider and API logs.";
             logger.LogWarning(ex, "Issue proposal run {RunId} stopped.", runId);
         }
         finally

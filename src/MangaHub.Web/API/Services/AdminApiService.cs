@@ -38,7 +38,8 @@ public sealed class AdminApiService(ApiHttpClient api)
     public Task<int> GetOpenIssueCountAsync() => api.GetAsync<int>("/api/admin/issues/open-count");
     public sealed record IssueProposal(string Text);
     public sealed record ChatGptStatus(bool Enabled, bool CredentialPresent, DateTimeOffset? LastVerifiedAt);
-    public Task<ChatGptStatus?> GetChatGptStatusAsync() => api.GetAsync<ChatGptStatus>("/api/admin/issues/chatgpt-status");
+    public Task<ChatGptStatus?> GetChatGptStatusAsync() =>
+        api.SendAsync<object, ChatGptStatus>(HttpMethod.Post, "/api/admin/issues/chatgpt-status", new { });
     public Task<ApiCallResult<ChatGptStatus>> TestChatGptConnectionAsync() =>
         api.SendWithResultAsync<object, ChatGptStatus>(HttpMethod.Post, "/api/admin/issues/chatgpt-test", new { });
     public sealed record ScheduledDraft(Guid Id, string Text, bool Manual = false, string? Action = null,
@@ -56,8 +57,9 @@ public sealed class AdminApiService(ApiHttpClient api)
             new { enabled, batchIntervalMinutes, requestIntervalSeconds, groupSize, webResearchEnabled });
     public Task<bool> ReviewScheduledDraftAsync(Guid id) =>
         api.SendWithoutResponseAsync(HttpMethod.Post, $"/api/admin/issues/proposal-schedule/{id}/review", new { });
-    public Task<ApiCallResult<IssueProposal>> SuggestIssueRepairsAsync(Guid[] ids) =>
-        api.SendWithResultAsync<Guid[], IssueProposal>(HttpMethod.Post, "/api/admin/issues/suggest-repairs", ids);
+    public Task<ApiCallResult<IssueProposal>> SuggestIssueRepairsAsync(Guid[] ids, bool webResearch) =>
+        api.SendWithResultAsync<Guid[], IssueProposal>(HttpMethod.Post,
+            $"/api/admin/issues/suggest-repairs?webResearch={(webResearch ? "true" : "false")}", ids);
     public Task<ApiCallResult<IssueProposal>> SuggestIssueRepairAsync(Guid id) =>
         api.SendWithResultAsync<object, IssueProposal>(HttpMethod.Post, $"/api/admin/issues/{id}/suggest-repair", new { });
     public Task<IssueHealthResponse?> GetIssueHealthAsync() => api.GetAsync<IssueHealthResponse>("/api/admin/issues/health");

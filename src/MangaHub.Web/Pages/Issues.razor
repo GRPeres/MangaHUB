@@ -1,5 +1,6 @@
 @page "/issues"
 @page "/admin/issues"
+@implements IDisposable
 @using MangaHub.Web.API.DTOs
 @using MangaHub.Web.API.Services
 @inject AuthSessionService Auth
@@ -190,7 +191,7 @@ else
                         <MudIconButton Icon="@Icons.Material.Filled.Close" Disabled="@batchRunning" OnClick="() => scheduleOpen = false" aria-label="Close AI proposals" />
                     </MudStack>
                 </MudStack>
-                <MudPaper Outlined="true" Elevation="0" Class="pa-4">
+                <section aria-label="Current drafts">
                     <MudStack Spacing="2">
                         <MudText Typo="Typo.subtitle1">Current drafts</MudText>
                         @if (proposalRequestTitle is not null)
@@ -210,10 +211,10 @@ else
                                 </MudStack>
                             </MudPaper>
                         }
-                        @if (proposalSchedule?.Running == true)
+                        @if (proposalSchedule?.Running == true && !batchRunning)
                         {
                             <MudProgressLinear Indeterminate="true" aria-label="Scheduled batch running" />
-                            <MudText Typo="Typo.body2">Scheduled batch running</MudText>
+                            <MudText Typo="Typo.body2">Proposal run in progress</MudText>
                         }
                         @if (proposalSchedule is { } inbox && inbox.Drafts.Count > 0)
                         {
@@ -221,9 +222,13 @@ else
                     @foreach (var draft in inbox.Drafts)
                     {
                         var sections = draft.Text.Split("\n\nResearch sources:\n", 2, StringSplitOptions.None);
+                        <MudPaper @key="draft.Id" Outlined="true" Elevation="0" Class="pa-4">
+                        <MudStack Spacing="2">
+                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.subtitle1" Style="overflow-wrap: anywhere">@(draft.Title ?? "Issue proposal")</MudText>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@(draft.Manual ? "Manual" : "Scheduled")</MudChip>
+                        </MudStack>
                         <MudDivider />
-                        <MudText Typo="Typo.caption">@(draft.Manual ? "Manual draft" : "Scheduled draft")</MudText>
-                        @if (!string.IsNullOrWhiteSpace(draft.Title)) { <MudText Typo="Typo.subtitle2">@draft.Title</MudText> }
                         @if (draft.Action == "repair_mangadex")
                         {
                             <MudText Typo="Typo.body2">Replace MangaDex ID with <strong>@draft.ReplacementId</strong>.</MudText>
@@ -260,13 +265,16 @@ else
                                 }
                             }
                         }
-                        <MudStack Row="true" Wrap="Wrap.Wrap">
+                        <MudDivider />
+                        <MudStack Row="true" Wrap="Wrap.Wrap" Justify="Justify.FlexEnd">
                             @if (draft.Action is "repair_mangadex" or "snooze" or "mark_hiatus" || AdditionalDraftAction(draft) is not null)
                             {
                                 <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@scheduleBusy" OnClick="() => ApproveDraftAsync(draft.Id)">Approve and apply</MudButton>
                             }
                             <MudButton Disabled="@scheduleBusy" OnClick="() => ReviewScheduledDraftAsync(draft.Id)">Leave unchanged</MudButton>
                         </MudStack>
+                        </MudStack>
+                        </MudPaper>
                     }
                         }
                         else if (!batchRunning && proposalRequestError is null && proposalSchedule?.Running != true)
@@ -274,12 +282,13 @@ else
                             <MudText Typo="Typo.body2">@(scheduleBusy ? "Loading drafts..." : proposalSchedule is null ? "Could not load drafts." : "No drafts awaiting review.")</MudText>
                         }
                     </MudStack>
-                </MudPaper>
+                </section>
                 <MudExpansionPanels>
                     <MudExpansionPanel Text="Draft now">
                         <MudStack Spacing="2">
                 <MudNumericField T="int" Label="Issues per request" @bind-Value="proposalLimit" Min="1" Max="10" Disabled="@batchRunning" />
                 <MudNumericField T="int" Label="Seconds between requests" @bind-Value="proposalDelay" Min="1" Max="120" Disabled="@batchRunning" />
+                <MudSwitch T="bool" Label="Web research for this batch" @bind-Value="manualWebResearch" Disabled="@batchRunning" />
                 @if (!batchRunning)
                 {
                     <MudText Typo="Typo.body2">@(checkedIssues.Count == 0 ? "All eligible open issues" : "Selected eligible issues")</MudText>
@@ -291,7 +300,7 @@ else
                     }
                     else
                     {
-                        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="RunProposalBatchAsync">Start batch</MudButton>
+                        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(proposalSchedule?.Running == true)" OnClick="RunProposalBatchAsync">Start batch</MudButton>
                     }
                 </MudStack>
                         </MudStack>
@@ -787,6 +796,7 @@ else
     private bool batchRunning;
     private int proposalLimit = 5;
     private int proposalDelay = 5;
+    private bool manualWebResearch;
     private CancellationTokenSource? batchStop;
     private string? proposalRequestTitle;
     private string? proposalRequestStatus;
@@ -803,6 +813,7 @@ else
         var pending = ProposalCandidates.ToList();
         var all = checkedIssues.Count == 0;
         var groupSize = Math.Clamp(proposalLimit, 1, 10);
+        var webResearch = manualWebResearch;
         var delay = TimeSpan.FromSeconds(Math.Clamp(proposalDelay, 1, 120));
         using var stop = new CancellationTokenSource();
         batchStop = stop;
@@ -835,7 +846,7 @@ else
                 }
                 proposalRequestStatus = "Request sent. Waiting for a response...";
                 StateHasChanged();
-                var result = await AdminApi.SuggestIssueRepairsAsync(groups[i]);
+                var result = await AdminApi.SuggestIssueRepairsAsync(groups[i], webResearch);
                 if (result.Value is null)
                     proposalRequestError = string.IsNullOrWhiteSpace(result.Error) ? "No proposal was returned." : result.Error;
                 else
@@ -855,6 +866,7 @@ else
             batchStop = null;
             batchRunning = false;
             if (proposalRequestError is null) proposalRequestTitle = null;
+            await RefreshProposalInboxAsync();
         }
     }
     private Guid? proposalIssueId;
@@ -1226,7 +1238,40 @@ else
         }
     }
 
-    protected override async Task OnInitializedAsync() { user = await Auth.GetCurrentUserAsync(); if (isAdmin) await LoadAsync(); else loading = false; }
+    private readonly CancellationTokenSource chatGptPolling = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await Auth.GetCurrentUserAsync();
+        if (canManage && !chatGptPolling.IsCancellationRequested) _ = PollChatGptStatusAsync(chatGptPolling.Token);
+        if (isAdmin) await LoadAsync();
+        else loading = false;
+    }
+
+    private async Task PollChatGptStatusAsync(CancellationToken token)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+        try
+        {
+            do
+            {
+                AdminApiService.ChatGptStatus? current = null;
+                try { current = await AdminApi.GetChatGptStatusAsync(); }
+                catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException) { }
+                if (token.IsCancellationRequested) return;
+                chatGptStatus = current;
+                await InvokeAsync(StateHasChanged);
+            }
+            while (await timer.WaitForNextTickAsync(token));
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+    }
+
+    public void Dispose()
+    {
+        chatGptPolling.Cancel();
+        chatGptPolling.Dispose();
+    }
     private async Task LoadAsync()
     {
         var currentStatus = status;
@@ -1240,7 +1285,6 @@ else
             var currentHealth = await summary;
             if (currentStatus != status) return;
             health = currentHealth;
-            if (canManage) chatGptStatus = await AdminApi.GetChatGptStatusAsync();
             items = page;
             hasMore = page.Count == PageSize;
         }
