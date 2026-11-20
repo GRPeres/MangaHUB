@@ -2,8 +2,9 @@ using System.Text.Json;
 
 namespace MangaHub.Api.Services;
 
-internal static class IssueProposalResearch
+public static class IssueProposalResearch
 {
+    internal const string SourcesSeparator = "\n\nResearch sources:\n";
     public const string Instructions = """
         For each stalled title, search for dated announcements from the publisher, serialization platform, or creator.
         Report one of: confirmed hiatus, confirmed resumed or still publishing, or uncertain. Tie each conclusion to a
@@ -18,8 +19,11 @@ internal static class IssueProposalResearch
     public static string AttachSources(JsonElement response, string text)
     {
         var links = new HashSet<string>(StringComparer.Ordinal);
+        var searchReported = false;
         foreach (var item in response.GetProperty("output").EnumerateArray())
         {
+            if (item.TryGetProperty("type", out var itemType) && itemType.GetString() == "web_search_call")
+                searchReported = true;
             if (!item.TryGetProperty("content", out var content) || content.ValueKind != JsonValueKind.Array) continue;
             foreach (var part in content.EnumerateArray())
             {
@@ -32,8 +36,9 @@ internal static class IssueProposalResearch
                         links.Add(uri.AbsoluteUri);
             }
         }
-        return links.Count == 0
-            ? "Uncertain: no cited web evidence was returned. Do not change publication status based on this draft."
-            : text + "\n\nResearch sources:\n" + string.Join("\n", links);
+        var sources = links.Count > 0 ? string.Join("\n", links)
+            : searchReported ? "A web search was reported, but the provider returned no URL citations."
+            : "Web research was requested, but the provider reported no web search call or URL citations.";
+        return text + SourcesSeparator + sources;
     }
 }

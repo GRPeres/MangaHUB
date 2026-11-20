@@ -5,6 +5,21 @@ namespace MangaHub.Api.Tests;
 public sealed class IssueProposalActionsTests
 {
     [Theory]
+    [InlineData("""{"output":[{"type":"web_search_call"}]}""", "no URL citations")]
+    [InlineData("""{"output":[]}""", "no web search call")]
+    public void UncitedResearchPreservesReasonButBlocksCitationRequiredAction(string providerOutput, string diagnostic)
+    {
+        using var provider = System.Text.Json.JsonDocument.Parse(providerOutput);
+        const string response = """[{"number":1,"action":"mark_hiatus","reason":"A hiatus was suggested","sourceUrl":"https://publisher.example/hiatus"}]""";
+        var draft = IssueProposalActions.Create(Guid.NewGuid(), "key", Guid.NewGuid(), "snapshot", 1,
+            IssueProposalResearch.AttachSources(provider.RootElement, response), null, null, "mangadex-release-stalled");
+        Assert.Equal("leave", draft.Action);
+        Assert.Null(draft.SourceUrl);
+        Assert.Contains("A hiatus was suggested", draft.Text);
+        Assert.Contains(diagnostic, draft.Text);
+    }
+
+    [Theory]
     [InlineData("refresh_chapters", "mangadex-release-stalled", "", "", "refresh_chapters")]
     [InlineData("clear_hiatus", "mangadex-language-coverage", "", "", "clear_hiatus")]
     [InlineData("mark_complete", "mangadex-release-stalled", "", "", "mark_complete")]

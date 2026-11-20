@@ -40,15 +40,19 @@ public static class IssueProposalActions
     public static ScheduledIssueProposal Create(Guid run, string key, Guid issueId, string snapshot,
         int number, string response, string? verifiedCandidate, string? expectedMalId, string? kind = null)
     {
-        var sections = response.Split("\n\nResearch sources:\n", 2, StringSplitOptions.None);
+        var sections = response.Split(IssueProposalResearch.SourcesSeparator, 2, StringSplitOptions.None);
         var draft = new ScheduledIssueProposal
         {
             RunId = run, GroupId = Guid.NewGuid(), EvidenceKey = key, IssueId = issueId, EvidenceSnapshot = snapshot,
-            Action = "leave", Text = "No actionable recommendation could be validated. Leave this issue unchanged."
+            Action = "leave", Text = "No valid per-issue response was returned. Leave this issue unchanged."
+                + (sections.Length == 2 ? IssueProposalResearch.SourcesSeparator + sections[1] : "")
         };
         try
         {
-            using var document = JsonDocument.Parse(sections[0]);
+            var json = sections[0].Trim();
+            if (json.StartsWith("```json\n", StringComparison.OrdinalIgnoreCase) && json.EndsWith("\n```", StringComparison.Ordinal))
+                json = json[8..^4];
+            using var document = JsonDocument.Parse(json);
             if (document.RootElement.ValueKind != JsonValueKind.Array) return draft;
             var rows = document.RootElement.EnumerateArray().Where(row => row.ValueKind == JsonValueKind.Object
                 && row.TryGetProperty("number", out var index) && index.ValueKind == JsonValueKind.Number
