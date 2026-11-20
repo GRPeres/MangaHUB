@@ -50,8 +50,15 @@ public sealed class AdminApiService(ApiHttpClient api)
         api.SendWithResultAsync<object, ProposalApproval>(HttpMethod.Post, $"/api/admin/issues/proposal-schedule/{id}/approve", new { });
     public sealed record ProposalSchedule(bool Enabled, int BatchIntervalMinutes, int RequestIntervalSeconds,
         int GroupSize, DateTimeOffset? NextRunAt, bool Running, string LastError, List<ScheduledDraft> Drafts,
-        bool ChatGptConfigured = false, bool ChatGptCredentialPresent = false, bool WebResearchEnabled = true);
+        bool ChatGptConfigured = false, bool ChatGptCredentialPresent = false, bool WebResearchEnabled = true,
+        bool ManualRunning = false, bool ManualStopRequested = false);
     public Task<ProposalSchedule?> GetProposalScheduleAsync() => api.GetAsync<ProposalSchedule>("/api/admin/issues/proposal-schedule");
+    public sealed record ProposalBatchReceipt(bool Accepted);
+    public Task<ApiCallResult<ProposalBatchReceipt>> StartProposalBatchAsync(Guid[] issueIds, int groupSize, int requestIntervalSeconds, bool webResearch) =>
+        api.SendWithResultAsync<object, ProposalBatchReceipt>(HttpMethod.Post, "/api/admin/issues/proposal-schedule/run",
+            new { issueIds, groupSize, requestIntervalSeconds, webResearch });
+    public Task<bool> StopProposalBatchAsync() =>
+        api.SendWithoutResponseAsync(HttpMethod.Post, "/api/admin/issues/proposal-schedule/stop", new { });
     public Task<bool> SaveProposalScheduleAsync(bool enabled, int batchIntervalMinutes, int requestIntervalSeconds, int groupSize, bool webResearchEnabled) =>
         api.SendWithoutResponseAsync(HttpMethod.Post, "/api/admin/issues/proposal-schedule",
             new { enabled, batchIntervalMinutes, requestIntervalSeconds, groupSize, webResearchEnabled });

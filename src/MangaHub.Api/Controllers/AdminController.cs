@@ -1,5 +1,6 @@
 using MangaHub.Api.Services;
 using MangaHub.Core.Dto;
+using MangaHub.Core.Models;
 using Microsoft.AspNetCore.Mvc;
 using MangaHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -191,8 +192,45 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
                 title = db.AdminIssues.Where(issue => issue.Id == row.IssueId).Select(issue => issue.TitleSnapshot).FirstOrDefault(),
                 manual = row.EvidenceKey.StartsWith("manual:") }).ToListAsync(cancellationToken);
         return Ok(new { schedule.Enabled, schedule.BatchIntervalMinutes, schedule.RequestIntervalSeconds,
-            schedule.GroupSize, schedule.WebResearchEnabled, schedule.NextRunAt, running = schedule.RunId != null, schedule.LastError, drafts,
-            chatGptConfigured = chatGpt.Enabled, chatGptCredentialPresent = chatGpt.IsConnected });
+            schedule.GroupSize, schedule.WebResearchEnabled, schedule.NextRunAt, running = schedule.RunId != null || schedule.PendingManualBatch != null, schedule.LastError, drafts,
+            manualRunning = schedule.PendingManualBatch != null || (schedule.RunId != null && schedule.ManualBatchRunning),
+            schedule.ManualStopRequested, chatGptConfigured = chatGpt.Enabled, chatGptCredentialPresent = chatGpt.IsConnected });
+    }
+
+    [HttpPost("issues/proposal-schedule/run")]
+    public async Task<IActionResult> StartManualProposalBatch([FromBody] ManualIssueProposalBatch batch,
+        [FromServices] IConfiguration configuration, [FromServices] ChatGptProposalProvider chatGpt, CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return Forbid();
+        if (batch.IssueIds is not { Length: <= 1000 } || batch.GroupSize is < 1 or > 10
+            || batch.RequestIntervalSeconds is < 1 or > 120)
+            return BadRequest("Invalid proposal batch settings.");
+        if (string.IsNullOrWhiteSpace(configuration["MangaHub:IssueProposals:Model"]) ||
+            (chatGpt.Enabled ? !chatGpt.IsConnected : string.IsNullOrWhiteSpace(configuration["MangaHub:IssueProposals:OpenAiApiKey"])))
+            return BadRequest("Issue proposals are not configured.");
+
+        var payload = System.Text.Json.JsonSerializer.Serialize(batch);
+        var queued = await db.IssueProposalSchedules.Where(row => row.Id == 1 && row.RunId == null && row.PendingManualBatch == null
+                && !db.ScheduledIssueProposals.Any(draft => draft.ReviewedAt == null))
+            .ExecuteUpdateAsync(update => update.SetProperty(row => row.PendingManualBatch, payload)
+                .SetProperty(row => row.LastError, ""), cancellationToken);
+        if (queued != 1) return Conflict("A proposal batch is already pending or running, or drafts still need review.");
+        return Accepted(new { accepted = true });
+    }
+
+    [HttpPost("issues/proposal-schedule/stop")]
+    public async Task<IActionResult> StopManualProposalBatch(CancellationToken cancellationToken)
+    {
+        var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (!CurrentUserService.IsAdmin(user)) return Forbid();
+        await db.IssueProposalSchedules.Where(row => row.Id == 1 &&
+                (row.PendingManualBatch != null || (row.RunId != null && row.ManualBatchRunning)))
+            .ExecuteUpdateAsync(update => update.SetProperty(row => row.PendingManualBatch, (string?)null)
+                .SetProperty(row => row.ManualStopRequested, row => row.RunId != null), cancellationToken);
+        return NoContent();
     }
 
     [HttpPost("issues/proposal-schedule")]
@@ -410,7 +448,8 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
         var runId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
         var claimed = await db.IssueProposalSchedules.Where(row => row.Id == 1
-                && (row.RunId == null || row.LeaseUntil <= now))
+                && row.PendingManualBatch == null && (row.RunId == null || row.LeaseUntil <= now)
+                && !db.ScheduledIssueProposals.Any(draft => draft.ReviewedAt == null))
             .ExecuteUpdateAsync(update => update.SetProperty(row => row.RunId, runId)
                 .SetProperty(row => row.LeaseUntil, now.AddSeconds(90)), cancellationToken);
         if (claimed != 1) return Conflict("Another proposal request or scheduled batch is already running.");
@@ -446,6 +485,12 @@ public sealed class AdminController(CurrentUserService currentUsers, AdminServic
             var instructions = IssueProposalActions.Instructions + (research ? "\n" + IssueProposalResearch.Instructions : "");
             var input = System.Text.Json.JsonSerializer.Serialize(packets);
             stage = "waiting for the proposal provider";
+
+            if (chatGpt.Enabled)
+            {
+                var chatGptDraft = await chatGpt.DraftAsync(model, instructions, input, timeout.Token, research);
+                return await SaveManualProposalAsync(chatGptDraft, sources, cancellationToken);
+            }
 
             using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/responses");
             request.Headers.Authorization = new("Bearer", key);

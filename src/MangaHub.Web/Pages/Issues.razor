@@ -39,7 +39,7 @@ else
                             <MudTooltip Text="@DraftActionLabel">
                                 <span class="mh-proposal-indicator">
                                 <MudIconButton Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Primary"
-                                               Disabled="@(suggesting || (checkedIssues.Count > 0 && !ProposalCandidates.Any()))"
+                                               Disabled="@(checkedIssues.Count > 0 && !ProposalCandidates.Any())"
                                                OnClick="OpenProposalScheduleAsync" aria-label="@DraftActionLabel" />
                                 <span class="@(chatGptStatus?.LastVerifiedAt is not null ? "mh-proposal-dot verified" : "mh-proposal-dot")" aria-hidden="true"></span>
                                 </span>
@@ -187,6 +187,10 @@ else
                         </MudTooltip>
                     </MudStack>
                     <MudStack Row="true" Spacing="0">
+                        <MudTooltip Text="ChatGPT connection setup">
+                            <MudIconButton Icon="@Icons.Material.Outlined.Info" Href="https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms"
+                                           Target="_blank" Rel="noopener noreferrer" aria-label="ChatGPT connection setup" />
+                        </MudTooltip>
                         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Disabled="@scheduleBusy" OnClick="RefreshProposalInboxAsync" aria-label="Refresh drafts" />
                         <MudIconButton Icon="@Icons.Material.Filled.Close" Disabled="@batchRunning" OnClick="() => scheduleOpen = false" aria-label="Close AI proposals" />
                     </MudStack>
@@ -194,31 +198,26 @@ else
                 <section aria-label="Current drafts">
                     <MudStack Spacing="2">
                         <MudText Typo="Typo.subtitle1">Current drafts</MudText>
-                        @if (proposalRequestTitle is not null)
+                        @if (proposalSchedule?.LastError is { Length: > 0 } runError)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true">@runError</MudAlert>
+                        }
+                        @if (proposalRequestError is { } error)
                         {
                             <MudPaper Outlined="true" Elevation="0" Class="pa-3">
                                 <MudStack Spacing="1" role="status" aria-live="polite">
-                                    <MudText Typo="Typo.subtitle2">@proposalRequestTitle</MudText>
-                                    @if (proposalRequestError is { } error)
-                                    {
-                                        <MudAlert Severity="Severity.Error" Dense="true">@error</MudAlert>
-                                    }
-                                    else if (batchRunning)
-                                    {
-                                        <MudText Typo="Typo.body2">@proposalRequestStatus</MudText>
-                                        <MudProgressLinear Indeterminate="true" aria-label="@proposalRequestStatus" />
-                                    }
+                                    <MudAlert Severity="Severity.Error" Dense="true">@error</MudAlert>
                                 </MudStack>
                             </MudPaper>
                         }
                         @if (proposalSchedule?.Running == true && !batchRunning)
                         {
-                            <MudProgressLinear Indeterminate="true" aria-label="Scheduled batch running" />
+                            <MudProgressLinear Indeterminate="true" aria-label="Proposal batch running" />
                             <MudText Typo="Typo.body2">Proposal run in progress</MudText>
                         }
                         @if (proposalSchedule is { } inbox && inbox.Drafts.Count > 0)
                         {
-                            <MudText Typo="Typo.body2">Automatic proposals wait until all drafts are reviewed.</MudText>
+                            <MudText Typo="Typo.body2">New batches wait until all drafts are reviewed.</MudText>
                     @foreach (var draft in inbox.Drafts)
                     {
                         var sections = draft.Text.Split("\n\nResearch sources:\n", 2, StringSplitOptions.None);
@@ -294,13 +293,14 @@ else
                     <MudText Typo="Typo.body2">@(checkedIssues.Count == 0 ? "All eligible open issues" : "Selected eligible issues")</MudText>
                 }
                 <MudStack Row="true" Wrap="Wrap.Wrap">
-                    @if (batchRunning)
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                               Disabled="@(batchRunning || proposalSchedule?.Running == true || proposalSchedule?.Drafts.Count > 0)"
+                               OnClick="RunProposalBatchAsync">@(batchRunning ? "Submitting..." : "Start batch")</MudButton>
+                    @if (proposalSchedule is { ManualRunning: true } run)
                     {
-                        <MudButton OnClick="StopProposalBatch">Stop after current request</MudButton>
-                    }
-                    else
-                    {
-                        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(proposalSchedule?.Running == true)" OnClick="RunProposalBatchAsync">Start batch</MudButton>
+                        <MudButton Disabled="@(batchRunning || run.ManualStopRequested)" OnClick="StopProposalBatchAsync">
+                            @(run.ManualStopRequested ? "Stopping..." : "Stop after current request")
+                        </MudButton>
                     }
                 </MudStack>
                         </MudStack>
@@ -311,7 +311,15 @@ else
                             <MudStack Spacing="2">
                     <MudSwitch T="bool" @bind-Value="scheduleEnabled" Label="Enable automatic proposals" />
                                 <MudSwitch T="bool" @bind-Value="scheduleWebResearchEnabled" Label="Web research for release and language gaps" />
-                    <MudNumericField T="int" Label="Minutes between batches" @bind-Value="scheduleBatchInterval" Min="5" Max="43200" />
+                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudNumericField T="int" Label="Time between batches" @bind-Value="scheduleBatchAmount"
+                                                     Min="@(scheduleBatchUnit == 1 ? 5 : 1)" Max="@(43200 / scheduleBatchUnit)" />
+                                    <MudSelect T="int" Label="Time unit" @bind-Value="scheduleBatchUnit" Dense="true">
+                                        <MudSelectItem T="int" Value="1">Minutes</MudSelectItem>
+                                        <MudSelectItem T="int" Value="60">Hours</MudSelectItem>
+                                        <MudSelectItem T="int" Value="1440">Days</MudSelectItem>
+                                    </MudSelect>
+                                </MudStack>
                     <MudNumericField T="int" Label="Seconds between requests" @bind-Value="scheduleRequestInterval" Min="1" Max="3600" />
                     <MudNumericField T="int" Label="Issues per request" @bind-Value="scheduleGroupSize" Min="1" Max="10" />
                     @if (schedule.Drafts.Count > 0)
@@ -326,15 +334,7 @@ else
                     {
                         <MudText>Next batch: @next.ToLocalTime().ToString("g")</MudText>
                     }
-                    @if (!string.IsNullOrWhiteSpace(schedule.LastError))
-                    {
-                        <MudAlert Severity="Severity.Warning">@schedule.LastError</MudAlert>
-                    }
                                 <MudButton Disabled="@scheduleBusy" Color="Color.Primary" OnClick="SaveProposalScheduleAsync">Save schedule</MudButton>
-                                @if (schedule.ChatGptConfigured)
-                                {
-                                    <MudButton Href="https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms" Target="_blank" Rel="noopener noreferrer">Connection setup</MudButton>
-                                }
                             </MudStack>
                         }
                     </MudExpansionPanel>
@@ -385,14 +385,7 @@ else
                 }
                 @if (canManage && IsOpen && (IsReleaseStallIssue || IsMangaDexIdentityMismatchIssue))
                 {
-                    <MudButton Disabled="@suggesting" OnClick="SuggestRepairAsync">@(suggesting ? "Drafting..." : "Draft repair suggestion")</MudButton>
-                    @if (proposalIssueId == selected.Id && !string.IsNullOrWhiteSpace(proposalText))
-                    {
-                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                            <MudText Typo="Typo.subtitle2">Suggested next step</MudText>
-                            <MudText Typo="Typo.body2" Style="white-space: pre-wrap; overflow-wrap: anywhere">@proposalText</MudText>
-                        </MudAlert>
-                    }
+                    <MudButton Disabled="@batchRunning" OnClick="SuggestRepairAsync">Draft repair suggestion</MudButton>
                 }
                 @if (IsReleaseStallIssue)
                 {
@@ -701,12 +694,12 @@ else
     private int snoozeDays = 30;
     private bool hasMore;
     private const int PageSize = 40;
-    private bool suggesting;
     private bool scheduleOpen;
     private bool scheduleBusy;
     private bool scheduleEnabled;
     private bool scheduleWebResearchEnabled;
-    private int scheduleBatchInterval;
+    private int scheduleBatchAmount = 1;
+    private int scheduleBatchUnit = 1440;
     private int scheduleRequestInterval;
     private int scheduleGroupSize;
     private AdminApiService.ProposalSchedule? proposalSchedule;
@@ -735,7 +728,9 @@ else
             if (proposalSchedule is not { } schedule) { Messages.Warning("Could not load proposal schedule."); return; }
             scheduleEnabled = schedule.Enabled;
             scheduleWebResearchEnabled = schedule.WebResearchEnabled;
-            scheduleBatchInterval = schedule.BatchIntervalMinutes;
+            scheduleBatchUnit = schedule.BatchIntervalMinutes % 1440 == 0 ? 1440
+                : schedule.BatchIntervalMinutes % 60 == 0 ? 60 : 1;
+            scheduleBatchAmount = schedule.BatchIntervalMinutes / scheduleBatchUnit;
             scheduleRequestInterval = schedule.RequestIntervalSeconds;
             scheduleGroupSize = schedule.GroupSize;
         }
@@ -748,7 +743,13 @@ else
         scheduleBusy = true;
         try
         {
-            if (await AdminApi.SaveProposalScheduleAsync(scheduleEnabled, scheduleBatchInterval, scheduleRequestInterval, scheduleGroupSize, scheduleWebResearchEnabled))
+            var interval = (long)scheduleBatchAmount * scheduleBatchUnit;
+            if (interval is < 5 or > 43200)
+            {
+                Messages.Warning("Choose a batch interval between 5 minutes and 30 days.");
+                return;
+            }
+            if (await AdminApi.SaveProposalScheduleAsync(scheduleEnabled, (int)interval, scheduleRequestInterval, scheduleGroupSize, scheduleWebResearchEnabled))
                 await OpenProposalScheduleAsync();
             else Messages.Warning("Could not save proposal schedule.");
         }
@@ -797,94 +798,46 @@ else
     private int proposalLimit = 5;
     private int proposalDelay = 5;
     private bool manualWebResearch;
-    private CancellationTokenSource? batchStop;
-    private string? proposalRequestTitle;
-    private string? proposalRequestStatus;
     private string? proposalRequestError;
     private IEnumerable<AdminIssueListItemResponse> ProposalCandidates => items.Where(item =>
         checkedIssues.Contains(item.Id) && item.Status == "open"
         && item.Kind is "mangadex-release-stalled" or "mangadex-identity-mismatch" or "mangadex-language-coverage");
 
-    private void StopProposalBatch() => batchStop?.Cancel();
+    private Task RunProposalBatchAsync() => SubmitProposalBatchAsync(checkedIssues.ToArray(), manualWebResearch);
 
-    private async Task RunProposalBatchAsync()
+    private async Task StopProposalBatchAsync()
     {
-        if (!canManage || batchRunning || suggesting) return;
-        var pending = ProposalCandidates.ToList();
-        var all = checkedIssues.Count == 0;
-        var groupSize = Math.Clamp(proposalLimit, 1, 10);
-        var webResearch = manualWebResearch;
-        var delay = TimeSpan.FromSeconds(Math.Clamp(proposalDelay, 1, 120));
-        using var stop = new CancellationTokenSource();
-        batchStop = stop;
+        if (!await AdminApi.StopProposalBatchAsync()) Messages.Warning("Could not stop the proposal batch.");
+        await RefreshProposalInboxAsync();
+    }
+
+    private async Task SubmitProposalBatchAsync(Guid[] issueIds, bool webResearch)
+    {
+        if (!canManage || batchRunning) return;
         batchRunning = true;
-        proposalRequestTitle = "Preparing proposal batch";
-        proposalRequestStatus = "Finding eligible issues...";
         proposalRequestError = null;
         try
         {
-            if (all)
-            {
-                const int pageSize = 100;
-                for (var offset = 0; !stop.IsCancellationRequested; offset += pageSize)
-                {
-                    var page = await AdminApi.GetIssuesAsync("open", offset, pageSize);
-                    pending.AddRange(page.Where(item => item.Kind is "mangadex-release-stalled" or "mangadex-identity-mismatch" or "mangadex-language-coverage"));
-                    if (page.Count < pageSize) break;
-                }
-            }
-            var groups = pending.DistinctBy(item => item.Id).Select(item => item.Id).Chunk(groupSize).ToArray();
-            if (groups.Length == 0) Messages.Info("No eligible open issues were found.");
-            for (var i = 0; i < groups.Length && !stop.IsCancellationRequested; i++)
-            {
-                proposalRequestTitle = $"Request {i + 1} of {groups.Length} · {groups[i].Length} issues";
-                if (i > 0)
-                {
-                    proposalRequestStatus = $"Waiting {delay.TotalSeconds:0} seconds before sending...";
-                    StateHasChanged();
-                    await Task.Delay(delay, stop.Token);
-                }
-                proposalRequestStatus = "Request sent. Waiting for a response...";
-                StateHasChanged();
-                var result = await AdminApi.SuggestIssueRepairsAsync(groups[i], webResearch);
-                if (result.Value is null)
-                    proposalRequestError = string.IsNullOrWhiteSpace(result.Error) ? "No proposal was returned." : result.Error;
-                else
-                {
-                    proposalRequestStatus = "Response received. Loading saved drafts...";
-                    StateHasChanged();
-                    await RefreshProposalInboxAsync();
-                }
-                StateHasChanged();
-                if (result.Value is null) break;
-            }
-        }
-        catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
-        catch (HttpRequestException) { proposalRequestError = "The proposal request could not reach the server."; }
-        finally
-        {
-            batchStop = null;
-            batchRunning = false;
-            if (proposalRequestError is null) proposalRequestTitle = null;
+            var result = await AdminApi.StartProposalBatchAsync(issueIds, proposalLimit, proposalDelay, webResearch);
+            if (result.Value is null)
+                proposalRequestError = result.Error ?? "The proposal batch could not be started.";
+            else
+                Messages.Info("Proposal batch submitted. You can leave this page.");
             await RefreshProposalInboxAsync();
         }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
+        {
+            proposalRequestError = "Could not confirm the request. Refresh Current drafts before retrying.";
+        }
+        finally { batchRunning = false; }
     }
-    private Guid? proposalIssueId;
-    private string? proposalText;
 
     private async Task SuggestRepairAsync()
     {
-        if (!canManage || selected is not { } issue || suggesting) return;
-        suggesting = true;
-        proposalIssueId = issue.Id;
-        proposalText = null;
-        try
-        {
-            var result = await AdminApi.SuggestIssueRepairAsync(issue.Id);
-            if (result.Value is { } proposal) proposalText = proposal.Text;
-            else Messages.Warning(result.Error ?? "No proposal was returned.");
-        }
-        finally { suggesting = false; }
+        if (!canManage || selected is not { } issue) return;
+        CloseIssue();
+        await OpenProposalScheduleAsync();
+        await SubmitProposalBatchAsync([issue.Id], proposalSchedule?.WebResearchEnabled == true);
     }
     private IssueHealthResponse? health;
     private static string NextIssueAction(AdminIssueListItemResponse item) => item.Status != "open" ? "View issue history" : item.Kind switch
@@ -1250,16 +1203,21 @@ else
 
     private async Task PollChatGptStatusAsync(CancellationToken token)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        var tick = 0;
         try
         {
             do
             {
-                AdminApiService.ChatGptStatus? current = null;
-                try { current = await AdminApi.GetChatGptStatusAsync(); }
+                try
+                {
+                    if (scheduleOpen && !scheduleBusy)
+                        proposalSchedule = await AdminApi.GetProposalScheduleAsync();
+                    if (tick++ % 12 == 0)
+                        chatGptStatus = await AdminApi.GetChatGptStatusAsync();
+                }
                 catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException) { }
                 if (token.IsCancellationRequested) return;
-                chatGptStatus = current;
                 await InvokeAsync(StateHasChanged);
             }
             while (await timer.WaitForNextTickAsync(token));

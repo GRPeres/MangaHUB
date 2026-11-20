@@ -1,5 +1,7 @@
 namespace MangaHub.Core.Models;
 
+public sealed record ManualIssueProposalBatch(Guid[] IssueIds, int GroupSize, int RequestIntervalSeconds, bool WebResearch);
+
 public sealed class IssueProposalSchedule
 {
     public int Id { get; set; } = 1;
@@ -12,6 +14,9 @@ public sealed class IssueProposalSchedule
     public Guid? RunId { get; set; }
     public DateTimeOffset? LeaseUntil { get; set; }
     public string LastError { get; set; } = "";
+    public string? PendingManualBatch { get; set; }
+    public bool ManualBatchRunning { get; set; }
+    public bool ManualStopRequested { get; set; }
 
     public bool CanStart(DateTimeOffset now, bool hasUnreadDrafts) =>
         Enabled && RunId is null && (NextRunAt is null || NextRunAt <= now) && !hasUnreadDrafts;

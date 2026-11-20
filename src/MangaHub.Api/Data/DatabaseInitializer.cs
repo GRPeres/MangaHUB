@@ -139,6 +139,9 @@ public sealed class DatabaseInitializer(MangaHubDbContext db)
                 ADD COLUMN IF NOT EXISTS "ActionValue" text NULL,
                 ADD COLUMN IF NOT EXISTS "ActionLanguage" text NULL;
             ALTER TABLE "IssueProposalSchedules" ADD COLUMN IF NOT EXISTS "WebResearchEnabled" boolean NOT NULL DEFAULT true;
+            ALTER TABLE "IssueProposalSchedules" ADD COLUMN IF NOT EXISTS "PendingManualBatch" text;
+            ALTER TABLE "IssueProposalSchedules" ADD COLUMN IF NOT EXISTS "ManualBatchRunning" boolean NOT NULL DEFAULT false;
+            ALTER TABLE "IssueProposalSchedules" ADD COLUMN IF NOT EXISTS "ManualStopRequested" boolean NOT NULL DEFAULT false;
             INSERT INTO "IssueProposalSchedules" ("Id","Enabled","BatchIntervalMinutes","RequestIntervalSeconds","GroupSize","LastError","WebResearchEnabled")
             VALUES (1,false,1440,30,5,'',true) ON CONFLICT ("Id") DO NOTHING;
             CREATE TABLE IF NOT EXISTS admin_issue_reports (

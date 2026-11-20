@@ -11,6 +11,10 @@ namespace MangaHub.Api.Services;
 public sealed class IssueProposalScheduleWorker(IServiceScopeFactory scopes, IConfiguration config,
     IHttpClientFactory clients, ChatGptProposalProvider chatGpt, ILogger<IssueProposalScheduleWorker> logger) : BackgroundService
 {
+    private const int DraftTimeoutSeconds = 60;
+    private const int ResearchTimeoutSeconds = 240;
+    private const int LeaseBufferSeconds = 120;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
@@ -36,39 +40,50 @@ public sealed class IssueProposalScheduleWorker(IServiceScopeFactory scopes, ICo
         {
             await db.IssueProposalSchedules.Where(row => row.Id == settings.Id && row.RunId == settings.RunId && row.LeaseUntil <= now)
                 .ExecuteUpdateAsync(update => update.SetProperty(row => row.RunId, (Guid?)null)
+                    .SetProperty(row => row.ManualBatchRunning, false)
+                    .SetProperty(row => row.ManualStopRequested, false)
                     .SetProperty(row => row.LastError, "The previous run was interrupted."), token);
             return;
         }
-        if (!settings.CanStart(now, hasUnreadDrafts: false)
-            || !settings.CanStart(now, await db.ScheduledIssueProposals.AnyAsync(item => item.ReviewedAt == null, token))) return;
+        var payload = settings.PendingManualBatch;
+        var manual = payload is null ? null : JsonSerializer.Deserialize<ManualIssueProposalBatch>(payload);
+        if (settings.RunId is not null || (manual is null && !settings.CanStart(now, hasUnreadDrafts: false))) return;
+        var delaySeconds = manual?.RequestIntervalSeconds ?? settings.RequestIntervalSeconds;
 
         var runId = Guid.NewGuid();
-        var claimed = await db.IssueProposalSchedules.Where(row => row.Id == settings.Id && row.Enabled
-                && row.RunId == null && (row.NextRunAt == null || row.NextRunAt <= now)
+        var claimed = await db.IssueProposalSchedules.Where(row => row.Id == settings.Id
+                && row.RunId == null && row.PendingManualBatch == payload
+                && (payload != null || (row.Enabled && (row.NextRunAt == null || row.NextRunAt <= now)))
                 && !db.ScheduledIssueProposals.Any(item => item.ReviewedAt == null))
             .ExecuteUpdateAsync(update => update.SetProperty(row => row.RunId, runId)
-                .SetProperty(row => row.LeaseUntil, now.AddSeconds(settings.RequestIntervalSeconds + 180))
+                .SetProperty(row => row.PendingManualBatch, (string?)null)
+                .SetProperty(row => row.ManualBatchRunning, payload != null)
+                .SetProperty(row => row.ManualStopRequested, false)
+                .SetProperty(row => row.LeaseUntil, now.AddSeconds(delaySeconds + ResearchTimeoutSeconds + LeaseBufferSeconds))
                 .SetProperty(row => row.LastError, ""), token);
         if (claimed != 1) return;
 
         var error = "";
+        var index = 0;
         try
         {
-            var known = await db.ScheduledIssueProposals.Select(item => item.EvidenceKey).ToListAsync(token);
-            var entries = await db.AdminIssues.AsNoTracking().Where(issue => issue.Status == "open"
+            var known = manual is null ? await db.ScheduledIssueProposals.Select(item => item.EvidenceKey).ToListAsync(token) : [];
+            var query = db.AdminIssues.AsNoTracking().Where(issue => issue.Status == "open"
                 && issue.ReviewState == "action_required" && (issue.SnoozedUntil == null || issue.SnoozedUntil <= now)
-                && (issue.Kind == "mangadex-release-stalled" || issue.Kind == "mangadex-identity-mismatch" || issue.Kind == "mangadex-language-coverage"))
-                .OrderBy(issue => issue.CreatedAt).ThenBy(issue => issue.Id).ToListAsync(token);
+                && (issue.Kind == "mangadex-release-stalled" || issue.Kind == "mangadex-identity-mismatch" || issue.Kind == "mangadex-language-coverage"));
+            if (manual is { IssueIds.Length: > 0 }) query = query.Where(issue => manual.IssueIds.Contains(issue.Id));
+            var entries = await query.OrderBy(issue => issue.CreatedAt).ThenBy(issue => issue.Id).ToListAsync(token);
             var seen = known.ToHashSet();
-            var groups = entries.Select(issue => CreatePacket(issue, settings.WebResearchEnabled && issue.Kind is "mangadex-release-stalled" or "mangadex-language-coverage"))
+            var groups = entries.Select(issue => CreatePacket(issue, (manual?.WebResearch ?? settings.WebResearchEnabled)
+                    && issue.Kind is "mangadex-release-stalled" or "mangadex-language-coverage"))
                 .Where(item => seen.Add(item.Key)).GroupBy(item => item.Research)
-                .SelectMany(group => group.Chunk(settings.GroupSize));
-            var index = 0;
+                .SelectMany(group => group.Chunk(manual?.GroupSize ?? settings.GroupSize));
             foreach (var group in groups)
             {
-                if (index++ > 0) await Task.Delay(TimeSpan.FromSeconds(settings.RequestIntervalSeconds), token);
-                var lease = DateTimeOffset.UtcNow.AddSeconds(settings.RequestIntervalSeconds + 180);
-                if (await db.IssueProposalSchedules.Where(row => row.Id == settings.Id && row.Enabled && row.RunId == runId)
+                if (index++ > 0) await Task.Delay(TimeSpan.FromSeconds(delaySeconds), token);
+                var lease = DateTimeOffset.UtcNow.AddSeconds(delaySeconds + ResearchTimeoutSeconds + LeaseBufferSeconds);
+                if (await db.IssueProposalSchedules.Where(row => row.Id == settings.Id && (payload != null || row.Enabled)
+                        && row.RunId == runId && !row.ManualStopRequested)
                     .ExecuteUpdateAsync(update => update.SetProperty(row => row.LeaseUntil, lease), token) != 1) break;
                 for (var i = 0; i < group.Length; i++)
                 {
@@ -79,15 +94,29 @@ public sealed class IssueProposalScheduleWorker(IServiceScopeFactory scopes, ICo
                     var (match, _) = await issueService.RepairMangaDexIdentityAsync(Guid.Empty, packet.Id, token, preview: true, confirmedMalId: mal);
                     group[i] = packet with { Candidate = match?.Id, ExpectedMal = mal };
                 }
-                var text = await DraftAsync(group, key ?? "", model, token);
+                var seconds = group[0].Research ? ResearchTimeoutSeconds : DraftTimeoutSeconds;
+                using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+                deadline.CancelAfter(TimeSpan.FromSeconds(seconds));
+                string text;
+                try
+                {
+                    text = await DraftAsync(group, key ?? "", model, deadline.Token);
+                }
+                catch (OperationCanceledException ex) when (deadline.IsCancellationRequested && !token.IsCancellationRequested)
+                {
+                    var mode = group[0].Research ? " with web research" : "";
+                    throw new TimeoutException($"Proposal request {index}{mode} exceeded its {seconds}-second time limit. Try fewer issues per request.", ex);
+                }
                 db.ScheduledIssueProposals.AddRange(group.Select((packet, i) => IssueProposalActions.Create(
-                    runId, packet.Key, packet.Id, packet.Snapshot, i + 1, text, packet.Candidate, packet.ExpectedMal, packet.Kind)));
+                    runId, manual is null ? packet.Key : $"manual:{runId:N}:{packet.Id:N}", packet.Id, packet.Snapshot,
+                    i + 1, text, packet.Candidate, packet.ExpectedMal, packet.Kind)));
                 await db.SaveChangesAsync(token);
             }
+            if (manual is not null && index == 0) error = "No eligible open issues were found.";
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
         {
-            error = ex is ChatGptRequestException ? ex.Message
+            error = ex is ChatGptRequestException or TimeoutException ? ex.Message
                 : "The run stopped before all requests completed. Check the provider and API logs.";
             logger.LogWarning(ex, "Issue proposal run {RunId} stopped.", runId);
         }
@@ -95,8 +124,10 @@ public sealed class IssueProposalScheduleWorker(IServiceScopeFactory scopes, ICo
         {
             await db.IssueProposalSchedules.Where(row => row.Id == settings.Id && row.RunId == runId)
                 .ExecuteUpdateAsync(update => update.SetProperty(row => row.RunId, (Guid?)null)
+                    .SetProperty(row => row.ManualBatchRunning, false)
+                    .SetProperty(row => row.ManualStopRequested, false)
                     .SetProperty(row => row.LastError, error)
-                    .SetProperty(row => row.NextRunAt, DateTimeOffset.UtcNow.AddMinutes(settings.BatchIntervalMinutes)),
+                    .SetProperty(row => row.NextRunAt, row => payload != null ? row.NextRunAt : DateTimeOffset.UtcNow.AddMinutes(settings.BatchIntervalMinutes)),
                     CancellationToken.None);
         }
     }
@@ -123,9 +154,7 @@ public sealed class IssueProposalScheduleWorker(IServiceScopeFactory scopes, ICo
         {
             number = index + 1, item.Kind, item.Title, item.Evidence, item.Catalog, verifiedReplacementId = item.Candidate
         }));
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
-        timeout.CancelAfter(TimeSpan.FromSeconds(60));
-        if (chatGpt.Enabled) return await chatGpt.DraftAsync(model, instructions, input, timeout.Token, research);
+        if (chatGpt.Enabled) return await chatGpt.DraftAsync(model, instructions, input, token, research);
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/responses");
         request.Headers.Authorization = new("Bearer", key);
         request.Content = JsonContent.Create(new
@@ -134,9 +163,10 @@ public sealed class IssueProposalScheduleWorker(IServiceScopeFactory scopes, ICo
             instructions, input, tools = research ? new[] { new { type = "web_search" } } : []
         });
         using var client = clients.CreateClient();
-        using var response = await client.SendAsync(request, timeout.Token);
+        client.Timeout = Timeout.InfiniteTimeSpan;
+        using var response = await client.SendAsync(request, token);
         response.EnsureSuccessStatusCode();
-        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
         if (doc.RootElement.GetProperty("status").GetString() != "completed")
             throw new InvalidOperationException("Proposal response was incomplete.");
         var text = string.Join("\n", doc.RootElement.GetProperty("output").EnumerateArray()
