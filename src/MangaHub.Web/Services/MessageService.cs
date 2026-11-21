@@ -1,3 +1,5 @@
+using MudBlazor;
+
 namespace MangaHub.Web.Services;
 
 public enum MessageLevel
@@ -8,19 +10,23 @@ public enum MessageLevel
     Info
 }
 
-public sealed record AppMessage(MessageLevel Level, string Title, string Message);
-
-public sealed class MessageService
+public sealed class MessageService(ISnackbar snackbar)
 {
-    private readonly Queue<AppMessage> queue = [];
-
-    public event Action? Changed;
-    public AppMessage? Current { get; private set; }
-
     public void Show(MessageLevel level, string message, string? title = null)
     {
-        queue.Enqueue(new AppMessage(level, title ?? DefaultTitle(level), message));
-        ShowNext();
+        var severity = level switch
+        {
+            MessageLevel.Success => Severity.Success,
+            MessageLevel.Warning => Severity.Warning,
+            MessageLevel.Error => Severity.Error,
+            _ => Severity.Info
+        };
+        var text = string.IsNullOrWhiteSpace(title) ? message : $"{title}: {message}";
+        snackbar.Add(text, severity, options =>
+        {
+            options.ShowCloseIcon = true;
+            options.VisibleStateDuration = level is MessageLevel.Warning or MessageLevel.Error ? 9000 : 5000;
+        });
     }
 
     public void Success(string message, string? title = null) => Show(MessageLevel.Success, message, title);
@@ -28,28 +34,4 @@ public sealed class MessageService
     public void Error(string message, string? title = null) => Show(MessageLevel.Error, message, title);
     public void Info(string message, string? title = null) => Show(MessageLevel.Info, message, title);
 
-    public void Dismiss()
-    {
-        Current = queue.Count == 0 ? null : queue.Dequeue();
-        Changed?.Invoke();
-    }
-
-    private void ShowNext()
-    {
-        if (Current is not null || queue.Count == 0)
-        {
-            return;
-        }
-
-        Current = queue.Dequeue();
-        Changed?.Invoke();
-    }
-
-    private static string DefaultTitle(MessageLevel level) => level switch
-    {
-        MessageLevel.Success => "Done",
-        MessageLevel.Warning => "Heads up",
-        MessageLevel.Error => "Something went wrong",
-        _ => "MangaHub"
-    };
 }

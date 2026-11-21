@@ -139,7 +139,6 @@
     <LoginModal @bind-Open="_loginOpen"
                 Message="@_loginMessage"
                 OnAuthenticated="OnLoginAuthenticated" />
-    <AppMessageModal />
     <PushSubscriptionsModal @bind-Open="_pushSubscriptionsOpen"
                             Subscriptions="_pushSubscriptions"
                             OnRefresh="EnablePhoneNotifications"

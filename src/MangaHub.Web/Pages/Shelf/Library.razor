@@ -102,7 +102,7 @@
 <ShelfImportModal Open="@isImportShelfOpen" OpenChanged="OnImportShelfOpenChanged" OnImported="OnShelfChanged" />
 <ShelfEditModal Entry="@editingEntry" OwnerUserId="@(IsAdmin ? selectedUserId : null)" OnSaved="OnShelfEditSaved" OnClosed="CloseEdit" />
 
-<ReaderPreparingOverlay Open="@isPreparingReader"
+<ReaderPreparationStatusNotice Open="@isPreparingReader"
                          Stage="@PreparingStage"
                          Progress="@(readerPreparation?.Progress ?? 0)"
                          CompletedPages="@(readerPreparation?.CompletedPages ?? 0)"
@@ -295,6 +295,7 @@
     private bool isImportShelfOpen;
     private bool filtersOpen;
     private bool isPreparingReader;
+    private bool openingReader;
     private ReaderPreparationStatus? readerPreparation;
     private PendingReaderChoice? pendingReaderChoice;
     private Guid? languageFallbackEntryId;
@@ -621,15 +622,19 @@
 
     private async Task Read(Guid entryId, string? language = null, bool allowLanguageFallback = false, bool allowChapterJump = false, string? requestedChapter = null, ReaderRoute? route = null)
     {
+        if (openingReader) return;
         if (!IsAdmin)
         {
             ShowWarning("Reader access is available to admins only.");
             return;
         }
 
+        openingReader = true;
+        var origin = Navigation.Uri;
         try
         {
             var options = await MangaApi.GetReadOptionsAsync(entryId);
+            if (Navigation.Uri != origin) return;
             if (options is null)
             {
                 ShowWarning("Could not load read options.");
@@ -668,6 +673,7 @@
                 }
 
                 var completedPreparation = await WaitForReaderPreparationAsync(readerPreparation.JobId);
+                if (Navigation.Uri != origin) return;
                 if (completedPreparation?.Launch is null)
                 {
                     if (completedPreparation?.OpenExternalReader == true && IsHttpUrl(completedPreparation.FallbackReaderUrl))
@@ -733,6 +739,7 @@
         }
         finally
         {
+            openingReader = false;
             isPreparingReader = false;
             readerPreparation = null;
         }

@@ -1,0 +1,28 @@
+.mh-reader-preparation-notice {
+    position: fixed;
+    inset-inline: 0;
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+    width: min(23rem, calc(100% - 2rem));
+    margin-inline: auto;
+    padding: .65rem .85rem;
+    display: grid;
+    gap: .35rem;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+    box-shadow: var(--mud-elevation-4);
+    z-index: var(--mud-zindex-popover);
+    pointer-events: none;
+    overflow-wrap: anywhere;
+}
+
+.mh-reader-preparation-heading {
+    display: grid;
+    gap: .15rem;
+}
+
+.mh-reader-preparation-heading span {
+    font-size: .8rem;
+    color: var(--mud-palette-text-secondary);
+}

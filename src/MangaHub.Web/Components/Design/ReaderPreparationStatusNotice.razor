@@ -1,0 +1,22 @@
+@if (Open)
+{
+    <aside class="mh-reader-preparation-notice">
+        <div class="mh-reader-preparation-heading" role="status">
+            <strong>Preparing chapter</strong>
+            <span>@Stage</span>
+        </div>
+        <MudProgressLinear Value="@Progress" Indeterminate="@(Progress <= 0)" Color="Color.Primary" aria-label="Chapter preparation progress" />
+        @if (TotalPages > 0)
+        {
+            <MudText Typo="Typo.caption">Downloaded @CompletedPages of @TotalPages pages</MudText>
+        }
+    </aside>
+}
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public string Stage { get; set; } = "Waiting to start";
+    [Parameter] public int Progress { get; set; }
+    [Parameter] public int CompletedPages { get; set; }
+    [Parameter] public int TotalPages { get; set; }
+}

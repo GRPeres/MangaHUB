@@ -132,15 +132,11 @@
     </MudPaper>
 </section>
 
-<ReaderPreparingOverlay Open="@(isPreparingChapter || isSeriesComplete)"
-                         Title="@(isSeriesComplete ? "You're done reading" : "Preparing chapter")"
-                         Stage="@(isSeriesComplete ? "You've read every available chapter in this completed manga. It is now marked done on your shelf." : PreparingStage)"
+<ReaderPreparationStatusNotice Open="@isPreparingChapter"
+                         Stage="@PreparingStage"
                          Progress="@(readerPreparation?.Progress ?? 0)"
                          CompletedPages="@(readerPreparation?.CompletedPages ?? 0)"
-                         TotalPages="@(readerPreparation?.TotalPages ?? 0)"
-                         IsTerminal="@isSeriesComplete"
-                         TerminalActionLabel="Back to shelf"
-                         OnTerminalAction="BackToShelf" />
+                         TotalPages="@(readerPreparation?.TotalPages ?? 0)" />
 
 <ChapterJumpWarningModal Open="@(chapterJumpNext is not null && chapterJump is not null)"
                          CurrentChapter="@(chapterJump?.CurrentChapter ?? "")"
@@ -189,7 +185,6 @@
     private Guid prefetchedChapterId;
     private Guid markedReadChapterId;
     private bool isPreparingChapter;
-    private bool isSeriesComplete;
     private bool isPageLoading;
     private bool scrollToInitialPage;
     private ElementReference pageFrame;
@@ -246,7 +241,6 @@
             loadingPreviewUrl = null;
             readerMessage = "";
             isPreparingChapter = false;
-            isSeriesComplete = false;
             readerPreparation = null;
             pageImageVersion = Guid.NewGuid().ToString("N");
             markedReadChapterId = Guid.Empty;
@@ -393,7 +387,7 @@
 
     private async Task PrepareAdjacentChapterAsync(bool next, string? language = null, bool allowLanguageFallback = false, bool allowChapterJump = false)
     {
-        if (!CanPrepareAdjacentChapter || EntryId is null)
+        if (isPreparingChapter || !CanPrepareAdjacentChapter || EntryId is null)
         {
             return;
         }
@@ -436,7 +430,7 @@
 
                 if (next && completedPreparation?.IsSeriesComplete == true)
                 {
-                    isSeriesComplete = true;
+                    Messages.Success("You've read every available chapter. This manga is marked done on your shelf.", "Series complete");
                     return;
                 }
 
