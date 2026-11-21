@@ -581,6 +581,7 @@ public sealed class RemoteMaintenanceService(
                 .Include(series => series.Chapters)
                 .Where(series => series.Source == MangaDexCacheSource)
                 .ToListAsync(cancellationToken);
+            var plannedPreferences = await PlannedChapterPrefetch.ReadPreferencesAsync(db, cancellationToken);
             var batchSize = Math.Clamp(options.Value.MangaDexCacheRetentionBatchSize, 1, 100);
             var archived = 0;
             var considered = 0;
@@ -591,6 +592,7 @@ public sealed class RemoteMaintenanceService(
 
             foreach (var cached in cachedSeries)
             {
+                var plannedChapterIds = PlannedChapterPrefetch.ProtectedChapterIds(cached, plannedPreferences);
                 readerProgressByMangaDexId.TryGetValue(cached.ExternalId, out var readerProgress);
                 readerProgress ??= [];
                 foreach (var chapterGroup in cached.Chapters.ToList().GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
@@ -605,7 +607,7 @@ public sealed class RemoteMaintenanceService(
                     // Cache creation and background prefetching are not reader activity. Only an
                     // explicit reader access earns the temporary archival grace period.
                     var lastAccessedAt = chapterGroup.Select(item => item.LastReaderOpenedAt).Max();
-                    if (MangaDexCacheRetentionPolicy.ShouldRetain(
+                    if (plannedChapterIds.Contains(chapter.SourceId) || MangaDexCacheRetentionPolicy.ShouldRetain(
                         chapter.SourceId,
                         chapter.ChapterNumber,
                         readerProgress,
@@ -915,9 +917,9 @@ public sealed class RemoteMaintenanceService(
             join user in db.Users on shelf.UserId equals user.Id
             join entry in db.MangaEntries on shelf.MangaEntryId equals entry.Id
             where entry.MangaDexId != ""
-                && (shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused")
-                && shelf.CurrentChapter != ""
-            select new UpdatePrefetchCandidate(entry, shelf.CurrentChapter, shelf.IsRead, user.PreferredLanguage))
+                && (((shelf.ReadingStatus == "reading" || shelf.ReadingStatus == "paused") && shelf.CurrentChapter != "")
+                    || (shelf.ReadingStatus == "planned" && shelf.CurrentChapter == ""))
+            select new UpdatePrefetchCandidate(entry, shelf.CurrentChapter, shelf.IsRead, user.PreferredLanguage, shelf.ReadingStatus == "planned"))
             .ToListAsync(cancellationToken);
 
         if (candidates.Count == 0)
@@ -933,20 +935,32 @@ public sealed class RemoteMaintenanceService(
         var updateCandidates = candidates
             .Where(candidate => IsShelfUpdateCandidate(candidate, latestChapters))
             .GroupBy(candidate => candidate.Entry.Id)
-            .OrderBy(group => group.Key)
+            .OrderBy(group => group.First().Entry.MangaDexLastPrefetchedAt)
+            .ThenBy(group => group.Key)
             .Take(batchSize)
             .ToList();
+        var plannedCandidates = candidates.Where(candidate => candidate.Planned)
+            .GroupBy(candidate => candidate.Entry.Id)
+            .OrderBy(group => group.First().Entry.MangaDexLastPrefetchedAt)
+            .ThenBy(group => group.Key)
+            .Take(Math.Min(batchSize, 10));
+        var prefetchGroups = updateCandidates.Concat(plannedCandidates).SelectMany(group => group)
+            .GroupBy(candidate => candidate.Entry.Id).ToList();
 
         var downloaded = 0;
-        foreach (var entryCandidates in updateCandidates)
+        foreach (var entryCandidates in prefetchGroups)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var entry = entryCandidates.First().Entry;
             try
             {
+                entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
+                await db.SaveChangesAsync(cancellationToken);
                 var sourceChapters = await mangaDex.GetChaptersAsync(entry.MangaDexId, null, cancellationToken);
                 var nextReadableChapters = entryCandidates
-                    .Select(candidate => FindNextReadableUpdateChapter(sourceChapters, candidate.CurrentChapter, candidate.IsRead, LanguagePreferences.Parse(candidate.PreferredLanguage)))
+                    .Select(candidate => candidate.Planned
+                        ? PlannedChapterPrefetch.SelectOpeningChapter(sourceChapters, LanguagePreferences.Parse(candidate.PreferredLanguage))
+                        : FindNextReadableUpdateChapter(sourceChapters, candidate.CurrentChapter, candidate.IsRead, LanguagePreferences.Parse(candidate.PreferredLanguage)))
                     .Where(chapter => chapter is not null)
                     .Select(chapter => chapter!)
                     .GroupBy(chapter => chapter.Id, StringComparer.Ordinal)
@@ -970,7 +984,6 @@ public sealed class RemoteMaintenanceService(
                     downloaded++;
                 }
 
-                entry.MangaDexLastPrefetchedAt = DateTimeOffset.UtcNow;
                 await db.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException or IOException)
@@ -980,9 +993,9 @@ public sealed class RemoteMaintenanceService(
         }
 
         logger.LogInformation(
-            "MangaDex update prefetch cached {ChapterCount} next readable chapters across {MangaCount} manga with shelf updates.",
+            "MangaDex prefetch cached {ChapterCount} chapters across {MangaCount} planned or updated manga candidates.",
             downloaded,
-            updateCandidates.Count);
+            prefetchGroups.Count);
     }
 
     private async Task RunIdleBackfillAsync(CancellationToken cancellationToken)
@@ -1309,7 +1322,8 @@ public sealed class RemoteMaintenanceService(
         MangaEntry Entry,
         string CurrentChapter,
         bool IsRead,
-        string PreferredLanguage);
+        string PreferredLanguage,
+        bool Planned);
 
     private static decimal? ParseChapterNumber(string value)
     {

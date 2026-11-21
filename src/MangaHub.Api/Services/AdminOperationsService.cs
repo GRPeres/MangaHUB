@@ -68,6 +68,7 @@ public sealed class AdminOperationsService(
             .GroupBy(entry => entry.MangaDexId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().Title, StringComparer.OrdinalIgnoreCase);
         var readerProgressByMangaDexId = await GetReaderProgressByMangaDexIdAsync(cancellationToken);
+        var plannedPreferences = await PlannedChapterPrefetch.ReadPreferencesAsync(db, cancellationToken);
         var series = await db.Series.AsNoTracking()
             .Include(item => item.Chapters)
             .Where(item => item.Source == "mangadex-cache")
@@ -94,12 +95,13 @@ public sealed class AdminOperationsService(
 
         foreach (var cached in series)
         {
+            var plannedChapterIds = PlannedChapterPrefetch.ProtectedChapterIds(cached, plannedPreferences);
             readerProgressByMangaDexId.TryGetValue(cached.ExternalId, out var readerProgress);
             readerProgress ??= [];
             var view = GetManga(manga, cached.ExternalId, titles.GetValueOrDefault(cached.ExternalId, cached.Title));
             var mostProtective = MangaDexCacheRetentionPolicy.FindMostProtectiveProgress(readerProgress);
             view.ReaderProtectionDetail = mostProtective is null
-                ? null
+                ? plannedChapterIds.Count > 0 ? "Planned opening chapter" : null
                 : $"{(mostProtective.IncludeCurrentChapter ? "from" : "after")} Ch. {mostProtective.CurrentChapter}";
 
             foreach (var chapterGroup in cached.Chapters.GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
@@ -112,7 +114,8 @@ public sealed class AdminOperationsService(
                     view.ActiveChapterCount += active.Count;
                     view.ActiveBytes += bytes;
                     var lastAccessedAt = chapterGroup.Select(item => item.LastReaderOpenedAt).Max();
-                    var protectedForReader = MangaDexCacheRetentionPolicy.IsProtectedForReader(chapter.ChapterNumber, readerProgress);
+                    var protectedForReader = plannedChapterIds.Contains(chapter.SourceId)
+                        || MangaDexCacheRetentionPolicy.IsProtectedForReader(chapter.ChapterNumber, readerProgress);
                     var protectedByGrace = lastAccessedAt >= now.AddDays(-graceDays);
 
                     if (protectedForReader)
@@ -404,6 +407,7 @@ public sealed class AdminOperationsService(
     private async Task<ReclaimableCacheUsage> GetReclaimableCacheUsageAsync(CancellationToken cancellationToken)
     {
         var readerProgressByMangaDexId = await GetReaderProgressByMangaDexIdAsync(cancellationToken);
+        var plannedPreferences = await PlannedChapterPrefetch.ReadPreferencesAsync(db, cancellationToken);
         var series = await db.Series.AsNoTracking().Include(item => item.Chapters)
             .Where(item => item.Source == "mangadex-cache")
             .ToListAsync(cancellationToken);
@@ -412,10 +416,12 @@ public sealed class AdminOperationsService(
 
         foreach (var cached in series)
         {
+            var plannedChapterIds = PlannedChapterPrefetch.ProtectedChapterIds(cached, plannedPreferences);
             readerProgressByMangaDexId.TryGetValue(cached.ExternalId, out var readerProgress);
             readerProgress ??= [];
             foreach (var group in cached.Chapters.GroupBy(chapter => chapter.SourceId, StringComparer.Ordinal))
             {
+                if (plannedChapterIds.Contains(group.Key)) continue;
                 var original = group.FirstOrDefault(chapter => !string.Equals(chapter.ImageQuality, "data-saver", StringComparison.OrdinalIgnoreCase));
                 if (original is null) continue;
                 var lastAccessedAt = group.Select(chapter => chapter.LastReaderOpenedAt).Max();
