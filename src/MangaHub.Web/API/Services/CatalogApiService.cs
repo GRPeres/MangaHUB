@@ -16,9 +16,10 @@ public sealed class CatalogApiService(ApiHttpClient api, AppRefreshService refre
         return await api.GetAsync<List<CatalogMangaResponse>>($"/api/catalog{query}") ?? [];
     }
 
-    public async Task<ApiCallResult<CatalogMangaResponse>> CreateCatalogMangaAsync(MangaEntryRequest request)
+    public async Task<ApiCallResult<CatalogMangaResponse>> CreateCatalogMangaAsync(MangaEntryRequest request, bool allowUnverifiedReader = false)
     {
-        var result = await api.SendWithResultAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Post, "/api/catalog", request);
+        var path = allowUnverifiedReader ? "/api/catalog?allowUnverifiedReader=true" : "/api/catalog";
+        var result = await api.SendWithResultAsync<MangaEntryRequest, CatalogMangaResponse>(HttpMethod.Post, path, request);
         NotifyCatalogMutation(result.Value is not null);
         return result;
     }

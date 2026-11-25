@@ -20,7 +20,8 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] MangaEntryRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create([FromBody] MangaEntryRequest request, CancellationToken cancellationToken,
+        [FromQuery] bool allowUnverifiedReader = false)
     {
         var user = await currentUsers.GetCurrentUserAsync(Request, cancellationToken);
         if (user is null)
@@ -35,8 +36,12 @@ public sealed class CatalogController(CurrentUserService currentUsers, CatalogSe
 
         try
         {
-            var created = await catalog.CreateAsync(user.Id, request, cancellationToken);
+            var created = await catalog.CreateAsync(user.Id, request, cancellationToken, checkReadability: !allowUnverifiedReader);
             return Created($"/api/catalog/{created.Id}", created);
+        }
+        catch (CatalogReaderConfirmationException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status412PreconditionFailed, title: "Reader confirmation required", detail: ex.Message);
         }
         catch (CatalogDuplicateIdentityException ex)
         {

@@ -3,6 +3,7 @@ using MangaHub.Api.Repositories;
 using MangaHub.Core.Dto;
 using MangaHub.Core.Models;
 using MangaHub.Core.Services;
+using MangaHub.Infrastructure.Sources;
 using System.Text.Json;
 
 namespace MangaHub.Api.Services;
@@ -14,14 +15,17 @@ public sealed class CatalogService(
     MangaDexTitleMatchService mangaDexTitleMatches,
     CatalogIdentityEnrichmentService identityEnrichment,
     AdminIssueRepository issues,
-    UsageTrackingService? usage = null)
+    UsageTrackingService? usage = null,
+    MangaSourceRegistry? sources = null,
+    SeriesRepository? series = null)
 {
     private static readonly SemaphoreSlim CreateLock = new(1, 1);
 
     public Task<List<CatalogMangaResponse>> SearchAsync(Guid userId, string? query, string preferredLanguage, int offset, int limit, bool readableOnly, CancellationToken cancellationToken) =>
         catalog.SearchAsync(userId, query, preferredLanguage, offset, limit, readableOnly, cancellationToken);
 
-    public async Task<CatalogMangaResponse> CreateAsync(Guid currentUserId, MangaEntryRequest entry, CancellationToken cancellationToken)
+    public async Task<CatalogMangaResponse> CreateAsync(Guid currentUserId, MangaEntryRequest entry, CancellationToken cancellationToken,
+        bool checkReadability = false)
     {
         await CreateLock.WaitAsync(cancellationToken);
         try
@@ -33,6 +37,8 @@ public sealed class CatalogService(
 
             var readerLinks = await ResolveReaderLinksForCreateAsync(entry, cancellationToken);
             await EnsureUniqueIdentitiesAsync(readerLinks.MangaDexId, mangaUpdatesId, entry.MyAnimeListId.Trim(), null, cancellationToken);
+            if (checkReadability)
+                await ConfirmReaderAvailabilityAsync(entry, readerLinks, cancellationToken);
 
             var manga = new MangaEntry
             {
@@ -159,6 +165,30 @@ public sealed class CatalogService(
         return new ReaderLinks(mangaDexId, fallbackReaderUrl);
     }
 
+    private async Task ConfirmReaderAvailabilityAsync(MangaEntryRequest entry, ReaderLinks links, CancellationToken cancellationToken)
+    {
+        if (Uri.TryCreate(links.FallbackReaderUrl, UriKind.Absolute, out var url)
+            && (url.Scheme == Uri.UriSchemeHttps || url.Scheme == Uri.UriSchemeHttp)) return;
+        if (entry.LocalSeriesId is { } localId && series is not null
+            && await series.GetFirstChapterAsync(localId, cancellationToken) is { PageCount: > 0 }) return;
+
+        if (!string.IsNullOrWhiteSpace(links.MangaDexId) && sources is not null)
+        {
+            try
+            {
+                var chapters = await sources.Get("mangadex").GetChaptersAsync(links.MangaDexId, null, cancellationToken);
+                if (chapters.Any(chapter => chapter.PageCount > 0)) return;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException
+                || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                throw new CatalogReaderConfirmationException("MangaDex chapters could not be verified. Retry, add an external reader link, or add the manga without a verified reader.");
+            }
+        }
+
+        throw new CatalogReaderConfirmationException("No readable chapters were found. Add an external reader link or confirm that you want to add the manga without a reader.");
+    }
+
     private async Task<ReaderLinks> ResolveReaderLinksForCreateAsync(MangaEntryRequest entry, CancellationToken cancellationToken)
     {
         var readerLinks = ResolveReaderLinks(entry);
@@ -265,3 +295,4 @@ public sealed class CatalogDuplicateIdentityException(string provider, string id
     : InvalidOperationException($"A catalog manga using this {provider} ID already exists: '{existingTitle}' ({id}). Review the existing entry or resolve it from Admin Issues.");
 
 public sealed class CatalogIdentityResolutionException(string message) : InvalidOperationException(message);
+public sealed class CatalogReaderConfirmationException(string message) : InvalidOperationException(message);

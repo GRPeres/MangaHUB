@@ -201,6 +201,19 @@ a {
     width: min(100%, 980px);
 }
 
+.mh-modal .mud-icon-button[aria-label^="Close "],
+.mh-modal .mud-icon-button[aria-label="Close"] {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+}
+
+.mh-modal .mud-icon-button[aria-label^="Close "] .mud-icon-root,
+.mh-modal .mud-icon-button[aria-label="Close"] .mud-icon-root {
+    font-size: 1.75rem;
+}
+
 .mh-modal-header {
     gap: 1rem;
 }

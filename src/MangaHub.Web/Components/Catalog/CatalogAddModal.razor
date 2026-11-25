@@ -163,6 +163,10 @@
                         }
                         @(isSaving ? (IsEditMode ? "Saving..." : "Adding...") : (IsEditMode ? "Save catalog metadata" : "Add to catalog"))
                     </MudButton>
+                    @if (readerConfirmationRequest is not null && readerConfirmationRequest == BuildRequest())
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Warning" Disabled="@isSaving" OnClick="ConfirmAddWithoutReader">Add without a verified reader</MudButton>
+                    }
                 </MudStack>
 
                 @if (!string.IsNullOrWhiteSpace(message))

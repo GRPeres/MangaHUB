@@ -4,6 +4,7 @@ using MangaHub.Core.Dto;
 using MangaHub.Core.Services;
 using MangaHub.Core.Sources;
 using MangaHub.Infrastructure;
+using MangaHub.Infrastructure.Sources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -12,6 +13,40 @@ namespace MangaHub.Api.Tests;
 
 public sealed class CatalogServiceTests
 {
+    [Fact]
+    public async Task CreateWithoutReadableChaptersRequiresConfirmationAndDoesNotCreateAnIssue()
+    {
+        await using var db = TestDb.Create();
+        var mangaDex = new FakeMangaDexSource();
+        mangaDex.Chapters.Add(new("external-only", "1", "", 0));
+        var service = CreateService(db, new FakeOpenLibrary(null), mangaDex);
+        var request = Request(mangaDexId: Guid.NewGuid().ToString());
+        var user = Guid.NewGuid();
+
+        await Assert.ThrowsAsync<CatalogReaderConfirmationException>(() =>
+            service.CreateAsync(user, request, CancellationToken.None, checkReadability: true));
+        Assert.Empty(await db.MangaEntries.ToListAsync());
+        Assert.Empty(await db.AdminIssues.ToListAsync());
+
+        await service.CreateAsync(user, request, CancellationToken.None);
+        Assert.Single(await db.MangaEntries.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CreateWithAReadableChapterOrExternalLinkNeedsNoConfirmation(bool useMangaDex)
+    {
+        await using var db = TestDb.Create();
+        var mangaDex = new FakeMangaDexSource();
+        if (useMangaDex) mangaDex.Chapters.Add(new("readable", "0", "", 12));
+        var service = CreateService(db, new FakeOpenLibrary(null), mangaDex);
+        var request = Request(mangaDexId: Guid.NewGuid().ToString(),
+            fallbackReaderUrl: useMangaDex ? "" : "https://reader.example/series");
+
+        await service.CreateAsync(Guid.NewGuid(), request, CancellationToken.None, checkReadability: true);
+        Assert.Single(await db.MangaEntries.ToListAsync());
+    }
     [Fact]
     public async Task CreateAsync_UsesOpenLibraryDetailsWhenRequestLeavesFieldsBlank()
     {
@@ -305,7 +340,8 @@ public sealed class CatalogServiceTests
             new MangaDexCatalogMatchService(resolvedMangaDex),
             new MangaDexTitleMatchService([resolvedMangaDex]),
             CreateEnrichment(db, resolvedMangaDex, resolvedMangaUpdates),
-            new AdminIssueRepository(db));
+            new AdminIssueRepository(db),
+            sources: new MangaSourceRegistry([resolvedMangaDex]));
     }
 
     private static CatalogIdentityEnrichmentService CreateEnrichment(

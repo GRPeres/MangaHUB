@@ -46,6 +46,7 @@ public partial class CatalogAddModal
     private bool isLoadingMangaDexMetadata;
     private bool isLoadingMangaUpdatesMetadata;
     private bool isSaving;
+    private MangaEntryRequest? readerConfirmationRequest;
     private int metadataSearchVersion;
     private int metadataSelectionVersion;
     private List<MetadataResult> metadataResults = [];
@@ -194,7 +195,12 @@ public partial class CatalogAddModal
         }
     }
 
-    private async Task Save()
+    private Task Save() => SaveAsync(allowUnverifiedReader: false);
+
+    private Task ConfirmAddWithoutReader() =>
+        SaveAsync(allowUnverifiedReader: readerConfirmationRequest == BuildRequest());
+
+    private async Task SaveAsync(bool allowUnverifiedReader)
     {
         if (isSaving)
         {
@@ -217,12 +223,40 @@ public partial class CatalogAddModal
         }
 
         var request = BuildRequest();
+        readerConfirmationRequest = null;
         if (!IsEditMode)
         {
-            // Creation can wait on the rate-limited identity lookup without holding the form
-            // hostage. The API still serializes and validates every create before it writes.
-            await OpenChanged.InvokeAsync(false);
-            _ = CompleteBackgroundCreateAsync(request);
+            if (IsHttpUrl(request.FallbackReaderUrl) || allowUnverifiedReader)
+            {
+                await OpenChanged.InvokeAsync(false);
+                _ = CompleteBackgroundCreateAsync(request, allowUnverifiedReader);
+                return;
+            }
+
+            isSaving = true;
+            messageSeverity = Severity.Info;
+            message = "Checking chapter availability...";
+            try
+            {
+                var result = await CatalogApi.CreateCatalogMangaAsync(request);
+                if (result.Value is { } saved)
+                {
+                    await OpenChanged.InvokeAsync(false);
+                    await OnCreatedInBackground.InvokeAsync(saved);
+                }
+                else
+                {
+                    if (result.StatusCode == 412) readerConfirmationRequest = request;
+                    messageSeverity = result.StatusCode == 412 ? Severity.Warning : Severity.Error;
+                    message = result.Error;
+                }
+            }
+            catch (HttpRequestException)
+            {
+                messageSeverity = Severity.Error;
+                message = "Could not reach MangaHub to verify this title. Try again.";
+            }
+            finally { isSaving = false; }
             return;
         }
 
@@ -252,11 +286,11 @@ public partial class CatalogAddModal
         }
     }
 
-    private async Task CompleteBackgroundCreateAsync(MangaEntryRequest request)
+    private async Task CompleteBackgroundCreateAsync(MangaEntryRequest request, bool allowUnverifiedReader)
     {
         try
         {
-            var result = await CatalogApi.CreateCatalogMangaAsync(request);
+            var result = await CatalogApi.CreateCatalogMangaAsync(request, allowUnverifiedReader);
             if (result.Value is { } saved)
             {
                 await OnCreatedInBackground.InvokeAsync(saved);
@@ -308,6 +342,7 @@ public partial class CatalogAddModal
 
     private void Reset()
     {
+        readerConfirmationRequest = null;
         title = "";
         authors = "";
         category = "";

@@ -26,3 +26,10 @@
     font-size: .8rem;
     color: var(--mud-palette-text-secondary);
 }
+
+@media (max-width: 600px) {
+    .mh-reader-preparation-notice {
+        top: calc(var(--mud-appbar-height, 56px) + env(safe-area-inset-top) + .5rem);
+        bottom: auto;
+    }
+}

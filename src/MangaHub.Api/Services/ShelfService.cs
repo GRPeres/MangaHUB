@@ -57,7 +57,11 @@ public sealed class ShelfService(
         }
 
         var now = DateTimeOffset.UtcNow;
-        entry!.LastExternalReaderOpenedAt = now;
+        if (string.Equals(entry!.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase))
+        {
+            entry.ReadingStatus = "reading";
+        }
+        entry.LastExternalReaderOpenedAt = now;
         entry.ExternalReaderCheckPendingAt = now;
         entry.UpdatedAt = now;
         await shelf.SaveChangesAsync(cancellationToken);
@@ -625,13 +629,16 @@ public sealed class ShelfService(
         }
     }
 
-    private static bool CanTrackExternalReader(UserMangaEntry? entry) =>
-        entry?.MangaEntry is not null
-        && (!string.IsNullOrWhiteSpace(entry.MangaEntry.MangaDexId)
-            || (Uri.TryCreate(entry.MangaEntry.FallbackReaderUrl, UriKind.Absolute, out var readerUrl)
-                && (readerUrl.Scheme == Uri.UriSchemeHttp || readerUrl.Scheme == Uri.UriSchemeHttps)))
-        && (string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(entry.ReadingStatus, "paused", StringComparison.OrdinalIgnoreCase));
+    private static bool CanTrackExternalReader(UserMangaEntry? entry)
+    {
+        if (entry?.MangaEntry is not { } manga) return false;
+        var hasExternalReader = Uri.TryCreate(manga.FallbackReaderUrl, UriKind.Absolute, out var readerUrl)
+            && (readerUrl.Scheme == Uri.UriSchemeHttp || readerUrl.Scheme == Uri.UriSchemeHttps);
+        if (string.Equals(entry.ReadingStatus, "planned", StringComparison.OrdinalIgnoreCase)) return hasExternalReader;
+        return (hasExternalReader || !string.IsNullOrWhiteSpace(manga.MangaDexId))
+            && (string.Equals(entry.ReadingStatus, "reading", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(entry.ReadingStatus, "paused", StringComparison.OrdinalIgnoreCase));
+    }
 
     private sealed record CsvImportValues(
         string Title,
