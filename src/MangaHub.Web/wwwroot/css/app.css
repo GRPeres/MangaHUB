@@ -214,6 +214,31 @@ a {
     font-size: 1.75rem;
 }
 
+@media (max-width: 600px) {
+    #mud-snackbar-container {
+        inset: auto 0 calc(4.75rem + env(safe-area-inset-bottom));
+        width: min(26rem, calc(100% - 1.5rem));
+        max-width: none;
+        margin-inline: auto;
+        transform: none;
+    }
+
+    #mud-snackbar-container .mud-snackbar {
+        width: 100%;
+        margin-inline: 0;
+    }
+
+    #mud-snackbar-container .mud-snackbar-content-action > .mud-icon-button {
+        width: 44px;
+        height: 44px;
+        padding: 0;
+    }
+
+    #mud-snackbar-container .mud-snackbar-content-action > .mud-icon-button .mud-icon-root {
+        font-size: 1.75rem;
+    }
+}
+
 .mh-modal-header {
     gap: 1rem;
 }

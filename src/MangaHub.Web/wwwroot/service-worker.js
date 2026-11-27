@@ -1,4 +1,4 @@
-const CACHE_NAME = "mangahub-app-v344";
+const CACHE_NAME = "mangahub-app-v345";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -9,7 +9,7 @@ const APP_SHELL = [
   "/icon-192.png",
   "/icon-512.png",
   "/icon-maskable-512.png",
-  "/css/app.css?v=309",
+  "/css/app.css?v=310",
   "/MangaHub.Web.styles.css?v=311"
 ];
 

@@ -88,7 +88,11 @@
                     <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">Status</MudText><MudText Typo="Typo.h6">@StatusDisplayLabel</MudText></div>
                 </MangaBentoTile>
                 <MangaBentoTile ColSpan="1" RowSpan="1" Scheme="@ProgressScheme" Class="@(HasNewChapters ? "mh-mobile-shelf-release-tile" : "")">
-                    <div class="mh-mobile-shelf-stat"><MudText Typo="Typo.overline">@(HasNewChapters ? "New" : "Progress")</MudText><MudText Typo="Typo.h6">@(HasNewChapters ? $"+{NewChapterCount}" : CurrentChapterValue)</MudText><MudText Typo="Typo.caption">@(HasNewChapters ? $"Latest {LatestChapterValue}" : ProgressHint)</MudText></div>
+                    <div class="mh-mobile-shelf-stat">
+                        <MudText Typo="Typo.overline">Progress</MudText>
+                        <MudText Typo="Typo.h6">@CurrentChapterValue</MudText>
+                        <MudText Typo="Typo.caption">@(HasNewChapters ? $"Latest {LatestChapterValue}" : ProgressHint)</MudText>
+                    </div>
                 </MangaBentoTile>
             </MangaBento>
             <MudCardActions Class="mh-mobile-shelf-rating" aria-label="@($"Rate {Entry.Title}")">
